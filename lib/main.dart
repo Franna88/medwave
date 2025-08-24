@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_performance/firebase_performance.dart';
+import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'models/patient.dart';
 import 'providers/patient_provider.dart';
@@ -23,7 +27,20 @@ import 'screens/notifications/notifications_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/user_profile_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  // Initialize Firebase Analytics
+  FirebaseAnalytics.instance;
+  
+  // Initialize Firebase Performance
+  FirebasePerformance.instance;
+  
   runApp(const MedWaveApp());
 }
 
