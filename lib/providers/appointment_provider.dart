@@ -108,7 +108,7 @@ class AppointmentProvider with ChangeNotifier {
     final now = DateTime.now();
     final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
-    
+
     return _appointments.where((appointment) {
       return appointment.startTime.isAfter(startOfWeek) &&
              appointment.startTime.isBefore(endOfWeek.add(const Duration(days: 1)));
@@ -241,6 +241,30 @@ class AppointmentProvider with ChangeNotifier {
       _setError('Failed to check conflicts: $e');
       return [];
     }
+  }
+
+  /// Check for appointment conflicts (synchronous version for UI)
+  bool hasConflict(DateTime startTime, DateTime endTime, {String? excludeAppointmentId}) {
+    // Get all appointments for the date
+    final appointmentsForDate = getAppointmentsForDate(startTime);
+    
+    // Check for conflicts with existing appointments
+    return appointmentsForDate.any((appointment) {
+      // Skip if this is the appointment we're excluding
+      if (excludeAppointmentId != null && appointment.id == excludeAppointmentId) {
+        return false;
+      }
+      
+      // Skip cancelled or no-show appointments
+      if (appointment.status == AppointmentStatus.cancelled ||
+          appointment.status == AppointmentStatus.noShow) {
+        return false;
+      }
+      
+      // Check for time overlap
+      return (startTime.isBefore(appointment.endTime) &&
+              endTime.isAfter(appointment.startTime));
+    });
   }
 
   /// Get available time slots for a date

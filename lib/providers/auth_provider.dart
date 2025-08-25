@@ -128,12 +128,16 @@ class AuthProvider extends ChangeNotifier {
         // Create practitioner application
         await _createPractitionerApplication(credential.user!.uid, signupData);
         
-        // If auto-approval is enabled, load the user profile immediately
+        // If auto-approval is enabled, set user and load profile immediately
         if (_autoApprovePractitioners) {
           _user = credential.user;
+          // Add a small delay to ensure Firestore write is complete
+          await Future.delayed(const Duration(milliseconds: 500));
           await _loadUserProfile();
           
           debugPrint('Auto-approved practitioner: ${credential.user!.email}');
+          debugPrint('User profile loaded: ${_userProfile?.accountStatus}');
+          debugPrint('Can access app: $canAccessApp');
         }
       }
       
@@ -142,7 +146,8 @@ class AuthProvider extends ChangeNotifier {
       _setError(_getAuthErrorMessage(e));
       return false;
     } catch (e) {
-      _setError('Failed to create account. Please try again.');
+      debugPrint('Signup error: $e');
+      _setError('Failed to create account: ${e.toString()}');
       return false;
     } finally {
       _setLoading(false);
@@ -202,6 +207,9 @@ class AuthProvider extends ChangeNotifier {
   }
   
   Future<void> _createUserProfile(String userId, Map<String, dynamic> signupData) async {
+    debugPrint('Creating user profile for: $userId');
+    debugPrint('Signup data: ${signupData.keys.toList()}');
+    
     final userProfile = {
       'firstName': signupData['firstName'],
       'lastName': signupData['lastName'],
@@ -236,7 +244,13 @@ class AuthProvider extends ChangeNotifier {
       'lastUpdated': FieldValue.serverTimestamp(),
     };
     
-    await _firestore.collection('users').doc(userId).set(userProfile);
+    try {
+      await _firestore.collection('users').doc(userId).set(userProfile);
+      debugPrint('User profile created successfully');
+    } catch (e) {
+      debugPrint('Error creating user profile: $e');
+      throw Exception('Failed to create user profile: $e');
+    }
   }
   
   Future<void> _createPractitionerApplication(String userId, Map<String, dynamic> signupData) async {
@@ -263,7 +277,13 @@ class AuthProvider extends ChangeNotifier {
       'referencesVerified': false,
     };
     
-    await _firestore.collection('practitionerApplications').add(application);
+    try {
+      await _firestore.collection('practitionerApplications').add(application);
+      debugPrint('Practitioner application created successfully');
+    } catch (e) {
+      debugPrint('Error creating practitioner application: $e');
+      throw Exception('Failed to create practitioner application: $e');
+    }
   }
   
   String _getAuthErrorMessage(FirebaseAuthException e) {

@@ -62,6 +62,7 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
       (p) => p.id == widget.appointment.patientId,
       orElse: () => Patient(
         id: widget.appointment.patientId,
+        practitionerId: widget.appointment.practitionerId ?? '',
         surname: widget.appointment.patientName.split(' ').last,
         fullNames: widget.appointment.patientName.split(' ').first,
         idNumber: '0000000000000',

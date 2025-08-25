@@ -254,6 +254,9 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
     });
 
     final authProvider = context.read<AuthProvider>();
+    
+    debugPrint('Starting signup process...');
+    
     final signupData = {
       // Personal Information
       'firstName': _firstNameController.text.trim(),
@@ -265,7 +268,7 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
       // Professional Information
       'licenseNumber': _licenseNumberController.text.trim(),
       'specialization': _specializationController.text.trim(),
-      'yearsOfExperience': int.parse(_yearsOfExperienceController.text),
+      'yearsOfExperience': int.tryParse(_yearsOfExperienceController.text.trim()) ?? 0,
       'practiceLocation': _practiceLocationController.text.trim(),
       
       // Location Information
@@ -277,7 +280,9 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
       'postalCode': _postalCodeController.text.trim(),
     };
 
+    debugPrint('Calling authProvider.signup with email: ${signupData['email']}');
     final success = await authProvider.signup(signupData);
+    debugPrint('Signup result: $success');
 
     if (mounted) {
       setState(() {
@@ -371,7 +376,7 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
               Navigator.of(context).pop();
               if (isAutoApproved) {
                 // If auto-approved, go directly to dashboard
-                context.go('/dashboard');
+                context.go('/');
               } else {
                 // If pending approval, go to login
                 context.go('/login');
