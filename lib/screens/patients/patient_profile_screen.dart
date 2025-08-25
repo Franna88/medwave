@@ -59,8 +59,12 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
     _scrollController.addListener(_onScroll);
     _headerAnimationController.forward();
     
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PatientProvider>().selectPatient(widget.patientId);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final patientProvider = context.read<PatientProvider>();
+      final patient = await patientProvider.getPatient(widget.patientId);
+      if (patient != null) {
+        patientProvider.selectPatient(patient);
+      }
     });
   }
 

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,8 @@ import '../../providers/patient_provider.dart';
 import '../../models/patient.dart';
 import '../../models/progress_metrics.dart';
 import '../../theme/app_theme.dart';
+import '../../services/firebase/analytics_service.dart';
+import '../../services/export_service.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -22,6 +25,13 @@ class _ReportsScreenState extends State<ReportsScreen>
   String _selectedPeriod = '30'; // days
 
   bool _isLoading = false;
+  
+  // Firebase Analytics Data
+  DashboardAnalytics? _dashboardAnalytics;
+  List<ProgressDataPoint> _overallProgressData = [];
+  PatientStatistics? _patientStatistics;
+  AppointmentAnalytics? _appointmentAnalytics;
+  SessionAnalytics? _sessionAnalytics;
 
   @override
   void initState() {
@@ -36,6 +46,45 @@ class _ReportsScreenState extends State<ReportsScreen>
       curve: Curves.easeInOut,
     );
     _fadeAnimationController.forward();
+    _loadAnalyticsData();
+  }
+
+  Future<void> _loadAnalyticsData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final days = int.parse(_selectedPeriod);
+      
+      // Load all analytics data in parallel
+      final results = await Future.wait([
+        AnalyticsService.getDashboardAnalytics(),
+        AnalyticsService.getOverallProgressData(days),
+        AnalyticsService.getPatientStatistics(),
+        AnalyticsService.getAppointmentAnalytics(days),
+        AnalyticsService.getSessionAnalytics(days),
+      ]);
+
+      setState(() {
+        _dashboardAnalytics = results[0] as DashboardAnalytics;
+        _overallProgressData = results[1] as List<ProgressDataPoint>;
+        _patientStatistics = results[2] as PatientStatistics;
+        _appointmentAnalytics = results[3] as AppointmentAnalytics;
+        _sessionAnalytics = results[4] as SessionAnalytics;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load analytics: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -128,8 +177,14 @@ class _ReportsScreenState extends State<ReportsScreen>
                       ],
                     ),
                   ),
-                  // Period filter button
-                  _buildPeriodFilterButton(),
+                  // Export and filter buttons
+                  Row(
+                    children: [
+                      _buildExportButton(),
+                      const SizedBox(width: 8),
+                      _buildPeriodFilterButton(),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -275,6 +330,127 @@ class _ReportsScreenState extends State<ReportsScreen>
         ),
       ],
     );
+  }
+
+  Widget _buildExportButton() {
+    return PopupMenuButton<String>(
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.download, color: AppTheme.textColor, size: 20),
+      ),
+      onSelected: (value) => _handleExport(value),
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'csv_patients',
+          child: Row(
+            children: [
+              Icon(Icons.table_chart, color: AppTheme.primaryColor, size: 20),
+              SizedBox(width: 12),
+              Text('Export Patients (CSV)'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'pdf_analytics',
+          child: Row(
+            children: [
+              Icon(Icons.analytics, color: AppTheme.primaryColor, size: 20),
+              SizedBox(width: 12),
+              Text('Export Analytics (PDF)'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'csv_sessions',
+          child: Row(
+            children: [
+              Icon(Icons.list_alt, color: AppTheme.primaryColor, size: 20),
+              SizedBox(width: 12),
+              Text('Export Sessions (CSV)'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleExport(String exportType) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      File? exportedFile;
+      String successMessage = '';
+
+      switch (exportType) {
+        case 'csv_patients':
+          exportedFile = await ExportService.exportPatientsToCSV();
+          successMessage = 'Patients data exported successfully';
+          break;
+        case 'pdf_analytics':
+          if (_dashboardAnalytics != null && 
+              _patientStatistics != null && 
+              _appointmentAnalytics != null && 
+              _sessionAnalytics != null) {
+            exportedFile = await ExportService.exportAnalyticsSummaryPDF(
+              _dashboardAnalytics!,
+              _patientStatistics!,
+              _appointmentAnalytics!,
+              _sessionAnalytics!,
+            );
+            successMessage = 'Analytics summary exported successfully';
+          } else {
+            throw Exception('Analytics data not available');
+          }
+          break;
+        case 'csv_sessions':
+          // This would require selecting a specific patient
+          // For now, we'll show a message to use patient-specific exports
+          throw Exception('Please use patient-specific session exports from the patient profile');
+      }
+
+      if (exportedFile != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$successMessage\nSaved to: ${exportedFile.path}'),
+            backgroundColor: AppTheme.primaryColor,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Widget _buildLoadingState() {

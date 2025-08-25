@@ -29,14 +29,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _selectedDay = DateTime.now();
     _selectedEvents = ValueNotifier([]);
     
-    // Load sample data if appointments are empty
+    // Load appointments from Firebase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appointmentProvider = context.read<AppointmentProvider>();
       final patientProvider = context.read<PatientProvider>();
       
-      if (appointmentProvider.appointments.isEmpty && patientProvider.patients.isNotEmpty) {
-        appointmentProvider.loadSampleData(patientProvider.patients);
-      }
+      // Initialize appointment provider with Firebase data
+      appointmentProvider.loadAppointments();
+      patientProvider.loadPatients();
       
       _updateSelectedEvents();
     });

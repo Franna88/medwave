@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../providers/patient_provider.dart';
 import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
+import '../../services/firebase/session_service.dart';
 
 class SessionLoggingScreen extends StatefulWidget {
   final String patientId;
@@ -924,7 +925,28 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
       final patientProvider = context.read<PatientProvider>();
       final sessionNumber = (_patient?.sessions.length ?? 0) + 1;
 
-      // Create updated wound
+      // Upload session photos to Firebase Storage first
+      List<String> uploadedPhotoUrls = [];
+      if (_sessionPhotos.isNotEmpty) {
+        try {
+          // Create a temporary session ID for photo organization
+          final tempSessionId = DateTime.now().millisecondsSinceEpoch.toString();
+          uploadedPhotoUrls = await SessionService.uploadSessionPhotos(
+            widget.patientId,
+            tempSessionId,
+            _sessionPhotos,
+          );
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Warning: Photo upload failed: $e')),
+            );
+          }
+          // Continue with session creation even if photo upload fails
+        }
+      }
+
+      // Create updated wound with uploaded photo URLs
       final updatedWound = Wound(
         id: _patient!.currentWounds.isNotEmpty 
             ? _patient!.currentWounds.first.id 
@@ -939,12 +961,12 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
         width: double.parse(_woundWidthController.text),
         depth: double.parse(_woundDepthController.text),
         description: _woundDescriptionController.text,
-        photos: _sessionPhotos,
+        photos: uploadedPhotoUrls, // Use uploaded URLs instead of local paths
         assessedAt: DateTime.now(),
         stage: _selectedWoundStage,
       );
 
-      // Create session
+      // Create session with uploaded photo URLs
       final session = Session(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         patientId: widget.patientId,
@@ -954,8 +976,8 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
         vasScore: int.parse(_vasScoreController.text),
         wounds: [updatedWound],
         notes: _notesController.text,
-        photos: _sessionPhotos,
-        practitionerId: 'current_practitioner', // In real app, get from auth
+        photos: uploadedPhotoUrls, // Use uploaded URLs instead of local paths
+        practitionerId: '', // Will be set by the Firebase service
       );
 
       await patientProvider.addSession(widget.patientId, session);

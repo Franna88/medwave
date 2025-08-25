@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum NotificationType {
   appointment('Appointment'),
   improvement('Improvement Alert'),
@@ -96,6 +98,46 @@ class AppNotification {
       patientId: json['patientId'],
       patientName: json['patientName'],
       data: json['data'],
+    );
+  }
+
+  /// Convert to Firestore document
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'title': title,
+      'message': message,
+      'type': type.name,
+      'priority': priority.name,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'isRead': isRead,
+      'patientId': patientId,
+      'patientName': patientName,
+      'data': data,
+    };
+  }
+
+  /// Create from Firestore document
+  factory AppNotification.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    
+    return AppNotification(
+      id: doc.id,
+      title: data['title'] ?? '',
+      message: data['message'] ?? '',
+      type: NotificationType.values.firstWhere(
+        (e) => e.name == data['type'],
+        orElse: () => NotificationType.reminder,
+      ),
+      priority: NotificationPriority.values.firstWhere(
+        (e) => e.name == data['priority'],
+        orElse: () => NotificationPriority.medium,
+      ),
+      createdAt: data['createdAt']?.toDate() ?? DateTime.now(),
+      isRead: data['isRead'] ?? false,
+      patientId: data['patientId'],
+      patientName: data['patientName'],
+      data: data['data'] != null ? Map<String, dynamic>.from(data['data']) : null,
     );
   }
 }

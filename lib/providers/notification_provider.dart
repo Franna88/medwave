@@ -1,10 +1,24 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/notification.dart';
+import '../services/firebase/fcm_service.dart';
 
 class NotificationProvider with ChangeNotifier {
   final List<AppNotification> _notifications = [];
   bool _isLoading = false;
+  
+  // Firebase integration
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  
+  // Feature flag for switching between mock and Firebase data
+  static const bool _useFirebase = true;
+  
+  // Stream subscription for real-time notifications
+  StreamSubscription<QuerySnapshot>? _notificationsSubscription;
 
   List<AppNotification> get notifications => List.unmodifiable(_notifications);
   bool get isLoading => _isLoading;
@@ -23,14 +37,67 @@ class NotificationProvider with ChangeNotifier {
   }
 
   Future<void> loadNotifications() async {
-    setLoading(true);
-    
-    // Simulate API call delay
-    await Future.delayed(const Duration(milliseconds: 300));
-    
-    _loadSampleNotifications();
-    
-    setLoading(false);
+    if (_useFirebase) {
+      await _loadFirebaseNotifications();
+    } else {
+      setLoading(true);
+      
+      // Simulate API call delay
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      _loadSampleNotifications();
+      
+      setLoading(false);
+    }
+  }
+
+  /// Load notifications from Firebase with real-time updates
+  Future<void> _loadFirebaseNotifications() async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) {
+        debugPrint('User not authenticated, cannot load notifications');
+        return;
+      }
+
+      setLoading(true);
+
+      // Cancel existing subscription
+      await _notificationsSubscription?.cancel();
+
+      // Set up real-time listener
+      _notificationsSubscription = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .orderBy('createdAt', descending: true)
+          .limit(100) // Limit to recent notifications
+          .snapshots()
+          .listen(
+        (snapshot) {
+          _notifications.clear();
+          
+          for (final doc in snapshot.docs) {
+            try {
+              final notification = AppNotification.fromFirestore(doc);
+              _notifications.add(notification);
+            } catch (e) {
+              debugPrint('Error parsing notification: $e');
+            }
+          }
+          
+          setLoading(false);
+          debugPrint('Loaded ${_notifications.length} notifications from Firebase');
+        },
+        onError: (error) {
+          debugPrint('Error loading notifications: $error');
+          setLoading(false);
+        },
+      );
+    } catch (e) {
+      debugPrint('Error setting up notifications listener: $e');
+      setLoading(false);
+    }
   }
 
   void _loadSampleNotifications() {
@@ -135,25 +202,37 @@ class NotificationProvider with ChangeNotifier {
   }
 
   Future<void> markAsRead(String notificationId) async {
-    final index = _notifications.indexWhere((n) => n.id == notificationId);
-    if (index != -1) {
-      _notifications[index] = _notifications[index].copyWith(isRead: true);
-      notifyListeners();
+    if (_useFirebase) {
+      await markAsReadFirebase(notificationId);
+    } else {
+      final index = _notifications.indexWhere((n) => n.id == notificationId);
+      if (index != -1) {
+        _notifications[index] = _notifications[index].copyWith(isRead: true);
+        notifyListeners();
+      }
     }
   }
 
   Future<void> markAllAsRead() async {
-    for (int i = 0; i < _notifications.length; i++) {
-      if (!_notifications[i].isRead) {
-        _notifications[i] = _notifications[i].copyWith(isRead: true);
+    if (_useFirebase) {
+      await markAllAsReadFirebase();
+    } else {
+      for (int i = 0; i < _notifications.length; i++) {
+        if (!_notifications[i].isRead) {
+          _notifications[i] = _notifications[i].copyWith(isRead: true);
+        }
       }
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   Future<void> deleteNotification(String notificationId) async {
-    _notifications.removeWhere((n) => n.id == notificationId);
-    notifyListeners();
+    if (_useFirebase) {
+      await deleteNotificationFirebase(notificationId);
+    } else {
+      _notifications.removeWhere((n) => n.id == notificationId);
+      notifyListeners();
+    }
   }
 
   // Auto-generate notifications based on patient progress
@@ -274,5 +353,159 @@ class NotificationProvider with ChangeNotifier {
     final monthAgo = DateTime.now().subtract(const Duration(days: 30));
     _notifications.removeWhere((n) => n.createdAt.isBefore(monthAgo));
     notifyListeners();
+  }
+
+  /// Mark notification as read in Firebase
+  Future<void> markAsReadFirebase(String notificationId) async {
+    if (!_useFirebase) return;
+
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) return;
+
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .doc(notificationId)
+          .update({'isRead': true});
+
+      debugPrint('Notification marked as read: $notificationId');
+    } catch (e) {
+      debugPrint('Error marking notification as read: $e');
+    }
+  }
+
+  /// Delete notification from Firebase
+  Future<void> deleteNotificationFirebase(String notificationId) async {
+    if (!_useFirebase) return;
+
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) return;
+
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .doc(notificationId)
+          .delete();
+
+      debugPrint('Notification deleted: $notificationId');
+    } catch (e) {
+      debugPrint('Error deleting notification: $e');
+    }
+  }
+
+  /// Mark all notifications as read in Firebase
+  Future<void> markAllAsReadFirebase() async {
+    if (!_useFirebase) return;
+
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) return;
+
+      final batch = _firestore.batch();
+      final unreadNotifications = _notifications.where((n) => !n.isRead);
+
+      for (final notification in unreadNotifications) {
+        final docRef = _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('notifications')
+            .doc(notification.id);
+        batch.update(docRef, {'isRead': true});
+      }
+
+      await batch.commit();
+      debugPrint('All notifications marked as read');
+    } catch (e) {
+      debugPrint('Error marking all notifications as read: $e');
+    }
+  }
+
+  /// Send appointment reminder notification
+  Future<void> sendAppointmentReminder({
+    required String patientId,
+    required String patientName,
+    required String appointmentId,
+    required DateTime appointmentDateTime,
+  }) async {
+    if (_useFirebase) {
+      await FCMService.scheduleAppointmentReminder(
+        practitionerId: _auth.currentUser?.uid ?? '',
+        patientId: patientId,
+        patientName: patientName,
+        appointmentId: appointmentId,
+        appointmentDateTime: appointmentDateTime,
+      );
+    } else {
+      addAppointmentReminder(patientId, patientName, appointmentDateTime);
+    }
+  }
+
+  /// Send patient progress alert
+  Future<void> sendProgressAlert({
+    required String patientId,
+    required String patientName,
+    required String alertType,
+    required String message,
+    NotificationPriority priority = NotificationPriority.high,
+  }) async {
+    if (_useFirebase) {
+      await FCMService.sendProgressAlert(
+        practitionerId: _auth.currentUser?.uid ?? '',
+        patientId: patientId,
+        patientName: patientName,
+        alertType: alertType,
+        message: message,
+        priority: priority,
+      );
+    } else {
+      addPatientImprovementAlert(patientId, patientName, alertType, 0.0);
+    }
+  }
+
+  /// Send system alert
+  Future<void> sendSystemAlert({
+    required String title,
+    required String message,
+    NotificationPriority priority = NotificationPriority.medium,
+    Map<String, dynamic>? data,
+  }) async {
+    if (_useFirebase) {
+      await FCMService.sendSystemAlert(
+        practitionerId: _auth.currentUser?.uid ?? '',
+        title: title,
+        message: message,
+        priority: priority,
+        additionalData: data,
+      );
+    } else {
+      // Add as local notification for development
+      addNotification(AppNotification(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        message: message,
+        type: NotificationType.alert,
+        priority: priority,
+        createdAt: DateTime.now(),
+        data: data,
+      ));
+    }
+  }
+
+  /// Initialize Firebase Cloud Messaging
+  Future<void> initializeFCM() async {
+    if (_useFirebase) {
+      await FCMService.initialize();
+    }
+  }
+
+  /// Dispose of resources
+  @override
+  void dispose() {
+    _notificationsSubscription?.cancel();
+    super.dispose();
   }
 }

@@ -22,10 +22,13 @@ import 'screens/calendar/calendar_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/auth/welcome_screen.dart';
+import 'screens/auth/pending_approval_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
+import 'screens/notifications/notification_preferences_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/user_profile_provider.dart';
+import 'services/firebase/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,9 +41,12 @@ void main() async {
   // Initialize Firebase Analytics
   FirebaseAnalytics.instance;
   
-  // Initialize Firebase Performance
+    // Initialize Firebase Performance
   FirebasePerformance.instance;
-  
+
+  // Initialize Firebase Cloud Messaging
+  await FCMService.initialize();
+
   runApp(const MedWaveApp());
 }
 
@@ -52,8 +58,8 @@ class MedWaveApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => PatientProvider()..loadPatients()),
-        ChangeNotifierProvider(create: (_) => NotificationProvider()..loadNotifications()),
+        ChangeNotifierProvider(create: (_) => PatientProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()..loadNotifications()..initializeFCM()),
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
       ],
@@ -69,6 +75,40 @@ class MedWaveApp extends StatelessWidget {
 
 final GoRouter _router = GoRouter(
   initialLocation: '/welcome',
+  redirect: (context, state) {
+    final authProvider = context.read<AuthProvider>();
+    final currentPath = state.uri.path;
+    
+    // If user is not authenticated, allow access to public routes only
+    if (!authProvider.isAuthenticated) {
+      if (currentPath.startsWith('/welcome') || 
+          currentPath.startsWith('/login') || 
+          currentPath.startsWith('/signup')) {
+        return null; // Allow access
+      }
+      return '/welcome'; // Redirect to welcome for protected routes
+    }
+    
+    // If user is authenticated but not approved, redirect to pending approval
+    if (authProvider.isAuthenticated && !authProvider.canAccessApp) {
+      if (currentPath != '/pending-approval') {
+        return '/pending-approval';
+      }
+      return null;
+    }
+    
+    // If user is authenticated and approved, redirect away from auth screens
+    if (authProvider.isAuthenticated && authProvider.canAccessApp) {
+      if (currentPath == '/welcome' || 
+          currentPath == '/login' || 
+          currentPath == '/signup' || 
+          currentPath == '/pending-approval') {
+        return '/'; // Redirect to dashboard
+      }
+    }
+    
+    return null; // No redirect needed
+  },
   routes: [
     // Welcome screen
     GoRoute(
@@ -86,6 +126,11 @@ final GoRouter _router = GoRouter(
       path: '/signup',
       name: 'signup',
       builder: (context, state) => const SignupScreen(),
+    ),
+    GoRoute(
+      path: '/pending-approval',
+      name: 'pending-approval',
+      builder: (context, state) => const PendingApprovalScreen(),
     ),
     
     // Main app routes (protected)
@@ -121,6 +166,13 @@ final GoRouter _router = GoRouter(
           path: '/notifications',
           name: 'notifications',
           builder: (context, state) => const NotificationsScreen(),
+          routes: [
+            GoRoute(
+              path: 'preferences',
+              name: 'notification-preferences',
+              builder: (context, state) => const NotificationPreferencesScreen(),
+            ),
+          ],
         ),
       ],
     ),

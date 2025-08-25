@@ -63,12 +63,23 @@ class ProgressDataPoint {
   final double value;
   final int sessionNumber;
   final String? notes;
+  // Extended fields for comprehensive analytics
+  final double? weightChange;
+  final double? painReduction;
+  final double? woundHealingProgress;
+  final double? vasScore;
+  final double? weight;
 
   const ProgressDataPoint({
     required this.date,
     required this.value,
     required this.sessionNumber,
     this.notes,
+    this.weightChange,
+    this.painReduction,
+    this.woundHealingProgress,
+    this.vasScore,
+    this.weight,
   });
 
   Map<String, dynamic> toJson() {
@@ -77,6 +88,11 @@ class ProgressDataPoint {
       'value': value,
       'sessionNumber': sessionNumber,
       'notes': notes,
+      'weightChange': weightChange,
+      'painReduction': painReduction,
+      'woundHealingProgress': woundHealingProgress,
+      'vasScore': vasScore,
+      'weight': weight,
     };
   }
 
@@ -86,6 +102,11 @@ class ProgressDataPoint {
       value: json['value'],
       sessionNumber: json['sessionNumber'],
       notes: json['notes'],
+      weightChange: json['weightChange']?.toDouble(),
+      painReduction: json['painReduction']?.toDouble(),
+      woundHealingProgress: json['woundHealingProgress']?.toDouble(),
+      vasScore: json['vasScore']?.toDouble(),
+      weight: json['weight']?.toDouble(),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum AppointmentType {
   consultation('Consultation'),
@@ -212,6 +213,63 @@ class Appointment {
   @override
   String toString() {
     return 'Appointment(id: $id, patientName: $patientName, title: $title, startTime: $startTime, status: $status)';
+  }
+
+  // Firestore serialization methods
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'patientId': patientId,
+      'patientName': patientName,
+      'title': title,
+      'description': description,
+      'startTime': Timestamp.fromDate(startTime),
+      'endTime': Timestamp.fromDate(endTime),
+      'type': type.name,
+      'status': status.name,
+      'practitionerId': practitionerId,
+      'practitionerName': practitionerName,
+      'location': location,
+      'notes': notes,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'lastUpdated': lastUpdated != null ? Timestamp.fromDate(lastUpdated!) : null,
+      'reminderSent': reminderSent,
+      'metadata': metadata,
+      // Additional fields for Firebase
+      'dateKey': '${startTime.year}-${startTime.month.toString().padLeft(2, '0')}-${startTime.day.toString().padLeft(2, '0')}',
+      'timeSlot': '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
+      'duration': duration.inMinutes,
+    };
+  }
+
+  factory Appointment.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    
+    return Appointment(
+      id: doc.id,
+      patientId: data['patientId'] ?? '',
+      patientName: data['patientName'] ?? '',
+      title: data['title'] ?? '',
+      description: data['description'],
+      startTime: data['startTime']?.toDate() ?? DateTime.now(),
+      endTime: data['endTime']?.toDate() ?? DateTime.now(),
+      type: AppointmentType.values.firstWhere(
+        (e) => e.name == data['type'],
+        orElse: () => AppointmentType.consultation,
+      ),
+      status: AppointmentStatus.values.firstWhere(
+        (e) => e.name == data['status'],
+        orElse: () => AppointmentStatus.scheduled,
+      ),
+      practitionerId: data['practitionerId'],
+      practitionerName: data['practitionerName'],
+      location: data['location'],
+      notes: List<String>.from(data['notes'] ?? []),
+      createdAt: data['createdAt']?.toDate() ?? DateTime.now(),
+      lastUpdated: data['lastUpdated']?.toDate(),
+      reminderSent: data['reminderSent'],
+      metadata: data['metadata'] != null ? Map<String, dynamic>.from(data['metadata']) : null,
+    );
   }
 }
 

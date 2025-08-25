@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Patient {
   final String id;
   
@@ -61,6 +63,12 @@ class Patient {
   
   final DateTime createdAt;
   final DateTime? lastUpdated;
+  
+  // Firebase-specific fields
+  final String practitionerId; // Reference to the practitioner who created this patient
+  final String? country; // Inherited from practitioner for analytics
+  final String? countryName; // Inherited from practitioner for analytics
+  final String? province; // Inherited from practitioner for analytics
   
   // Baseline measurements
   final double baselineWeight;
@@ -137,6 +145,10 @@ class Patient {
     this.trainingPhotosConsentDate,
     required this.createdAt,
     this.lastUpdated,
+    required this.practitionerId,
+    this.country,
+    this.countryName,
+    this.province,
     required this.baselineWeight,
     required this.baselineVasScore,
     required this.baselineWounds,
@@ -240,6 +252,10 @@ class Patient {
     DateTime? trainingPhotosConsentDate,
     DateTime? createdAt,
     DateTime? lastUpdated,
+    String? practitionerId,
+    String? country,
+    String? countryName,
+    String? province,
     double? baselineWeight,
     int? baselineVasScore,
     List<Wound>? baselineWounds,
@@ -302,6 +318,10 @@ class Patient {
       trainingPhotosConsentDate: trainingPhotosConsentDate ?? this.trainingPhotosConsentDate,
       createdAt: createdAt ?? this.createdAt,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      practitionerId: practitionerId ?? this.practitionerId,
+      country: country ?? this.country,
+      countryName: countryName ?? this.countryName,
+      province: province ?? this.province,
       baselineWeight: baselineWeight ?? this.baselineWeight,
       baselineVasScore: baselineVasScore ?? this.baselineVasScore,
       baselineWounds: baselineWounds ?? this.baselineWounds,
@@ -367,6 +387,10 @@ class Patient {
       'trainingPhotosConsentDate': trainingPhotosConsentDate?.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'lastUpdated': lastUpdated?.toIso8601String(),
+      'practitionerId': practitionerId,
+      'country': country,
+      'countryName': countryName,
+      'province': province,
       'baselineWeight': baselineWeight,
       'baselineVasScore': baselineVasScore,
       'baselineWounds': baselineWounds.map((w) => w.toJson()).toList(),
@@ -438,6 +462,10 @@ class Patient {
           : null,
       createdAt: DateTime.parse(json['createdAt']),
       lastUpdated: json['lastUpdated'] != null ? DateTime.parse(json['lastUpdated']) : null,
+      practitionerId: json['practitionerId'] ?? '',
+      country: json['country'],
+      countryName: json['countryName'],
+      province: json['province'],
       baselineWeight: json['baselineWeight']?.toDouble(),
       baselineVasScore: json['baselineVasScore'],
       baselineWounds: (json['baselineWounds'] as List).map((w) => Wound.fromJson(w)).toList(),
@@ -449,6 +477,157 @@ class Patient {
       weightChange: json['weightChange']?.toDouble(),
       painReduction: json['painReduction']?.toDouble(),
       woundHealingProgress: json['woundHealingProgress']?.toDouble(),
+    );
+  }
+
+  // Firestore serialization methods
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'surname': surname,
+      'fullNames': fullNames,
+      'idNumber': idNumber,
+      'dateOfBirth': Timestamp.fromDate(dateOfBirth),
+      'workNameAndAddress': workNameAndAddress,
+      'workPostalAddress': workPostalAddress,
+      'workTelNo': workTelNo,
+      'patientCell': patientCell,
+      'homeTelNo': homeTelNo,
+      'email': email,
+      'maritalStatus': maritalStatus,
+      'occupation': occupation,
+      'responsiblePersonSurname': responsiblePersonSurname,
+      'responsiblePersonFullNames': responsiblePersonFullNames,
+      'responsiblePersonIdNumber': responsiblePersonIdNumber,
+      'responsiblePersonDateOfBirth': Timestamp.fromDate(responsiblePersonDateOfBirth),
+      'responsiblePersonWorkNameAndAddress': responsiblePersonWorkNameAndAddress,
+      'responsiblePersonWorkPostalAddress': responsiblePersonWorkPostalAddress,
+      'responsiblePersonWorkTelNo': responsiblePersonWorkTelNo,
+      'responsiblePersonCell': responsiblePersonCell,
+      'responsiblePersonHomeTelNo': responsiblePersonHomeTelNo,
+      'responsiblePersonEmail': responsiblePersonEmail,
+      'responsiblePersonMaritalStatus': responsiblePersonMaritalStatus,
+      'responsiblePersonOccupation': responsiblePersonOccupation,
+      'relationToPatient': relationToPatient,
+      'medicalAidSchemeName': medicalAidSchemeName,
+      'medicalAidNumber': medicalAidNumber,
+      'planAndDepNumber': planAndDepNumber,
+      'mainMemberName': mainMemberName,
+      'referringDoctorName': referringDoctorName,
+      'referringDoctorCell': referringDoctorCell,
+      'additionalReferrerName': additionalReferrerName,
+      'additionalReferrerCell': additionalReferrerCell,
+      'medicalConditions': medicalConditions,
+      'medicalConditionDetails': medicalConditionDetails,
+      'currentMedications': currentMedications,
+      'allergies': allergies,
+      'isSmoker': isSmoker,
+      'naturalTreatments': naturalTreatments,
+      'accountResponsibilitySignature': accountResponsibilitySignature,
+      'accountResponsibilitySignatureDate': accountResponsibilitySignatureDate != null 
+          ? Timestamp.fromDate(accountResponsibilitySignatureDate!) 
+          : null,
+      'woundPhotographyConsentSignature': woundPhotographyConsentSignature,
+      'witnessSignature': witnessSignature,
+      'woundPhotographyConsentDate': woundPhotographyConsentDate != null 
+          ? Timestamp.fromDate(woundPhotographyConsentDate!) 
+          : null,
+      'trainingPhotosConsent': trainingPhotosConsent,
+      'trainingPhotosConsentDate': trainingPhotosConsentDate != null 
+          ? Timestamp.fromDate(trainingPhotosConsentDate!) 
+          : null,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'lastUpdated': lastUpdated != null ? Timestamp.fromDate(lastUpdated!) : null,
+      'practitionerId': practitionerId,
+      'country': country,
+      'countryName': countryName,
+      'province': province,
+      'baselineWeight': baselineWeight,
+      'baselineVasScore': baselineVasScore,
+      'baselineWounds': baselineWounds.map((w) => w.toFirestore()).toList(),
+      'baselinePhotos': baselinePhotos,
+      'currentWeight': currentWeight,
+      'currentVasScore': currentVasScore,
+      'currentWounds': currentWounds.map((w) => w.toFirestore()).toList(),
+      // Note: sessions are stored as a subcollection, not embedded
+      'weightChange': weightChange,
+      'painReduction': painReduction,
+      'woundHealingProgress': woundHealingProgress,
+    };
+  }
+
+  factory Patient.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    
+    return Patient(
+      id: doc.id,
+      surname: data['surname'] ?? '',
+      fullNames: data['fullNames'] ?? '',
+      idNumber: data['idNumber'] ?? '',
+      dateOfBirth: data['dateOfBirth']?.toDate() ?? DateTime.now(),
+      workNameAndAddress: data['workNameAndAddress'],
+      workPostalAddress: data['workPostalAddress'],
+      workTelNo: data['workTelNo'],
+      patientCell: data['patientCell'] ?? '',
+      homeTelNo: data['homeTelNo'],
+      email: data['email'] ?? '',
+      maritalStatus: data['maritalStatus'],
+      occupation: data['occupation'],
+      responsiblePersonSurname: data['responsiblePersonSurname'] ?? '',
+      responsiblePersonFullNames: data['responsiblePersonFullNames'] ?? '',
+      responsiblePersonIdNumber: data['responsiblePersonIdNumber'] ?? '',
+      responsiblePersonDateOfBirth: data['responsiblePersonDateOfBirth']?.toDate() ?? DateTime.now(),
+      responsiblePersonWorkNameAndAddress: data['responsiblePersonWorkNameAndAddress'],
+      responsiblePersonWorkPostalAddress: data['responsiblePersonWorkPostalAddress'],
+      responsiblePersonWorkTelNo: data['responsiblePersonWorkTelNo'],
+      responsiblePersonCell: data['responsiblePersonCell'] ?? '',
+      responsiblePersonHomeTelNo: data['responsiblePersonHomeTelNo'],
+      responsiblePersonEmail: data['responsiblePersonEmail'],
+      responsiblePersonMaritalStatus: data['responsiblePersonMaritalStatus'],
+      responsiblePersonOccupation: data['responsiblePersonOccupation'],
+      relationToPatient: data['relationToPatient'],
+      medicalAidSchemeName: data['medicalAidSchemeName'] ?? '',
+      medicalAidNumber: data['medicalAidNumber'] ?? '',
+      planAndDepNumber: data['planAndDepNumber'],
+      mainMemberName: data['mainMemberName'] ?? '',
+      referringDoctorName: data['referringDoctorName'],
+      referringDoctorCell: data['referringDoctorCell'],
+      additionalReferrerName: data['additionalReferrerName'],
+      additionalReferrerCell: data['additionalReferrerCell'],
+      medicalConditions: Map<String, bool>.from(data['medicalConditions'] ?? {}),
+      medicalConditionDetails: Map<String, String?>.from(data['medicalConditionDetails'] ?? {}),
+      currentMedications: data['currentMedications'],
+      allergies: data['allergies'],
+      isSmoker: data['isSmoker'] ?? false,
+      naturalTreatments: data['naturalTreatments'],
+      accountResponsibilitySignature: data['accountResponsibilitySignature'],
+      accountResponsibilitySignatureDate: data['accountResponsibilitySignatureDate']?.toDate(),
+      woundPhotographyConsentSignature: data['woundPhotographyConsentSignature'],
+      witnessSignature: data['witnessSignature'],
+      woundPhotographyConsentDate: data['woundPhotographyConsentDate']?.toDate(),
+      trainingPhotosConsent: data['trainingPhotosConsent'],
+      trainingPhotosConsentDate: data['trainingPhotosConsentDate']?.toDate(),
+      createdAt: data['createdAt']?.toDate() ?? DateTime.now(),
+      lastUpdated: data['lastUpdated']?.toDate(),
+      practitionerId: data['practitionerId'] ?? '',
+      country: data['country'],
+      countryName: data['countryName'],
+      province: data['province'],
+      baselineWeight: data['baselineWeight']?.toDouble() ?? 0.0,
+      baselineVasScore: data['baselineVasScore'] ?? 0,
+      baselineWounds: (data['baselineWounds'] as List? ?? [])
+          .map((w) => Wound.fromFirestore(w))
+          .toList(),
+      baselinePhotos: List<String>.from(data['baselinePhotos'] ?? []),
+      currentWeight: data['currentWeight']?.toDouble(),
+      currentVasScore: data['currentVasScore'],
+      currentWounds: (data['currentWounds'] as List? ?? [])
+          .map((w) => Wound.fromFirestore(w))
+          .toList(),
+      sessions: [], // Sessions will be loaded separately from subcollection
+      weightChange: data['weightChange']?.toDouble(),
+      painReduction: data['painReduction']?.toDouble(),
+      woundHealingProgress: data['woundHealingProgress']?.toDouble(),
     );
   }
 }
@@ -535,6 +714,40 @@ class Wound {
       photos: List<String>.from(json['photos']),
       assessedAt: DateTime.parse(json['assessedAt']),
       stage: WoundStage.values.firstWhere((e) => e.name == json['stage']),
+    );
+  }
+
+  // Firestore serialization methods
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'location': location,
+      'type': type,
+      'length': length,
+      'width': width,
+      'depth': depth,
+      'description': description,
+      'photos': photos,
+      'assessedAt': Timestamp.fromDate(assessedAt),
+      'stage': stage.name,
+    };
+  }
+
+  factory Wound.fromFirestore(Map<String, dynamic> data) {
+    return Wound(
+      id: data['id'] ?? '',
+      location: data['location'] ?? '',
+      type: data['type'] ?? '',
+      length: data['length']?.toDouble() ?? 0.0,
+      width: data['width']?.toDouble() ?? 0.0,
+      depth: data['depth']?.toDouble() ?? 0.0,
+      description: data['description'] ?? '',
+      photos: List<String>.from(data['photos'] ?? []),
+      assessedAt: data['assessedAt']?.toDate() ?? DateTime.now(),
+      stage: WoundStage.values.firstWhere(
+        (e) => e.name == data['stage'],
+        orElse: () => WoundStage.stage1,
+      ),
     );
   }
 }
@@ -629,6 +842,43 @@ class Session {
       notes: json['notes'],
       photos: List<String>.from(json['photos']),
       practitionerId: json['practitionerId'],
+    );
+  }
+
+  // Firestore serialization methods
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'patientId': patientId,
+      'sessionNumber': sessionNumber,
+      'date': Timestamp.fromDate(date),
+      'weight': weight,
+      'vasScore': vasScore,
+      'wounds': wounds.map((w) => w.toFirestore()).toList(),
+      'notes': notes,
+      'photos': photos,
+      'practitionerId': practitionerId,
+      'createdAt': Timestamp.fromDate(DateTime.now()),
+      'lastUpdated': Timestamp.fromDate(DateTime.now()),
+    };
+  }
+
+  factory Session.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    
+    return Session(
+      id: doc.id,
+      patientId: data['patientId'] ?? '',
+      sessionNumber: data['sessionNumber'] ?? 0,
+      date: data['date']?.toDate() ?? DateTime.now(),
+      weight: data['weight']?.toDouble() ?? 0.0,
+      vasScore: data['vasScore'] ?? 0,
+      wounds: (data['wounds'] as List? ?? [])
+          .map((w) => Wound.fromFirestore(w))
+          .toList(),
+      notes: data['notes'] ?? '',
+      photos: List<String>.from(data['photos'] ?? []),
+      practitionerId: data['practitionerId'] ?? '',
     );
   }
 }

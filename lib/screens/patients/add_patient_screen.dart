@@ -1586,6 +1586,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       trainingPhotosConsentDate: _trainingPhotosConsent != null ? now : null,
       
       createdAt: now,
+      practitionerId: '', // Will be set by the Firebase service
       baselineWeight: double.parse(_weightController.text),
       baselineVasScore: int.parse(_vasScoreController.text),
       baselineWounds: [wound],
