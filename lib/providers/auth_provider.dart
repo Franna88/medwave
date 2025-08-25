@@ -15,6 +15,10 @@ class AuthProvider extends ChangeNotifier {
   // Feature flag for development - allows switching between mock and Firebase
   static const bool _useFirebase = true; // Firebase is now configured!
   
+  // Feature flag for auto-approval during development/testing
+  // Set to true for testing, false for production approval workflow
+  static const bool _autoApprovePractitioners = true; // Enable for testing
+  
   // Mock data for development
   bool _mockAuthenticated = false;
   String? _mockEmail;
@@ -28,6 +32,10 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get userEmail => _useFirebase ? _user?.email : _mockEmail;
   String? get userName => _userProfile?.fullName ?? (_useFirebase ? _user?.displayName : _mockUserName);
+  
+  // Helper getters for development
+  bool get isAutoApprovalEnabled => _autoApprovePractitioners;
+  bool get isUsingFirebase => _useFirebase;
   
   // Check if user can access the app (approved practitioner or super admin)
   bool get canAccessApp {
@@ -114,11 +122,19 @@ class AuthProvider extends ChangeNotifier {
       );
       
       if (credential.user != null) {
-        // Create user profile in Firestore with pending status
+        // Create user profile in Firestore
         await _createUserProfile(credential.user!.uid, signupData);
         
         // Create practitioner application
         await _createPractitionerApplication(credential.user!.uid, signupData);
+        
+        // If auto-approval is enabled, load the user profile immediately
+        if (_autoApprovePractitioners) {
+          _user = credential.user;
+          await _loadUserProfile();
+          
+          debugPrint('Auto-approved practitioner: ${credential.user!.email}');
+        }
       }
       
       return true;
@@ -201,10 +217,11 @@ class AuthProvider extends ChangeNotifier {
       'city': signupData['city'] ?? '',
       'address': signupData['address'] ?? '',
       'postalCode': signupData['postalCode'] ?? '',
-      'accountStatus': 'pending',
+      'accountStatus': _autoApprovePractitioners ? 'approved' : 'pending',
       'applicationDate': FieldValue.serverTimestamp(),
+      'approvalDate': _autoApprovePractitioners ? FieldValue.serverTimestamp() : null,
       'role': 'practitioner',
-      'licenseVerified': false,
+      'licenseVerified': _autoApprovePractitioners ? true : false,
       'professionalReferences': [],
       'settings': {
         'notificationsEnabled': true,
@@ -236,11 +253,13 @@ class AuthProvider extends ChangeNotifier {
       'countryName': signupData['countryName'] ?? '',
       'province': signupData['province'] ?? '',
       'city': signupData['city'] ?? '',
-      'status': 'pending',
+      'status': _autoApprovePractitioners ? 'approved' : 'pending',
       'submittedAt': FieldValue.serverTimestamp(),
+      'approvedAt': _autoApprovePractitioners ? FieldValue.serverTimestamp() : null,
+      'approvedBy': _autoApprovePractitioners ? 'auto-system' : null,
       'documents': {},
-      'documentsVerified': false,
-      'licenseVerified': false,
+      'documentsVerified': _autoApprovePractitioners ? true : false,
+      'licenseVerified': _autoApprovePractitioners ? true : false,
       'referencesVerified': false,
     };
     
@@ -286,6 +305,41 @@ class AuthProvider extends ChangeNotifier {
     _mockAuthenticated = true;
     _mockEmail = signupData['email'];
     _mockUserName = '${signupData['firstName']} ${signupData['lastName']}';
+    
+    // Create mock user profile for testing
+    _userProfile = UserProfile(
+      id: 'mock-${DateTime.now().millisecondsSinceEpoch}',
+      email: signupData['email'],
+      firstName: signupData['firstName'],
+      lastName: signupData['lastName'],
+      phoneNumber: signupData['phoneNumber'] ?? '',
+      licenseNumber: signupData['licenseNumber'] ?? '',
+      specialization: signupData['specialization'] ?? '',
+      yearsOfExperience: signupData['yearsOfExperience'] ?? 0,
+      practiceLocation: signupData['practiceLocation'] ?? '',
+      country: signupData['country'] ?? '',
+      countryName: signupData['countryName'] ?? '',
+      province: signupData['province'] ?? '',
+      city: signupData['city'] ?? '',
+      address: signupData['address'] ?? '',
+      postalCode: signupData['postalCode'] ?? '',
+      accountStatus: _autoApprovePractitioners ? 'approved' : 'pending',
+      role: 'practitioner',
+      licenseVerified: _autoApprovePractitioners,
+      professionalReferences: [],
+      settings: UserSettings(
+        notificationsEnabled: true,
+        darkModeEnabled: false,
+        biometricEnabled: false,
+        language: 'en',
+        timezone: 'UTC',
+      ),
+      createdAt: DateTime.now(),
+      totalPatients: 0,
+      totalSessions: 0,
+    );
+    
+    debugPrint('Mock ${_autoApprovePractitioners ? 'auto-approved' : 'pending'} practitioner: ${signupData['email']}');
     notifyListeners();
     return true;
   }

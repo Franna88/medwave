@@ -236,12 +236,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: AppTheme.errorColor,
       ),
-    );
+      );
   }
 
   Future<void> _handleSignup() async {
@@ -293,6 +293,9 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
   }
 
   void _showSuccessDialog() {
+    final authProvider = context.read<AuthProvider>();
+    final isAutoApproved = authProvider.isAutoApprovalEnabled;
+    
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -307,41 +310,74 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
-                Icons.check_circle,
+                isAutoApproved ? Icons.verified : Icons.check_circle,
                 color: AppTheme.successColor,
                 size: 24,
               ),
             ),
             const SizedBox(width: 12),
-            const Text('Application Submitted'),
+            Text(isAutoApproved ? 'Account Created & Approved!' : 'Application Submitted'),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Thank you for your application to join MedWave!',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              isAutoApproved 
+                  ? 'Welcome to MedWave! Your account is ready to use.'
+                  : 'Thank you for your application to join MedWave!',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
-              'Your practitioner application has been submitted for review. Our admin team will verify your credentials and notify you within 24-48 hours.',
+              isAutoApproved
+                  ? 'Your practitioner account has been automatically approved for testing purposes. You can now access all features of the app.'
+                  : 'Your practitioner application has been submitted for review. Our admin team will verify your credentials and notify you within 24-48 hours.',
             ),
-            SizedBox(height: 12),
-            Text(
-              'You will receive an email confirmation shortly with further instructions.',
-              style: TextStyle(color: AppTheme.secondaryColor),
-            ),
+            const SizedBox(height: 12),
+            if (isAutoApproved) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: AppTheme.primaryColor, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Development Mode: Auto-approval is enabled for testing',
+                        style: TextStyle(color: AppTheme.primaryColor, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              const Text(
+                'You will receive an email confirmation shortly with further instructions.',
+                style: TextStyle(color: AppTheme.secondaryColor),
+              ),
+            ],
           ],
         ),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              context.go('/login');
+              if (isAutoApproved) {
+                // If auto-approved, go directly to dashboard
+                context.go('/dashboard');
+              } else {
+                // If pending approval, go to login
+                context.go('/login');
+              }
             },
-            child: const Text('Go to Login'),
+            child: Text(isAutoApproved ? 'Start Using MedWave' : 'Go to Login'),
           ),
         ],
       ),
@@ -563,10 +599,10 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
                     Expanded(
                       child: Form(
                         key: _formKey,
-                        child: PageView(
-                          controller: _pageController,
-                          physics: const NeverScrollableScrollPhysics(),
-                          children: [
+                      child: PageView(
+                        controller: _pageController,
+                        physics: const NeverScrollableScrollPhysics(),
+                        children: [
                             _buildPersonalInfoStep(),
                             _buildProfessionalInfoStep(),
                             _buildLocationInfoStep(),
@@ -706,14 +742,14 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           Expanded(
             child: Form(
               key: _formKey,
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildPersonalInfoStep(),
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _buildPersonalInfoStep(),
                   _buildProfessionalInfoStep(),
                   _buildLocationInfoStep(),
-                ],
+              ],
               ),
             ),
           ),
@@ -760,83 +796,83 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
 
   Widget _buildPersonalInfoStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Personal Information',
-            style: TextStyle(
+          padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Personal Information',
+                  style: TextStyle(
               fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
             'Enter your personal details',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.secondaryColor,
-            ),
-          ),
-          const SizedBox(height: 32),
-          
-          // First Name
-          TextFormField(
-            controller: _firstNameController,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'First Name *',
-              hintText: 'Enter your first name',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
+                // First Name
+                TextFormField(
+                  controller: _firstNameController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'First Name *',
+                    hintText: 'Enter your first name',
               prefixIcon: Icon(Icons.person),
             ),
-          ),
-          const SizedBox(height: 20),
-          
-          // Last Name
-          TextFormField(
-            controller: _lastNameController,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Last Name *',
-              hintText: 'Enter your last name',
+                ),
+                const SizedBox(height: 20),
+                
+                // Last Name
+                TextFormField(
+                  controller: _lastNameController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Last Name *',
+                    hintText: 'Enter your last name',
               prefixIcon: Icon(Icons.person_outline),
             ),
-          ),
-          const SizedBox(height: 20),
-          
-          // Email
-          TextFormField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 20),
+                
+                // Email
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Email Address *',
+                  decoration: const InputDecoration(
+                    labelText: 'Email Address *',
               hintText: 'Enter your professional email',
               prefixIcon: Icon(Icons.email),
             ),
-          ),
-          const SizedBox(height: 20),
-          
+              ),
+              const SizedBox(height: 20),
+              
           // Phone Number
-          TextFormField(
+              TextFormField(
             controller: _phoneNumberController,
             keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
               labelText: 'Phone Number *',
               hintText: 'Enter your contact number',
               prefixIcon: Icon(Icons.phone),
             ),
-          ),
-          const SizedBox(height: 20),
-          
+              ),
+              const SizedBox(height: 20),
+              
           // Password
-          TextFormField(
+              TextFormField(
             controller: _passwordController,
             obscureText: !_passwordVisible,
-            textInputAction: TextInputAction.next,
+                textInputAction: TextInputAction.next,
             decoration: InputDecoration(
               labelText: 'Password *',
               hintText: 'Create a secure password',
@@ -851,13 +887,13 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          
+              const SizedBox(height: 20),
+              
           // Confirm Password
-          TextFormField(
+              TextFormField(
             controller: _confirmPasswordController,
             obscureText: !_confirmPasswordVisible,
-            textInputAction: TextInputAction.done,
+                textInputAction: TextInputAction.done,
             decoration: InputDecoration(
               labelText: 'Confirm Password *',
               hintText: 'Confirm your password',
@@ -865,58 +901,58 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
               suffixIcon: IconButton(
                 icon: Icon(_confirmPasswordVisible ? Icons.visibility : Icons.visibility_off),
                 onPressed: () {
-                  setState(() {
+                    setState(() {
                     _confirmPasswordVisible = !_confirmPasswordVisible;
-                  });
-                },
+                    });
+                  },
               ),
-            ),
-          ),
-        ],
+                              ),
+                            ),
+                          ],
       ),
     );
   }
 
   Widget _buildProfessionalInfoStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
+          padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
             'Professional Information',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
             'Tell us about your professional credentials',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.secondaryColor,
-            ),
-          ),
-          const SizedBox(height: 32),
-          
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                
           // License Number
-          TextFormField(
+                TextFormField(
             controller: _licenseNumberController,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
               labelText: 'License Number *',
               hintText: 'Enter your professional license number',
               prefixIcon: Icon(Icons.badge),
             ),
-          ),
-          const SizedBox(height: 20),
-          
+                ),
+                const SizedBox(height: 20),
+                
           // Specialization Dropdown
           DropdownButtonFormField<String>(
             value: _specializationController.text.isEmpty ? null : _specializationController.text,
-            decoration: const InputDecoration(
+                  decoration: const InputDecoration(
               labelText: 'Specialization *',
               hintText: 'Select your specialization',
               prefixIcon: Icon(Icons.medical_services),
@@ -931,30 +967,30 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
               setState(() {
                 _specializationController.text = value ?? '';
               });
-            },
-          ),
-          const SizedBox(height: 20),
-          
+                  },
+                ),
+                const SizedBox(height: 20),
+                
           // Years of Experience
-          TextFormField(
+                TextFormField(
             controller: _yearsOfExperienceController,
             keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.next,
+                  textInputAction: TextInputAction.next,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
+                  decoration: const InputDecoration(
               labelText: 'Years of Experience *',
               hintText: 'Enter years of professional experience',
               prefixIcon: Icon(Icons.timeline),
             ),
-          ),
-          const SizedBox(height: 20),
-          
+                ),
+                const SizedBox(height: 20),
+                
           // Practice Location
-          TextFormField(
+                TextFormField(
             controller: _practiceLocationController,
-            textInputAction: TextInputAction.done,
+                  textInputAction: TextInputAction.done,
             maxLines: 2,
-            decoration: const InputDecoration(
+                  decoration: const InputDecoration(
               labelText: 'Practice Location *',
               hintText: 'Enter your primary practice location/facility',
               prefixIcon: Icon(Icons.location_on),
@@ -967,32 +1003,32 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
 
   Widget _buildLocationInfoStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
             'Location Information',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
             'Provide your location details',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.secondaryColor,
-            ),
-          ),
-          const SizedBox(height: 32),
-          
+                style: TextStyle(
+                  fontSize: 16,
+                  color: AppTheme.secondaryColor,
+                ),
+              ),
+              const SizedBox(height: 32),
+              
           // Country Dropdown
           DropdownButtonFormField<String>(
             value: _selectedCountry,
-            decoration: const InputDecoration(
+                decoration: const InputDecoration(
               labelText: 'Country *',
               prefixIcon: Icon(Icons.public),
             ),
@@ -1013,34 +1049,34 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
                 _selectedCountry = value!;
                 _selectedCountryName = _countries.firstWhere((c) => c['code'] == value)['name']!;
               });
-            },
-          ),
-          const SizedBox(height: 20),
-          
+                },
+              ),
+              const SizedBox(height: 20),
+              
           // Province/State
-          TextFormField(
+              TextFormField(
             controller: _provinceController,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
               labelText: 'Province/State *',
               hintText: 'Enter your province or state',
               prefixIcon: Icon(Icons.location_city),
             ),
-          ),
-          const SizedBox(height: 20),
-          
+              ),
+              const SizedBox(height: 20),
+              
           // City
-          TextFormField(
+              TextFormField(
             controller: _cityController,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
               labelText: 'City *',
               hintText: 'Enter your city',
               prefixIcon: Icon(Icons.location_on),
             ),
-          ),
-          const SizedBox(height: 20),
-          
+              ),
+              const SizedBox(height: 20),
+              
           // Address
           TextFormField(
             controller: _addressController,
@@ -1052,13 +1088,13 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
               prefixIcon: Icon(Icons.home),
             ),
           ),
-          const SizedBox(height: 20),
-          
+              const SizedBox(height: 20),
+              
           // Postal Code
-          TextFormField(
+              TextFormField(
             controller: _postalCodeController,
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
               labelText: 'Postal Code *',
               hintText: 'Enter your postal code',
               prefixIcon: Icon(Icons.markunread_mailbox),
@@ -1074,26 +1110,26 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppTheme.borderColor),
             ),
-            child: Column(
+          child: Column(
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
                     Checkbox(
                       value: _acceptTerms,
-                      onChanged: (value) {
-                        setState(() {
+                  onChanged: (value) {
+                    setState(() {
                           _acceptTerms = value ?? false;
-                        });
-                      },
-                      activeColor: AppTheme.primaryColor,
-                    ),
-                    const SizedBox(width: 8),
+                    });
+                  },
+                  activeColor: AppTheme.primaryColor,
+                            ),
+                            const SizedBox(width: 8),
                     const Expanded(
                       child: Text(
                         'I agree to the Terms of Service and Privacy Policy. I understand that my application will be reviewed by MedWave administrators before approval.',
                         style: TextStyle(
-                          fontSize: 14,
+                                fontSize: 14,
                           color: AppTheme.textColor,
                         ),
                       ),
@@ -1101,36 +1137,36 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
                   ],
                 ),
                 const SizedBox(height: 16),
-                Container(
+              Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
+                decoration: BoxDecoration(
                     color: AppTheme.infoColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
+                ),
+                child: Row(
+                  children: [
                       Icon(
                         Icons.info_outline,
                         color: AppTheme.infoColor,
                         size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
                           'Your application will be reviewed within 24-48 hours. You will receive an email notification once approved.',
-                          style: TextStyle(
+                        style: TextStyle(
                             fontSize: 12,
                             color: AppTheme.secondaryColor,
-                          ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+              ),
               ],
-            ),
-          ),
-        ],
+                ),
+              ),
+            ],
       ),
     );
   }
