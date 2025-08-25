@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import '../../models/patient.dart';
 
@@ -17,12 +18,23 @@ class PatientService {
     final userId = _auth.currentUser?.uid;
     if (userId == null) return Stream.value([]);
 
+    debugPrint('PatientService: Querying patients for practitioner $userId');
     return _patientsCollection
         .where('practitionerId', isEqualTo: userId)
-        .orderBy('lastUpdated', descending: true)
         .snapshots()
         .map((snapshot) {
-      print('Found ${snapshot.docs.length} patients for practitioner $userId');
+      debugPrint('Found ${snapshot.docs.length} patients for practitioner $userId');
+      if (snapshot.docs.isEmpty) {
+        debugPrint('No patients found. Checking all patients...');
+        // Let's query all patients to see what's there
+        _patientsCollection.limit(5).get().then((allSnapshot) {
+          debugPrint('Total patients in database (sample): ${allSnapshot.docs.length}');
+          for (final doc in allSnapshot.docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            debugPrint('Patient ${doc.id}: practitionerId=${data['practitionerId']}, surname=${data['surname']}');
+          }
+        });
+      }
       return snapshot.docs.map((doc) => Patient.fromFirestore(doc)).toList();
     });
   }

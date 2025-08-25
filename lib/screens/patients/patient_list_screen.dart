@@ -34,6 +34,10 @@ class _PatientListScreenState extends State<PatientListScreen>
       vsync: this,
     );
 
+    // Initialize patient loading
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PatientProvider>().loadPatients();
+    });
   }
 
   @override

@@ -50,9 +50,11 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _loadAnalyticsData() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       final days = int.parse(_selectedPeriod);
@@ -66,20 +68,22 @@ class _ReportsScreenState extends State<ReportsScreen>
         AnalyticsService.getSessionAnalytics(days),
       ]);
 
-      setState(() {
-        _dashboardAnalytics = results[0] as DashboardAnalytics;
-        _overallProgressData = results[1] as List<ProgressDataPoint>;
-        _patientStatistics = results[2] as PatientStatistics;
-        _appointmentAnalytics = results[3] as AppointmentAnalytics;
-        _sessionAnalytics = results[4] as SessionAnalytics;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      
       if (mounted) {
+        setState(() {
+          _dashboardAnalytics = results[0] as DashboardAnalytics;
+          _overallProgressData = results[1] as List<ProgressDataPoint>;
+          _patientStatistics = results[2] as PatientStatistics;
+          _appointmentAnalytics = results[3] as AppointmentAnalytics;
+          _sessionAnalytics = results[4] as SessionAnalytics;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load analytics: $e')),
         );
@@ -235,10 +239,12 @@ class _ReportsScreenState extends State<ReportsScreen>
         child: const Icon(Icons.tune, color: AppTheme.textColor, size: 20),
       ),
       onSelected: (value) {
-        setState(() {
-          _isLoading = true;
-          _selectedPeriod = value;
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = true;
+            _selectedPeriod = value;
+          });
+        }
         
         HapticFeedback.lightImpact();
         
@@ -386,9 +392,11 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Future<void> _handleExport(String exportType) async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       File? exportedFile;
@@ -448,9 +456,11 @@ class _ReportsScreenState extends State<ReportsScreen>
       }
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Widget _buildLoadingState() {

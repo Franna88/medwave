@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 class Patient {
   final String id;
@@ -558,6 +559,7 @@ class Patient {
 
   factory Patient.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    debugPrint('Patient.fromFirestore: Parsing patient ${doc.id} with data keys: ${data.keys.toList()}');
     
     return Patient(
       id: doc.id,

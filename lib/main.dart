@@ -63,21 +63,76 @@ class MedWaveApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
       ],
-      child: MaterialApp.router(
-        title: 'MedWave Provider',
-        theme: AppTheme.lightTheme,
-        routerConfig: _router,
-        debugShowCheckedModeBanner: false,
+      child: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          // Show loading screen while auth is initializing
+          if (authProvider.isLoading) {
+            return MaterialApp(
+              title: 'MedWave Provider',
+              theme: AppTheme.lightTheme,
+              debugShowCheckedModeBanner: false,
+              home: Scaffold(
+                backgroundColor: AppTheme.primaryColor,
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: const Icon(
+                          Icons.medical_services,
+                          size: 60,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      const Text(
+                        'MedWave',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return MaterialApp.router(
+            title: 'MedWave Provider',
+            theme: AppTheme.lightTheme,
+            routerConfig: _buildRouter(authProvider),
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }
 }
 
-final GoRouter _router = GoRouter(
+GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
   initialLocation: '/welcome',
   redirect: (context, state) {
-    final authProvider = context.read<AuthProvider>();
     final currentPath = state.uri.path;
+    
+    debugPrint('Router redirect: currentPath=$currentPath, isAuthenticated=${authProvider.isAuthenticated}, canAccessApp=${authProvider.canAccessApp}, isLoading=${authProvider.isLoading}');
+    
+    // Wait for auth to initialize
+    if (authProvider.isLoading) {
+      return null; // Stay on current route while loading
+    }
     
     // If user is not authenticated, allow access to public routes only
     if (!authProvider.isAuthenticated) {

@@ -46,18 +46,21 @@ class AuthProvider extends ChangeNotifier {
   
   AuthProvider() {
     if (_useFirebase) {
+      _isLoading = true; // Set loading while initializing
       _initializeAuthStateListener();
     }
   }
   
   void _initializeAuthStateListener() {
     _auth.authStateChanges().listen((User? user) async {
+      debugPrint('Auth state changed: user=${user?.email}, uid=${user?.uid}');
       _user = user;
       if (user != null) {
         await _loadUserProfile();
       } else {
         _userProfile = null;
       }
+      _isLoading = false; // Auth state has been determined
       notifyListeners();
     });
   }
@@ -197,9 +200,13 @@ class AuthProvider extends ChangeNotifier {
     if (_user == null) return;
     
     try {
+      debugPrint('Loading user profile for: ${_user!.uid}');
       final doc = await _firestore.collection('users').doc(_user!.uid).get();
       if (doc.exists) {
         _userProfile = UserProfile.fromFirestore(doc);
+        debugPrint('User profile loaded: ${_userProfile?.accountStatus}, canAccessApp: $canAccessApp');
+      } else {
+        debugPrint('User profile document does not exist');
       }
     } catch (e) {
       debugPrint('Error loading user profile: $e');
