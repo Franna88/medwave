@@ -22,6 +22,7 @@ class PatientService {
         .orderBy('lastUpdated', descending: true)
         .snapshots()
         .map((snapshot) {
+      print('Found ${snapshot.docs.length} patients for practitioner $userId');
       return snapshot.docs.map((doc) => Patient.fromFirestore(doc)).toList();
     });
   }
