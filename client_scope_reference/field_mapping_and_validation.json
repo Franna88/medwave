@@ -1,0 +1,329 @@
+{
+  "metadata": {
+    "title": "Field Mapping and Validation Requirements",
+    "description": "Complete mapping between Patient Intake Form and Wound Care Motivation Form, plus validation requirements for seamless data flow",
+    "purpose": "Ensure efficient data reuse and identify fields requiring manual clinical input"
+  },
+
+  "auto_populate_mapping": {
+    "description": "Fields that automatically populate from Patient Intake to Wound Care Motivation",
+    "implementation_priority": "HIGH",
+    "mappings": {
+      "patient_name": {
+        "intake_source": "patient_details.full_names",
+        "motivation_target": "header_basic_details.patient_name",
+        "validation": "non_empty_string",
+        "implementation_note": "Direct string mapping"
+      },
+      "medical_aid_scheme": {
+        "intake_source": "medical_aid_details.scheme_name", 
+        "motivation_target": "header_basic_details.medical_aid",
+        "validation": "non_empty_string",
+        "implementation_note": "Core overlap field - critical for insurance claims"
+      },
+      "membership_number": {
+        "intake_source": "medical_aid_details.membership_number",
+        "motivation_target": "header_basic_details.membership_number", 
+        "validation": "alphanumeric_format",
+        "implementation_note": "Required for all medical aid claims"
+      },
+      "referring_doctor": {
+        "intake_source": "referring_doctor.doctor_name",
+        "motivation_target": "header_basic_details.referring_doctor",
+        "validation": "optional_string",
+        "implementation_note": "May be empty - not all patients have referrals"
+      },
+      "patient_contact_info": {
+        "intake_source": ["patient_details.patient_cell", "patient_details.email"],
+        "motivation_target": "internal_use_only",
+        "validation": "phone_and_email_format",
+        "implementation_note": "For follow-up, not included in motivation letter"
+      }
+    }
+  },
+
+  "manual_clinical_input_required": {
+    "description": "Fields in Wound Care Motivation that require expert clinical assessment - cannot be auto-populated",
+    "implementation_priority": "CRITICAL",
+    "categories": {
+      "wound_specialist_info": {
+        "wound_specialist_name": {
+          "default": "Sr Rene Lessing 0168238",
+          "editable": true,
+          "reason": "Different practitioners may use the system",
+          "implementation_note": "Pre-fill but allow editing"
+        }
+      },
+      "clinical_codes": {
+        "icd_10_codes": {
+          "input_method": "ai_assisted_selection",
+          "source": "wound_history_analysis",
+          "validation": "sa_mit_database_lookup",
+          "implementation_note": "AI suggests based on wound description"
+        },
+        "treatment_codes": {
+          "input_method": "dropdown_selection",
+          "pre_populate": ["88002", "88031", "88045"],
+          "validation": "sa_treatment_code_format",
+          "implementation_note": "Standard SA wound care treatment codes"
+        }
+      },
+      "treatment_scheduling": {
+        "treatment_dates": {
+          "input_method": "calendar_picker",
+          "validation": "reasonable_date_range",
+          "implementation_note": "Nurse schedules based on patient needs and clinic availability"
+        }
+      },
+      "clinical_assessments": {
+        "wound_history": {
+          "input_method": "narrative_textarea",
+          "ai_integration": "icd10_code_suggestion_trigger",
+          "validation": "200_500_character_recommendation",
+          "implementation_note": "Critical field that drives AI code suggestions"
+        },
+        "wound_details": {
+          "wound_type": {
+            "input_method": "dropdown_with_conditional_sub_classifications",
+            "validation": "required_selection",
+            "implementation_note": "Triggers different classification systems"
+          },
+          "size_measurements": {
+            "input_method": "measurement_inputs_with_units",
+            "validation": "numeric_with_units",
+            "implementation_note": "Clinical measurement required"
+          },
+          "current_treatment": {
+            "input_method": "textarea",
+            "validation": "non_empty_clinical_description",
+            "implementation_note": "Current dressing/treatment regime"
+          },
+          "wound_location": {
+            "input_method": "interactive_body_diagram_plus_manual",
+            "validation": "location_specified",
+            "implementation_note": "Combine diagram with measurements"
+          }
+        },
+        "times_assessment": {
+          "tissue": {
+            "input_method": "multi_select_with_percentages",
+            "validation": "percentages_total_100",
+            "implementation_note": "Clinical wound bed assessment"
+          },
+          "inflammation_infection": {
+            "input_method": "yes_no_with_conditional_classification",
+            "validation": "conditional_field_completion",
+            "implementation_note": "IWII classification if infected"
+          },
+          "moisture": {
+            "input_method": "dropdown_with_exudate_type",
+            "validation": "both_level_and_type_selected",
+            "implementation_note": "Moisture level and exudate characteristics"
+          },
+          "edges": {
+            "input_method": "multi_select_checkboxes",
+            "validation": "at_least_one_selected",
+            "implementation_note": "Wound edge characteristics"
+          },
+          "surrounding_skin": {
+            "input_method": "multi_select_with_other_option",
+            "validation": "selection_or_other_specified",
+            "implementation_note": "Periwound skin condition"
+          }
+        },
+        "treatment_plan": {
+          "cleansing": {
+            "input_method": "dropdown_or_text",
+            "pre_populate": ["HOCL"],
+            "validation": "cleansing_agent_specified"
+          },
+          "skin_protectant": {
+            "input_method": "dropdown_or_text", 
+            "pre_populate": ["Cavilon spray"],
+            "validation": "protectant_specified"
+          },
+          "planned_treatments": {
+            "input_method": "categorized_multi_select",
+            "categories": ["foams", "hydrogels", "antimicrobials"],
+            "validation": "treatment_products_selected"
+          },
+          "tests_ordered": {
+            "input_method": "checklist_with_other",
+            "options": ["Hb", "ESR", "Serum Protein", "HbA1c", "CRP"],
+            "validation": "tests_selected_if_applicable"
+          },
+          "photobiomodulation": {
+            "input_method": "yes_no_with_research_links",
+            "conditional_content": "research_study_links",
+            "validation": "yes_no_selection"
+          }
+        }
+      }
+    }
+  },
+
+  "intake_medical_history_integration": {
+    "description": "How intake medical history can inform motivation form AI suggestions",
+    "implementation_approach": "suggestion_enhancement",
+    "mappings": {
+      "diabetes_flag": {
+        "intake_source": "medical_history.illness_conditions.diabetes",
+        "motivation_enhancement": "suggest_diabetic_foot_codes",
+        "icd10_suggestions": ["E11.621", "E10.9", "L97.*"],
+        "implementation_note": "If diabetes=yes in intake, prioritize diabetic wound codes"
+      },
+      "cardiovascular_conditions": {
+        "intake_source": "medical_history.illness_conditions.heart",
+        "motivation_enhancement": "suggest_vascular_related_codes",
+        "icd10_suggestions": ["I73.9", "I70.2", "I87.2"],
+        "implementation_note": "Heart conditions suggest vascular wound etiology"
+      },
+      "current_medications": {
+        "intake_source": "medical_history.current_medicines",
+        "motivation_enhancement": "parse_for_relevant_medications",
+        "ai_analysis": "identify_anticoagulants_immunosuppressants_steroids",
+        "implementation_note": "Medication list can suggest wound healing factors"
+      },
+      "allergies": {
+        "intake_source": "medical_history.allergies",
+        "motivation_enhancement": "treatment_contraindication_alerts", 
+        "implementation_note": "Alert if planned treatments contain known allergens"
+      }
+    }
+  },
+
+  "validation_requirements": {
+    "intake_form_validations": {
+      "required_fields": [
+        "patient_details.surname",
+        "patient_details.full_names", 
+        "patient_details.id_number",
+        "patient_details.date_of_birth",
+        "patient_details.patient_cell",
+        "responsible_person.surname",
+        "responsible_person.full_names",
+        "responsible_person.relation_to_patient",
+        "medical_aid_details.scheme_name",
+        "medical_aid_details.membership_number",
+        "account_responsibility.signature",
+        "wound_photography_consent.patient_signature"
+      ],
+      "format_validations": {
+        "id_number": {
+          "pattern": "^\\d{13}$",
+          "description": "SA ID format - exactly 13 digits"
+        },
+        "phone_numbers": {
+          "pattern": "^[+]?[0-9\\s\\-\\(\\)]{10,15}$",
+          "description": "International phone format"
+        },
+        "email": {
+          "pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+          "description": "Valid email format"
+        }
+      },
+      "conditional_validations": {
+        "medical_history_specify_fields": {
+          "condition": "illness_condition_yes_selected",
+          "required": "specify_textarea_completion",
+          "applies_to": ["cancer", "arthritis", "auto_immune"]
+        },
+        "training_consent_mutual_exclusivity": {
+          "condition": "one_option_selected",
+          "validation": "yes_or_no_but_not_both"
+        }
+      }
+    },
+    
+    "motivation_form_validations": {
+      "required_fields": [
+        "header_basic_details.patient_name",
+        "header_basic_details.medical_aid",
+        "header_basic_details.membership_number",
+        "header_basic_details.icd_10_codes",
+        "header_basic_details.treatment_codes",
+        "treatment_dates.selected_dates",
+        "wound_history.description",
+        "wound_details.wound_type", 
+        "wound_details.current_treatment",
+        "times_assessment.tissue",
+        "times_assessment.inflammation_infection",
+        "times_assessment.moisture",
+        "times_assessment.edges",
+        "times_assessment.surrounding_skin",
+        "closing_submission.signature"
+      ],
+      "clinical_validations": {
+        "times_tissue_percentages": {
+          "validation": "sum_equals_100_percent",
+          "error_message": "Tissue percentages must total 100%"
+        },
+        "wound_measurements": {
+          "validation": "positive_numeric_values",
+          "error_message": "Measurements must be positive numbers"
+        },
+        "icd10_codes": {
+          "validation": "valid_sa_mit_codes",
+          "error_message": "Invalid ICD-10 code for South African use"
+        },
+        "treatment_dates": {
+          "validation": "at_least_one_date_selected",
+          "error_message": "At least one treatment date must be selected"
+        }
+      }
+    }
+  },
+
+  "data_flow_implementation": {
+    "intake_completion_triggers": {
+      "on_intake_submit": [
+        "validate_all_required_fields",
+        "store_patient_data_with_intake_completed_flag",
+        "generate_pdf_copy_for_records",
+        "prepare_auto_populate_data_for_motivation_form"
+      ]
+    },
+    "motivation_form_initialization": {
+      "on_motivation_start": [
+        "check_patient_has_completed_intake",
+        "auto_populate_overlapping_fields",
+        "pre_fill_practitioner_signature",
+        "initialize_ai_code_suggestion_service"
+      ]
+    },
+    "cross_form_data_sync": {
+      "if_patient_data_updated": [
+        "update_auto_populate_fields_in_motivation",
+        "maintain_data_consistency",
+        "audit_trail_of_changes"
+      ]
+    }
+  },
+
+  "implementation_notes": {
+    "database_schema_considerations": [
+      "Store intake and motivation as separate but linked documents",
+      "Create PatientIntake and WoundCareMotivation models",
+      "Link via patient_id and maintain referential integrity",
+      "Store auto-populate mappings in configuration"
+    ],
+    "ui_ux_considerations": [
+      "Show progress indicator across both forms",
+      "Indicate which fields are auto-populated vs manual",
+      "Provide clear visual distinction for required clinical input",
+      "Show intake completion status in motivation form header"
+    ],
+    "performance_optimizations": [
+      "Cache auto-populate data locally",
+      "Lazy load motivation form sections",
+      "Optimize AI code suggestions with debouncing",
+      "Preload common dropdown options"
+    ],
+    "error_handling": [
+      "Graceful fallback if auto-populate fails",
+      "Validation error highlighting with specific messages",
+      "Save draft functionality to prevent data loss",
+      "Offline capability for critical fields"
+    ]
+  }
+}

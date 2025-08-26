@@ -1,0 +1,693 @@
+{
+  "metadata": {
+    "title": "Wound Care Motivation Form - Complete Structure",
+    "description": "Letter to insurance company for wound care authorization - comprehensive breakdown for MedWave app implementation",
+    "purpose": "Insurance submission form for nurses to request wound care coverage",
+    "target_users": "Wound care nurses in clinical settings",
+    "ui_requirements": [
+      "Mobile-optimized for clinical use",
+      "Collapsible accordion sections",
+      "Interactive elements (dropdowns, date pickers, image uploads)",
+      "Conditional logic for wound classifications",
+      "Progress tracking for multi-section completion",
+      "Preview/generate PDF or Word export",
+      "Data privacy compliance (HIPAA-like standards)"
+    ],
+    "data_sources": [
+      "Auto-populate from patient intake form",
+      "Manual nurse input for clinical assessments", 
+      "AI-assisted ICD-10 code suggestions",
+      "Integration with wound measurement tools"
+    ]
+  },
+
+  "form_sections": {
+    "1_header_basic_details": {
+      "implementation_priority": "HIGH",
+      "ui_component": "HeaderDetailsCard",
+      "auto_populate_source": "patient_intake_form",
+      "fields": {
+        "form_title": {
+          "value": "Clinical Motivation for Wound Care",
+          "type": "static_text"
+        },
+        "date": {
+          "type": "date_picker",
+          "default": "auto_current_date",
+          "editable": true,
+          "required": true
+        },
+        "patient_name": {
+          "type": "text_input",
+          "required": true,
+          "auto_populate_from": "patient_intake.full_names",
+          "implementation_note": "Link to patient intake form data"
+        },
+        "medical_aid": {
+          "type": "dropdown_or_text",
+          "required": true,
+          "auto_populate_from": "patient_intake.medical_aid.scheme_name",
+          "pre_populate_options": "common_sa_medical_aids",
+          "implementation_note": "Maintain list of common SA medical aid providers"
+        },
+        "membership_number": {
+          "type": "text_input",
+          "required": true,
+          "validation": "alphanumeric_format",
+          "auto_populate_from": "patient_intake.medical_aid.membership_number"
+        },
+        "referring_doctor": {
+          "type": "text_input",
+          "required": false,
+          "auto_populate_from": "patient_intake.referring_doctor.name"
+        },
+        "wound_specialist": {
+          "type": "text_input",
+          "default": "Sr Rene Lessing 0168238",
+          "editable": true,
+          "required": true,
+          "implementation_note": "Pre-fill but allow editing for different practitioners"
+        },
+        "icd_10_codes": {
+          "type": "multi_select_with_ai_suggestion",
+          "required": true,
+          "ai_integration": {
+            "trigger": "wound_history_analysis",
+            "source": "section_3_wound_history.description",
+            "display": "clickable_chips_or_list",
+            "fallback_message": "No ICD-10 codes auto-detected; please enter manually"
+          },
+          "implementation_note": "Key feature - AI suggests codes based on wound description"
+        },
+        "treatment_codes": {
+          "type": "multi_select_dropdown",
+          "required": true,
+          "pre_populate_examples": ["88002", "88031", "88045"],
+          "implementation_note": "Standard SA treatment codes for wound care"
+        }
+      }
+    },
+
+    "2_treatment_dates": {
+      "implementation_priority": "HIGH",
+      "ui_component": "CalendarIntegrationSection", 
+      "fields": {
+        "calendar_picker": {
+          "type": "multi_date_picker",
+          "display": "calendar_view",
+          "functionality": "select_multiple_dates",
+          "date_range_limit": "past_6_months_to_future_3_months",
+          "implementation_note": "Use calendar widget for multiple date selection"
+        },
+        "selected_dates_display": {
+          "type": "dynamic_table",
+          "columns": ["Date", "Notes"],
+          "grouping": "by_month",
+          "example_display": {
+            "June": [
+              {"date": "2024-06-15", "notes": "Initial assessment"},
+              {"date": "2024-06-22", "notes": "Follow-up"}
+            ],
+            "July": [
+              {"date": "2024-07-01", "notes": "Treatment"}
+            ]
+          }
+        },
+        "add_date_button": {
+          "type": "action_button",
+          "functionality": "open_calendar_picker",
+          "validation": "reasonable_date_range"
+        }
+      }
+    },
+
+    "3_wound_history": {
+      "implementation_priority": "CRITICAL",
+      "ui_component": "AIIntegratedTextSection",
+      "ai_integration_key": true,
+      "fields": {
+        "description": {
+          "type": "textarea",
+          "required": true,
+          "character_limit": "200-500_chars_suggested",
+          "placeholder": "e.g., Type 1 diabetic patient with a pressure injury stage 2 on her left heel after a left hip replacement",
+          "implementation_note": "This is the KEY field that triggers AI ICD-10 code suggestions"
+        },
+        "ai_suggest_button": {
+          "type": "action_button",
+          "label": "Suggest ICD-10 Codes",
+          "trigger": "on_blur_or_manual_click",
+          "ai_processing": {
+            "analyze_text_for": [
+              "wound_type_keywords",
+              "anatomical_location",
+              "causative_factors",
+              "comorbidities",
+              "severity_indicators"
+            ],
+            "api_integration_options": [
+              "WHO ICD-10 API",
+              "AWS Comprehend Medical",
+              "Google Cloud Healthcare API",
+              "Local NLP with SA ICD-10 MIT database"
+            ],
+            "output_format": {
+              "suggested_codes": [
+                {
+                  "code": "L89.612",
+                  "description": "Pressure ulcer of left heel, stage 2",
+                  "confidence": "high",
+                  "explanation": "Based on 'pressure injury stage 2' and 'left heel'"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "ai_implementation_requirements": {
+        "data_sources": [
+          "SA ICD-10 Master Industry Table (2021)",
+          "WHO ICD-10 official database",
+          "Local wound care terminology mapping"
+        ],
+        "privacy_compliance": [
+          "Process text anonymously where possible",
+          "On-device processing preferred",
+          "POPIA/HIPAA compliant data handling"
+        ],
+        "accuracy_measures": [
+          "Cross-reference with verified ICD-10 database",
+          "Avoid AI hallucinations",
+          "Provide multiple options when ambiguous",
+          "Allow manual override and editing"
+        ]
+      }
+    },
+
+    "4_wound_details": {
+      "implementation_priority": "HIGH",
+      "ui_component": "InteractiveWoundAssessmentSection",
+      "conditional_logic": "show_classification_based_on_wound_type",
+      "fields": {
+        "wound_type": {
+          "type": "dropdown_with_conditional_sub_fields",
+          "required": true,
+          "options": {
+            "skin_tear": {
+              "label": "Skin Tear",
+              "sub_classification": "ISTAP_classification_dropdown"
+            },
+            "venous_leg_ulcer": {
+              "label": "Venous Leg Ulcer", 
+              "sub_classification": "CEAP_classification_dropdown"
+            },
+            "arterial_leg_ulcer": {
+              "label": "Arterial Leg Ulcer",
+              "sub_classification": "CEAP_classification_dropdown"
+            },
+            "mixed_ulcer": {
+              "label": "Mixed Ulcer",
+              "sub_classification": "CEAP_classification_dropdown"
+            },
+            "pressure_injury": {
+              "label": "Pressure Injury",
+              "sub_classification": "NPUAP_classification_dropdown"
+            },
+            "burns": {
+              "label": "Burns",
+              "sub_fields": [
+                {
+                  "name": "tbsa_percentage",
+                  "type": "number_input",
+                  "label": "TBSA %"
+                },
+                {
+                  "name": "depth",
+                  "type": "dropdown",
+                  "options": ["Partial Thickness", "Deep Partial Thickness", "Full Thickness"]
+                }
+              ]
+            },
+            "diabetic_foot": {
+              "label": "Diabetic Foot",
+              "sub_classification": "Texas_or_Wagner_classification_dropdown"
+            },
+            "surgical_site_infection": {
+              "label": "Surgical Site Infection", 
+              "sub_classification": "SANDY_grading_dropdown"
+            },
+            "other": {
+              "label": "Other",
+              "sub_fields": [
+                {
+                  "name": "specify_other",
+                  "type": "textarea",
+                  "required": true
+                }
+              ]
+            }
+          }
+        },
+        "size": {
+          "type": "measurement_input_with_units",
+          "placeholder": "e.g., 1 x 1.9 pre debridement",
+          "units_dropdown": ["cm", "mm"],
+          "additional_options": [
+            "pre_post_debridement_toggle"
+          ]
+        },
+        "current_treatment": {
+          "type": "textarea",
+          "placeholder": "e.g., Allevyn foam dressings with intrasite gel",
+          "required": true
+        },
+        "wound_location": {
+          "type": "interactive_body_diagram_with_measurements",
+          "implementation_options": {
+            "interactive_diagram": {
+              "type": "svg_body_diagram",
+              "views": ["front", "back"],
+              "functionality": "tap_click_to_mark_location",
+              "auto_generate_description": "e.g., Left heel"
+            },
+            "manual_measurements": {
+              "length": {
+                "type": "number_input",
+                "unit": "cm"
+              },
+              "width": {
+                "type": "number_input", 
+                "unit": "cm"
+              },
+              "depth": {
+                "type": "number_input",
+                "unit": "cm",
+                "label": "Depth (manual input)"
+              }
+            },
+            "photo_integration": {
+              "type": "camera_upload_button",
+              "ai_measurement": "integrate_eKare_like_tool_if_feasible",
+              "fallback": "manual_entry",
+              "implementation_note": "Phone camera auto-calculate circumference/area via AI - advanced feature"
+            }
+          }
+        }
+      }
+    },
+
+    "5_times_assessment": {
+      "implementation_priority": "HIGH",
+      "ui_component": "TimesAssessmentTable",
+      "format": "table_or_card_layout",
+      "implementation_note": "Critical clinical assessment framework",
+      "fields": {
+        "tissue": {
+          "type": "multi_select_with_percentages",
+          "options": {
+            "red": {
+              "label": "Red",
+              "percentage_input": true
+            },
+            "yellow": {
+              "label": "Yellow", 
+              "percentage_input": true
+            },
+            "black": {
+              "label": "Black",
+              "percentage_input": true
+            },
+            "green": {
+              "label": "Green",
+              "percentage_input": true
+            },
+            "mixed": {
+              "label": "Mixed",
+              "percentage_input": true
+            }
+          },
+          "validation": "percentages_total_100",
+          "additional_options": ["Friable", "Hypergranulated"]
+        },
+        "inflammation_infection": {
+          "type": "yes_no_with_conditional",
+          "conditional_field": {
+            "type": "dropdown",
+            "label": "IWII Infection Continuum Classification",
+            "show_when": "yes_selected"
+          }
+        },
+        "moisture": {
+          "type": "dropdown_with_sub_category",
+          "levels": ["Low", "Moderate", "High"],
+          "exudate_types": {
+            "type": "dropdown",
+            "options": ["Serous", "Serosanginous", "Purulent", "Sanguineous", "Hemopurulent"]
+          }
+        },
+        "edges": {
+          "type": "multi_select",
+          "options": ["Advancing", "Non-advancing", "Rolled", "Necrotic", "Dry", "Epibole"]
+        },
+        "surrounding_skin": {
+          "type": "multi_select_with_other",
+          "options": ["Normal", "Inflamed", "Eczema", "Dry and Scaly", "Oedematous"],
+          "other_option": {
+            "type": "text_input",
+            "label": "Other (specify)"
+          }
+        }
+      }
+    },
+
+    "6_treatment_plan": {
+      "implementation_priority": "HIGH", 
+      "ui_component": "TreatmentPlanSection",
+      "fields": {
+        "cleansing": {
+          "type": "dropdown_or_text",
+          "pre_populate_options": ["HOCL"],
+          "implementation_note": "Pre-populate common cleansing options"
+        },
+        "skin_protectant": {
+          "type": "dropdown_or_text",
+          "pre_populate_options": ["Cavilon spray"],
+          "implementation_note": "Pre-populate common skin protectants"
+        },
+        "treatment_planned": {
+          "type": "categorized_multi_select",
+          "categories": {
+            "foams": [],
+            "hydrogels": [],
+            "antimicrobials": []
+          },
+          "data_source": "WHASA_poster_or_similar",
+          "implementation_note": "Fetch/update from external list or static DB of SA-available products"
+        },
+        "tests": {
+          "type": "multi_select_checklist",
+          "options": ["Hb", "ESR", "Serum Protein", "HbA1c", "CRP"],
+          "other_option": {
+            "type": "text_input",
+            "label": "Other (specify)"
+          }
+        },
+        "photobiomodulation_therapy": {
+          "type": "yes_no_with_links",
+          "conditional_content": {
+            "show_when": "yes_selected",
+            "type": "hyperlink_field",
+            "pre_populate": "links_to_RED_light_studies",
+            "implementation_note": "Embed buttons to view research studies"
+          }
+        }
+      }
+    },
+
+    "7_closing_submission": {
+      "implementation_priority": "MEDIUM",
+      "ui_component": "ClosingSection",
+      "fields": {
+        "authorization_request": {
+          "type": "static_text",
+          "content": "Kindly authorise the treatment for IN LIEU OF HOSPITALISATION.",
+          "style": "emphasis_text"
+        },
+        "signature": {
+          "type": "digital_signature_field",
+          "default": "Sr Rene Black (Formerly Lessing)",
+          "editable": true,
+          "implementation_note": "Allow practitioner customization"
+        },
+        "generate_report": {
+          "type": "action_button",
+          "functionality": "preview_export_pdf_word",
+          "template": "mirror_example_document",
+          "include": ["tables", "diagrams", "images"]
+        }
+      }
+    }
+  },
+
+  "additional_features": {
+    "save_draft": {
+      "implementation": "auto_save_and_manual_save",
+      "storage": "local_and_cloud_backup"
+    },
+    "validation": {
+      "required_fields": "highlight_before_submission",
+      "auto_calculations": "totals_where_applicable_eg_wound_size",
+      "format_checks": "dates_numbers_percentages"
+    },
+    "attachments": {
+      "upload_section": ["photos", "test_results", "other_documents"],
+      "file_types": ["jpg", "png", "pdf", "doc"]
+    },
+    "integration": {
+      "insurance_portals": "api_hooks_if_available",
+      "direct_submission": "email_or_portal_export"
+    }
+  },
+
+  "auto_populate_mapping": {
+    "from_patient_intake": {
+      "patient_name": "patient_intake.full_names",
+      "medical_aid": "patient_intake.medical_aid.scheme_name", 
+      "membership_number": "patient_intake.medical_aid.membership_number",
+      "referring_doctor": "patient_intake.referring_doctor.name"
+    },
+    "implementation_note": "Create data mapper service to auto-populate overlapping fields"
+  },
+
+  "implementation_notes": {
+    "critical_ai_features": [
+      "ICD-10 code suggestion from wound description",
+      "Integration with SA ICD-10 MIT database",
+      "Validation against WHO official codes"
+    ],
+    "mobile_optimization": [
+      "Touch-friendly interface for clinical use",
+      "Offline capability for areas with poor connectivity", 
+      "Quick data entry workflows",
+      "Photo capture and upload functionality"
+    ],
+    "data_compliance": [
+      "POPIA compliance for patient data",
+      "Secure storage of signatures and photos",
+      "Audit trail for form submissions",
+      "Data encryption in transit and at rest"
+    ],
+    "integration_priorities": [
+      "Patient intake form auto-population",
+      "Wound measurement tools",
+      "Photo capture and management",
+      "Insurance portal submissions"
+    ]
+  },
+
+  "ai_chatbot_specification": {
+    "description": "AI-powered conversational report generation for clinical motivation letters",
+    "implementation_priority": "CRITICAL",
+    "purpose": "Generate insurance-ready clinical motivation reports through guided conversation",
+    
+    "system_prompt": {
+      "role_definition": "You are an AI chatbot designed to assist wound care practitioners in South Africa with generating clinical motivation reports for medical aid claims.",
+      "primary_goal": "Gather patient-specific information through a conversational interview of 5-10 targeted questions, then use that data to compile a detailed report in the exact format of the provided example document.",
+      "practitioner_customization": "Make sure that you capture the nurses name to put into the Report and you don't want to say Sr. Rene Black, because other nurses might use this AI chat.",
+      "technical_requirements": [
+        "Include relevant ICD-10 codes (primary, secondary, and external cause where applicable)",
+        "Extract codes from South African ICD-10 Master Industry Table (MIT, 2021 version)",
+        "Use Excel file with columns like ICD10_Code, WHO_Full_Desc, Valid_ICD10_ClinicalUse, etc.",
+        "Include treatment codes (e.g., 88002 for wound debridement)",
+        "Check for Prescribed Minimum Benefits (PMB) eligibility using 2022 PMB ICD-10 Coded List",
+        "Respond in Motivation Letter Formatting"
+      ]
+    },
+
+    "interaction_guidelines": {
+      "greeting_and_purpose": {
+        "opening_message": "Hello, I'm here to help you create a clinical motivation report for wound care. I'll ask 5-10 questions to gather the necessary details, then generate the report.",
+        "conversation_style": "One question at a time, sequentially, based on practitioner responses",
+        "adaptability": "Adapt follow-up questions if needed for clarification (e.g., if response is vague, probe gently)",
+        "efficiency": "Limit to 5-10 questions total to keep it efficient"
+      },
+
+      "priority_question_sequence": {
+        "1_patient_demographics": {
+          "focus": "Patient demographics and basics",
+          "questions": ["name", "medical aid", "membership no.", "referring doctor"],
+          "implementation_note": "Auto-populate from intake if available"
+        },
+        "2_wound_history_and_type": {
+          "focus": "Wound history and type", 
+          "example_question": "What is the cause of the wound?",
+          "purpose": "Determine primary ICD-10 code",
+          "ai_processing": "Trigger code suggestion from wound description"
+        },
+        "3_wound_occurrence": {
+          "focus": "How the wound occurred",
+          "example_question": "How did the patient get this wound? For example, did they fall down stairs, off a bike, or is it due to a chronic condition like diabetes?",
+          "purpose": "Determine external cause code from V01-Y98",
+          "note": "Note if not applicable, e.g., for venous leg ulcers without trauma"
+        },
+        "4_comorbidities": {
+          "focus": "Co-morbidities",
+          "example_question": "What co-morbidities does the patient have, such as diabetes, hypertension, or vascular disease?",
+          "purpose": "Identify secondary codes and PMB eligibility"
+        },
+        "5_infection_status": {
+          "focus": "Infection status",
+          "example_question": "Does the patient have an infection? If yes, describe the type and any test results.",
+          "purpose": "Additional coding and treatment planning"
+        },
+        "6_tests_undertaken": {
+          "focus": "Tests undertaken",
+          "example_question": "What tests were performed, such as HbA1c, CRP, ESR, Serum Protein, ABPI, SWMT, or others? Provide results if available.",
+          "purpose": "Clinical evidence and coding support"
+        },
+        "7_wound_details": {
+          "focus": "Wound details",
+          "components": ["type/classification", "size", "location", "TIMES assessment: Tissue, Inflammation/Infection, Moisture, Edges, Surrounding skin"],
+          "purpose": "Detailed clinical assessment for report"
+        },
+        "8_treatment_details": {
+          "focus": "Treatment details",
+          "components": ["dates", "cleansing", "skin protectant", "planned treatments/products", "photobiomodulation therapy"],
+          "purpose": "Treatment planning and justification"
+        },
+        "9_additional_information": {
+          "focus": "Any other relevant info",
+          "example_question": "Is this in lieu of hospitalization? Any additional notes?",
+          "purpose": "Complete clinical picture"
+        }
+      },
+
+      "conversation_management": {
+        "approach": "Do not ask all questions at once; make it a natural conversation",
+        "completion_confirmation": "After gathering sufficient info (aim for after 5-10 questions), confirm: 'Based on what you've shared, I'll now generate the report. Is there anything else to add?'",
+        "missing_information": "If information is missing for key sections (e.g., no cause provided), politely ask a follow-up within the question limit"
+      }
+    },
+
+    "code_extraction_process": {
+      "icd10_code_processing": {
+        "database_structure": "MIT Excel structure (columns: A-Number, B-Chapter_No, C-Chapter_Desc, D-Group_Code, E-Group_Desc, F-ICD10_3_Code, G-ICD10_3_Code_Desc, H-ICD10_Code, I-WHO_Full_Desc, J-Valid_ICD10_ClinicalUse (Y/N), K-Valid_ICD10_Primary (Y/N), etc.)",
+        "search_methodology": "Use keyword matching on column I (WHO_Full_Desc) for wound cause/description",
+        "example_process": "Search 'pressure ulcer stage 2' → L89.02 if valid for clinical use",
+        "code_selection": {
+          "primary_code": "Select primary code as the main condition (e.g., L89.02 for pressure injury)",
+          "secondary_codes": "Add secondary codes for co-morbidities (e.g., E11.9 for diabetes)",
+          "external_cause": "If external cause applies, search Chapter XX (V01-Y98) for matches (e.g., 'fall down stairs' → W10.9)"
+        },
+        "validation": "Ensure codes are valid (J=Y, K=Y for primary)"
+      },
+
+      "pmb_checking": {
+        "source": "2022 PMB Coded List (Excel with columns like code, description, PMB status)",
+        "process": "If the primary/secondary code matches a PMB condition (e.g., E11.621 for diabetic foot ulcer is PMB-eligible under diabetes complications)",
+        "reporting": "Note it in the report (e.g., mark as PMB condition)"
+      },
+
+      "treatment_codes": {
+        "standard_codes": "Use standard SA codes like 88002 (debridement), 88031 (dressing), 88045 (advanced wound care)",
+        "selection_basis": "Based on described treatments",
+        "fallback": "If no exact match, choose the closest valid code and explain in the report (e.g., 'Closest match: L89.02 based on description')"
+      }
+    },
+
+    "report_generation_format": {
+      "output_requirements": "Once info is gathered, output the report in the exact format below, filling in all fields with the collected data",
+      "formatting_guidelines": [
+        "Use dropdown-style descriptions where applicable (e.g., for wound type: 'Pressure Injury (Classification system NPUAP)')",
+        "Include a human body diagram description if location is provided (e.g., 'Left heel marked on diagram')",
+        "End with the authorization request and signature"
+      ],
+      
+      "report_template": {
+        "header": "Clinical Motivation for Wound Care                                                          DATE: [Current Date]",
+        "patient_section": {
+          "patient_name": "[Filled]",
+          "medical_aid": "[Filled]", 
+          "membership_no": "[Filled]",
+          "referring_doctor": "[Filled]",
+          "wound_specialist": "[Nurse Name] [Practice Number]",
+          "icd_10_codes": "[Primary, Secondary, External if applicable; note if PMB]",
+          "treatment_codes": "[e.g., 88002, 88031, 88045]"
+        },
+        "treatment_dates": "[List with months, e.g., June: dates; July: dates]",
+        "case_manager_address": "Dear Case Manager",
+        "wound_history_section": {
+          "description": "[Description, e.g., Type 1 diabetic patient with a pressure injury stage 2 on her left heel after a left hip replacement.]"
+        },
+        "wound_details_section": {
+          "wound_type": "[e.g., Pressure Injury (Classification system NPUAP)]",
+          "size": "[e.g., 1 x 1.9 pre debridement]", 
+          "treatment": "[e.g., Allevyn foam dressings with intrasite gel.]",
+          "wound_location": "[Description with diagram note, e.g., Left heel; measurements: ...]"
+        },
+        "times_assessment_section": {
+          "tissue": "[e.g., Red, Yellow, etc.]",
+          "inflammation_or_infection": "[Yes/No; description]",
+          "moisture": "[Low/Moderate/High; exudate type]",
+          "edges": "[Advancing/Non-advancing; other descriptors]",
+          "surrounding_skin": "[Normal/Inflamed/etc.]"
+        },
+        "treatment_plan_section": {
+          "cleansing": "[e.g., HOCL]",
+          "skin_protectant": "[e.g., Cavilon spray]", 
+          "treatment_planned": "[Products/categories]",
+          "tests": "[e.g., Hb, ESR, etc.; results]",
+          "photobiomodulation_therapy": "[Yes/No; link to studies if Yes]"
+        },
+        "authorization_request": "Kindly authorise the treatment for IN LIEU OF HOSPITALISATION.",
+        "signature": "[Nurse Name] (Signature)"
+      },
+
+      "pmb_notation": "If PMB applies, add a note: 'This condition qualifies as a PMB under [relevant code/description].'"
+    },
+
+    "implementation_requirements": {
+      "technical_integration": [
+        "Integrate with SA ICD-10 MIT 2021 database",
+        "Connect to PMB 2022 coded list",
+        "Natural language processing for keyword extraction",
+        "Code validation against SA standards",
+        "Report formatting engine"
+      ],
+      "user_experience": [
+        "Conversational UI with chat interface",
+        "Progressive question flow",
+        "Real-time code suggestions",
+        "Report preview before finalization",
+        "Edit capability after generation"
+      ],
+      "data_handling": [
+        "Secure patient information processing",
+        "POPIA compliance",
+        "Audit trail of generated reports",
+        "Integration with existing patient records"
+      ]
+    },
+
+    "quality_assurance": {
+      "code_accuracy": [
+        "Cross-reference with verified ICD-10 database",
+        "Validate against SA MIT requirements",
+        "Check PMB eligibility accuracy",
+        "Ensure external cause code compliance"
+      ],
+      "report_quality": [
+        "Proper medical terminology",
+        "Complete clinical information",
+        "Insurance-ready formatting",
+        "Professional presentation"
+      ],
+      "error_handling": [
+        "Graceful handling of ambiguous responses",
+        "Fallback to manual code entry",
+        "Validation warnings for incomplete information",
+        "Option to restart conversation if needed"
+      ]
+    }
+  }
+}

@@ -1,0 +1,364 @@
+{
+  "metadata": {
+    "title": "ICD-10 Integration Reference for South Africa",
+    "description": "Complete guide for implementing AI-driven ICD-10 code selection using South African Master Industry Table",
+    "implementation_priority": "CRITICAL",
+    "compliance_requirements": [
+      "National Department of Health (NDoH) standards",
+      "Council for Medical Schemes (CMS) PMB requirements",
+      "South African Coding Standards (SACS)",
+      "WHO ICD-10 base standards with SA additions"
+    ]
+  },
+
+  "data_sources": {
+    "primary_source": {
+      "name": "SA ICD-10 Master Industry Table (MIT)",
+      "version": "January 2014 with WHO Corrigenda updates",
+      "url": "https://www.health.gov.za/icd-10-master-industry-table/",
+      "description": "Official SA reference for ICD-10 codes",
+      "implementation_note": "Download and integrate locally for AI processing"
+    },
+    "updated_source": {
+      "name": "ICD-10 MIT 2021 Database",
+      "url": "https://docs.google.com/spreadsheets/d/1b92iMrq8kBFlR6bt8V9-DnZ6iuQl6bNm1LjfFiMrOog/edit?usp=sharing",
+      "description": "Updated version with COVID-19 codes and recent additions",
+      "implementation_note": "Use this as primary data source for AI training"
+    },
+    "pmb_source": {
+      "name": "2022 PMB ICD-10 Coded List", 
+      "url": "https://www.medicalschemes.co.za/resources/pmb-coded-list/",
+      "description": "Prescribed Minimum Benefits codes for medical aid claims",
+      "implementation_note": "Critical for identifying guaranteed coverage codes"
+    }
+  },
+
+  "database_structure": {
+    "mit_2021_columns": {
+      "A": "Number",
+      "B": "Chapter_No", 
+      "C": "Chapter_Desc",
+      "D": "Group_Code",
+      "E": "Group_Desc", 
+      "F": "ICD10_3_Code",
+      "G": "ICD10_3_Code_Desc",
+      "H": "ICD10_Code",
+      "I": "WHO_Full_Desc",
+      "J": "Valid_ICD10_ClinicalUse",
+      "K": "Valid_ICD10_Primary",
+      "L": "Additional metadata columns"
+    },
+    "key_fields_for_ai": {
+      "search_field": "I (WHO_Full_Desc)",
+      "code_field": "H (ICD10_Code)", 
+      "validation_fields": ["J (Valid_ICD10_ClinicalUse)", "K (Valid_ICD10_Primary)"],
+      "chapter_field": "C (Chapter_Desc)"
+    }
+  },
+
+  "chapter_breakdown_for_wound_care": {
+    "most_relevant_chapters": {
+      "XII": {
+        "code_range": "L00-L99",
+        "title": "Diseases of the skin and subcutaneous tissue", 
+        "wound_relevance": "HIGH - Primary wound codes",
+        "key_codes": [
+          {
+            "code": "L89.612",
+            "description": "Pressure ulcer of left heel, stage 2",
+            "usage": "Pressure injuries"
+          },
+          {
+            "code": "L97.4",
+            "description": "Non-pressure chronic ulcer of heel and midfoot", 
+            "usage": "Diabetic foot ulcers"
+          },
+          {
+            "code": "L08.9",
+            "description": "Local infection of skin and subcutaneous tissue, unspecified",
+            "usage": "Wound infections"
+          }
+        ]
+      },
+      "IV": {
+        "code_range": "E00-E90",
+        "title": "Endocrine, nutritional and metabolic diseases",
+        "wound_relevance": "HIGH - Diabetes complications",
+        "key_codes": [
+          {
+            "code": "E11.621",
+            "description": "Type 2 diabetes mellitus with foot ulcer",
+            "usage": "Diabetic wound complications", 
+            "pmb_status": "Yes"
+          },
+          {
+            "code": "E10.9",
+            "description": "Type 1 diabetes mellitus without complications",
+            "usage": "Diabetes as comorbidity"
+          }
+        ]
+      },
+      "XIX": {
+        "code_range": "S00-T98",
+        "title": "Injury, poisoning and certain other consequences of external causes",
+        "wound_relevance": "MEDIUM - Trauma wounds",
+        "key_codes": [
+          {
+            "code": "T79.3",
+            "description": "Post-traumatic wound infection",
+            "usage": "Infected trauma wounds"
+          }
+        ]
+      },
+      "XX": {
+        "code_range": "V01-Y98", 
+        "title": "External causes of morbidity and mortality",
+        "wound_relevance": "CRITICAL - External cause codes (mandatory for injuries)",
+        "implementation_note": "Required by SACS for all injury-related wounds",
+        "key_codes": [
+          {
+            "code": "W10.9",
+            "description": "Fall on stairs, unspecified",
+            "usage": "Fall-related injuries"
+          },
+          {
+            "code": "V89.2", 
+            "description": "Person injured in unspecified motor-vehicle accident, traffic",
+            "usage": "Motor vehicle accident wounds"
+          },
+          {
+            "code": "W26.8",
+            "description": "Contact with other sharp objects",
+            "usage": "Sharp object injuries"
+          }
+        ]
+      }
+    }
+  },
+
+  "ai_implementation_strategy": {
+    "nlp_keyword_mapping": {
+      "wound_types": {
+        "pressure injury": ["L89.*", "Pressure ulcer codes"],
+        "pressure ulcer": ["L89.*", "Pressure ulcer codes"],
+        "bedsore": ["L89.*", "Pressure ulcer codes"],
+        "diabetic foot": ["E11.621", "L97.*", "Diabetic complications"],
+        "diabetic ulcer": ["E11.621", "L97.*", "Diabetic complications"],
+        "venous ulcer": ["I83.0", "I87.2", "Venous insufficiency"],
+        "arterial ulcer": ["I70.2", "Peripheral arterial disease"],
+        "surgical site infection": ["T81.4", "Surgical complications"],
+        "burn": ["T20.*-T32.*", "Burn codes"],
+        "trauma wound": ["S*.*", "T79.3", "Injury codes"]
+      },
+      "anatomical_locations": {
+        "heel": ["L89.6*", "L97.4*", "Heel-specific codes"],
+        "ankle": ["L89.5*", "L97.3*", "Ankle-specific codes"], 
+        "foot": ["E11.621", "L97.*", "Foot ulcer codes"],
+        "leg": ["L97.2*", "L97.8*", "Leg ulcer codes"],
+        "sacrum": ["L89.15*", "Sacral pressure ulcer"],
+        "hip": ["L89.2*", "Hip pressure ulcer"]
+      },
+      "severity_indicators": {
+        "stage 1": ["*.1", "Stage 1 pressure ulcer"],
+        "stage 2": ["*.2", "Stage 2 pressure ulcer"],
+        "stage 3": ["*.3", "Stage 3 pressure ulcer"],
+        "stage 4": ["*.4", "Stage 4 pressure ulcer"],
+        "infected": ["L08.9", "T79.3", "Infection codes"],
+        "necrotic": ["R02", "Gangrene codes"]
+      },
+      "comorbidities": {
+        "diabetes": ["E10.*", "E11.*", "Diabetes codes"],
+        "type 1 diabetes": ["E10.*", "Type 1 diabetes"],
+        "type 2 diabetes": ["E11.*", "Type 2 diabetes"],
+        "hypertension": ["I10", "Essential hypertension"],
+        "heart disease": ["I25.*", "Cardiovascular disease"],
+        "kidney disease": ["N18.*", "Chronic kidney disease"]
+      }
+    },
+
+    "ai_processing_workflow": {
+      "step_1": {
+        "action": "Extract keywords from wound description",
+        "implementation": "Use NLP to identify wound type, location, severity, comorbidities"
+      },
+      "step_2": {
+        "action": "Map keywords to ICD-10 code categories",
+        "implementation": "Use keyword mapping table above"
+      },
+      "step_3": {
+        "action": "Search MIT database for matching codes",
+        "implementation": "Query column I (WHO_Full_Desc) for keyword matches"
+      },
+      "step_4": {
+        "action": "Validate codes for clinical use",
+        "implementation": "Check J=Y (Valid_ICD10_ClinicalUse) and K=Y (Valid_ICD10_Primary)"
+      },
+      "step_5": {
+        "action": "Rank suggestions by relevance",
+        "implementation": "Score based on keyword match strength and code specificity"
+      },
+      "step_6": {
+        "action": "Check PMB eligibility",
+        "implementation": "Cross-reference with PMB coded list"
+      },
+      "step_7": {
+        "action": "Format suggestions for user",
+        "implementation": "Present as clickable chips with explanations"
+      }
+    }
+  },
+
+  "code_selection_requirements": {
+    "primary_code": {
+      "description": "Main condition causing the wound",
+      "examples": [
+        "L89.612 - Pressure ulcer of left heel, stage 2",
+        "E11.621 - Type 2 diabetes with foot ulcer",
+        "L97.419 - Non-pressure chronic ulcer of right heel"
+      ],
+      "validation": "Must be Valid_ICD10_Primary = Y"
+    },
+    "secondary_codes": {
+      "description": "Comorbidities affecting wound healing",
+      "examples": [
+        "E11.9 - Type 2 diabetes without complications", 
+        "I10 - Essential hypertension",
+        "N18.9 - Chronic kidney disease, unspecified"
+      ],
+      "validation": "Must be Valid_ICD10_ClinicalUse = Y"
+    },
+    "external_cause_codes": {
+      "description": "How the wound occurred (mandatory for injuries)",
+      "chapter": "XX (V01-Y98)",
+      "examples": [
+        "W10.9 - Fall on stairs",
+        "V89.2 - Motor vehicle accident",
+        "W26.8 - Contact with sharp objects"
+      ],
+      "when_not_applicable": "Chronic conditions like venous ulcers without trauma"
+    }
+  },
+
+  "pmb_integration": {
+    "description": "Prescribed Minimum Benefits - guaranteed medical aid coverage",
+    "implementation_priority": "HIGH",
+    "key_pmb_wound_conditions": [
+      {
+        "condition": "Diabetes complications",
+        "codes": ["E10.*", "E11.*"],
+        "coverage": "Guaranteed for diabetic wound care"
+      },
+      {
+        "condition": "Cardiovascular disease complications", 
+        "codes": ["I21.*", "I25.*"],
+        "coverage": "Guaranteed for vascular-related wounds"
+      },
+      {
+        "condition": "Chronic kidney disease",
+        "codes": ["N18.*"],
+        "coverage": "Guaranteed for CKD-related complications"
+      }
+    ],
+    "ui_implementation": {
+      "display": "Mark PMB codes with special indicator",
+      "explanation": "Add note: 'This condition qualifies as PMB - guaranteed coverage'",
+      "priority": "Show PMB codes first in suggestions"
+    }
+  },
+
+  "validation_requirements": {
+    "mandatory_validations": [
+      "Code exists in SA MIT 2021 database",
+      "Valid_ICD10_ClinicalUse = Y",
+      "Primary codes must have Valid_ICD10_Primary = Y",
+      "External cause codes required for injury-related wounds",
+      "Age and gender validation where applicable"
+    ],
+    "error_handling": [
+      "If no exact match, suggest closest valid codes",
+      "Explain confidence level of suggestions",
+      "Allow manual override with warning",
+      "Provide fallback to manual code entry"
+    ]
+  },
+
+  "critical_tests_and_assessments": {
+    "abpi_test": {
+      "full_name": "Ankle Brachial Pressure Index",
+      "purpose": "Assess arterial blood flow for peripheral arterial disease",
+      "mandatory_for": "Leg ulcer assessment to avoid inappropriate compression",
+      "interpretation": {
+        "0.9-1.3": "Normal - safe for compression therapy",
+        "<0.9": "Indicates PAD - compression contraindicated",
+        ">1.3": "Calcified vessels - use TBPI instead"
+      },
+      "related_codes": ["I73.9 - PAD", "I70.2 - Atherosclerosis"],
+      "implementation_note": "Results must be documented before treatment coding"
+    },
+    "wound_classifications": {
+      "wagner_classification": {
+        "for": "Diabetic foot ulcers",
+        "grades": {
+          "0": "No open lesion",
+          "1": "Superficial ulcer", 
+          "2": "Deep ulcer to tendon/bone",
+          "3": "Deep ulcer with abscess",
+          "4": "Partial foot gangrene",
+          "5": "Whole foot gangrene"
+        },
+        "codes": ["E11.621", "L97.*"]
+      },
+      "npuap_staging": {
+        "for": "Pressure injuries",
+        "stages": {
+          "1": "Non-blanchable erythema",
+          "2": "Partial-thickness skin loss",
+          "3": "Full-thickness skin loss", 
+          "4": "Full-thickness with exposed bone/muscle"
+        },
+        "codes": ["L89.*"]
+      }
+    }
+  },
+
+  "ai_prompt_for_report_generation": {
+    "system_prompt": "You are an AI assistant for South African wound care practitioners. Generate clinical motivation reports using SA ICD-10 MIT codes, treatment codes, and PMB eligibility. Always include relevant research links for treatment justification.",
+    "user_interaction_flow": [
+      "Greet practitioner and explain purpose",
+      "Ask 5-10 targeted questions sequentially",
+      "Gather patient demographics, wound details, tests, treatments",
+      "Generate report in exact format with ICD-10 codes",
+      "Include PMB notes where applicable",
+      "Add research links for treatment justification"
+    ],
+    "code_extraction_process": [
+      "Search MIT 2021 database for wound cause (primary code)",
+      "Identify comorbidities (secondary codes)",
+      "Determine external cause if injury-related",
+      "Check PMB eligibility",
+      "Validate all codes for clinical use"
+    ]
+  },
+
+  "implementation_notes": {
+    "database_integration": [
+      "Download and parse MIT 2021 Excel file",
+      "Create local SQLite/Firebase database",
+      "Index WHO_Full_Desc column for fast text search",
+      "Implement fuzzy matching for keyword searches"
+    ],
+    "ai_service_architecture": [
+      "Local NLP processing preferred for privacy",
+      "Fallback to cloud AI services if needed",
+      "Cache common code suggestions",
+      "Implement offline capability for basic codes"
+    ],
+    "ui_components_needed": [
+      "ICD10CodeSuggestionWidget",
+      "PMBIndicatorBadge", 
+      "CodeValidationHelper",
+      "ExternalCauseConditionalField",
+      "ResearchLinkGenerator"
+    ]
+  }
+}

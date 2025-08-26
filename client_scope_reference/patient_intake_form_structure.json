@@ -1,0 +1,476 @@
+{
+  "metadata": {
+    "title": "Patient Intake Form - Complete Structure",
+    "description": "Comprehensive breakdown of patient intake form requirements for MedWave app implementation",
+    "implementation_notes": "This form integrates with wound care motivation form - auto-populate overlapping fields",
+    "ui_requirements": [
+      "Mobile-friendly design",
+      "Collapsible accordion sections", 
+      "Progress bar for multi-page flow",
+      "Digital signature pad (finger/stylus)",
+      "Save drafts functionality",
+      "PDF export capability",
+      "Bilingual support (English/Afrikaans)"
+    ],
+    "validation_requirements": [
+      "Required field validation",
+      "SA ID format validation (13 digits)",
+      "Phone number masks",
+      "Email validation", 
+      "Date format validation",
+      "Conditional logic (show 'specify' fields when Yes selected)"
+    ]
+  },
+
+  "form_sections": {
+    "1_header_basic_info": {
+      "implementation_priority": "HIGH",
+      "ui_component": "HeaderCard",
+      "fields": {
+        "form_title": {
+          "value": "Patient Intake Form / Pasient Inligting",
+          "type": "static_text",
+          "bilingual": true
+        },
+        "date": {
+          "type": "date_picker",
+          "default": "auto_current_date",
+          "editable": true,
+          "required": true
+        },
+        "provider_details": {
+          "type": "pre_filled_readonly",
+          "values": {
+            "name": "Sr. Rene Lessing PR 0168238",
+            "title": "Haute Care Advanced Wound Care Specialist", 
+            "contact": "082 828 2476",
+            "email": "wounds@hauteCare.co.za"
+          }
+        }
+      }
+    },
+
+    "2_patient_details": {
+      "implementation_priority": "HIGH",
+      "ui_component": "AccordionSection",
+      "database_mapping": "Patient model - primary fields",
+      "fields": {
+        "surname": {
+          "type": "text_input",
+          "required": true,
+          "label": "Surname / Van",
+          "validation": "non_empty"
+        },
+        "full_names": {
+          "type": "text_input", 
+          "required": true,
+          "label": "Full Names / Volle Name",
+          "validation": "non_empty"
+        },
+        "id_number": {
+          "type": "text_input",
+          "required": true,
+          "label": "ID No",
+          "validation": "sa_id_format",
+          "pattern": "^\\d{13}$",
+          "implementation_note": "Add SA ID number validation helper function"
+        },
+        "date_of_birth": {
+          "type": "date_picker",
+          "required": true,
+          "validation": "valid_date"
+        },
+        "work_name_address": {
+          "type": "textarea",
+          "required": false
+        },
+        "work_postal_address": {
+          "type": "textarea", 
+          "required": false
+        },
+        "work_tel": {
+          "type": "phone_input",
+          "international_format": true,
+          "required": false
+        },
+        "patient_cell": {
+          "type": "phone_input",
+          "required": true,
+          "validation": "phone_format"
+        },
+        "home_tel": {
+          "type": "phone_input",
+          "required": false
+        },
+        "email": {
+          "type": "email_input",
+          "required": false,
+          "validation": "email_format"
+        },
+        "marital_status": {
+          "type": "dropdown",
+          "options": ["Single", "Married", "Divorced", "Widowed", "Other"],
+          "required": false
+        },
+        "occupation": {
+          "type": "text_input",
+          "required": false
+        }
+      }
+    },
+
+    "3_responsible_person": {
+      "implementation_priority": "HIGH",
+      "ui_component": "AccordionSection", 
+      "database_mapping": "ResponsiblePerson model or Patient.responsiblePerson nested object",
+      "fields": {
+        "surname": {
+          "type": "text_input",
+          "required": true,
+          "label": "Surname / Van"
+        },
+        "full_names": {
+          "type": "text_input",
+          "required": true, 
+          "label": "Full Names / Volle Name"
+        },
+        "id_number": {
+          "type": "text_input",
+          "required": true,
+          "validation": "sa_id_format"
+        },
+        "date_of_birth": {
+          "type": "date_picker", 
+          "required": true
+        },
+        "work_name_address": {
+          "type": "textarea",
+          "required": false
+        },
+        "work_postal_address": {
+          "type": "textarea",
+          "required": false
+        },
+        "work_tel": {
+          "type": "phone_input",
+          "required": false
+        },
+        "responsible_person_cell": {
+          "type": "phone_input",
+          "required": true,
+          "implementation_note": "Original form says 'Patient Cell' but this should be 'Responsible Person Cell'"
+        },
+        "home_tel": {
+          "type": "phone_input", 
+          "required": false
+        },
+        "email": {
+          "type": "email_input",
+          "required": false
+        },
+        "marital_status": {
+          "type": "dropdown",
+          "options": ["Single", "Married", "Divorced", "Widowed", "Other"],
+          "required": false
+        },
+        "occupation": {
+          "type": "text_input",
+          "required": false
+        },
+        "relation_to_patient": {
+          "type": "dropdown_or_text",
+          "options": ["Self", "Spouse", "Parent", "Child", "Other"],
+          "allow_custom": true,
+          "required": true
+        }
+      }
+    },
+
+    "4_medical_aid_details": {
+      "implementation_priority": "HIGH",
+      "ui_component": "AccordionSection",
+      "cross_reference": "AUTO-POPULATE in wound care motivation form",
+      "database_mapping": "Patient.medicalAid nested object",
+      "fields": {
+        "scheme_name": {
+          "type": "text_input",
+          "required": true,
+          "label": "Name of Scheme",
+          "implementation_note": "This field overlaps with motivation form - create reusable component"
+        },
+        "membership_number": {
+          "type": "text_input", 
+          "required": true,
+          "label": "M/Aid No"
+        },
+        "plan_and_dep_number": {
+          "type": "text_input",
+          "required": false,
+          "label": "Plan and DEP No"
+        },
+        "main_member_name": {
+          "type": "text_input",
+          "required": true,
+          "label": "Name of Main Member"
+        }
+      }
+    },
+
+    "5_referring_doctor": {
+      "implementation_priority": "MEDIUM",
+      "ui_component": "AccordionSection",
+      "cross_reference": "AUTO-POPULATE in wound care motivation form",
+      "database_mapping": "Patient.referringDoctor nested object",
+      "fields": {
+        "doctor_name": {
+          "type": "text_input",
+          "required": false,
+          "label": "Name",
+          "implementation_note": "Overlaps with motivation form"
+        },
+        "doctor_cell": {
+          "type": "phone_input", 
+          "required": false,
+          "label": "Cell No"
+        },
+        "additional_doctor_name": {
+          "type": "text_input",
+          "required": false,
+          "label": "Additional Name"
+        },
+        "additional_doctor_cell": {
+          "type": "phone_input",
+          "required": false,
+          "label": "Additional Cell No"
+        }
+      }
+    },
+
+    "6_account_responsibility": {
+      "implementation_priority": "HIGH",
+      "ui_component": "SignatureSection",
+      "legal_requirement": true,
+      "fields": {
+        "disclaimer_text": {
+          "type": "static_display",
+          "content": "I understand that I am responsible for my account and NOT my Medical Aid. I undertake to settle my account. Please note that if payment is not made within 30 days, the account will be handed over to our attorneys for collection. You will be liable to pay any collection and/or attorney fees on the Attorney Client Scale. GEMS AND MEDSCHEME PATIENTS ARE RESPONSIBLE FOR AUTHORISATION FROM SCHEME BEFORE TREATMENT WILL COMMENCE.",
+          "style": "legal_text_display"
+        },
+        "signature": {
+          "type": "digital_signature_pad",
+          "required": true,
+          "library_suggestion": "SignaturePad",
+          "linked_to": "patient_or_responsible_person",
+          "implementation_note": "Store signature as base64 image in Firebase Storage"
+        },
+        "signature_date": {
+          "type": "date_picker",
+          "default": "auto_current_date",
+          "required": true
+        }
+      }
+    },
+
+    "7_medical_history": {
+      "implementation_priority": "HIGH",
+      "ui_component": "CheckboxGridSection",
+      "database_mapping": "Patient.medicalHistory nested object",
+      "conditional_logic": "Show textarea when 'Yes' selected",
+      "fields": {
+        "illness_conditions": {
+          "type": "checkbox_grid_with_conditional",
+          "required": true,
+          "options": {
+            "heart": {
+              "label": "Heart",
+              "conditional_specify": false
+            },
+            "lungs": {
+              "label": "Lungs", 
+              "conditional_specify": false
+            },
+            "kidneys": {
+              "label": "Kidneys",
+              "conditional_specify": false
+            },
+            "colon_digestive": {
+              "label": "Colon or digestive system",
+              "conditional_specify": false
+            },
+            "cancer": {
+              "label": "Cancer", 
+              "conditional_specify": true
+            },
+            "liver": {
+              "label": "Liver",
+              "conditional_specify": false
+            },
+            "pancreas": {
+              "label": "Pancreas",
+              "conditional_specify": false
+            },
+            "diabetes": {
+              "label": "Diabetes",
+              "conditional_specify": false
+            },
+            "hiv": {
+              "label": "HIV", 
+              "conditional_specify": false
+            },
+            "arthritis": {
+              "label": "Arthritis",
+              "conditional_specify": true
+            },
+            "auto_immune": {
+              "label": "Auto Immune Disease (MS, Muscle Dystrophy, Fibromyalgia etc.)",
+              "conditional_specify": true
+            },
+            "paraplegic": {
+              "label": "Paraplegic",
+              "conditional_specify": false
+            },
+            "quadriplegic": {
+              "label": "Quadriplegic",
+              "conditional_specify": false
+            }
+          }
+        },
+        "other_conditions": {
+          "type": "textarea",
+          "label": "Other",
+          "required": false
+        },
+        "current_medicines": {
+          "type": "textarea",
+          "label": "Please list your Medicines that you are taking",
+          "multiline": true,
+          "required": false
+        },
+        "allergies": {
+          "type": "textarea",
+          "label": "Are you allergic to any medicines or foods or dressings?",
+          "required": false
+        },
+        "smoker": {
+          "type": "radio_yes_no", 
+          "label": "Are you a smoker?",
+          "required": false
+        },
+        "natural_treatments": {
+          "type": "textarea",
+          "label": "Are you using any natural/herbal or traditional medicines or treatments? Please specify",
+          "required": false
+        }
+      }
+    },
+
+    "8_wound_photography_consent": {
+      "implementation_priority": "HIGH",
+      "ui_component": "ConsentSection",
+      "legal_requirement": true,
+      "fields": {
+        "consent_text": {
+          "type": "static_display",
+          "content": "During your treatment we will be taking regular images/photos of your wounds. These images are shared with the Medical Aid during motivations for wound treatment and to update them on the progress of your treatment. The images are also shared with your Doctor/Specialist.",
+          "style": "consent_text_display"
+        },
+        "patient_signature": {
+          "type": "digital_signature_pad",
+          "required": true,
+          "label": "Patient Signature"
+        },
+        "witness_signature": {
+          "type": "digital_signature_pad", 
+          "required": false,
+          "label": "Witness Signature"
+        },
+        "consent_date": {
+          "type": "date_picker",
+          "default": "auto_current_date", 
+          "required": true
+        },
+        "training_consent": {
+          "type": "mutually_exclusive_checkboxes",
+          "label": "Training Purposes Consent",
+          "description": "From time to time I might ask for your consent to use your photographs for training purposes. Your identity will be protected at all times. If you are willing to assist in the training of qualifying wound specialists, kindly give permission below.",
+          "options": {
+            "yes_permission": {
+              "label": "Yes, I give permission",
+              "requires_date": true
+            },
+            "no_permission": {
+              "label": "No, I do not give permission", 
+              "requires_date": true
+            }
+          },
+          "implementation_note": "Enforce mutual exclusivity - only one can be selected"
+        }
+      }
+    },
+
+    "9_submission_features": {
+      "implementation_priority": "MEDIUM",
+      "ui_component": "SubmissionSection",
+      "features": {
+        "pdf_generation": {
+          "type": "button",
+          "label": "Generate PDF",
+          "functionality": "Preview/export as PDF replicating physical form layout including signatures as images"
+        },
+        "form_integration": {
+          "auto_populate_fields": [
+            "Patient Name -> Motivation Form",
+            "Medical Aid -> Motivation Form", 
+            "Referring Doctor -> Motivation Form"
+          ]
+        },
+        "validation_before_submit": [
+          "Required fields highlighted",
+          "Signatures captured",
+          "Valid ID format",
+          "Valid phone/email formats"
+        ],
+        "additional_features": [
+          "Upload ID copies",
+          "Upload medical records", 
+          "Upload photos",
+          "Bilingual toggle (English/Afrikaans)",
+          "GDPR/POPIA compliance notice"
+        ]
+      }
+    }
+  },
+
+  "implementation_notes": {
+    "database_models": {
+      "patient_model": [
+        "Basic patient details (section 2)",
+        "Responsible person nested object (section 3)", 
+        "Medical aid nested object (section 4)",
+        "Referring doctor nested object (section 5)",
+        "Medical history nested object (section 7)",
+        "Consent information (sections 6 & 8)",
+        "Intake completion status and timestamps"
+      ]
+    },
+    "reusable_components": [
+      "PhoneInputField (with international format)",
+      "DigitalSignaturePad", 
+      "SAIDValidationField",
+      "ConditionalCheckboxGrid",
+      "BilingualLabel",
+      "AccordionSection"
+    ],
+    "validation_helpers": [
+      "validateSAID(String id)",
+      "validatePhoneNumber(String phone)",
+      "validateEmail(String email)", 
+      "enforceRequiredFields(Map<String, dynamic> formData)"
+    ],
+    "integration_points": [
+      "Auto-populate wound care motivation form from this intake",
+      "Link to wound details section",
+      "Cross-reference with existing patient data"
+    ]
+  }
+}
