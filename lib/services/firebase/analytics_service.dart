@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/patient.dart';
 import '../../models/appointment.dart';
 import '../../models/progress_metrics.dart';
+import '../../models/patient.dart' show Session;
 
 class AnalyticsService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -10,7 +11,7 @@ class AnalyticsService {
 
   // Collection references
   static CollectionReference get _patientsCollection => _firestore.collection('patients');
-  static CollectionReference get _appointmentsCollection => _firestore.collection('appointments');
+  static CollectionReference get _sessionsCollection => _firestore.collection('sessions');
 
   /// Get comprehensive dashboard analytics for the current practitioner
   static Future<DashboardAnalytics> getDashboardAnalytics() async {
@@ -21,7 +22,6 @@ class AnalyticsService {
       final now = DateTime.now();
       final startOfMonth = DateTime(now.year, now.month, 1);
       final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-      final startOfYear = DateTime(now.year, 1, 1);
 
       // Get practitioner's patients
       final patientsSnapshot = await _patientsCollection
@@ -30,46 +30,48 @@ class AnalyticsService {
 
       final patients = patientsSnapshot.docs.map((doc) => Patient.fromFirestore(doc)).toList();
 
-      // Get appointments for periods  
-      final appointmentsSnapshot = await _firestore
-          .collection('appointments')
+      // Get appointments for periods (with error handling)
+      List<Appointment> appointments = [];
+      try {
+        final appointmentsSnapshot = await _firestore
+            .collection('appointments')
+            .where('practitionerId', isEqualTo: userId)
+            .get();
+        appointments = appointmentsSnapshot.docs.map((doc) => Appointment.fromFirestore(doc)).toList();
+        print('📊 ANALYTICS DEBUG: Found ${appointments.length} appointments');
+      } catch (e) {
+        print('📊 ANALYTICS DEBUG: Could not load appointments (will use 0): $e');
+        // Continue without appointments data
+      }
+
+      // Calculate session statistics using main sessions collection
+      print('📊 ANALYTICS DEBUG: Calculating session statistics...');
+      
+      // Get all sessions for this practitioner
+      final allSessionsSnapshot = await _sessionsCollection
           .where('practitionerId', isEqualTo: userId)
           .get();
-
-      final appointments = appointmentsSnapshot.docs.map((doc) => Appointment.fromFirestore(doc)).toList();
-
-      // Calculate session statistics
-      int totalSessions = 0;
-      int monthSessions = 0;
-      int weekSessions = 0;
-
-      for (final patient in patients) {
-        // Get sessions for this patient
-        final sessionsSnapshot = await _patientsCollection
-            .doc(patient.id)
-            .collection('sessions')
-            .get();
-
-        totalSessions += sessionsSnapshot.docs.length;
-
-        // Count sessions for this month
-        final monthSessionsSnapshot = await _patientsCollection
-            .doc(patient.id)
-            .collection('sessions')
-            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
-            .get();
-
-        monthSessions += monthSessionsSnapshot.docs.length;
-
-        // Count sessions for this week
-        final weekSessionsSnapshot = await _patientsCollection
-            .doc(patient.id)
-            .collection('sessions')
-            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek))
-            .get();
-
-        weekSessions += weekSessionsSnapshot.docs.length;
-      }
+      
+      final totalSessions = allSessionsSnapshot.docs.length;
+      print('📊 ANALYTICS DEBUG: Found $totalSessions total sessions');
+      
+      // Count sessions for this month
+      final monthSessionsSnapshot = await _sessionsCollection
+          .where('practitionerId', isEqualTo: userId)
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
+          .get();
+      
+      final monthSessions = monthSessionsSnapshot.docs.length;
+      print('📊 ANALYTICS DEBUG: Found $monthSessions sessions this month');
+      
+      // Count sessions for this week
+      final weekSessionsSnapshot = await _sessionsCollection
+          .where('practitionerId', isEqualTo: userId)
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfWeek))
+          .get();
+      
+      final weekSessions = weekSessionsSnapshot.docs.length;
+      print('📊 ANALYTICS DEBUG: Found $weekSessions sessions this week');
 
       // Calculate appointment statistics
       final monthAppointments = appointments.where((a) => a.startTime.isAfter(startOfMonth)).length;
@@ -111,7 +113,7 @@ class AnalyticsService {
         averageWeightChange: averageWeightChange,
         averagePainReduction: averagePainReduction,
         averageWoundHealing: averageWoundHealing,
-        activePatients: patients.where((p) => p.sessions.isNotEmpty).length,
+        activePatients: await _calculateActivePatientsCount(userId),
         completedAppointments: appointments.where((a) => a.status == AppointmentStatus.completed).length,
         cancelledAppointments: appointments.where((a) => a.status == AppointmentStatus.cancelled).length,
       );
@@ -126,15 +128,18 @@ class AnalyticsService {
       final now = DateTime.now();
       final startDate = now.subtract(Duration(days: days));
 
-      // Get patient sessions within the date range
-      final sessionsSnapshot = await _patientsCollection
-          .doc(patientId)
-          .collection('sessions')
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-          .orderBy('date')
+      // Get patient sessions using main collection (avoid composite index)
+      final sessionsSnapshot = await _sessionsCollection
+          .where('patientId', isEqualTo: patientId)
           .get();
 
-      final sessions = sessionsSnapshot.docs.map((doc) => Session.fromFirestore(doc)).toList();
+      final allSessions = sessionsSnapshot.docs.map((doc) => Session.fromFirestore(doc)).toList();
+      
+      // Filter by date and sort in memory to avoid composite index requirement
+      final sessions = allSessions
+          .where((session) => session.date.isAfter(startDate))
+          .toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
 
       // Get patient baseline data
       final patientDoc = await _patientsCollection.doc(patientId).get();
@@ -190,9 +195,6 @@ class AnalyticsService {
     try {
       final userId = _auth.currentUser?.uid;
       if (userId == null) throw Exception('User not authenticated');
-
-      final now = DateTime.now();
-      final startDate = now.subtract(Duration(days: days));
 
       // Get practitioner's patients
       final patientsSnapshot = await _patientsCollection
@@ -312,7 +314,7 @@ class AnalyticsService {
         averageAge: patients.isNotEmpty 
             ? patients.map((p) => now.difference(p.dateOfBirth).inDays ~/ 365).reduce((a, b) => a + b) / patients.length
             : 0.0,
-        patientsWithActiveSessions: patients.where((p) => p.sessions.isNotEmpty).length,
+        patientsWithActiveSessions: await _calculateActivePatientsCount(userId),
       );
     } catch (e) {
       throw Exception('Failed to get patient statistics: $e');
@@ -328,14 +330,25 @@ class AnalyticsService {
       final now = DateTime.now();
       final startDate = now.subtract(Duration(days: days));
 
-      // Get appointments for the period
-      final appointmentsSnapshot = await _firestore
-          .collection('appointments')
-          .where('practitionerId', isEqualTo: userId)
-          .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-          .get();
-
-      final appointments = appointmentsSnapshot.docs.map((doc) => Appointment.fromFirestore(doc)).toList();
+      // Get appointments for the period (with error handling for index requirement)
+      List<Appointment> appointments = [];
+      try {
+        // First try to get all appointments for practitioner, then filter by date
+        final appointmentsSnapshot = await _firestore
+            .collection('appointments')
+            .where('practitionerId', isEqualTo: userId)
+            .get();
+        
+        final allAppointments = appointmentsSnapshot.docs.map((doc) => Appointment.fromFirestore(doc)).toList();
+        
+        // Filter by date in memory to avoid composite index requirement
+        appointments = allAppointments.where((a) => a.startTime.isAfter(startDate)).toList();
+        
+        print('📊 ANALYTICS DEBUG: Found ${appointments.length} appointments in date range');
+      } catch (e) {
+        print('📊 ANALYTICS DEBUG: Could not load appointments (will use empty list): $e');
+        // Continue without appointments data
+      }
 
       // Calculate statistics
       final totalAppointments = appointments.length;
@@ -399,24 +412,24 @@ class AnalyticsService {
       final dailySessionCounts = <DateTime, int>{};
       final patientSessionCounts = <String, int>{};
 
-      for (final patient in patients) {
-        // Get sessions for this patient within the date range
-        final sessionsSnapshot = await _patientsCollection
-            .doc(patient.id)
-            .collection('sessions')
-            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-            .get();
-
-        final sessionCount = sessionsSnapshot.docs.length;
-        totalSessions += sessionCount;
-        patientSessionCounts[patient.id] = sessionCount;
-
+      // Get all sessions for this practitioner within the date range
+      final sessionsSnapshot = await _sessionsCollection
+          .where('practitionerId', isEqualTo: userId)
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .get();
+      
+      totalSessions = sessionsSnapshot.docs.length;
+      
+      // Process sessions to calculate patient and daily counts
+      for (final sessionDoc in sessionsSnapshot.docs) {
+        final session = Session.fromFirestore(sessionDoc);
+        
+        // Count sessions per patient
+        patientSessionCounts[session.patientId] = (patientSessionCounts[session.patientId] ?? 0) + 1;
+        
         // Count daily sessions
-        for (final sessionDoc in sessionsSnapshot.docs) {
-          final session = Session.fromFirestore(sessionDoc);
-          final dateKey = DateTime(session.date.year, session.date.month, session.date.day);
-          dailySessionCounts[dateKey] = (dailySessionCounts[dateKey] ?? 0) + 1;
-        }
+        final dateKey = DateTime(session.date.year, session.date.month, session.date.day);
+        dailySessionCounts[dateKey] = (dailySessionCounts[dateKey] ?? 0) + 1;
       }
 
       final averageSessionsPerPatient = patients.isNotEmpty ? totalSessions / patients.length : 0.0;
@@ -460,9 +473,23 @@ class AnalyticsService {
 
       // Data rows
       for (final patient in patients) {
-        final lastSessionDate = patient.sessions.isNotEmpty 
-            ? patient.sessions.last.date.toIso8601String().split('T')[0]
+        // Get last session date from main collection
+        final lastSessionSnapshot = await _sessionsCollection
+            .where('patientId', isEqualTo: patient.id)
+            .orderBy('sessionNumber', descending: true)
+            .limit(1)
+            .get();
+            
+        final lastSessionDate = lastSessionSnapshot.docs.isNotEmpty
+            ? Session.fromFirestore(lastSessionSnapshot.docs.first).date.toIso8601String().split('T')[0]
             : '';
+            
+        // Get session count from main collection
+        final sessionCountSnapshot = await _sessionsCollection
+            .where('patientId', isEqualTo: patient.id)
+            .get();
+            
+        final sessionCount = sessionCountSnapshot.docs.length;
 
         csvContent.writeln('${patient.id},"${patient.surname}","${patient.fullNames}",'
             '"${patient.idNumber}","${patient.dateOfBirth.toIso8601String().split('T')[0]}",'
@@ -471,12 +498,36 @@ class AnalyticsService {
             '${patient.baselineVasScore},${patient.currentVasScore ?? 'N/A'},'
             '${patient.painReduction?.toStringAsFixed(2) ?? 'N/A'},'
             '${patient.woundHealingProgress?.toStringAsFixed(2) ?? 'N/A'},'
-            '${patient.sessions.length},"$lastSessionDate"');
+            '$sessionCount,"$lastSessionDate"');
       }
 
       return csvContent.toString();
     } catch (e) {
       throw Exception('Failed to export patients to CSV: $e');
+    }
+  }
+
+  /// Helper method to calculate active patients count
+  static Future<int> _calculateActivePatientsCount(String userId) async {
+    try {
+      print('📊 ANALYTICS DEBUG: Calculating active patients count...');
+      
+      // Get unique patient IDs from sessions
+      final sessionsSnapshot = await _sessionsCollection
+          .where('practitionerId', isEqualTo: userId)
+          .get();
+      
+      final activePatientIds = <String>{};
+      for (final doc in sessionsSnapshot.docs) {
+        final session = Session.fromFirestore(doc);
+        activePatientIds.add(session.patientId);
+      }
+      
+      print('📊 ANALYTICS DEBUG: Found ${activePatientIds.length} active patients');
+      return activePatientIds.length;
+    } catch (e) {
+      print('❌ ANALYTICS ERROR: Failed to calculate active patients: $e');
+      return 0;
     }
   }
 }

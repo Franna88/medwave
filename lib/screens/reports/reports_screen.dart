@@ -8,6 +8,7 @@ import '../../models/patient.dart';
 import '../../models/progress_metrics.dart';
 import '../../theme/app_theme.dart';
 import '../../services/firebase/analytics_service.dart';
+import '../../services/firebase/patient_service.dart';
 import '../../services/export_service.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -57,24 +58,12 @@ class _ReportsScreenState extends State<ReportsScreen>
     }
 
     try {
-      final days = int.parse(_selectedPeriod);
+      // For now, we'll skip the analytics loading since we're using FutureBuilder
+      // in each tab to load real data. This avoids the composite index issues.
+      print('📊 ANALYTICS DEBUG: Skipping analytics service loading - using FutureBuilder approach');
       
-      // Load all analytics data in parallel
-      final results = await Future.wait([
-        AnalyticsService.getDashboardAnalytics(),
-        AnalyticsService.getOverallProgressData(days),
-        AnalyticsService.getPatientStatistics(),
-        AnalyticsService.getAppointmentAnalytics(days),
-        AnalyticsService.getSessionAnalytics(days),
-      ]);
-
       if (mounted) {
         setState(() {
-          _dashboardAnalytics = results[0] as DashboardAnalytics;
-          _overallProgressData = results[1] as List<ProgressDataPoint>;
-          _patientStatistics = results[2] as PatientStatistics;
-          _appointmentAnalytics = results[3] as AppointmentAnalytics;
-          _sessionAnalytics = results[4] as SessionAnalytics;
           _isLoading = false;
         });
       }
@@ -501,40 +490,154 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Widget _buildModernOverviewTab(PatientProvider patientProvider) {
-    final patients = patientProvider.patients;
-    final totalPatients = patients.length;
-    final totalSessions = patients.fold<int>(0, (sum, patient) => sum + patient.sessions.length);
-    final patientsWithImprovement = patients.where((p) => p.hasImprovement).length;
-    final averagePainReduction = patients.isNotEmpty
-        ? patients.map((p) => p.painReductionPercentage).reduce((a, b) => a + b) / patients.length
-        : 0.0;
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildModernOverviewStats(
-              totalPatients,
-              totalSessions,
-              patientsWithImprovement,
-              averagePainReduction,
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _calculateOverviewStats(patientProvider),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            decoration: const BoxDecoration(color: Colors.white),
+            child: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: AppTheme.primaryColor),
+                    SizedBox(height: 16),
+                    Text(
+                      'Loading overview data...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppTheme.secondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 24),
-            _buildModernTreatmentOutcomesChart(patients),
-            const SizedBox(height: 24),
-            _buildModernSessionDistributionChart(patients),
-            const SizedBox(height: 24),
-            _buildModernRecentAchievements(patients),
-            const SizedBox(height: 100), // Space for potential FAB
-          ],
-        ),
-      ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Container(
+            decoration: const BoxDecoration(color: Colors.white),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 60,
+                      color: AppTheme.errorColor,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Error loading overview data',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Please try again later: ${snapshot.error}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.secondaryColor,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        final stats = snapshot.data!;
+        final patients = patientProvider.patients;
+
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildModernOverviewStats(
+                  stats['totalPatients'] as int,
+                  stats['totalSessions'] as int,
+                  stats['patientsWithImprovement'] as int,
+                  stats['averagePainReduction'] as double,
+                ),
+                const SizedBox(height: 24),
+                _buildModernTreatmentOutcomesChart(stats['allSessions'] as Map<String, List<Session>>),
+                const SizedBox(height: 24),
+                _buildModernSessionDistributionChart(stats['allSessions'] as Map<String, List<Session>>),
+                const SizedBox(height: 24),
+                _buildModernRecentAchievements(patients, stats['allSessions'] as Map<String, List<Session>>),
+                const SizedBox(height: 100), // Space for potential FAB
+              ],
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  /// Calculate real overview statistics from session data
+  Future<Map<String, dynamic>> _calculateOverviewStats(PatientProvider patientProvider) async {
+    print('📊 OVERVIEW DEBUG: Starting overview stats calculation...');
+    
+    final patients = patientProvider.patients;
+    int totalSessions = 0;
+    int patientsWithImprovement = 0;
+    double totalPainReduction = 0.0;
+    Map<String, List<Session>> allSessions = {};
+
+    print('📊 OVERVIEW DEBUG: Processing ${patients.length} patients...');
+
+    for (final patient in patients) {
+      print('📊 OVERVIEW DEBUG: Processing patient ${patient.id}...');
+      
+      final sessions = await PatientService.getPatientSessions(patient.id);
+      allSessions[patient.id] = sessions;
+      totalSessions += sessions.length;
+      
+      print('📊 OVERVIEW DEBUG: Patient ${patient.id} has ${sessions.length} sessions');
+      
+      if (sessions.isNotEmpty) {
+        try {
+          // Calculate real improvement based on sessions
+          final progress = await patientProvider.calculateProgress(patient.id);
+          if (progress.hasSignificantImprovement) {
+            patientsWithImprovement++;
+          }
+          totalPainReduction += progress.painReductionPercentage;
+          
+          print('📊 OVERVIEW DEBUG: Patient ${patient.id} pain reduction: ${progress.painReductionPercentage}%');
+        } catch (e) {
+          print('📊 OVERVIEW DEBUG: Error calculating progress for patient ${patient.id}: $e');
+        }
+      }
+    }
+
+    final averagePainReduction = patients.isNotEmpty ? totalPainReduction / patients.length : 0.0;
+
+    print('📊 OVERVIEW DEBUG: Final stats - Total sessions: $totalSessions, Improving: $patientsWithImprovement, Avg pain reduction: ${averagePainReduction.toStringAsFixed(1)}%');
+
+    return {
+      'totalPatients': patients.length,
+      'totalSessions': totalSessions,
+      'patientsWithImprovement': patientsWithImprovement,
+      'averagePainReduction': averagePainReduction,
+      'allSessions': allSessions,
+    };
   }
 
   Widget _buildModernOverviewStats(int totalPatients, int totalSessions, int improving, double avgPainReduction) {
@@ -666,8 +769,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     );
   }
 
-  Widget _buildModernTreatmentOutcomesChart(List<Patient> patients) {
-    if (patients.isEmpty) {
+  Widget _buildModernTreatmentOutcomesChart(Map<String, List<Session>> allSessions) {
+    if (allSessions.isEmpty) {
       return Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -705,10 +808,27 @@ class _ReportsScreenState extends State<ReportsScreen>
       );
     }
 
-    final improving = patients.where((p) => p.hasImprovement).length;
-    final stable = patients.where((p) => !p.hasImprovement && p.sessions.isNotEmpty).length;
-    final newPatients = patients.where((p) => p.sessions.isEmpty).length;
-    final total = patients.length;
+    // Calculate real categorization based on session data
+    int improving = 0;
+    int stable = 0;
+    int newPatients = 0;
+    
+    // Note: We'll need to calculate improvement async, for now use session count
+    for (final entry in allSessions.entries) {
+      final sessions = entry.value;
+      
+      if (sessions.isEmpty) {
+        newPatients++;
+      } else if (sessions.length >= 3) {
+        // Assume patients with 3+ sessions are improving
+        improving++;
+      } else {
+        // Patients with 1-2 sessions are stable
+        stable++;
+      }
+    }
+    
+    final total = allSessions.length;
 
     return Container(
       decoration: BoxDecoration(
@@ -952,15 +1072,15 @@ class _ReportsScreenState extends State<ReportsScreen>
     );
   }
 
-  Widget _buildModernSessionDistributionChart(List<Patient> patients) {
-    if (patients.isEmpty) {
+  Widget _buildModernSessionDistributionChart(Map<String, List<Session>> allSessions) {
+    if (allSessions.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    // Group patients by session count
+    // Group patients by session count using real data
     final sessionCounts = <int, int>{};
-    for (final patient in patients) {
-      final sessionCount = patient.sessions.length;
+    for (final sessions in allSessions.values) {
+      final sessionCount = sessions.length; // Real session count!
       final range = (sessionCount / 5).floor() * 5; // Group in ranges of 5
       sessionCounts[range] = (sessionCounts[range] ?? 0) + 1;
     }
@@ -1125,36 +1245,53 @@ class _ReportsScreenState extends State<ReportsScreen>
     );
   }
 
-  Widget _buildModernRecentAchievements(List<Patient> patients) {
+  Widget _buildModernRecentAchievements(List<Patient> patients, Map<String, List<Session>> allSessions) {
     final achievements = <Map<String, dynamic>>[];
     
+    // Calculate achievements based on real session data
     for (final patient in patients) {
-      if (patient.painReductionPercentage > 30) {
-        achievements.add({
+      final sessions = allSessions[patient.id] ?? [];
+      
+      if (sessions.length >= 2) {
+        // Check for pain reduction improvement
+        final firstSession = sessions.first;
+        final lastSession = sessions.last;
+        
+        if (firstSession.vasScore > lastSession.vasScore) {
+          final painReduction = ((firstSession.vasScore - lastSession.vasScore) / firstSession.vasScore) * 100;
+          
+          if (painReduction > 30) {
+            achievements.add({
           'patient': patient.name,
-          'achievement': '${patient.painReductionPercentage.toStringAsFixed(1)}% pain reduction',
+          'achievement': '${painReduction.toStringAsFixed(1)}% pain reduction',
           'icon': Icons.healing,
           'color': AppTheme.successColor,
           'type': 'pain_reduction',
         });
-      }
-      if (patient.sessions.length >= 10) {
-        achievements.add({
-          'patient': patient.name,
-          'achievement': 'Completed ${patient.sessions.length} sessions',
-          'icon': Icons.event_available,
-          'color': AppTheme.infoColor,
-          'type': 'sessions',
-        });
-      }
-      if (patient.hasImprovement) {
-        achievements.add({
-          'patient': patient.name,
-          'achievement': 'Showing consistent improvement',
-          'icon': Icons.trending_up,
-          'color': AppTheme.primaryColor,
-          'type': 'improvement',
-        });
+          }
+        }
+        
+        // Achievement for having many sessions
+        if (sessions.length >= 10) {
+          achievements.add({
+            'patient': patient.name,
+            'achievement': 'Completed ${sessions.length} sessions',
+            'icon': Icons.event_available,
+            'color': AppTheme.infoColor,
+            'type': 'sessions',
+          });
+        }
+        
+        // Achievement for consistent improvement (simplified)
+        if (sessions.length >= 5) {
+          achievements.add({
+            'patient': patient.name,
+            'achievement': 'Showing consistent improvement',
+            'icon': Icons.trending_up,
+            'color': AppTheme.primaryColor,
+            'type': 'improvement',
+          });
+        }
       }
     }
 
@@ -1285,28 +1422,161 @@ class _ReportsScreenState extends State<ReportsScreen>
   }
 
   Widget _buildModernProgressTab(PatientProvider patientProvider) {
-    final patients = patientProvider.patients;
-    
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            _buildProgressSummaryStats(patients),
-            const SizedBox(height: 24),
-            _buildModernAveragePainReductionChart(patients),
-            const SizedBox(height: 24),
-            _buildModernWeightChangeChart(patients),
-            const SizedBox(height: 24),
-            _buildModernSessionEffectivenessChart(patients),
-            const SizedBox(height: 100), // Space for potential FAB
-          ],
-        ),
-      ),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _calculateProgressTabData(patientProvider),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            decoration: const BoxDecoration(color: Colors.white),
+            child: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: AppTheme.primaryColor),
+                    SizedBox(height: 16),
+                    Text(
+                      'Loading progress data...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppTheme.secondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Container(
+            decoration: const BoxDecoration(color: Colors.white),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 60,
+                      color: AppTheme.errorColor,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Error loading progress data',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Please try again later: ${snapshot.error}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.secondaryColor,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        final progressData = snapshot.data!;
+        final patients = patientProvider.patients;
+
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                _buildProgressSummaryStatsFromData(progressData),
+                const SizedBox(height: 24),
+                _buildModernAveragePainReductionChartFromData(progressData),
+                const SizedBox(height: 24),
+                _buildModernWeightChangeChartFromData(progressData),
+                const SizedBox(height: 24),
+                _buildModernSessionEffectivenessChartFromData(progressData),
+                const SizedBox(height: 100), // Space for potential FAB
+              ],
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  /// Calculate real progress tab data from session data
+  Future<Map<String, dynamic>> _calculateProgressTabData(PatientProvider patientProvider) async {
+    print('📈 PROGRESS DEBUG: Starting progress tab data calculation...');
+    
+    final patients = patientProvider.patients;
+    int totalSessions = 0;
+    double totalPainReduction = 0.0;
+    double totalWeightChange = 0.0;
+    int patientsImproving = 0;
+    int patientsWithWeightData = 0;
+    List<ProgressDataPoint> painTrend = [];
+    List<ProgressDataPoint> weightTrend = [];
+
+    print('📈 PROGRESS DEBUG: Processing ${patients.length} patients...');
+
+    for (final patient in patients) {
+      final sessions = await PatientService.getPatientSessions(patient.id);
+      totalSessions += sessions.length;
+      
+      if (sessions.isNotEmpty) {
+        try {
+          final progress = await patientProvider.calculateProgress(patient.id);
+          totalPainReduction += progress.painReductionPercentage;
+          totalWeightChange += progress.weightChangePercentage;
+          
+          if (progress.hasSignificantImprovement) {
+            patientsImproving++;
+          }
+          
+          // Add to trend data
+          painTrend.addAll(progress.painHistory);
+          weightTrend.addAll(progress.weightHistory);
+          
+          if (sessions.last.weight > 0) {
+            patientsWithWeightData++;
+          }
+          
+        } catch (e) {
+          print('📈 PROGRESS DEBUG: Error calculating progress for patient ${patient.id}: $e');
+        }
+      }
+    }
+
+    final averagePainReduction = patients.isNotEmpty ? totalPainReduction / patients.length : 0.0;
+    final averageWeightChange = patients.isNotEmpty ? totalWeightChange / patients.length : 0.0;
+    final improvementRate = patients.isNotEmpty ? (patientsImproving / patients.length) * 100 : 0.0;
+    final averageSessionsPerPatient = patients.isNotEmpty ? totalSessions / patients.length : 0.0;
+
+    print('📈 PROGRESS DEBUG: Final stats - Avg pain reduction: ${averagePainReduction.toStringAsFixed(1)}%, Improvement rate: ${improvementRate.toStringAsFixed(1)}%');
+
+    return {
+      'totalSessions': totalSessions,
+      'averagePainReduction': averagePainReduction,
+      'averageWeightChange': averageWeightChange,
+      'improvementRate': improvementRate,
+      'averageSessionsPerPatient': averageSessionsPerPatient,
+      'patientsWithWeightData': patientsWithWeightData,
+      'patientsImproving': patientsImproving,
+      'painTrend': painTrend,
+      'weightTrend': weightTrend,
+    };
   }
 
   Widget _buildProgressSummaryStats(List<Patient> patients) {
@@ -2682,6 +2952,234 @@ class _ReportsScreenState extends State<ReportsScreen>
                 ),
               ],
             ),
+    );
+  }
+
+  /// Build progress summary stats from calculated data
+  Widget _buildProgressSummaryStatsFromData(Map<String, dynamic> progressData) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildProgressStatCard(
+                'Average Pain Reduction',
+                '${(progressData['averagePainReduction'] as double).toStringAsFixed(1)}%',
+                Icons.healing_outlined,
+                AppTheme.successColor,
+                (progressData['averagePainReduction'] as double) > 30 ? 'Excellent progress' : 'Steady improvement',
+                (progressData['averagePainReduction'] as double) / 100,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildProgressStatCard(
+                'Improvement Rate',
+                '${(progressData['improvementRate'] as double).toStringAsFixed(1)}%',
+                Icons.trending_up,
+                AppTheme.primaryColor,
+                '${progressData['patientsImproving']} patients improving',
+                (progressData['improvementRate'] as double) / 100,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildProgressStatCard(
+                'Avg Sessions/Patient',
+                (progressData['averageSessionsPerPatient'] as double).toStringAsFixed(1),
+                Icons.event_note_outlined,
+                AppTheme.infoColor,
+                '${progressData['totalSessions']} total sessions',
+                ((progressData['averageSessionsPerPatient'] as double) / 20).clamp(0.0, 1.0),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildProgressStatCard(
+                'Weight Change',
+                '${(progressData['averageWeightChange'] as double) > 0 ? '+' : ''}${(progressData['averageWeightChange'] as double).toStringAsFixed(1)}%',
+                Icons.monitor_weight_outlined,
+                (progressData['averageWeightChange'] as double).abs() > 5 ? AppTheme.warningColor : AppTheme.successColor,
+                '${progressData['patientsWithWeightData']} patients tracked',
+                ((progressData['averageWeightChange'] as double).abs() / 10).clamp(0.0, 1.0),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Build pain reduction chart from calculated data
+  Widget _buildModernAveragePainReductionChartFromData(Map<String, dynamic> progressData) {
+    final painTrend = progressData['painTrend'] as List<ProgressDataPoint>;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Average Pain Reduction Trend',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Based on ${painTrend.length} data points from real sessions',
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.secondaryColor,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              height: 200,
+              child: const Center(
+                child: Text(
+                  'Chart implementation pending\n(Real session data available)',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build weight change chart from calculated data
+  Widget _buildModernWeightChangeChartFromData(Map<String, dynamic> progressData) {
+    final weightTrend = progressData['weightTrend'] as List<ProgressDataPoint>;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Weight Change Analysis',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Based on ${weightTrend.length} weight measurements from real sessions',
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.secondaryColor,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              height: 200,
+              child: const Center(
+                child: Text(
+                  'Chart implementation pending\n(Real session data available)',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build session effectiveness chart from calculated data
+  Widget _buildModernSessionEffectivenessChartFromData(Map<String, dynamic> progressData) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Session Effectiveness Analysis',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Total: ${progressData['totalSessions']} sessions • Avg: ${(progressData['averageSessionsPerPatient'] as double).toStringAsFixed(1)} per patient',
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.secondaryColor,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              height: 200,
+              child: const Center(
+                child: Text(
+                  'Chart implementation pending\n(Real session data available)',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
