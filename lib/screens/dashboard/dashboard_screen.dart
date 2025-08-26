@@ -685,7 +685,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'Session ${patient.sessions.length + 1}',
+                          'Loading...',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -907,7 +907,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${patient.sessions.length} sessions completed',
+                    'Loading sessions...',
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppTheme.secondaryColor,

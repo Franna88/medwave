@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:io';
 import '../../providers/patient_provider.dart';
 import '../../models/patient.dart';
 import '../../models/progress_metrics.dart';
@@ -316,14 +315,20 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                                    color: AppTheme.primaryColor.withOpacity(0.7),
                                  ),
                                  const SizedBox(width: 4),
-                                 Text(
-                                   '${patient.sessions.length} sessions',
-                                   style: TextStyle(
-                                     fontSize: 13,
-                                     color: AppTheme.primaryColor.withOpacity(0.8),
-                                     fontWeight: FontWeight.w600,
-                                   ),
-                                 ),
+                                                                 FutureBuilder<List<Session>>(
+                                  future: context.read<PatientProvider>().getPatientSessions(patient.id),
+                                  builder: (context, snapshot) {
+                                    final sessionCount = snapshot.hasData ? snapshot.data!.length : 0;
+                                    return Text(
+                                      '$sessionCount sessions',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppTheme.primaryColor.withOpacity(0.8),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    );
+                                  },
+                                ),
                                ],
                              ),
                            ],
@@ -556,26 +561,6 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
   }
 
   Widget _buildModernOverviewTab(Patient patient, PatientProvider patientProvider) {
-    ProgressMetrics? progress;
-    try {
-      progress = patientProvider.calculateProgress(patient.id);
-    } catch (e) {
-      // Handle any errors in progress calculation
-      progress = ProgressMetrics(
-        patientId: patient.id,
-        calculatedAt: DateTime.now(),
-        painReductionPercentage: 0.0,
-        weightChangePercentage: 0.0,
-        woundHealingPercentage: 0.0,
-        totalSessions: 0,
-        hasSignificantImprovement: false,
-        painHistory: [],
-        weightHistory: [],
-        woundSizeHistory: [],
-        improvementSummary: '',
-      );
-    }
-    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -593,9 +578,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
           const SizedBox(height: 20),
           _buildModernConsentCard(patient),
           const SizedBox(height: 20),
-          _buildModernQuickStatsCard(patient, progress),
+          _buildModernQuickStatsCardAsync(patient, patientProvider),
           const SizedBox(height: 20),
-          _buildModernCurrentStatusCard(patient),
+          _buildModernCurrentStatusCardAsync(patient, patientProvider),
           const SizedBox(height: 20),
           _buildModernNextAppointmentCard(patient),
           const SizedBox(height: 100), // Space for FAB
@@ -1172,6 +1157,85 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
     );
   }
 
+  Widget _buildModernQuickStatsCardAsync(Patient patient, PatientProvider patientProvider) {
+    return FutureBuilder<ProgressMetrics>(
+      future: patientProvider.calculateProgress(patient.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Text(
+                    'Progress Summary',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor,
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Center(child: CircularProgressIndicator()),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        if (snapshot.hasError) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  const Text(
+                    'Progress Summary',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Error loading progress: ${snapshot.error}',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        final progress = snapshot.data!;
+        return _buildModernQuickStatsCard(patient, progress);
+      },
+    );
+  }
+
   Widget _buildModernQuickStatsCard(Patient patient, ProgressMetrics progress) {
     return Container(
       decoration: BoxDecoration(
@@ -1214,8 +1278,8 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                 Expanded(
                   child: _buildModernProgressIndicator(
                     'Total Sessions',
-                    '${patient.sessions.length}',
-                    patient.sessions.length / 20, // Assuming max 20 sessions
+                    '${progress.totalSessions}',
+                    progress.totalSessions / 20, // Assuming max 20 sessions
                     AppTheme.infoColor,
                     Icons.event_note_outlined,
                   ),
@@ -1316,6 +1380,239 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildModernCurrentStatusCardAsync(Patient patient, PatientProvider patientProvider) {
+    return FutureBuilder<List<Session>>(
+      future: patientProvider.getPatientSessions(patient.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Current Status',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor,
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Center(child: CircularProgressIndicator()),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        if (snapshot.hasError) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Current Status',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Error loading status: ${snapshot.error}',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        final sessions = snapshot.data ?? [];
+        final latestSession = sessions.isNotEmpty ? sessions.last : null;
+        return _buildModernCurrentStatusCardWithData(patient, latestSession);
+      },
+    );
+  }
+
+  Widget _buildModernCurrentStatusCardWithData(Patient patient, Session? latestSession) {
+    // Use latest session data if available, otherwise fall back to patient baseline/current data
+    final currentWeight = latestSession?.weight ?? patient.currentWeight ?? patient.baselineWeight;
+    final currentVasScore = latestSession?.vasScore ?? patient.currentVasScore ?? patient.baselineVasScore;
+    final currentWounds = latestSession?.wounds ?? patient.currentWounds;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'Current Status',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+                const Spacer(),
+                if (latestSession != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Session ${latestSession.sessionNumber}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildModernStatusItem(
+                    'Weight',
+                    currentWeight != null ? '${currentWeight.toStringAsFixed(1)} kg' : 'N/A',
+                    Icons.monitor_weight_outlined,
+                    AppTheme.infoColor,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildModernStatusItem(
+                    'Pain Score',
+                    currentVasScore != null ? '$currentVasScore/10' : 'N/A',
+                    Icons.healing_outlined,
+                    _getPainColor(currentVasScore ?? 0),
+                  ),
+                ),
+              ],
+            ),
+            if (currentWounds.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.warningColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.warningColor.withOpacity(0.2),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.healing,
+                          color: AppTheme.warningColor,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Active Wounds (${currentWounds.length})',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.warningColor,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...currentWounds.take(3).map((wound) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: AppTheme.warningColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${wound.location} - ${wound.length.toStringAsFixed(1)}×${wound.width.toStringAsFixed(1)} cm',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.warningColor.withOpacity(0.8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )).toList(),
+                    if (currentWounds.length > 3)
+                      Text(
+                        '... and ${currentWounds.length - 3} more',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.warningColor.withOpacity(0.6),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1614,45 +1911,101 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
   }
 
   Widget _buildModernProgressTab(Patient patient, PatientProvider patientProvider) {
-    ProgressMetrics? progress;
-    try {
-      progress = patientProvider.calculateProgress(patient.id);
-    } catch (e) {
-      // Handle any errors in progress calculation
-      progress = ProgressMetrics(
-        patientId: patient.id,
-        calculatedAt: DateTime.now(),
-        painReductionPercentage: 0.0,
-        weightChangePercentage: 0.0,
-        woundHealingPercentage: 0.0,
-        totalSessions: 0,
-        hasSignificantImprovement: false,
-        painHistory: [],
-        weightHistory: [],
-        woundSizeHistory: [],
-        improvementSummary: '',
-      );
-    }
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          _buildProgressSummaryCard(patient, progress),
-          const SizedBox(height: 24),
-          _buildModernPainChart(progress.painHistory),
-          const SizedBox(height: 24),
-          _buildModernWeightChart(progress.weightHistory),
-          const SizedBox(height: 24),
-          if (progress.woundSizeHistory.isNotEmpty)
-            _buildModernWoundSizeChart(progress.woundSizeHistory),
-          const SizedBox(height: 24),
-          _buildTreatmentTimelineCard(patient),
-          const SizedBox(height: 24),
-          _buildGoalsAndMilestonesCard(patient, progress),
-          const SizedBox(height: 100), // Space for FAB
-        ],
-      ),
+    return FutureBuilder<ProgressMetrics>(
+      future: patientProvider.calculateProgress(patient.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: AppTheme.primaryColor),
+                  SizedBox(height: 16),
+                  Text(
+                    'Calculating progress metrics...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppTheme.secondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red.withOpacity(0.7),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error calculating progress',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${snapshot.error}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.secondaryColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        // Trigger a rebuild to retry
+                      });
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        final progress = snapshot.data!;
+        
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              _buildProgressSummaryCard(patient, progress),
+              const SizedBox(height: 24),
+              _buildModernPainChart(progress.painHistory),
+              const SizedBox(height: 24),
+              _buildModernWeightChart(progress.weightHistory),
+              const SizedBox(height: 24),
+              if (progress.woundSizeHistory.isNotEmpty)
+                _buildModernWoundSizeChart(progress.woundSizeHistory),
+              const SizedBox(height: 24),
+              // TODO: Implement treatment timeline
+              // _buildTreatmentTimelineCard(patient, progress),
+              // const SizedBox(height: 24),
+              // TODO: Implement goals and milestones
+              // _buildGoalsAndMilestonesCard(patient, progress),
+              const SizedBox(height: 100), // Space for FAB
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -2348,12 +2701,18 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildProgressMetric(
-                    'Total Sessions',
-                    '${patient.sessions.length}',
-                    'sessions',
-                    Icons.event_note,
-                    AppTheme.primaryColor,
+                  child: FutureBuilder<List<Session>>(
+                    future: context.read<PatientProvider>().getPatientSessions(patient.id),
+                    builder: (context, snapshot) {
+                      final sessionCount = snapshot.hasData ? snapshot.data!.length : 0;
+                      return _buildProgressMetric(
+                        'Total Sessions',
+                        '$sessionCount',
+                        'sessions',
+                        Icons.event_note,
+                        AppTheme.primaryColor,
+                      );
+                    },
                   ),
                 ),
               ],
@@ -2804,61 +3163,133 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
   }
 
   Widget _buildModernSessionsTab(Patient patient) {
-    final sessions = patient.sessions..sort((a, b) => b.date.compareTo(a.date));
-
-    if (sessions.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(50),
-                ),
-                child: Icon(
-                  Icons.event_note_outlined,
-                  size: 50,
-                  color: AppTheme.primaryColor.withOpacity(0.7),
-                ),
+    return FutureBuilder<List<Session>>(
+      future: context.read<PatientProvider>().getPatientSessions(patient.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+        
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red.withOpacity(0.7),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading sessions',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${snapshot.error}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.secondaryColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        // Trigger a rebuild to retry loading
+                      });
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              const Text(
-                'No sessions recorded yet',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textColor,
-                ),
+            ),
+          );
+        }
+        
+        final sessions = snapshot.data ?? [];
+        
+        if (sessions.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: Icon(
+                      Icons.event_note_outlined,
+                      size: 50,
+                      color: AppTheme.primaryColor.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'No sessions recorded yet',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Start documenting patient sessions to track healing progress and treatment effectiveness.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppTheme.secondaryColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      context.push('/patients/${patient.id}/session');
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add First Session'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Start recording sessions to track progress',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppTheme.secondaryColor,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(20),
-      itemCount: sessions.length,
-      itemBuilder: (context, index) {
-        final session = sessions[index];
-        return AnimatedContainer(
-          duration: Duration(milliseconds: 100 + (index * 50)),
-          curve: Curves.easeOutBack,
-          child: _buildModernSessionCard(patient, session, index),
+            ),
+          );
+        }
+        
+        // Sort sessions by date (newest first)
+        sessions.sort((a, b) => b.date.compareTo(a.date));
+        
+        return ListView.builder(
+          padding: const EdgeInsets.all(20),
+          itemCount: sessions.length,
+          itemBuilder: (context, index) {
+            final session = sessions[index];
+            return AnimatedContainer(
+              duration: Duration(milliseconds: 100 + (index * 50)),
+              curve: Curves.easeOutBack,
+              child: _buildModernSessionCard(patient, session, index),
+            );
+          },
         );
       },
     );
@@ -3068,66 +3499,198 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
   }
 
   Widget _buildModernPhotosTab(Patient patient) {
-    final photoItems = _buildPhotoItemsList(patient);
+    return FutureBuilder<List<Session>>(
+      future: context.read<PatientProvider>().getPatientSessions(patient.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: AppTheme.primaryColor),
+                  SizedBox(height: 16),
+                  Text(
+                    'Loading photos...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppTheme.secondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red.withOpacity(0.7),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading photos',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${snapshot.error}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.secondaryColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        // Trigger a rebuild to retry
+                      });
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        final sessions = snapshot.data ?? [];
+        final photoItems = _buildPhotoItemsListFromSessions(patient, sessions);
 
-    if (photoItems.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(50),
-                ),
-                child: Icon(
-                  Icons.photo_library_outlined,
-                  size: 50,
-                  color: AppTheme.primaryColor.withOpacity(0.7),
-                ),
+        if (photoItems.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: Icon(
+                      Icons.photo_library_outlined,
+                      size: 50,
+                      color: AppTheme.primaryColor.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'No photos available',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Photos will appear here as you document sessions',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppTheme.secondaryColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      context.push('/patients/${patient.id}/session');
+                    },
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Take First Photo'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              const Text(
-                'No photos available',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Photos will appear here as you document sessions',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppTheme.secondaryColor,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+            ),
+          );
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(20),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            childAspectRatio: 0.75, // Reduced to give more height for content
           ),
-        ),
-      );
-    }
-
-    return GridView.builder(
-      padding: const EdgeInsets.all(20),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.75, // Reduced to give more height for content
-      ),
-      itemCount: photoItems.length,
-      itemBuilder: (context, index) {
-        final photoItem = photoItems[index];
-        return _buildPhotoCard(photoItem);
+          itemCount: photoItems.length,
+          itemBuilder: (context, index) {
+            final photoItem = photoItems[index];
+            return _buildPhotoCard(photoItem);
+          },
+        );
       },
     );
+  }
+
+  List<PhotoItem> _buildPhotoItemsListFromSessions(Patient patient, List<Session> sessions) {
+    final List<PhotoItem> photoItems = [];
+
+    // Add baseline photos
+    if (patient.baselinePhotos.isNotEmpty) {
+      for (int i = 0; i < patient.baselinePhotos.length; i++) {
+        photoItems.add(PhotoItem(
+          photoPath: patient.baselinePhotos[i],
+          type: PhotoType.baseline,
+          timestamp: patient.createdAt ?? DateTime.now(),
+          label: 'Baseline Photo ${i + 1}',
+        ));
+      }
+    }
+
+    // Add session photos from fetched sessions
+    for (Session session in sessions) {
+      for (int i = 0; i < session.photos.length; i++) {
+        photoItems.add(PhotoItem(
+          photoPath: session.photos[i],
+          type: PhotoType.session,
+          timestamp: session.date,
+          sessionNumber: session.sessionNumber,
+          label: 'Session ${session.sessionNumber} - Photo ${i + 1}',
+        ));
+      }
+    }
+
+    // Add wound photos from latest session wounds or current wounds
+    final woundsToCheck = sessions.isNotEmpty ? sessions.last.wounds : patient.currentWounds;
+    for (Wound wound in woundsToCheck) {
+      for (int i = 0; i < wound.photos.length; i++) {
+        photoItems.add(PhotoItem(
+          photoPath: wound.photos[i],
+          type: PhotoType.wound,
+          timestamp: wound.assessedAt,
+          label: 'Wound - ${wound.location} (${i + 1})',
+        ));
+      }
+    }
+
+    // Sort by timestamp (newest first)
+    photoItems.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return photoItems;
   }
 
   List<PhotoItem> _buildPhotoItemsList(Patient patient) {
@@ -3467,7 +4030,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
 
       // Calculate progress
       final patientProvider = context.read<PatientProvider>();
-      final progress = patientProvider.calculateProgress(patient.id);
+      final progress = await patientProvider.calculateProgress(patient.id);
 
       // Generate PDF
       final file = await ExportUtils.exportPatientProgressToPdf(patient, progress);

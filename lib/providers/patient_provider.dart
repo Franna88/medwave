@@ -197,22 +197,34 @@ class PatientProvider with ChangeNotifier {
 
   /// Add a session to a patient
   Future<bool> addPatientSession(String patientId, Session session) async {
+    print('🏥 PATIENT PROVIDER DEBUG: addPatientSession called');
+    print('🏥 PATIENT PROVIDER DEBUG: Patient ID: $patientId');
+    print('🏥 PATIENT PROVIDER DEBUG: Session ID: ${session.id}');
+    print('🏥 PATIENT PROVIDER DEBUG: UseFirebase flag: $_useFirebase');
+    
     if (!_useFirebase) {
+      print('🏥 PATIENT PROVIDER DEBUG: Using mock data - calling _addMockSession');
       return _addMockSession(patientId, session);
     }
 
     try {
+      print('🏥 PATIENT PROVIDER DEBUG: Setting loading state to true');
       _setLoading(true);
       _setError(null);
       
+      print('🏥 PATIENT PROVIDER DEBUG: Calling PatientService.addPatientSession');
       await PatientService.addPatientSession(patientId, session);
+      print('✅ PATIENT PROVIDER DEBUG: PatientService.addPatientSession completed successfully');
       
       // The real-time listener will automatically update the UI
+      print('🏥 PATIENT PROVIDER DEBUG: Returning true (success)');
       return true;
     } catch (e) {
+      print('❌ PATIENT PROVIDER DEBUG: Error in addPatientSession: $e');
       _setError('Failed to add session: $e');
       return false;
     } finally {
+      print('🏥 PATIENT PROVIDER DEBUG: Setting loading state to false');
       _setLoading(false);
     }
   }
@@ -269,66 +281,111 @@ class PatientProvider with ChangeNotifier {
     }
   }
 
-  /// Calculate progress metrics for a patient (now simplified to use built-in calculations)
-  ProgressMetrics calculateProgress(String patientId) {
+  /// Calculate progress metrics for a patient using real session data from main collection
+  Future<ProgressMetrics> calculateProgress(String patientId) async {
     final patient = _patients.firstWhere(
       (p) => p.id == patientId,
       orElse: () => throw Exception('Patient not found'),
     );
 
-    return ProgressMetrics(
-      patientId: patientId,
-      calculatedAt: DateTime.now(),
-      painReductionPercentage: patient.painReductionPercentage,
-      weightChangePercentage: patient.weightChangePercentage,
-      woundHealingPercentage: patient.woundHealingProgress ?? 0.0,
-      totalSessions: patient.totalSessions,
-      hasSignificantImprovement: patient.hasImprovement,
-      painHistory: patient.sessions.asMap().entries.map((entry) => ProgressDataPoint(
-        date: entry.value.date,
-        value: entry.value.vasScore.toDouble(),
-        sessionNumber: entry.key + 1,
-      )).toList(),
-      weightHistory: patient.sessions.asMap().entries.map((entry) => ProgressDataPoint(
-        date: entry.value.date,
-        value: entry.value.weight,
-        sessionNumber: entry.key + 1,
-      )).toList(),
-      woundSizeHistory: patient.sessions.asMap().entries.map((entry) => ProgressDataPoint(
-        date: entry.value.date,
-        value: entry.value.wounds.fold(0.0, (sum, w) => sum + w.area),
-        sessionNumber: entry.key + 1,
-      )).toList(),
-      improvementSummary: _generateImprovementSummary(patient),
-    );
-  }
-
-  /// Generate improvement summary text
-  String _generateImprovementSummary(Patient patient) {
-    final List<String> improvements = [];
+    // Fetch real sessions from main collection
+    final sessions = await getPatientSessions(patientId);
     
-    if (patient.painReductionPercentage > 20) {
-      improvements.add('${patient.painReductionPercentage.toStringAsFixed(1)}% pain reduction');
-    }
-    
-    if (patient.weightChangePercentage.abs() > 5) {
-      if (patient.weightChangePercentage > 0) {
-        improvements.add('${patient.weightChangePercentage.toStringAsFixed(1)}% weight gain');
-      } else {
-        improvements.add('${patient.weightChangePercentage.abs().toStringAsFixed(1)}% weight loss');
+    // Calculate pain reduction percentage
+    double painReductionPercentage = 0.0;
+    if (sessions.isNotEmpty && patient.baselineVasScore != null) {
+      final latestVas = sessions.last.vasScore;
+      final baselineVas = patient.baselineVasScore!;
+      if (baselineVas > 0) {
+        painReductionPercentage = ((baselineVas - latestVas) / baselineVas) * 100;
       }
     }
     
-    if ((patient.woundHealingProgress ?? 0) > 30) {
-      improvements.add('${patient.woundHealingProgress!.toStringAsFixed(1)}% wound healing');
+    // Calculate weight change percentage
+    double weightChangePercentage = 0.0;
+    if (sessions.isNotEmpty && patient.baselineWeight != null) {
+      final latestWeight = sessions.last.weight;
+      final baselineWeight = patient.baselineWeight!;
+      if (baselineWeight > 0) {
+        weightChangePercentage = ((latestWeight - baselineWeight) / baselineWeight) * 100;
+      }
+    }
+    
+    // Calculate wound healing percentage
+    double woundHealingPercentage = 0.0;
+    if (sessions.isNotEmpty && patient.baselineWounds != null && patient.baselineWounds!.isNotEmpty) {
+      final baselineArea = patient.baselineWounds!.fold(0.0, (sum, w) => sum + w.area);
+      final latestArea = sessions.last.wounds.fold(0.0, (sum, w) => sum + w.area);
+      if (baselineArea > 0) {
+        woundHealingPercentage = ((baselineArea - latestArea) / baselineArea) * 100;
+      }
+    }
+    
+    // Create progress data points from real sessions
+    final painHistory = sessions.map((session) => ProgressDataPoint(
+      date: session.date,
+      value: session.vasScore.toDouble(),
+      sessionNumber: session.sessionNumber,
+    )).toList();
+    
+    final weightHistory = sessions.map((session) => ProgressDataPoint(
+      date: session.date,
+      value: session.weight,
+      sessionNumber: session.sessionNumber,
+    )).toList();
+    
+    final woundSizeHistory = sessions.map((session) => ProgressDataPoint(
+      date: session.date,
+      value: session.wounds.fold(0.0, (sum, w) => sum + w.area),
+      sessionNumber: session.sessionNumber,
+    )).toList();
+
+    return ProgressMetrics(
+      patientId: patientId,
+      calculatedAt: DateTime.now(),
+      painReductionPercentage: painReductionPercentage,
+      weightChangePercentage: weightChangePercentage,
+      woundHealingPercentage: woundHealingPercentage,
+      totalSessions: sessions.length,
+      hasSignificantImprovement: painReductionPercentage > 20 || woundHealingPercentage > 30,
+      painHistory: painHistory,
+      weightHistory: weightHistory,
+      woundSizeHistory: woundSizeHistory,
+      improvementSummary: _generateImprovementSummaryFromSessions(patient, sessions, painReductionPercentage, weightChangePercentage, woundHealingPercentage),
+    );
+  }
+
+  /// Generate improvement summary text from real session data
+  String _generateImprovementSummaryFromSessions(Patient patient, List<Session> sessions, double painReduction, double weightChange, double woundHealing) {
+    final List<String> improvements = [];
+    
+    if (painReduction > 20) {
+      improvements.add('${painReduction.toStringAsFixed(1)}% pain reduction');
+    }
+    
+    if (weightChange.abs() > 5) {
+      if (weightChange > 0) {
+        improvements.add('${weightChange.toStringAsFixed(1)}% weight gain');
+      } else {
+        improvements.add('${weightChange.abs().toStringAsFixed(1)}% weight loss');
+      }
+    }
+    
+    if (woundHealing > 30) {
+      improvements.add('${woundHealing.toStringAsFixed(1)}% wound healing');
     }
     
     if (improvements.isEmpty) {
+      if (sessions.isEmpty) {
+        return 'Begin treatment to track progress';
+      }
       return 'Continue monitoring progress';
     }
     
     return 'Showing improvement: ${improvements.join(', ')}';
   }
+
+
 
   /// Add a session (legacy method name for backward compatibility)
   Future<bool> addSession(String patientId, Session session) async {

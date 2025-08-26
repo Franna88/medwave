@@ -23,10 +23,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -65,5 +62,15 @@ class DefaultFirebaseOptions {
     messagingSenderId: '163334285228',
     projectId: 'bhl-obe',
     storageBucket: 'bhl-obe.firebasestorage.app',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyCbmVTd9lfnZbkAt1UvtrG5ZsbSH2BGwf4',
+    appId: '1:163334285228:ios:3c25bacf88e706df187c09',
+    messagingSenderId: '163334285228',
+    projectId: 'bhl-obe',
+    storageBucket: 'bhl-obe.firebasestorage.app',
+    iosClientId: '163334285228-8qj4m5g3m9q5h8r6d1v7s2p4k9n0c3b1.apps.googleusercontent.com',
+    iosBundleId: 'com.example.medwaveApp',
   );
 }

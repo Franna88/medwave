@@ -755,10 +755,10 @@ class Wound {
 }
 
 enum WoundStage {
-  stage1('Stage 1 - Intact skin with redness'),
-  stage2('Stage 2 - Partial thickness loss'),
-  stage3('Stage 3 - Full thickness loss'),
-  stage4('Stage 4 - Full thickness with exposed bone/muscle'),
+  stage1('Stage 1 - Intact skin'),
+  stage2('Stage 2 - Partial loss'),
+  stage3('Stage 3 - Full thickness'),
+  stage4('Stage 4 - Bone/muscle exposed'),
   unstageable('Unstageable'),
   deepTissueInjury('Deep Tissue Injury');
 

@@ -5,6 +5,7 @@ import '../providers/patient_provider.dart';
 import '../models/patient.dart';
 import '../theme/app_theme.dart';
 import '../utils/responsive_utils.dart';
+import '../services/firebase/patient_service.dart';
 
 class ResponsivePatientList extends StatelessWidget {
   final String searchQuery;
@@ -409,13 +410,19 @@ class ResponsivePatientList extends StatelessWidget {
                         color: AppTheme.primaryColor.withOpacity(0.7),
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        '${patient.sessions.length} sessions',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.primaryColor.withOpacity(0.8),
-                        ),
+                      FutureBuilder<List<Session>>(
+                        future: PatientService.getPatientSessions(patient.id),
+                        builder: (context, snapshot) {
+                          final sessionCount = snapshot.hasData ? snapshot.data!.length : 0;
+                          return Text(
+                            '$sessionCount sessions',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryColor.withOpacity(0.8),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -478,12 +485,18 @@ class ResponsivePatientList extends StatelessWidget {
                 children: [
                   _buildStatusIndicator(patient),
                   const SizedBox(height: 4),
-                  Text(
-                    '${patient.sessions.length} sessions',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.secondaryColor.withOpacity(0.6),
-                    ),
+                  FutureBuilder<List<Session>>(
+                    future: PatientService.getPatientSessions(patient.id),
+                    builder: (context, snapshot) {
+                      final sessionCount = snapshot.hasData ? snapshot.data!.length : 0;
+                      return Text(
+                        '$sessionCount sessions',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.secondaryColor.withOpacity(0.6),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -660,13 +673,19 @@ class ResponsivePatientList extends StatelessWidget {
                       color: AppTheme.primaryColor.withOpacity(0.6),
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      '${patient.sessions.length}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.primaryColor.withOpacity(0.8),
-                      ),
+                    FutureBuilder<List<Session>>(
+                      future: PatientService.getPatientSessions(patient.id),
+                      builder: (context, snapshot) {
+                        final sessionCount = snapshot.hasData ? snapshot.data!.length : 0;
+                        return Text(
+                          '$sessionCount',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primaryColor.withOpacity(0.8),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),

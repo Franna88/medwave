@@ -8,6 +8,7 @@ import '../providers/notification_provider.dart';
 import '../providers/appointment_provider.dart';
 import '../models/patient.dart';
 import '../models/notification.dart';
+import '../services/firebase/patient_service.dart';
 import '../models/appointment.dart';
 import '../theme/app_theme.dart';
 import '../utils/responsive_utils.dart';
@@ -304,13 +305,19 @@ class ResponsiveDashboardContent extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            patientProvider.patients.fold<int>(0, (sum, p) => sum + p.sessions.length).toString(),
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.infoColor,
-                            ),
+                          FutureBuilder<int>(
+                            future: _getTotalSessionsCount(patientProvider.patients),
+                            builder: (context, snapshot) {
+                              final totalSessions = snapshot.hasData ? snapshot.data! : 0;
+                              return Text(
+                                totalSessions.toString(),
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.infoColor,
+                                ),
+                              );
+                            },
                           ),
                           const Text(
                             'Sessions',
@@ -933,5 +940,14 @@ class ResponsiveDashboardContent extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<int> _getTotalSessionsCount(List<Patient> patients) async {
+    int totalSessions = 0;
+    for (Patient patient in patients) {
+      final sessions = await PatientService.getPatientSessions(patient.id);
+      totalSessions += sessions.length;
+    }
+    return totalSessions;
   }
 }

@@ -342,46 +342,100 @@ class PatientService {
 
   /// Get patient sessions
   static Future<List<Session>> getPatientSessions(String patientId) async {
+    print('📋 GET SESSIONS DEBUG: getPatientSessions started - MAIN COLLECTION');
+    print('📋 GET SESSIONS DEBUG: Patient ID: $patientId');
+    
     try {
-      final snapshot = await _patientsCollection
-          .doc(patientId)
+      print('📋 GET SESSIONS DEBUG: Querying main sessions collection...');
+      final snapshot = await FirebaseFirestore.instance
           .collection('sessions')
+          .where('patientId', isEqualTo: patientId)
           .orderBy('sessionNumber')
           .get();
-
-      return snapshot.docs.map((doc) => Session.fromFirestore(doc)).toList();
+      
+      print('📋 GET SESSIONS DEBUG: Query completed');
+      print('📋 GET SESSIONS DEBUG: Number of session documents found: ${snapshot.docs.length}');
+      
+      if (snapshot.docs.isEmpty) {
+        print('📋 GET SESSIONS DEBUG: No sessions found for patient $patientId');
+        return [];
+      }
+      
+      print('📋 GET SESSIONS DEBUG: Converting documents to Session objects...');
+      final sessions = snapshot.docs.map((doc) {
+        print('📋 GET SESSIONS DEBUG: Processing session doc ID: ${doc.id}');
+        print('📋 GET SESSIONS DEBUG: Session doc data keys: ${doc.data().keys.toList()}');
+        return Session.fromFirestore(doc);
+      }).toList();
+      
+      print('✅ GET SESSIONS DEBUG: Successfully converted ${sessions.length} sessions');
+      print('📋 GET SESSIONS DEBUG: Session IDs: ${sessions.map((s) => s.id).toList()}');
+      return sessions;
     } catch (e) {
+      print('❌ GET SESSIONS DEBUG: Error getting sessions: $e');
       throw Exception('Failed to get patient sessions: $e');
     }
   }
 
   /// Add a session to a patient
   static Future<String> addPatientSession(String patientId, Session session) async {
+    print('🔥 PATIENT SERVICE DEBUG: addPatientSession started');
+    print('🔥 PATIENT SERVICE DEBUG: Patient ID: $patientId');
+    print('🔥 PATIENT SERVICE DEBUG: Session ID: ${session.id}');
+    print('🔥 PATIENT SERVICE DEBUG: Session Number: ${session.sessionNumber}');
+    
     try {
       final userId = _auth.currentUser?.uid;
-      if (userId == null) throw Exception('User not authenticated');
-
-      // Verify patient ownership
-      final patient = await getPatient(patientId);
-      if (patient == null) throw Exception('Patient not found');
-      if (patient.practitionerId != userId) {
-        throw Exception('Access denied: Patient belongs to another practitioner');
+      print('🔥 PATIENT SERVICE DEBUG: Current user ID: $userId');
+      
+      if (userId == null) {
+        print('❌ PATIENT SERVICE DEBUG: User not authenticated');
+        throw Exception('User not authenticated');
       }
 
+      // Verify patient ownership
+      print('🔥 PATIENT SERVICE DEBUG: Verifying patient ownership...');
+      final patient = await getPatient(patientId);
+      if (patient == null) {
+        print('❌ PATIENT SERVICE DEBUG: Patient not found');
+        throw Exception('Patient not found');
+      }
+      print('🔥 PATIENT SERVICE DEBUG: Patient found: ${patient.name}');
+      print('🔥 PATIENT SERVICE DEBUG: Patient practitioner ID: ${patient.practitionerId}');
+      
+      if (patient.practitionerId != userId) {
+        print('❌ PATIENT SERVICE DEBUG: Access denied - practitioner mismatch');
+        throw Exception('Access denied: Patient belongs to another practitioner');
+      }
+      print('✅ PATIENT SERVICE DEBUG: Patient ownership verified');
+
       // Add session to subcollection
+      print('🔥 PATIENT SERVICE DEBUG: Converting session to Firestore format...');
+      final sessionData = session.toFirestore();
+      print('🔥 PATIENT SERVICE DEBUG: Session data for Firestore: $sessionData');
+      
+      print('🔥 PATIENT SERVICE DEBUG: Adding session to Firebase subcollection...');
       final sessionRef = await _patientsCollection
           .doc(patientId)
           .collection('sessions')
-          .add(session.toFirestore());
+          .add(sessionData);
+      print('✅ PATIENT SERVICE DEBUG: Session added to Firebase with auto-ID: ${sessionRef.id}');
 
       // Update session with its own ID
+      print('🔥 PATIENT SERVICE DEBUG: Updating session document with its own ID...');
       await sessionRef.update({'id': sessionRef.id});
+      print('✅ PATIENT SERVICE DEBUG: Session document updated with ID');
 
       // Update patient progress
+      print('🔥 PATIENT SERVICE DEBUG: Updating patient progress...');
       await updatePatientProgress(patientId);
+      print('✅ PATIENT SERVICE DEBUG: Patient progress updated');
 
+      print('✅ PATIENT SERVICE DEBUG: addPatientSession completed successfully!');
+      print('🔥 PATIENT SERVICE DEBUG: Final session ID: ${sessionRef.id}');
       return sessionRef.id;
     } catch (e) {
+      print('❌ PATIENT SERVICE DEBUG: Error in addPatientSession: $e');
       throw Exception('Failed to add session: $e');
     }
   }

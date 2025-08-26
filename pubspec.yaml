@@ -57,15 +57,15 @@ dependencies:
   # Navigation
   go_router: ^12.1.3
   
-  # Firebase Dependencies - using compatible versions
-  firebase_core: ^2.32.0
-  firebase_auth: ^4.19.6
-  cloud_firestore: ^4.17.5
-  firebase_storage: ^11.7.7
-  firebase_messaging: ^14.9.4
-  firebase_analytics: ^10.10.7
-  firebase_performance: ^0.9.4+7
-  cloud_functions: ^4.7.6
+  # Firebase Dependencies - using Xcode 16.4 compatible versions
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.0
+  firebase_storage: ^12.3.2
+  firebase_messaging: ^15.1.3
+  firebase_analytics: ^11.3.3
+  firebase_performance: ^0.10.0+8
+  cloud_functions: ^5.1.3
   
   # Local notifications
   flutter_local_notifications: ^17.2.2

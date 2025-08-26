@@ -2281,11 +2281,32 @@ class _ReportsScreenState extends State<ReportsScreen>
             itemCount: patients.length,
             itemBuilder: (context, index) {
               final patient = patients[index];
-              final progress = patientProvider.calculateProgress(patient.id);
-              return AnimatedContainer(
-                duration: Duration(milliseconds: 100 + (index * 50)),
-                curve: Curves.easeOutBack,
-                child: _buildModernPatientReportCard(patient, progress, index),
+              return FutureBuilder<ProgressMetrics>(
+                future: patientProvider.calculateProgress(patient.id),
+                builder: (context, progressSnapshot) {
+                  if (progressSnapshot.connectionState == ConnectionState.waiting) {
+                    return Container(
+                      height: 200,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  
+                  final progress = progressSnapshot.data;
+                  if (progress == null) {
+                    return const SizedBox.shrink();
+                  }
+                  
+                  return AnimatedContainer(
+                    duration: Duration(milliseconds: 100 + (index * 50)),
+                    curve: Curves.easeOutBack,
+                    child: _buildModernPatientReportCard(patient, progress, index),
+                  );
+                },
               );
             },
           );
@@ -2399,7 +2420,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
-                                          '${patient.sessions.length} sessions completed',
+                                          'Loading sessions...',
                                           style: TextStyle(
                                             color: AppTheme.secondaryColor,
                                             fontSize: isSmallScreen ? 12 : 14,

@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>MedWave needs camera access to take photos for wound documentation and patient session records to track treatment progress.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MedWave needs photo library access to select existing images for patient documentation and wound comparison photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>MedWave needs permission to save patient photos and wound documentation images to your photo library for record keeping.</string>
 </dict>
 </plist>

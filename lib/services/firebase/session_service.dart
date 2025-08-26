@@ -57,14 +57,17 @@ class SessionService {
   /// Get a specific session by ID
   static Future<Session?> getSession(String patientId, String sessionId) async {
     try {
-      final doc = await _patientsCollection
-          .doc(patientId)
+      final doc = await FirebaseFirestore.instance
           .collection('sessions')
           .doc(sessionId)
           .get();
       
       if (doc.exists) {
-        return Session.fromFirestore(doc);
+        final sessionData = doc.data() as Map<String, dynamic>;
+        // Verify the session belongs to the specified patient
+        if (sessionData['patientId'] == patientId) {
+          return Session.fromFirestore(doc);
+        }
       }
       return null;
     } catch (e) {
@@ -74,25 +77,40 @@ class SessionService {
 
   /// Create a new session
   static Future<String> createSession(String patientId, Session session) async {
+    print('🔥 SESSION SERVICE DEBUG: createSession started - MAIN COLLECTION');
+    print('🔥 SESSION SERVICE DEBUG: Patient ID: $patientId');
+    
     try {
       final userId = _auth.currentUser?.uid;
-      if (userId == null) throw Exception('User not authenticated');
+      print('🔥 SESSION SERVICE DEBUG: Current user ID: $userId');
+      
+      if (userId == null) {
+        print('❌ SESSION SERVICE DEBUG: User not authenticated');
+        throw Exception('User not authenticated');
+      }
 
       // Verify patient ownership
+      print('🔥 SESSION SERVICE DEBUG: Verifying patient ownership...');
       final patientDoc = await _patientsCollection.doc(patientId).get();
       if (!patientDoc.exists) {
+        print('❌ SESSION SERVICE DEBUG: Patient not found');
         throw Exception('Patient not found');
       }
       
       final patientData = patientDoc.data() as Map<String, dynamic>;
+      print('🔥 SESSION SERVICE DEBUG: Patient practitioner ID: ${patientData['practitionerId']}');
+      
       if (patientData['practitionerId'] != userId) {
+        print('❌ SESSION SERVICE DEBUG: Access denied - practitioner mismatch');
         throw Exception('Access denied: Patient belongs to another practitioner');
       }
+      print('✅ SESSION SERVICE DEBUG: Patient ownership verified');
 
-      // Get the next session number
-      final existingSessions = await _patientsCollection
-          .doc(patientId)
+      // Get the next session number for this patient from main sessions collection
+      print('🔥 SESSION SERVICE DEBUG: Getting next session number for patient...');
+      final existingSessions = await FirebaseFirestore.instance
           .collection('sessions')
+          .where('patientId', isEqualTo: patientId)
           .orderBy('sessionNumber', descending: true)
           .limit(1)
           .get();
@@ -100,26 +118,36 @@ class SessionService {
       final nextSessionNumber = existingSessions.docs.isEmpty 
           ? 1 
           : (existingSessions.docs.first.data()['sessionNumber'] as int) + 1;
+      print('🔥 SESSION SERVICE DEBUG: Next session number: $nextSessionNumber');
 
-      // Create session with auto-generated session number
+      // Create session with complete references
       final sessionData = session.copyWith(
         sessionNumber: nextSessionNumber,
         practitionerId: userId,
+        patientId: patientId, // Ensure patientId is included
       );
 
-      final docRef = await _patientsCollection
-          .doc(patientId)
+      print('🔥 SESSION SERVICE DEBUG: Creating session in main collection...');
+      final docRef = await FirebaseFirestore.instance
           .collection('sessions')
           .add(sessionData.toFirestore());
       
+      print('✅ SESSION SERVICE DEBUG: Session created with auto-ID: ${docRef.id}');
+      
       // Update the session document with its own ID
+      print('🔥 SESSION SERVICE DEBUG: Updating session with its own ID...');
       await docRef.update({'id': docRef.id});
+      print('✅ SESSION SERVICE DEBUG: Session document updated with ID');
 
       // Update patient's current status with latest session data
+      print('🔥 SESSION SERVICE DEBUG: Updating patient progress...');
       await _updatePatientProgressFromSession(patientId, sessionData);
+      print('✅ SESSION SERVICE DEBUG: Patient progress updated');
       
+      print('✅ SESSION SERVICE DEBUG: createSession completed successfully!');
       return docRef.id;
     } catch (e) {
+      print('❌ SESSION SERVICE DEBUG: Error in createSession: $e');
       throw Exception('Failed to create session: $e');
     }
   }

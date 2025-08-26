@@ -24,10 +24,15 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == request.resource.data.practitionerId;
     }
     
-    // Practitioners can read/write their own sessions
+    // Practitioners can read/write sessions for their patients
     match /sessions/{sessionId} {
+      // Allow practitioners to access sessions they created
       allow read, write: if request.auth != null && request.auth.uid == resource.data.practitionerId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.practitionerId;
+      
+      // Also allow reading/writing sessions for patients they own
+      allow read, write: if request.auth != null && 
+        request.auth.uid == get(/databases/$(database)/documents/patients/$(resource.data.patientId)).data.practitionerId;
     }
     
     // Practitioners can read/write their own notifications
