@@ -53,6 +53,13 @@ class Patient {
   final bool isSmoker;
   final String? naturalTreatments;
   
+  // Enhanced Wound History (for AI report generation)
+  final DateTime? woundStartDate;
+  final String? woundOccurrence;
+  final String? woundOccurrenceDetails;
+  final String? woundHistory;
+  final String? previousTreatments;
+  
   // Consent and Signatures
   final String? accountResponsibilitySignature;
   final DateTime? accountResponsibilitySignatureDate;
@@ -136,6 +143,12 @@ class Patient {
     this.allergies,
     required this.isSmoker,
     this.naturalTreatments,
+    // Enhanced Wound History
+    this.woundStartDate,
+    this.woundOccurrence,
+    this.woundOccurrenceDetails,
+    this.woundHistory,
+    this.previousTreatments,
     // Consent and Signatures
     this.accountResponsibilitySignature,
     this.accountResponsibilitySignatureDate,
@@ -244,6 +257,11 @@ class Patient {
     String? allergies,
     bool? isSmoker,
     String? naturalTreatments,
+    DateTime? woundStartDate,
+    String? woundOccurrence,
+    String? woundOccurrenceDetails,
+    String? woundHistory,
+    String? previousTreatments,
     String? accountResponsibilitySignature,
     DateTime? accountResponsibilitySignatureDate,
     String? woundPhotographyConsentSignature,
@@ -310,6 +328,11 @@ class Patient {
       allergies: allergies ?? this.allergies,
       isSmoker: isSmoker ?? this.isSmoker,
       naturalTreatments: naturalTreatments ?? this.naturalTreatments,
+      woundStartDate: woundStartDate ?? this.woundStartDate,
+      woundOccurrence: woundOccurrence ?? this.woundOccurrence,
+      woundOccurrenceDetails: woundOccurrenceDetails ?? this.woundOccurrenceDetails,
+      woundHistory: woundHistory ?? this.woundHistory,
+      previousTreatments: previousTreatments ?? this.previousTreatments,
       accountResponsibilitySignature: accountResponsibilitySignature ?? this.accountResponsibilitySignature,
       accountResponsibilitySignatureDate: accountResponsibilitySignatureDate ?? this.accountResponsibilitySignatureDate,
       woundPhotographyConsentSignature: woundPhotographyConsentSignature ?? this.woundPhotographyConsentSignature,

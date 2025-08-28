@@ -24,7 +24,7 @@ class MainScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Image.asset(
-          'images/medwave_logo_black.png',
+          'images/medwave_logo_grey.png',
           height: 32,
         ),
         centerTitle: false,

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
+import '../ai/ai_report_chat_screen.dart';
 
 class SessionDetailScreen extends StatefulWidget {
   final String patientId;
@@ -50,6 +51,110 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
     if (sessions.isNotEmpty) {
       _previousSession = sessions.first;
     }
+  }
+
+  void _generateAIReport() {
+    HapticFeedback.mediumImpact();
+    
+    // Show confirmation dialog first
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.smart_toy, color: AppTheme.primaryColor),
+            SizedBox(width: 12),
+            Text('Generate AI Report'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Generate a clinical motivation report for ${widget.patient.name}?',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, 
+                           color: AppTheme.primaryColor, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This will use patient data from their file and ask 3-5 questions about this session.',
+                          style: TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.schedule, 
+                           color: AppTheme.primaryColor, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Estimated time: 2-3 minutes',
+                          style: TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _launchAIChat();
+            },
+            icon: const Icon(Icons.smart_toy),
+            label: const Text('Start AI Chat'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _launchAIChat() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AIReportChatScreen(
+          patientId: widget.patientId,
+          sessionId: widget.sessionId,
+          patient: widget.patient,
+          session: widget.session,
+        ),
+      ),
+    );
   }
 
   @override
@@ -104,6 +209,30 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
           color: AppTheme.textColor,
         ),
       ),
+      actions: [
+        Container(
+          margin: const EdgeInsets.only(right: 16),
+          child: IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.smart_toy, color: Colors.white, size: 20),
+            ),
+            onPressed: _generateAIReport,
+            tooltip: 'Generate AI Report',
+          ),
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(

@@ -7,6 +7,7 @@ import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
 import '../../services/firebase/session_service.dart';
 import '../../services/firebase/patient_service.dart';
+import '../ai/ai_report_chat_screen.dart';
 
 class SessionLoggingScreen extends StatefulWidget {
   final String patientId;
@@ -854,18 +855,83 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
   }
 
   void _generateMotivationForm() {
+    // Check if session is saved first
+    if (_patient == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please load patient data first'),
+          backgroundColor: AppTheme.warningColor,
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.description_outlined, color: AppTheme.primaryColor),
+            Icon(Icons.smart_toy, color: AppTheme.primaryColor),
             SizedBox(width: 12),
-            Text('Generate Motivation Form'),
+            Text('Generate AI Report'),
           ],
         ),
-        content: const Text(
-          'This will generate a comprehensive motivation form based on the patient\'s current session data and treatment progress. The form will include medical justification for continued treatment.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Generate a clinical motivation report for ${_patient!.name}?',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.warningColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.warningColor.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, 
+                           color: AppTheme.warningColor, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Note: Save this session first to include current data in the report.',
+                          style: TextStyle(
+                            color: AppTheme.warningColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.schedule, 
+                           color: AppTheme.primaryColor, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'AI will ask 3-5 questions about this session.',
+                          style: TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -875,50 +941,57 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
           ElevatedButton.icon(
             onPressed: () {
               Navigator.of(context).pop();
-              _showMotivationFormGenerated();
+              _launchAIReportForCurrentSession();
             },
-            icon: const Icon(Icons.file_download),
-            label: const Text('Generate'),
+            icon: const Icon(Icons.smart_toy),
+            label: const Text('Start AI Chat'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showMotivationFormGenerated() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Motivation form generated successfully! Check your downloads.',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: AppTheme.successColor,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: 'View',
-          textColor: Colors.white,
-          onPressed: () {
-            // In a real app, this would open the generated PDF
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Opening motivation form...'),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          },
+  void _launchAIReportForCurrentSession() {
+    // Create a temporary session object with current data
+    final temporarySession = Session(
+      id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+      patientId: widget.patientId,
+      sessionNumber: (_patient?.sessions.length ?? 0) + 1,
+      date: DateTime.now(),
+      weight: double.tryParse(_weightController.text) ?? _patient?.currentWeight ?? 0,
+      vasScore: int.tryParse(_vasScoreController.text) ?? _patient?.currentVasScore ?? 0,
+      notes: _notesController.text,
+      photos: _sessionPhotos,
+      practitionerId: _patient?.practitionerId ?? '',
+      wounds: _patient?.currentWounds.isNotEmpty == true
+          ? [
+              _patient!.currentWounds.first.copyWith(
+                length: double.tryParse(_woundLengthController.text),
+                width: double.tryParse(_woundWidthController.text),
+                depth: double.tryParse(_woundDepthController.text),
+                description: _woundDescriptionController.text,
+                stage: _selectedWoundStage,
+              )
+            ]
+          : [],
+    );
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AIReportChatScreen(
+          patientId: widget.patientId,
+          sessionId: temporarySession.id,
+          patient: _patient!,
+          session: temporarySession,
         ),
       ),
     );
   }
+
+
 
   Future<void> _pickImage(ImageSource source) async {
     try {

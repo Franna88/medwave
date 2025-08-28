@@ -70,6 +70,16 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   final _woundDescriptionController = TextEditingController();
   WoundStage _selectedWoundStage = WoundStage.stage1;
   String _selectedWoundType = 'Pressure Ulcer';
+  
+  // Enhanced Wound History (NEW - for AI report generation)
+  final _woundHistoryController = TextEditingController();
+  final _woundOccurrenceController = TextEditingController();
+  final _previousTreatmentsController = TextEditingController();
+  final _referringDoctorController = TextEditingController();
+  final _referringDoctorContactController = TextEditingController();
+  DateTime? _woundStartDate;
+  String _selectedWoundOccurrence = 'Chronic condition';
+  final Map<String, String> _detailedMedicalConditions = {};
 
   List<String> _baselinePhotos = [];
   List<String> _woundPhotos = [];
@@ -111,6 +121,11 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     _woundWidthController.dispose();
     _woundDepthController.dispose();
     _woundDescriptionController.dispose();
+    _woundHistoryController.dispose();
+    _woundOccurrenceController.dispose();
+    _previousTreatmentsController.dispose();
+    _referringDoctorController.dispose();
+    _referringDoctorContactController.dispose();
     super.dispose();
   }
 
@@ -164,6 +179,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                 _buildMedicalHistoryPage(),
                 _buildBaselineMeasurementsPage(),
                 _buildWoundDetailsPage(),
+                _buildWoundHistoryPage(),
                 _buildConsentPage(),
                 _buildConfirmationPage(),
               ],
@@ -179,7 +195,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
-        children: List.generate(8, (index) {
+        children: List.generate(9, (index) {
           final isActive = index <= _currentPage;
           return Expanded(
             child: Container(
@@ -499,6 +515,38 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
               prefixIcon: const Icon(Icons.person),
             ),
           ),
+          const SizedBox(height: 32),
+          
+          // Referring Doctor Section
+          const Text(
+            'Referring Doctor/Specialist',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _referringDoctorController,
+            decoration: const InputDecoration(
+              labelText: 'Referring Doctor Name',
+              prefixIcon: Icon(Icons.local_hospital),
+              hintText: 'Dr. Smith',
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _referringDoctorContactController,
+            decoration: const InputDecoration(
+              labelText: 'Doctor Contact Number',
+              prefixIcon: Icon(Icons.phone),
+              hintText: '011 123 4567',
+            ),
+            keyboardType: TextInputType.phone,
+          ),
         ],
       ),
     );
@@ -615,40 +663,275 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         border: Border.all(color: AppTheme.borderColor.withOpacity(0.5)),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              AppLocalizations.get(condition),
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  AppLocalizations.get(condition),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Text(AppLocalizations.get('yes')),
+                  Radio<bool>(
+                    value: true,
+                    groupValue: _medicalConditions[condition],
+                    onChanged: (value) {
+                      setState(() {
+                        _medicalConditions[condition] = value!;
+                      });
+                    },
+                  ),
+                  Text(AppLocalizations.get('no')),
+                  Radio<bool>(
+                    value: false,
+                    groupValue: _medicalConditions[condition],
+                    onChanged: (value) {
+                      setState(() {
+                        _medicalConditions[condition] = value!;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Enhanced: Add detailed description field for ICD-10 coding
+          if (_medicalConditions[condition] == true) ...[
+            const SizedBox(height: 12),
+            TextFormField(
+              decoration: InputDecoration(
+                labelText: 'Please provide details about ${AppLocalizations.get(condition).toLowerCase()}',
+                hintText: 'e.g., Type 1/2 diabetes, specific cardiac condition, etc.',
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+              maxLines: 2,
+              onChanged: (value) {
+                _detailedMedicalConditions[condition] = value;
+              },
+              validator: _medicalConditions[condition] == true
+                  ? (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please provide details for ICD-10 coding';
+                      }
+                      return null;
+                    }
+                  : null,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWoundHistoryPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Wound History & Occurrence',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'This information is crucial for accurate ICD-10 coding and insurance claims',
+            style: TextStyle(color: AppTheme.secondaryColor),
+          ),
+          const SizedBox(height: 24),
+          
+          // When did the wound start?
+          const Text(
+            'When did the wound first appear?',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () async {
+              final date = await showDatePicker(
+                context: context,
+                initialDate: _woundStartDate ?? DateTime.now().subtract(const Duration(days: 30)),
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+              );
+              if (date != null) {
+                setState(() {
+                  _woundStartDate = date;
+                });
+              }
+            },
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Wound Start Date *',
+                prefixIcon: Icon(Icons.calendar_today),
+                border: OutlineInputBorder(),
+              ),
+              child: Text(
+                _woundStartDate != null
+                    ? '${_woundStartDate!.day}/${_woundStartDate!.month}/${_woundStartDate!.year}'
+                    : 'Select date when wound first appeared',
+                style: TextStyle(
+                  color: _woundStartDate != null ? AppTheme.textColor : AppTheme.secondaryColor,
+                ),
               ),
             ),
           ),
-          Row(
-            children: [
-              Text(AppLocalizations.get('yes')),
-              Radio<bool>(
-                value: true,
-                groupValue: _medicalConditions[condition],
-                onChanged: (value) {
-                  setState(() {
-                    _medicalConditions[condition] = value!;
-                  });
-                },
-              ),
-              Text(AppLocalizations.get('no')),
-              Radio<bool>(
-                value: false,
-                groupValue: _medicalConditions[condition],
-                onChanged: (value) {
-                  setState(() {
-                    _medicalConditions[condition] = value!;
-                  });
-                },
-              ),
-            ],
+          const SizedBox(height: 24),
+          
+          // How did the wound occur?
+          const Text(
+            'How did the wound occur?',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _selectedWoundOccurrence,
+            decoration: const InputDecoration(
+              labelText: 'Wound Cause/Occurrence *',
+              prefixIcon: Icon(Icons.help_outline),
+              border: OutlineInputBorder(),
+            ),
+            isExpanded: true,
+            items: [
+              'Chronic condition (diabetes, vascular disease)',
+              'Fall (down stairs, from height)',
+              'Motor vehicle accident',
+              'Sports injury',
+              'Work-related accident',
+              'Post-surgical complication',
+              'Pressure from prolonged bed rest',
+              'Other trauma/injury',
+              'Unknown/unclear cause',
+            ].map((cause) {
+              return DropdownMenuItem(
+                value: cause,
+                child: Text(
+                  cause,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedWoundOccurrence = value!;
+              });
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please select how the wound occurred';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _woundOccurrenceController,
+            decoration: const InputDecoration(
+              labelText: 'Additional details about wound occurrence',
+              hintText: 'Provide specific details (e.g., fell down 5 stairs, left ankle twisted)',
+              prefixIcon: Icon(Icons.notes),
+              border: OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
+            maxLines: 3,
+            validator: (value) {
+              if (_selectedWoundOccurrence.contains('Other') && 
+                  (value == null || value.trim().isEmpty)) {
+                return 'Please provide details when "Other" is selected';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 24),
+          
+          // Wound history and progression
+          const Text(
+            'Wound History & Previous Treatments',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _woundHistoryController,
+            decoration: const InputDecoration(
+              labelText: 'Wound progression and history',
+              hintText: 'How has the wound changed over time? Any improvements or worsening?',
+              prefixIcon: Icon(Icons.history),
+              border: OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
+            maxLines: 4,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please describe the wound history and progression';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _previousTreatmentsController,
+            decoration: const InputDecoration(
+              labelText: 'Previous treatments attempted',
+              hintText: 'List any previous treatments, dressings, medications, or therapies tried',
+              prefixIcon: Icon(Icons.medical_services),
+              border: OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 24),
+          
+          // Information note
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: AppTheme.primaryColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'This information will be used to generate accurate ICD-10 codes and reduce repetitive questions during AI report generation.',
+                    style: TextStyle(
+                      color: AppTheme.primaryColor,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1440,8 +1723,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           if (_currentPage > 0) const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: _currentPage == 7 ? _submitForm : _nextPage,
-              child: Text(_currentPage == 7 ? AppLocalizations.get('submit') : AppLocalizations.get('next')),
+              onPressed: _currentPage == 8 ? _submitForm : _nextPage,
+              child: Text(_currentPage == 8 ? AppLocalizations.get('submit') : AppLocalizations.get('next')),
             ),
           ),
         ],
@@ -1451,7 +1734,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
 
   void _nextPage() {
     if (_validateCurrentPage()) {
-      if (_currentPage < 7) {
+      if (_currentPage < 8) {
         _pageController.nextPage(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
@@ -1542,7 +1825,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     final medicalConditionDetails = <String, String?>{};
     for (String condition in _medicalConditions.keys) {
       if (_medicalConditions[condition] == true) {
-        medicalConditionDetails[condition] = null; // Simplified - no detailed descriptions
+        medicalConditionDetails[condition] = _detailedMedicalConditions[condition]; // Use detailed descriptions
       }
     }
 
@@ -1569,12 +1852,23 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       medicalAidNumber: _medicalAidNumberController.text,
       mainMemberName: _mainMemberNameController.text,
       
+      // Referring Doctor
+      referringDoctorName: _referringDoctorController.text.isEmpty ? null : _referringDoctorController.text,
+      referringDoctorCell: _referringDoctorContactController.text.isEmpty ? null : _referringDoctorContactController.text,
+      
       // Medical History
       medicalConditions: _medicalConditions,
       medicalConditionDetails: medicalConditionDetails,
       currentMedications: _currentMedicationsController.text.isEmpty ? null : _currentMedicationsController.text,
       allergies: _allergiesController.text.isEmpty ? null : _allergiesController.text,
       isSmoker: _isSmoker,
+      
+      // Enhanced Wound History
+      woundStartDate: _woundStartDate,
+      woundOccurrence: _selectedWoundOccurrence,
+      woundOccurrenceDetails: _woundOccurrenceController.text.isEmpty ? null : _woundOccurrenceController.text,
+      woundHistory: _woundHistoryController.text.isEmpty ? null : _woundHistoryController.text,
+      previousTreatments: _previousTreatmentsController.text.isEmpty ? null : _previousTreatmentsController.text,
       
       // Signatures and consent
       accountResponsibilitySignature: accountSignature,
