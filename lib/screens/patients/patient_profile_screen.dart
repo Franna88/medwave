@@ -10,6 +10,7 @@ import '../../models/patient.dart';
 import '../../models/progress_metrics.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/export_utils.dart';
+import '../../services/wound_management_service.dart';
 
 enum PhotoType { baseline, session, wound }
 
@@ -555,9 +556,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
           onPressed: () {
             HapticFeedback.lightImpact();
             if (hasNoSessions) {
-              context.push('/patients/${patient.id}/case-history');
+              context.push('/patients/${patient.id}/wound-selection?name=${Uri.encodeComponent(patient.fullNames + ' ' + patient.surname)}');
             } else {
-              context.push('/patients/${patient.id}/session');
+              // Smart routing based on wound count
+              final sessionRoute = WoundManagementService.getSessionLoggingRoute(patient.id, patient);
+              context.push(sessionRoute);
             }
           },
           backgroundColor: hasNoSessions ? AppTheme.warningColor : AppTheme.primaryColor,
@@ -3317,7 +3320,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                   const SizedBox(height: 32),
                   ElevatedButton.icon(
                     onPressed: () {
-                      context.push('/patients/${patient.id}/case-history');
+                      context.push('/patients/${patient.id}/wound-selection?name=${Uri.encodeComponent(patient.fullNames + ' ' + patient.surname)}');
                     },
                     icon: const Icon(Icons.assignment_turned_in),
                     label: const Text('Complete Case History'),

@@ -7,6 +7,9 @@ import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
 import '../ai/ai_report_chat_screen.dart';
 import '../../services/firebase/patient_service.dart';
+import '../../services/wound_management_service.dart';
+import '../../widgets/wound_progress_card.dart';
+import '../../widgets/multi_wound_summary.dart';
 
 class SessionDetailScreen extends StatefulWidget {
   final String patientId;
@@ -32,11 +35,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
   Session? _previousSession;
   List<Session> _allSessions = [];
   bool _isLoadingSessions = true;
+  bool _isMultiWound = false;
+  int _expandedWoundIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _isMultiWound = WoundManagementService.hasMultipleWounds(widget.patient);
+    _tabController = TabController(length: _isMultiWound ? 4 : 3, vsync: this);
     _loadAllSessions();
   }
 
@@ -367,10 +373,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
               fontWeight: FontWeight.w600,
               fontSize: 12,
             ),
-            tabs: const [
-              Tab(text: 'Overview', icon: Icon(Icons.dashboard_outlined, size: 20)),
-              Tab(text: 'Comparisons', icon: Icon(Icons.compare_arrows, size: 20)),
-              Tab(text: 'Photos', icon: Icon(Icons.photo_library_outlined, size: 20)),
+            tabs: [
+              const Tab(text: 'Overview', icon: Icon(Icons.dashboard_outlined, size: 20)),
+              if (_isMultiWound)
+                const Tab(text: 'Wounds', icon: Icon(Icons.medical_information_outlined, size: 20)),
+              const Tab(text: 'Comparisons', icon: Icon(Icons.compare_arrows, size: 20)),
+              const Tab(text: 'Photos', icon: Icon(Icons.photo_library_outlined, size: 20)),
             ],
           ),
         ),
@@ -387,6 +395,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
         controller: _tabController,
         children: [
           _buildOverviewTab(),
+          if (_isMultiWound) _buildWoundsTab(),
           _buildComparisonsTab(),
           _buildPhotosTab(),
         ],
@@ -401,12 +410,101 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
         children: [
           _buildSessionMetricsCard(),
           const SizedBox(height: 20),
-          _buildWoundDetailsCard(),
+          if (_isMultiWound) 
+            MultiWoundSummary(
+              currentWounds: widget.session.wounds,
+              previousWounds: _previousSession?.wounds,
+              currentSession: widget.session,
+              previousSession: _previousSession,
+            )
+          else
+            _buildWoundDetailsCard(),
           const SizedBox(height: 20),
           if (widget.session.notes.isNotEmpty) _buildNotesCard(),
         ],
       ),
     );
+  }
+
+  Widget _buildWoundsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Individual Wound Assessment',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textColor,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${widget.session.wounds.length} wounds',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Detailed assessment of each wound with progress tracking',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.secondaryColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Individual wound cards
+          ...widget.session.wounds.asMap().entries.map((entry) {
+            final index = entry.key;
+            final wound = entry.value;
+            final previousWound = _findMatchingPreviousWound(wound);
+            
+            return WoundProgressCard(
+              currentWound: wound,
+              previousWound: previousWound,
+              woundIndex: index,
+              isExpanded: _expandedWoundIndex == index,
+              onToggleExpanded: () {
+                setState(() {
+                  _expandedWoundIndex = _expandedWoundIndex == index ? -1 : index;
+                });
+              },
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Wound? _findMatchingPreviousWound(Wound currentWound) {
+    if (_previousSession == null || _previousSession!.wounds.isEmpty) {
+      return null;
+    }
+    
+    // Try to find wound by ID first
+    try {
+      return _previousSession!.wounds.firstWhere((w) => w.id == currentWound.id);
+    } catch (e) {
+      // If no ID match, return null (no previous wound data)
+      return null;
+    }
   }
 
   Widget _buildSessionMetricsCard() {

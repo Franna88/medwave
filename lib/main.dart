@@ -16,8 +16,12 @@ import 'screens/patients/patient_list_screen.dart';
 import 'screens/patients/add_patient_screen.dart';
 import 'screens/patients/patient_profile_screen.dart';
 import 'screens/patients/patient_case_history_screen.dart';
+import 'screens/patients/wound_count_selection_screen.dart';
+import 'screens/patients/multi_wound_case_history_screen.dart';
+import 'screens/ai/enhanced_ai_report_chat_screen.dart';
 import 'screens/patients/session_detail_screen.dart';
 import 'screens/sessions/session_logging_screen.dart';
+import 'screens/sessions/multi_wound_session_logging_screen.dart';
 import 'screens/reports/reports_screen.dart';
 import 'screens/calendar/calendar_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -239,6 +243,18 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       },
     ),
     GoRoute(
+      path: '/patients/:patientId/wound-selection',
+      name: 'wound-count-selection',
+      builder: (context, state) {
+        final patientId = state.pathParameters['patientId']!;
+        final patientName = state.uri.queryParameters['name'] ?? 'Patient';
+        return WoundCountSelectionScreen(
+          patientId: patientId,
+          patientName: patientName,
+        );
+      },
+    ),
+    GoRoute(
       path: '/patients/:patientId/case-history',
       name: 'patient-case-history',
       builder: (context, state) {
@@ -246,12 +262,53 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         return PatientCaseHistoryScreen(patientId: patientId);
       },
     ),
+              GoRoute(
+            path: '/patients/:patientId/multi-wound-case-history',
+            name: 'multi-wound-case-history',
+            builder: (context, state) {
+              final patientId = state.pathParameters['patientId']!;
+              return MultiWoundCaseHistoryScreen(patientId: patientId);
+            },
+          ),
+          GoRoute(
+            path: '/patients/:patientId/sessions/:sessionId/enhanced-ai-chat',
+            name: 'enhanced-ai-chat',
+            builder: (context, state) {
+              final patientId = state.pathParameters['patientId']!;
+              final sessionId = state.pathParameters['sessionId']!;
+              final extra = state.extra as Map<String, dynamic>?;
+              
+              if (extra == null || extra['patient'] == null || extra['session'] == null) {
+                // Fallback - redirect to patient profile
+                return const Scaffold(
+                  body: Center(
+                    child: Text('Invalid session data. Please try again.'),
+                  ),
+                );
+              }
+              
+              return EnhancedAIReportChatScreen(
+                patientId: patientId,
+                sessionId: sessionId,
+                patient: extra['patient'] as Patient,
+                session: extra['session'] as Session,
+              );
+            },
+          ),
     GoRoute(
       path: '/patients/:patientId/session',
       name: 'session-logging',
       builder: (context, state) {
         final patientId = state.pathParameters['patientId']!;
         return SessionLoggingScreen(patientId: patientId);
+      },
+    ),
+    GoRoute(
+      path: '/patients/:patientId/multi-wound-session',
+      name: 'multi-wound-session-logging',
+      builder: (context, state) {
+        final patientId = state.pathParameters['patientId']!;
+        return MultiWoundSessionLoggingScreen(patientId: patientId);
       },
     ),
     GoRoute(

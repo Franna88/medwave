@@ -14,6 +14,7 @@ import '../models/progress_metrics.dart';
 import '../providers/patient_provider.dart';
 import 'firebase/patient_service.dart';
 import '../models/icd10_code.dart';
+import 'wound_management_service.dart';
 
 class PDFGenerationService {
   
@@ -209,6 +210,43 @@ class PDFGenerationService {
   static const String _logoPath = 'images/medwave_logo_black.png';
   
   /// Generate a clinical motivation report PDF
+  /// Enhanced PDF generation that intelligently handles single and multiple wounds
+  static Future<File> generateEnhancedClinicalMotivationPDF({
+    required String reportContent,
+    required Patient patient,
+    required Session session,
+    required String practitionerName,
+    List<SelectedICD10Code> selectedCodes = const [],
+    List<String> treatmentCodes = const [],
+    String? additionalNotes,
+    Session? previousSession,
+  }) async {
+    final isMultiWound = WoundManagementService.hasMultipleWounds(patient);
+    
+    if (isMultiWound) {
+      return _generateMultiWoundPDF(
+        reportContent: reportContent,
+        patient: patient,
+        session: session,
+        practitionerName: practitionerName,
+        selectedCodes: selectedCodes,
+        treatmentCodes: treatmentCodes,
+        additionalNotes: additionalNotes,
+        previousSession: previousSession,
+      );
+    } else {
+      return generateClinicalMotivationPDF(
+        reportContent: reportContent,
+        patient: patient,
+        session: session,
+        practitionerName: practitionerName,
+        selectedCodes: selectedCodes,
+        treatmentCodes: treatmentCodes,
+        additionalNotes: additionalNotes,
+      );
+    }
+  }
+
   static Future<File> generateClinicalMotivationPDF({
     required String reportContent,
     required Patient patient,
@@ -303,44 +341,91 @@ class PDFGenerationService {
           ? await _buildWoundImagesSection(currentSessionPhotos, previousSessionPhotos)
           : null;
 
+      // PAGE 1: Patient Details, ICD-10 Codes, Clinical Motivational Report
       pdf.addPage(
-        pw.MultiPage(
+        pw.Page(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(18), // Slightly reduced margins for more space
-          header: (context) => _buildHeader(null, context),
-          footer: (context) => _buildFooter(context),
-          build: (context) => [
-            // 1. PATIENT DETAILS SECTION (First Block)
-            _buildPatientBasicInfo(patient),
-            pw.SizedBox(height: 15),
-            
-            // 2. ICD-10 SUMMARY SECTION (Second Block)
-            if (selectedCodes != null && selectedCodes.isNotEmpty) ...[
-              _buildICD10SummarySection(selectedCodes),
-              pw.SizedBox(height: 15),
+          margin: const pw.EdgeInsets.all(18),
+          build: (context) => pw.Column(
+            children: [
+              _buildHeader(null, context),
+              pw.Expanded(
+                child: pw.Column(
+                  children: [
+                    // 1. PATIENT DETAILS SECTION
+                    _buildPatientBasicInfo(patient),
+                    pw.SizedBox(height: 15),
+                    
+                    // 2. ICD-10 SUMMARY SECTION
+                    if (selectedCodes != null && selectedCodes.isNotEmpty) ...[
+                      _buildICD10SummarySection(selectedCodes),
+                      pw.SizedBox(height: 15),
+                    ],
+                    
+                    // 3. CLINICAL MOTIVATIONAL REPORT
+                    pw.Expanded(
+                      child: _buildEnhancedChatReportContent(reportContent),
+                    ),
+                  ],
+                ),
+              ),
+              _buildFooter(context),
             ],
-            
-            // 3. LETTER SECTION (Third Block)
-            _buildEnhancedChatReportContent(reportContent),
-            pw.SizedBox(height: 15),
-            
-            // 4. PHOTOS SECTION (Fourth Block)
-            if (woundImagesSection != null) ...[
-              _buildSectionTitle('Clinical Documentation Photos'),
-              pw.SizedBox(height: 10),
-              woundImagesSection,
-              pw.SizedBox(height: 20),
+          ),
+        ),
+      );
+
+      // PAGE 2: Clinical Documentation Photos (only if photos exist)
+      if (woundImagesSection != null && (currentSessionPhotos.isNotEmpty || previousSessionPhotos.isNotEmpty)) {
+        pdf.addPage(
+          pw.Page(
+            pageFormat: PdfPageFormat.a4,
+            margin: const pw.EdgeInsets.all(18),
+            build: (context) => pw.Column(
+              children: [
+                _buildHeader(null, context),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionTitle('Clinical Documentation Photos'),
+                      pw.SizedBox(height: 15),
+                      pw.Expanded(child: woundImagesSection),
+                    ],
+                  ),
+                ),
+                _buildFooter(context),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // PAGE 3: Patient Progress Analytics & Signature
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(18),
+          build: (context) => pw.Column(
+            children: [
+              _buildHeader(null, context),
+              pw.Expanded(
+                child: pw.Column(
+                  children: [
+                    // Patient Progress Analytics Section
+                    _buildSectionTitle('Patient Progress Analytics'),
+                    pw.SizedBox(height: 15),
+                    _buildProgressAnalyticsSection(progressMetrics),
+                    pw.Spacer(),
+                    
+                    // Signature Section
+                    _buildSignatureSection(practitionerName),
+                  ],
+                ),
+              ),
+              _buildFooter(context),
             ],
-            
-            // Additional Analytics Section (Optional)
-            _buildSectionTitle('Patient Progress Analytics'),
-            pw.SizedBox(height: 10),
-            _buildProgressAnalyticsSection(progressMetrics),
-            pw.SizedBox(height: 20),
-            
-            // Signature Section
-            _buildSignatureSection(practitionerName),
-          ],
+          ),
         ),
       );
 
@@ -445,6 +530,107 @@ class PDFGenerationService {
     );
     
     return await _savePDF(pdf, _generateChatFileName(patient));
+  }
+
+  /// Generate comprehensive multi-wound PDF report
+  static Future<File> _generateMultiWoundPDF({
+    required String reportContent,
+    required Patient patient,
+    required Session session,
+    required String practitionerName,
+    List<SelectedICD10Code> selectedCodes = const [],
+    List<String> treatmentCodes = const [],
+    String? additionalNotes,
+    Session? previousSession,
+  }) async {
+    final pdf = pw.Document();
+    
+    // Load logo if available
+    pw.ImageProvider? logoImage;
+    try {
+      final logoData = await rootBundle.load(_logoPath);
+      logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+    } catch (e) {
+      print('Logo not found: $e');
+    }
+    
+    // Page 1: Overview and Summary
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        header: (context) => _buildHeader(logoImage, context),
+        footer: (context) => _buildFooter(context),
+        build: (context) => [
+          // Patient Information
+          _buildPatientSection(patient, session),
+          pw.SizedBox(height: 20),
+          
+          // Multi-Wound Overview
+          _buildMultiWoundOverviewSection(session, previousSession),
+          pw.SizedBox(height: 20),
+          
+          // Clinical Motivation Report
+          _buildReportTitle(title: 'Clinical Motivation for Multi-Wound Care'),
+          pw.SizedBox(height: 15),
+          _buildReportContent(reportContent),
+          pw.SizedBox(height: 20),
+          
+          // ICD-10 Codes
+          _buildCodesSection(selectedCodes, treatmentCodes),
+        ],
+      ),
+    );
+    
+    // Page 2+: Individual Wound Details
+    for (int i = 0; i < session.wounds.length; i++) {
+      final wound = session.wounds[i];
+      final previousWound = previousSession?.wounds.where((w) => w.id == wound.id).firstOrNull;
+      
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(40),
+          header: (context) => _buildHeader(logoImage, context),
+          footer: (context) => _buildFooter(context),
+          build: (context) => [
+            _buildIndividualWoundSection(wound, previousWound, i + 1),
+            pw.SizedBox(height: 20),
+            if (wound.photos.isNotEmpty) ...[
+              _buildWoundPhotosSection(wound.photos, 'Wound ${i + 1} Photos'),
+              pw.SizedBox(height: 20),
+            ],
+          ],
+        ),
+      );
+    }
+    
+    // Final page: Signature and notes
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        header: (context) => _buildHeader(logoImage, context),
+        footer: (context) => _buildFooter(context),
+        build: (context) => [
+          _buildTreatmentSummarySection(session.wounds, previousSession?.wounds),
+          pw.SizedBox(height: 20),
+          _buildSignatureSection(practitionerName),
+          if (additionalNotes != null) ...[
+            pw.SizedBox(height: 15),
+            _buildAdditionalNotes(additionalNotes),
+          ],
+        ],
+      ),
+    );
+    
+    // Save and return file
+    final directory = await getApplicationDocumentsDirectory();
+    final fileName = 'multi_wound_report_${patient.surname}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+    final file = File('${directory.path}/$fileName');
+    await file.writeAsBytes(await pdf.save());
+    
+    return file;
   }
   
   static pw.Widget _buildHeader(pw.ImageProvider? logoImage, pw.Context context) {
@@ -1096,40 +1282,42 @@ class PDFGenerationService {
     );
   }
 
-  /// Create a concise 3-paragraph summary from the full clinical report
-  static String _createThreeParagraphSummary(String content) {
+  /// Create a comprehensive 4-paragraph summary from the full clinical report
+  static String _createFourParagraphSummary(String content) {
     // Split content into sentences for intelligent summarization
     final sentences = content.split(RegExp(r'(?<=[.!?])\s+'));
     
-    if (sentences.length <= 9) {
-      // If short enough, just reformat into 3 paragraphs
-      final third = (sentences.length / 3).ceil();
-      final paragraph1 = sentences.take(third).join(' ');
-      final paragraph2 = sentences.skip(third).take(third).join(' ');
-      final paragraph3 = sentences.skip(third * 2).join(' ');
-      return '$paragraph1\n\n$paragraph2\n\n$paragraph3';
+    if (sentences.length <= 16) {
+      // If manageable length, distribute evenly into 4 paragraphs
+      final quarter = (sentences.length / 4).ceil();
+      final paragraph1 = sentences.take(quarter).join(' ');
+      final paragraph2 = sentences.skip(quarter).take(quarter).join(' ');
+      final paragraph3 = sentences.skip(quarter * 2).take(quarter).join(' ');
+      final paragraph4 = sentences.skip(quarter * 3).join(' ');
+      return '$paragraph1\n\n$paragraph2\n\n$paragraph3\n\n$paragraph4';
     }
     
-    // For longer content, create focused 3-paragraph summary
-    final paragraph1 = sentences.take(3).join(' '); // Opening context
-    final paragraph2 = sentences.skip(3).take(3).join(' '); // Middle details
-    final paragraph3 = sentences.skip(sentences.length - 3).take(3).join(' '); // Conclusion
+    // For longer content, create focused 4-paragraph structure with 4 sentences each
+    final paragraph1 = sentences.take(4).join(' '); // Patient identification & presentation
+    final paragraph2 = sentences.skip(4).take(4).join(' '); // Clinical assessment & findings
+    final paragraph3 = sentences.skip(8).take(4).join(' '); // Treatment & interventions
+    final paragraph4 = sentences.skip(sentences.length - 4).take(4).join(' '); // Authorization & conclusion
     
-    return '$paragraph1\n\n$paragraph2\n\n$paragraph3';
+    return '$paragraph1\n\n$paragraph2\n\n$paragraph3\n\n$paragraph4';
   }
 
   static pw.Widget _buildEnhancedChatReportContent(String content) {
-    // Optimized to fit in exactly 3 paragraphs on page 1
-    String processedContent = _createThreeParagraphSummary(content);
+    // Optimized for 4 paragraphs with 4 lines each to fill page 1 space
+    String processedContent = _createFourParagraphSummary(content);
     
-    // Ensure maximum 3 paragraphs by limiting content further
+    // Ensure maximum 4 paragraphs by limiting content further
     final paragraphs = processedContent.split('\n\n');
-    if (paragraphs.length > 3) {
-      processedContent = paragraphs.take(3).join('\n\n');
+    if (paragraphs.length > 4) {
+      processedContent = paragraphs.take(4).join('\n\n');
     }
     
-    // Hard limit for page 1 fitting (approximately 1500 characters for 3 paragraphs)
-    const maxContentLength = 1500;
+    // Generous limit for 4 comprehensive paragraphs
+    const maxContentLength = 3000; // Increased for 4 detailed paragraphs
     if (processedContent.length > maxContentLength) {
       processedContent = processedContent.substring(0, maxContentLength);
       final lastPeriod = processedContent.lastIndexOf('.');
@@ -1536,5 +1724,505 @@ class PDFGenerationService {
     );
 
     return await _savePDF(pdf, 'simplified_enhanced_ai_report_${patient.surname}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf');
+  }
+
+  /// Build multi-wound overview section for PDF
+  static pw.Widget _buildMultiWoundOverviewSection(Session session, Session? previousSession) {
+    final totalArea = session.wounds.fold<double>(0, (sum, wound) => sum + wound.area);
+    final totalVolume = session.wounds.fold<double>(0, (sum, wound) => sum + wound.volume);
+    
+    double? previousTotalArea;
+    if (previousSession != null && previousSession.wounds.isNotEmpty) {
+      previousTotalArea = previousSession.wounds.fold<double>(0, (sum, wound) => sum + wound.area);
+    }
+    
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+        borderRadius: pw.BorderRadius.circular(5),
+      ),
+      child: pw.Column(
+        children: [
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.blue100,
+              borderRadius: const pw.BorderRadius.only(
+                topLeft: pw.Radius.circular(5),
+                topRight: pw.Radius.circular(5),
+              ),
+            ),
+            child: pw.Text(
+              'MULTI-WOUND OVERVIEW',
+              style: pw.TextStyle(
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.blue800,
+              ),
+            ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(15),
+            child: pw.Column(
+              children: [
+                pw.Row(
+                  children: [
+                    pw.Expanded(
+                      child: _buildMetricBox('Total Wounds', '${session.wounds.length}', PdfColors.blue),
+                    ),
+                    pw.SizedBox(width: 10),
+                    pw.Expanded(
+                      child: _buildMetricBox('Combined Area', '${totalArea.toStringAsFixed(1)} cm²', PdfColors.green),
+                    ),
+                    pw.SizedBox(width: 10),
+                    pw.Expanded(
+                      child: _buildMetricBox('Combined Volume', '${totalVolume.toStringAsFixed(1)} cm³', PdfColors.orange),
+                    ),
+                  ],
+                ),
+                if (previousTotalArea != null) ...[
+                  pw.SizedBox(height: 15),
+                  _buildProgressIndicator(previousTotalArea, totalArea),
+                ],
+                pw.SizedBox(height: 15),
+                _buildWoundStageDistribution(session.wounds),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build individual wound section for PDF
+  static pw.Widget _buildIndividualWoundSection(Wound wound, Wound? previousWound, int woundNumber) {
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+        borderRadius: pw.BorderRadius.circular(5),
+      ),
+      child: pw.Column(
+        children: [
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.purple100,
+              borderRadius: const pw.BorderRadius.only(
+                topLeft: pw.Radius.circular(5),
+                topRight: pw.Radius.circular(5),
+              ),
+            ),
+            child: pw.Text(
+              'WOUND $woundNumber: ${wound.location.toUpperCase()}',
+              style: pw.TextStyle(
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.purple800,
+              ),
+            ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(15),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Basic wound information
+                pw.Row(
+                  children: [
+                    pw.Expanded(child: _buildInfoRow('Type:', wound.type)),
+                    pw.Expanded(child: _buildInfoRow('Stage:', _getStageDescription(wound.stage))),
+                  ],
+                ),
+                pw.SizedBox(height: 10),
+                
+                // Current measurements
+                pw.Text(
+                  'Current Measurements:',
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.SizedBox(height: 5),
+                pw.Row(
+                  children: [
+                    pw.Expanded(child: _buildMeasurementRow('Length:', '${wound.length.toStringAsFixed(1)} cm')),
+                    pw.Expanded(child: _buildMeasurementRow('Width:', '${wound.width.toStringAsFixed(1)} cm')),
+                    pw.Expanded(child: _buildMeasurementRow('Depth:', '${wound.depth.toStringAsFixed(1)} cm')),
+                  ],
+                ),
+                pw.SizedBox(height: 5),
+                pw.Row(
+                  children: [
+                    pw.Expanded(child: _buildMeasurementRow('Area:', '${wound.area.toStringAsFixed(1)} cm²')),
+                    pw.Expanded(child: _buildMeasurementRow('Volume:', '${wound.volume.toStringAsFixed(1)} cm³')),
+                    pw.Expanded(child: pw.Container()), // Empty space
+                  ],
+                ),
+                
+                // Progress comparison if available
+                if (previousWound != null) ...[
+                  pw.SizedBox(height: 15),
+                  pw.Text(
+                    'Progress Since Last Session:',
+                    style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.SizedBox(height: 5),
+                  _buildWoundProgressTable(wound, previousWound),
+                ],
+                
+                // Description
+                if (wound.description.isNotEmpty) ...[
+                  pw.SizedBox(height: 15),
+                  pw.Text(
+                    'Assessment Notes:',
+                    style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.SizedBox(height: 5),
+                  pw.Container(
+                    width: double.infinity,
+                    padding: const pw.EdgeInsets.all(10),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.grey100,
+                      borderRadius: pw.BorderRadius.circular(3),
+                    ),
+                    child: pw.Text(
+                      wound.description,
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build treatment summary section
+  static pw.Widget _buildTreatmentSummarySection(List<Wound> currentWounds, List<Wound>? previousWounds) {
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+        borderRadius: pw.BorderRadius.circular(5),
+      ),
+      child: pw.Column(
+        children: [
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.green100,
+              borderRadius: const pw.BorderRadius.only(
+                topLeft: pw.Radius.circular(5),
+                topRight: pw.Radius.circular(5),
+              ),
+            ),
+            child: pw.Text(
+              'TREATMENT SUMMARY & RECOMMENDATIONS',
+              style: pw.TextStyle(
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.green800,
+              ),
+            ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(15),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'Overall Assessment:',
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.SizedBox(height: 5),
+                pw.Text(
+                  'Patient presents with ${currentWounds.length} wounds requiring continued wound care management. Individual wound assessments and progress tracking indicate varying stages of healing.',
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+                pw.SizedBox(height: 10),
+                
+                pw.Text(
+                  'Treatment Recommendations:',
+                  style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.SizedBox(height: 5),
+                pw.Text(
+                  '• Continue specialized wound care treatment for all ${currentWounds.length} wounds\n'
+                  '• Regular monitoring and assessment of healing progress\n'
+                  '• Individual wound-specific treatment protocols\n'
+                  '• Follow-up sessions as clinically indicated\n'
+                  '• Patient education on wound care management',
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+                
+                if (previousWounds != null && previousWounds.isNotEmpty) ...[
+                  pw.SizedBox(height: 10),
+                  pw.Text(
+                    'Progress Summary:',
+                    style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.SizedBox(height: 5),
+                  pw.Text(
+                    _generateProgressSummary(currentWounds, previousWounds),
+                    style: const pw.TextStyle(fontSize: 10),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build wound photos section
+  static pw.Widget _buildWoundPhotosSection(List<String> photos, String title) {
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+        borderRadius: pw.BorderRadius.circular(5),
+      ),
+      child: pw.Column(
+        children: [
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              color: PdfColors.orange100,
+              borderRadius: const pw.BorderRadius.only(
+                topLeft: pw.Radius.circular(5),
+                topRight: pw.Radius.circular(5),
+              ),
+            ),
+            child: pw.Text(
+              title.toUpperCase(),
+              style: pw.TextStyle(
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.orange800,
+              ),
+            ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(15),
+            child: pw.Text(
+              photos.isNotEmpty
+                  ? '${photos.length} photo(s) are available in the digital patient record.'
+                  : 'No photos documented for this wound.',
+              style: const pw.TextStyle(fontSize: 10),
+              textAlign: pw.TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Helper method to build metric boxes
+  static pw.Widget _buildMetricBox(String label, String value, PdfColor color) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey100,
+        borderRadius: pw.BorderRadius.circular(3),
+        border: pw.Border.all(color: color),
+      ),
+      child: pw.Column(
+        children: [
+          pw.Text(
+            value,
+            style: pw.TextStyle(
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+              color: color,
+            ),
+          ),
+          pw.SizedBox(height: 2),
+          pw.Text(
+            label,
+            style: pw.TextStyle(
+              fontSize: 8,
+              color: color,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build progress indicator
+  static pw.Widget _buildProgressIndicator(double previousArea, double currentArea) {
+    final change = ((previousArea - currentArea) / previousArea * 100);
+    final isImproving = change > 0;
+    
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        color: isImproving ? PdfColors.green50 : PdfColors.red50,
+        borderRadius: pw.BorderRadius.circular(3),
+        border: pw.Border.all(
+          color: isImproving ? PdfColors.green300 : PdfColors.red300,
+        ),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.center,
+        children: [
+          pw.Text(
+            isImproving ? '↗ ' : '↘ ',
+            style: pw.TextStyle(
+              fontSize: 16,
+              color: isImproving ? PdfColors.green800 : PdfColors.red800,
+            ),
+          ),
+          pw.Text(
+            'Overall Progress: ${change.abs().toStringAsFixed(1)}% ${isImproving ? 'improvement' : 'increase'} in total wound area',
+            style: pw.TextStyle(
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+              color: isImproving ? PdfColors.green800 : PdfColors.red800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build wound stage distribution
+  static pw.Widget _buildWoundStageDistribution(List<Wound> wounds) {
+    final stageCount = <WoundStage, int>{};
+    for (final wound in wounds) {
+      stageCount[wound.stage] = (stageCount[wound.stage] ?? 0) + 1;
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Wound Stage Distribution:',
+          style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.SizedBox(height: 5),
+        ...stageCount.entries.map((entry) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 3),
+            child: pw.Text(
+              '• ${_getStageDescription(entry.key)}: ${entry.value} wound${entry.value != 1 ? 's' : ''}',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  /// Build wound progress table
+  static pw.Widget _buildWoundProgressTable(Wound current, Wound previous) {
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey300),
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfColors.grey100),
+          children: [
+            _buildTableCell('Measurement', isHeader: true),
+            _buildTableCell('Previous', isHeader: true),
+            _buildTableCell('Current', isHeader: true),
+            _buildTableCell('Change', isHeader: true),
+          ],
+        ),
+        _buildProgressTableRow('Length (cm)', previous.length, current.length),
+        _buildProgressTableRow('Width (cm)', previous.width, current.width),
+        _buildProgressTableRow('Depth (cm)', previous.depth, current.depth),
+        _buildProgressTableRow('Area (cm²)', previous.area, current.area),
+        _buildProgressTableRow('Volume (cm³)', previous.volume, current.volume),
+      ],
+    );
+  }
+
+  /// Build progress table row
+  static pw.TableRow _buildProgressTableRow(String label, double previous, double current) {
+    final change = current - previous;
+    final isImproving = change < 0; // Smaller is better for wounds
+    
+    return pw.TableRow(
+      children: [
+        _buildTableCell(label),
+        _buildTableCell(previous.toStringAsFixed(1)),
+        _buildTableCell(current.toStringAsFixed(1)),
+        _buildTableCell(
+          '${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)}',
+          color: isImproving ? PdfColors.green800 : PdfColors.red800,
+        ),
+      ],
+    );
+  }
+
+  /// Build table cell
+  static pw.Widget _buildTableCell(String text, {bool isHeader = false, PdfColor? color}) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(5),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: 9,
+          fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+          color: color ?? PdfColors.black,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
+  /// Build measurement row
+  static pw.Widget _buildMeasurementRow(String label, String value) {
+    return pw.Row(
+      children: [
+        pw.Text('$label ', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+        pw.Text(value, style: const pw.TextStyle(fontSize: 9)),
+      ],
+    );
+  }
+
+  /// Get stage description
+  static String _getStageDescription(WoundStage stage) {
+    switch (stage) {
+      case WoundStage.stage1:
+        return 'Stage I';
+      case WoundStage.stage2:
+        return 'Stage II';
+      case WoundStage.stage3:
+        return 'Stage III';
+      case WoundStage.stage4:
+        return 'Stage IV';
+      case WoundStage.unstageable:
+        return 'Unstageable';
+      case WoundStage.deepTissueInjury:
+        return 'Deep Tissue Injury';
+    }
+  }
+
+  /// Generate progress summary
+  static String _generateProgressSummary(List<Wound> current, List<Wound> previous) {
+    int improving = 0;
+    int stable = 0;
+    int worsening = 0;
+    
+    for (final currentWound in current) {
+      final previousWound = previous.where((w) => w.id == currentWound.id).firstOrNull;
+      if (previousWound != null) {
+        final areaChange = (previousWound.area - currentWound.area) / previousWound.area;
+        if (areaChange > 0.1) {
+          improving++;
+        } else if (areaChange < -0.1) {
+          worsening++;
+        } else {
+          stable++;
+        }
+      }
+    }
+    
+    return 'Of ${current.length} wounds assessed: $improving showing improvement, $stable stable, $worsening requiring additional attention.';
   }
 }
