@@ -6,6 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
 import '../ai/ai_report_chat_screen.dart';
+import '../../services/firebase/patient_service.dart';
 
 class SessionDetailScreen extends StatefulWidget {
   final String patientId;
@@ -29,12 +30,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
   Session? _previousSession;
+  List<Session> _allSessions = [];
+  bool _isLoadingSessions = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _findPreviousSession();
+    _loadAllSessions();
   }
 
   @override
@@ -43,13 +46,60 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
     super.dispose();
   }
 
+  Future<void> _loadAllSessions() async {
+    try {
+      print('🔍 DEBUG: Loading all sessions for patient ${widget.patientId}...');
+      _allSessions = await PatientService.getPatientSessions(widget.patientId);
+      print('✅ DEBUG: Loaded ${_allSessions.length} sessions from Firebase');
+      
+      if (mounted) {
+        setState(() {
+          _isLoadingSessions = false;
+        });
+        _findPreviousSession();
+      }
+    } catch (e) {
+      print('❌ DEBUG: Error loading sessions: $e');
+      // Fallback to using the sessions from the patient object
+      _allSessions = widget.patient.sessions;
+      if (mounted) {
+        setState(() {
+          _isLoadingSessions = false;
+        });
+        _findPreviousSession();
+      }
+    }
+  }
+
   void _findPreviousSession() {
-    final sessions = widget.patient.sessions
+    print('🔍 DEBUG: Finding previous session...');
+    print('🔍 DEBUG: Current session number: ${widget.session.sessionNumber}');
+    print('🔍 DEBUG: Total sessions available: ${_allSessions.length}');
+    
+    // Try to find by session number first (more reliable)
+    final previousByNumber = _allSessions
+        .where((s) => s.sessionNumber < widget.session.sessionNumber)
+        .toList();
+    previousByNumber.sort((a, b) => b.sessionNumber.compareTo(a.sessionNumber));
+    
+    if (previousByNumber.isNotEmpty) {
+      _previousSession = previousByNumber.first;
+      print('✅ DEBUG: Found previous session by number: ${_previousSession!.sessionNumber}');
+      return;
+    }
+    
+    // Fallback to date-based search
+    final sessions = _allSessions
         .where((s) => s.date.isBefore(widget.session.date))
         .toList();
     sessions.sort((a, b) => b.date.compareTo(a.date));
+    
     if (sessions.isNotEmpty) {
       _previousSession = sessions.first;
+      print('✅ DEBUG: Found previous session by date: ${_previousSession!.sessionNumber}');
+    } else {
+      print('❌ DEBUG: No previous session found');
+      print('🔍 DEBUG: Available session numbers: ${_allSessions.map((s) => s.sessionNumber).toList()}');
     }
   }
 
@@ -667,6 +717,30 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
   }
 
   Widget _buildComparisonsTab() {
+    if (_isLoadingSessions) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+              ),
+              SizedBox(height: 24),
+              Text(
+                'Loading Session Data...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: AppTheme.secondaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_previousSession == null) {
       return Center(
         child: Padding(
@@ -1120,6 +1194,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
   }
 
   Widget _buildWoundComparisonCard() {
+    // Get wound comparison data
+    final currentWounds = widget.session.wounds;
+    final previousWounds = _previousSession?.wounds ?? [];
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1159,38 +1237,535 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Wound size and healing progress comparison',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.secondaryColor,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.infoColor.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: AppTheme.infoColor, size: 20),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Detailed wound measurements and photos can be viewed in the Photos tab',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.infoColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            if (currentWounds.isEmpty && previousWounds.isEmpty)
+              _buildNoWoundsMessage()
+            else if (previousWounds.isEmpty)
+              _buildFirstSessionWounds(currentWounds)
+            else
+              _buildWoundProgressComparison(currentWounds, previousWounds),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildNoWoundsMessage() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.successColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.successColor.withOpacity(0.2)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.check_circle_outline, color: AppTheme.successColor, size: 24),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No wounds recorded in this session',
+              style: TextStyle(
+                fontSize: 16,
+                color: AppTheme.successColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFirstSessionWounds(List<Wound> wounds) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.infoColor.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.info_outline, color: AppTheme.infoColor, size: 20),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Baseline measurements - no previous session to compare',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.infoColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        ...wounds.map((wound) => _buildWoundBaselineCard(wound)),
+      ],
+    );
+  }
+
+  Widget _buildWoundBaselineCard(Wound wound) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getWoundStageColor(wound.stage).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _getWoundStageColor(wound.stage).withOpacity(0.3)),
+                ),
+                child: Text(
+                  wound.stage.description,
+                  style: TextStyle(
+                    color: _getWoundStageColor(wound.stage),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${wound.area.toStringAsFixed(1)} cm²',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${wound.location} - ${wound.type}',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${wound.length} × ${wound.width} × ${wound.depth} cm',
+            style: const TextStyle(
+              color: AppTheme.secondaryColor,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWoundProgressComparison(List<Wound> currentWounds, List<Wound> previousWounds) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Overall progress summary
+        _buildOverallWoundProgress(currentWounds, previousWounds),
+        const SizedBox(height: 20),
+        // Individual wound comparisons
+        const Text(
+          'Individual Wound Progress',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textColor,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ..._buildIndividualWoundComparisons(currentWounds, previousWounds),
+      ],
+    );
+  }
+
+  Widget _buildOverallWoundProgress(List<Wound> currentWounds, List<Wound> previousWounds) {
+    final totalPreviousArea = previousWounds.fold(0.0, (sum, wound) => sum + wound.area);
+    final totalCurrentArea = currentWounds.fold(0.0, (sum, wound) => sum + wound.area);
+    final areaChange = totalCurrentArea - totalPreviousArea;
+    final percentageChange = totalPreviousArea > 0 ? (areaChange / totalPreviousArea) * 100 : 0.0;
+    
+    final healingColor = areaChange < 0 ? AppTheme.successColor : 
+                       areaChange > 0 ? AppTheme.errorColor : AppTheme.secondaryColor;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            healingColor.withOpacity(0.1),
+            healingColor.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: healingColor.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                areaChange < 0 ? Icons.trending_down : 
+                areaChange > 0 ? Icons.trending_up : Icons.trending_flat,
+                color: healingColor,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Overall Progress',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildProgressMetric(
+                  'Total Area',
+                  '${totalCurrentArea.toStringAsFixed(1)} cm²',
+                  '${areaChange >= 0 ? '+' : ''}${areaChange.toStringAsFixed(1)} cm²',
+                  healingColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildProgressMetric(
+                  'Change',
+                  '${percentageChange.toStringAsFixed(1)}%',
+                  areaChange < 0 ? 'Healing' : areaChange > 0 ? 'Enlarging' : 'Stable',
+                  healingColor,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressMetric(String label, String value, String subtitle, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 10,
+              color: color.withOpacity(0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildIndividualWoundComparisons(List<Wound> currentWounds, List<Wound> previousWounds) {
+    final comparisons = <Widget>[];
+    
+    // Match wounds by location and type for comparison
+    for (final currentWound in currentWounds) {
+      final matchingPrevious = previousWounds.cast<Wound?>().firstWhere(
+        (prevWound) => prevWound?.location == currentWound.location && 
+                      prevWound?.type == currentWound.type,
+        orElse: () => null,
+      );
+      
+      if (matchingPrevious != null) {
+        comparisons.add(_buildWoundComparisonItem(currentWound, matchingPrevious));
+      } else {
+        comparisons.add(_buildNewWoundItem(currentWound));
+      }
+    }
+    
+    // Check for wounds that were present previously but not now (healed)
+    for (final previousWound in previousWounds) {
+      final stillPresent = currentWounds.any(
+        (current) => current.location == previousWound.location && 
+                    current.type == previousWound.type,
+      );
+      if (!stillPresent) {
+        comparisons.add(_buildHealedWoundItem(previousWound));
+      }
+    }
+    
+    return comparisons;
+  }
+
+  Widget _buildWoundComparisonItem(Wound currentWound, Wound previousWound) {
+    final areaChange = currentWound.area - previousWound.area;
+    final percentageChange = previousWound.area > 0 ? (areaChange / previousWound.area) * 100 : 0.0;
+    final stageImproved = currentWound.stage.index < previousWound.stage.index;
+    final stageWorsened = currentWound.stage.index > previousWound.stage.index;
+    
+    final progressColor = areaChange < 0 ? AppTheme.successColor : 
+                         areaChange > 0 ? AppTheme.errorColor : AppTheme.secondaryColor;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: progressColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: progressColor.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${currentWound.location} - ${currentWound.type}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+              ),
+              Icon(
+                areaChange < 0 ? Icons.trending_down : 
+                areaChange > 0 ? Icons.trending_up : Icons.trending_flat,
+                color: progressColor,
+                size: 16,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // Stage comparison
+              if (stageImproved || stageWorsened)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: stageImproved ? AppTheme.successColor.withOpacity(0.1) : 
+                           AppTheme.warningColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        stageImproved ? Icons.arrow_downward : Icons.arrow_upward,
+                        size: 10,
+                        color: stageImproved ? AppTheme.successColor : AppTheme.warningColor,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        'Stage ${stageImproved ? 'Improved' : 'Changed'}',
+                        style: TextStyle(
+                          fontSize: 8,
+                          color: stageImproved ? AppTheme.successColor : AppTheme.warningColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const Spacer(),
+              Text(
+                '${percentageChange >= 0 ? '+' : ''}${percentageChange.toStringAsFixed(1)}%',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: progressColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Previous: ${previousWound.area.toStringAsFixed(1)} cm²',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.secondaryColor,
+                      ),
+                    ),
+                    Text(
+                      'Current: ${currentWound.area.toStringAsFixed(1)} cm²',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${areaChange >= 0 ? '+' : ''}${areaChange.toStringAsFixed(1)} cm²',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: progressColor,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNewWoundItem(Wound wound) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.warningColor.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.add_circle_outline, color: AppTheme.warningColor, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${wound.location} - ${wound.type}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+                Text(
+                  'New wound: ${wound.area.toStringAsFixed(1)} cm²',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.warningColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'NEW',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.warningColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealedWoundItem(Wound wound) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.successColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.successColor.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_outline, color: AppTheme.successColor, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${wound.location} - ${wound.type}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+                Text(
+                  'Previously: ${wound.area.toStringAsFixed(1)} cm²',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.successColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'HEALED',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.successColor,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1291,12 +1866,34 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                   ),
                   child: Stack(
                     children: [
-                      // Main photo placeholder
-                      const Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          size: 40,
-                          color: AppTheme.secondaryColor,
+                      // Main photo
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16),
+                        ),
+                        child: Image.network(
+                          widget.session.photos[index],
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.primaryColor,
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                size: 40,
+                                color: AppTheme.secondaryColor,
+                              ),
+                            );
+                          },
                         ),
                       ),
                       // Session badge
@@ -1450,31 +2047,62 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                 ],
               ),
             ),
-            // Photo placeholder
+            // Photo display
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.image_outlined,
-                        size: 80,
-                        color: AppTheme.secondaryColor,
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Photo Preview',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: AppTheme.secondaryColor,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    widget.session.photos[index],
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              color: AppTheme.primaryColor,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Loading photo...',
+                              style: TextStyle(
+                                color: AppTheme.secondaryColor,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.broken_image_outlined,
+                              size: 80,
+                              color: AppTheme.secondaryColor,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Failed to load photo',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppTheme.secondaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -1571,3 +2199,4 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
     }
   }
 }
+

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../models/conversation_data.dart';
 import '../../models/icd10_code.dart';
+import 'icd10_service.dart';
 
 class OpenAIService {
   static const String _baseUrl = 'https://api.openai.com/v1';
@@ -10,11 +11,16 @@ class OpenAIService {
   static const String _systemPrompt = '''
 You are an AI chatbot designed to assist wound care practitioners in South Africa with generating clinical motivation reports for medical aid claims. Your goal is to gather SESSION-SPECIFIC information through a conversational interview of 3-5 targeted questions, then use that data combined with existing patient data to compile a detailed report in the exact format of the provided example document. Make sure that you capture the nurses name to put into the Report and you don't want to say Sr. Rene Black, because other nurses might use this AI chat. The report must include relevant ICD-10 codes (primary, secondary, and external cause where applicable) extracted from the South African ICD-10 Master Industry Table (MIT, 2021 version), treatment codes (e.g., 88002 for wound debridement), and check for Prescribed Minimum Benefits (PMB) eligibility using the 2022 PMB ICD-10 Coded List from the Council for Medical Schemes.
 
-IMPORTANT: The following information is already available from patient onboarding and should NOT be asked again:
+IMPORTANT: The following information is already available from patient onboarding and session data and should NOT be asked again:
 - Patient demographics (name, medical aid, membership number, referring doctor)
 - Basic wound history and how the wound occurred
-- Comorbidities and medical conditions
+- Comorbidities and medical conditions (diabetes, hypertension, cardiovascular disease, etc.) - these are captured during patient registration with detailed descriptions
 - Wound type and initial details
+- Wound measurements (length, width, depth in centimeters) - these are captured during the session
+- Wound location and anatomical details
+- Wound classification/staging information
+
+NEVER ask about comorbidities or medical conditions if they are listed in the patient's medical history from registration.
 
 Key Guidelines for Session-Specific Questions:
 
@@ -167,35 +173,26 @@ Keep responses professional, empathetic, and compliant with SA healthcare standa
   }) async {
     try {
       final reportPrompt = '''
-Based on the comprehensive clinical information below, generate a complete clinical motivation letter for medical aid claims:
+Based on the comprehensive clinical information below, generate a complete, readable clinical motivation letter for medical aid claims. 
 
-**PATIENT INFORMATION (from file):**
-- Patient: ${clinicalData.patientName}
-- Medical Aid: ${clinicalData.medicalAid}
-- Membership Number: ${clinicalData.membershipNumber}
-- Referring Doctor: ${clinicalData.referringDoctor}
+IMPORTANT FORMATTING REQUIREMENTS:
+1. Write in complete sentences and paragraphs, NOT bullet points or lists
+2. Do NOT use symbols like dashes (-), slashes (/), or numbers (1,2,3) as formatting
+3. Write a comprehensive, flowing narrative report
+4. Do NOT include any feedback requests or questions at the end
+5. Use professional medical language in paragraph format
 
-**WOUND HISTORY & BACKGROUND (from patient onboarding):**
-- Wound History: ${clinicalData.woundHistory ?? 'Not specified'}
-- How Wound Occurred: ${clinicalData.woundOccurrence ?? 'Not specified'}
-- Comorbidities: ${clinicalData.comorbidities.isNotEmpty ? clinicalData.comorbidities.join(', ') : 'None specified'}
+PATIENT INFORMATION: ${clinicalData.patientName} (Medical Aid: ${clinicalData.medicalAid}, Membership: ${clinicalData.membershipNumber}, Referring Doctor: ${clinicalData.referringDoctor})
 
-**CURRENT SESSION INFORMATION:**
-- Practitioner: ${clinicalData.practitionerName}
-- Current Infection Status: ${clinicalData.infectionStatus ?? 'None reported'}
-- Tests Performed This Session: ${clinicalData.testsPerformed.isNotEmpty ? clinicalData.testsPerformed.join(', ') : 'None performed'}
-- Current Wound Status: ${clinicalData.woundDetails?.type ?? 'Not specified'}
-- Wound Size: ${clinicalData.woundDetails?.size ?? 'Not measured'}
-- Location: ${clinicalData.woundDetails?.location ?? 'Not specified'}
-- TIMES Assessment: Tissue: ${clinicalData.woundDetails?.timesAssessment?.tissue ?? 'Not assessed'}, Inflammation: ${clinicalData.woundDetails?.timesAssessment?.inflammation ?? 'Not assessed'}, Moisture: ${clinicalData.woundDetails?.timesAssessment?.moisture ?? 'Not assessed'}
-- Current Treatment Plan: ${clinicalData.treatmentDetails?.plannedTreatments.isNotEmpty == true ? clinicalData.treatmentDetails!.plannedTreatments.join(', ') : 'Standard wound care'}
-- Additional Session Notes: ${clinicalData.additionalNotes ?? 'None'}
+WOUND HISTORY AND BACKGROUND: ${clinicalData.woundHistory ?? 'Not specified'}, Occurrence: ${clinicalData.woundOccurrence ?? 'Not specified'}, Patient Comorbidities: ${clinicalData.patientComorbidities.isNotEmpty ? clinicalData.patientComorbidities.join(', ') : 'None specified'}, Session Comorbidities: ${clinicalData.sessionComorbidities.isNotEmpty ? clinicalData.sessionComorbidities.join(', ') : 'None specified'}
 
-**CODING INFORMATION:**
-- ICD-10 Codes: ${selectedCodes.isNotEmpty ? selectedCodes.map((c) => '${c.code.icd10Code} (${c.type.displayName})').join(', ') : 'To be determined based on wound description'}
-- Treatment Codes: ${treatmentCodes.join(', ')}
+CURRENT SESSION INFORMATION: Practitioner: ${clinicalData.practitionerName}, Practice Number: ${clinicalData.practitionerPracticeNumber ?? 'Not provided'}, Contact: ${clinicalData.practitionerContactDetails ?? 'Not provided'}, Wound Type: ${clinicalData.woundTypeAndHistory ?? 'Not provided'}, Occurrence Description: ${clinicalData.woundOccurrenceDescription ?? 'Not provided'}, Infection Status: ${clinicalData.infectionStatus ?? 'None reported'}, Tests Performed: ${clinicalData.testsPerformed.isNotEmpty ? clinicalData.testsPerformed.join(', ') : 'None performed'}, Treatment Dates: ${clinicalData.treatmentDates.isNotEmpty ? clinicalData.treatmentDates.join(', ') : 'Not scheduled'}, Current Wound Status: ${clinicalData.woundDetails?.type ?? 'Not specified'}, Size: ${clinicalData.woundDetails?.size ?? 'Not measured'}, Location: ${clinicalData.woundDetails?.location ?? 'Not specified'}, TIMES Assessment - Tissue: ${clinicalData.woundDetails?.timesAssessment?.tissue ?? 'Not assessed'}, Inflammation: ${clinicalData.woundDetails?.timesAssessment?.inflammation ?? 'Not assessed'}, Moisture: ${clinicalData.woundDetails?.timesAssessment?.moisture ?? 'Not assessed'}, Treatment Plan: ${clinicalData.treatmentDetails?.plannedTreatments.isNotEmpty == true ? clinicalData.treatmentDetails!.plannedTreatments.join(', ') : 'Standard wound care'}, Additional Notes: ${clinicalData.additionalNotes ?? 'None'}
 
-Generate a professional clinical motivation letter that combines this historical patient data with the current session information. Use the standard South African medical aid motivation letter format, including appropriate ICD-10 codes based on the wound description and comorbidities.
+CODING INFORMATION: 
+${selectedCodes.isNotEmpty ? ICD10Service.formatCodesForReport(selectedCodes) : 'ICD-10 codes to be determined based on clinical assessment'}
+Treatment Codes: ${treatmentCodes.join(', ')}
+
+Generate a professional clinical motivation letter written in fluent paragraph format. Begin with patient identification, describe the wound history and current condition in narrative form, detail the current session findings and treatments in complete sentences, and PROMINENTLY include the ICD-10 diagnostic codes within the text (especially noting any PMB-eligible codes for guaranteed coverage). Conclude with the authorization request. Do NOT use bullet points, lists, or formatting symbols. Write as a complete, flowing medical report that clearly includes the diagnostic codes for insurance processing.
 ''';
 
       final response = await http.post(
@@ -311,34 +308,25 @@ Provide your response:''';
   }) async {
     try {
       final prompt = '''
-You are a professional wound care AI assistant analyzing a practitioner's response during clinical data collection.
+You are a clinical data collection system. Your ONLY job is to collect information silently.
 
-CONTEXT:
-$conversationContext
-
-CURRENT STEP: $currentQuestion
+CURRENT QUESTION: $currentQuestion
 USER'S RESPONSE: "$userResponse"
 
-INSTRUCTIONS:
-1. Analyze if the user's response is:
-   - Clinically relevant and appropriate for the question asked
-   - Clear and understandable (not gibberish or random text)
-   - Complete enough to be useful for clinical documentation
+CRITICAL INSTRUCTIONS:
+1. NEVER provide feedback, acknowledgments, or explanations
+2. ONLY respond if there is a genuine problem requiring correction:
+   - Response is complete gibberish/random characters
+   - Response contains obvious spelling errors that affect meaning
+   - Response is completely irrelevant to the clinical question
 
-2. Respond with a JSON object containing:
-   - "message": Your response to the user (acknowledgment, clarification request, or feedback)
-   - "proceed": true if response is adequate, false if you need clarification
+3. If you must respond, be EXTREMELY brief (max 10 words)
+4. For valid responses (even if short), ALWAYS respond with empty message and proceed=true
 
-RESPONSE GUIDELINES:
-- If response is adequate: Acknowledge positively and explain clinical relevance
-- If response is unclear/inadequate: Politely ask for clarification with specific guidance
-- If response is gibberish: Ask them to provide a proper clinical response
-- Be professional but conversational
-
-EXAMPLE RESPONSES:
-Good response: {"message": "Thank you for providing those test results. The HbA1c and CRP values will help assess healing potential. This information strengthens our clinical justification.", "proceed": true}
-
-Poor response: {"message": "I didn't quite understand that response. Could you please provide the specific tests that were performed during this session? For example: HbA1c, CRP, ESR, wound swabs, ABPI, etc.", "proceed": false}
+RESPONSE FORMAT - JSON only:
+Valid response: {"message": "", "proceed": true}
+Needs spelling fix: {"message": "Please check spelling", "proceed": false}
+Gibberish: {"message": "Please provide relevant clinical information", "proceed": false}
 
 Respond only with valid JSON:''';
 
@@ -351,11 +339,11 @@ Respond only with valid JSON:''';
         body: jsonEncode({
           'model': 'gpt-4o-mini',
           'messages': [
-            {'role': 'system', 'content': 'You are a professional clinical AI assistant that responds only with valid JSON.'},
+            {'role': 'system', 'content': 'You are a silent clinical data collection system. Respond only with valid JSON. Never provide feedback unless correction is needed.'},
             {'role': 'user', 'content': prompt}
           ],
-          'max_tokens': 200,
-          'temperature': 0.7,
+          'max_tokens': 50, // Reduced for brief corrections only
+          'temperature': 0.1, // Very low for deterministic, minimal responses
         }),
       );
 
@@ -371,21 +359,21 @@ Respond only with valid JSON:''';
             'proceed': result['proceed'] ?? true,
           };
         } catch (e) {
-          // If JSON parsing fails, extract message and make conservative decision
+          // If JSON parsing fails, be conservative and proceed silently
           return {
-            'message': content.isNotEmpty ? content : 'Thank you for your response.',
-            'proceed': !userResponse.toLowerCase().contains(RegExp(r'^[a-z]*$')) || userResponse.length < 3, // Proceed if not gibberish
+            'message': '', // Silent - no feedback
+            'proceed': userResponse.length >= 2, // Proceed if not too short
           };
         }
       }
 
       return {
-        'message': 'Thank you for your response. Let me continue with the next question.',
+        'message': '', // Silent - no feedback
         'proceed': true,
       };
     } catch (e) {
       return {
-        'message': 'Thank you for your response. Let me continue with the next question.',
+        'message': '', // Silent - no feedback  
         'proceed': true,
       };
     }

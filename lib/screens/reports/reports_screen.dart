@@ -2177,7 +2177,11 @@ class _ReportsScreenState extends State<ReportsScreen>
                                 ),
                                 child: Center(
                                   child: Text(
-                                    patient.name.split(' ').map((n) => n[0]).take(2).join(),
+                                    patient.name.split(' ')
+                                        .where((n) => n.isNotEmpty)
+                                        .map((n) => n[0].toUpperCase())
+                                        .take(2)
+                                        .join(),
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
@@ -2270,7 +2274,9 @@ class _ReportsScreenState extends State<ReportsScreen>
       final effectiveness = sessions > 0 ? improvement / sessions : 0;
       return {
         'name': patient.name,
-        'firstName': patient.name.split(' ').first,
+        'firstName': patient.name.split(' ').where((n) => n.isNotEmpty).isNotEmpty 
+                      ? patient.name.split(' ').where((n) => n.isNotEmpty).first 
+                      : 'Unknown',
         'effectiveness': effectiveness,
         'sessions': sessions,
         'improvement': improvement,
@@ -2401,7 +2407,11 @@ class _ReportsScreenState extends State<ReportsScreen>
                           ),
                           child: Center(
                             child: Text(
-                              name.split(' ').map((n) => n[0]).take(2).join(),
+                              name.split(' ')
+                                  .where((n) => n.isNotEmpty)
+                                  .map((n) => n[0].toUpperCase())
+                                  .take(2)
+                                  .join(),
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -2654,7 +2664,11 @@ class _ReportsScreenState extends State<ReportsScreen>
                                 ),
                                 child: Center(
                                   child: Text(
-                                    patient.name.split(' ').map((n) => n[0]).take(2).join(),
+                                    patient.name.split(' ')
+                                        .where((n) => n.isNotEmpty)
+                                        .map((n) => n[0].toUpperCase())
+                                        .take(2)
+                                        .join(),
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,

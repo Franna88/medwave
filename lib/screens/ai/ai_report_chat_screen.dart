@@ -4,7 +4,9 @@ import 'dart:io';
 import '../../models/patient.dart';
 import '../../models/conversation_data.dart';
 import '../../services/ai/openai_service.dart';
+import '../../services/ai/icd10_service.dart';
 import '../../services/pdf_generation_service.dart';
+import '../../services/firebase/practitioner_service.dart';
 import '../../theme/app_theme.dart';
 
 class AIReportChatScreen extends StatefulWidget {
@@ -34,14 +36,24 @@ class _AIReportChatScreenState extends State<AIReportChatScreen> {
   ConversationStep _currentStep = ConversationStep.greeting;
   bool _isLoading = false;
   bool _isGeneratingReport = false;
+  bool _isEditingReport = false;
+  TextEditingController _reportEditController = TextEditingController();
   String? _generatedReport;
   
   // Extracted data for report generation
   String _practitionerName = '';
+  String _practitionerPracticeNumber = '';
+  String _practitionerContactDetails = '';
+  String _woundTypeAndHistory = '';
+  String _woundOccurrenceDescription = '';
+  List<String> _sessionComorbidities = [];
+  String _patientComorbidities = ''; // Auto-populated from patient medical history
   String _infectionStatus = '';
   List<String> _testsPerformed = [];
+  String _woundDetailsClassification = '';
   String _timesAssessment = '';
   String _currentTreatment = '';
+  List<String> _treatmentDates = [];
   String _additionalNotes = '';
 
   @override
@@ -54,26 +66,335 @@ class _AIReportChatScreenState extends State<AIReportChatScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _reportEditController.dispose();
     super.dispose();
   }
+  
+  void _startEditReport() {
+    setState(() {
+      _isEditingReport = true;
+      _reportEditController.text = _generatedReport ?? '';
+    });
+  }
+  
+  void _saveEditedReport() {
+    setState(() {
+      _generatedReport = _reportEditController.text;
+      _isEditingReport = false;
+      
+      // Update the message in the list
+      for (int i = _messages.length - 1; i >= 0; i--) {
+        if (_messages[i].isBot && _messages[i].content.contains('Report generated successfully')) {
+          _messages[i] = AIMessage(
+            content: 'Report generated successfully! Here\'s your updated clinical motivation letter:\n\n${_generatedReport!}',
+            isBot: true,
+            timestamp: _messages[i].timestamp,
+          );
+          break;
+        }
+      }
+    });
+    
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('✅ Report updated successfully!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+  
+  void _cancelEditReport() {
+    setState(() {
+      _isEditingReport = false;
+      _reportEditController.clear();
+    });
+  }
 
-  void _initializeConversation() {
-    // Start with greeting message that acknowledges existing patient data
+  void _initializeConversation() async {
+    // Pre-populate data from patient and session
+    _populateExistingData();
+    
+    // Start with greeting message that shows what data we already have
+    final patientSummary = _buildPatientDataSummary();
+    final sessionSummary = _buildSessionDataSummary();
+    
     final greetingMessage = AIMessage(
-      content: 'Hello! I have ${widget.patient.name}\'s information from their file. I\'ll ask 3-5 questions about this specific session to generate the motivation report. Let\'s begin!',
+      content: '''Report Generator - ${widget.patient.fullNames} ${widget.patient.surname}
+
+**Available Data:**
+$patientSummary
+
+**Session Data:**
+$sessionSummary
+
+**Data Collection Required:**
+I need to collect additional information to complete the motivation report. Please answer the following questions.''',
       isBot: true,
       timestamp: DateTime.now(),
     );
     
     setState(() {
       _messages.add(greetingMessage);
-      _currentStep = ConversationStep.practitionerName;
+      _isLoading = true;
+    });
+
+    // Try to auto-populate practitioner details
+    await _loadPractitionerDetails();
+
+    setState(() {
+      _isLoading = false;
     });
     
     // Ask the first question after a brief delay
     Future.delayed(const Duration(milliseconds: 500), () {
       _askNextQuestion();
     });
+  }
+
+  Future<void> _loadPractitionerDetails() async {
+    try {
+      final practitionerInfo = await PractitionerService.getPractitionerInfo();
+      
+      if (practitionerInfo['name'] != null) {
+        _practitionerName = practitionerInfo['name']!;
+        
+        if (practitionerInfo['licenseNumber'] != null) {
+          _practitionerPracticeNumber = practitionerInfo['licenseNumber']!;
+        }
+        
+        if (practitionerInfo['contactDetails'] != null) {
+          _practitionerContactDetails = practitionerInfo['contactDetails']!;
+        }
+        
+        // Auto-populate patient comorbidities from existing medical history
+        _loadPatientComorbidities();
+        
+        // Auto-populate wound history if available
+        _loadPatientWoundHistory();
+        
+        // Add a message showing auto-populated details
+        final autoPopulatedMessage = AIMessage(
+          content: 'Perfect! I\'ve loaded your practitioner details and ${widget.patient.fullNames}\'s medical history:\n'
+                  '• Practitioner: $_practitionerName\n'
+                  '• License: ${_practitionerPracticeNumber.isNotEmpty ? _practitionerPracticeNumber : 'Not found'}\n'
+                  '• Patient has existing medical history: ${_patientComorbidities.isNotEmpty ? 'Yes' : 'No'}\n'
+                  '• Previous wound history: ${widget.patient.woundHistory?.isNotEmpty == true ? 'Yes' : 'No'}\n\n'
+                  'I\'ll focus on this session\'s specific clinical details.',
+          isBot: true,
+          timestamp: DateTime.now(),
+        );
+        
+        setState(() {
+          _messages.add(autoPopulatedMessage);
+        });
+        
+        // Skip practitioner questions and patient demographics
+        if (_practitionerName.isNotEmpty) {
+          _currentStep = ConversationStep.woundHistoryAndType;
+        }
+      } else {
+        // No practitioner details found, proceed with manual entry
+        final noDetailsMessage = AIMessage(
+          content: 'I couldn\'t find your practitioner details in the system. I\'ll ask you to provide them manually.',
+          isBot: true,
+          timestamp: DateTime.now(),
+        );
+        
+        setState(() {
+          _messages.add(noDetailsMessage);
+          _currentStep = ConversationStep.practitionerName;
+        });
+      }
+    } catch (e) {
+      print('Error loading practitioner details: $e');
+      // Continue with manual entry if auto-load fails
+      final errorMessage = AIMessage(
+        content: 'I encountered an issue loading your details, so I\'ll ask you to provide them manually.',
+        isBot: true,
+        timestamp: DateTime.now(),
+      );
+      
+      setState(() {
+        _messages.add(errorMessage);
+        _currentStep = ConversationStep.practitionerName;
+      });
+    }
+  }
+
+  void _loadPatientComorbidities() {
+    // Extract comorbidities from patient's medical conditions
+    final conditions = <String>[];
+    
+    widget.patient.medicalConditions.forEach((key, value) {
+      if (value == true) {
+        switch (key) {
+          case 'heart':
+            conditions.add('Cardiovascular disease');
+            break;
+          case 'lungs':
+            conditions.add('Respiratory conditions');
+            break;
+          case 'diabetes':
+            conditions.add('Diabetes mellitus');
+            break;
+          case 'hypertension':
+            conditions.add('Hypertension');
+            break;
+          case 'kidney':
+            conditions.add('Kidney disease');
+            break;
+          case 'liver':
+            conditions.add('Liver disease');
+            break;
+          case 'neurological':
+            conditions.add('Neurological conditions');
+            break;
+          case 'autoimmune':
+            conditions.add('Autoimmune conditions');
+            break;
+          case 'cancer':
+            conditions.add('Cancer/malignancy');
+            break;
+          case 'mental_health':
+            conditions.add('Mental health conditions');
+            break;
+          case 'other':
+            conditions.add('Other medical conditions');
+            break;
+        }
+      }
+    });
+    
+    _patientComorbidities = conditions.join(', ');
+  }
+
+  void _populateExistingData() {
+    // Pre-populate patient comorbidities
+    _loadPatientComorbidities();
+    
+    // Debug: Check what wound data we have
+    print('🔍 AI DEBUG: Patient wound history: "${widget.patient.woundHistory}"');
+    print('🔍 AI DEBUG: Patient wound occurrence: "${widget.patient.woundOccurrence}"');
+    print('🔍 AI DEBUG: Patient wound occurrence details: "${widget.patient.woundOccurrenceDetails}"');
+    print('🔍 AI DEBUG: Patient baseline wounds count: ${widget.patient.baselineWounds.length}');
+    if (widget.patient.baselineWounds.isNotEmpty) {
+      final baselineWound = widget.patient.baselineWounds.first;
+      print('🔍 AI DEBUG: Baseline wound: ${baselineWound.type} at ${baselineWound.location}');
+    }
+    print('🔍 AI DEBUG: Session wounds count: ${widget.session.wounds.length}');
+    if (widget.session.wounds.isNotEmpty) {
+      final sessionWound = widget.session.wounds.first;
+      print('🔍 AI DEBUG: Session wound: ${sessionWound.type} at ${sessionWound.location}');
+    }
+    
+    // Pre-populate wound information from patient onboarding
+    if (widget.patient.woundHistory != null && widget.patient.woundHistory!.isNotEmpty) {
+      _woundTypeAndHistory = widget.patient.woundHistory!;
+      print('✅ AI DEBUG: Pre-populated wound history: "$_woundTypeAndHistory"');
+    } else {
+      // Try to build wound history from baseline wounds
+      if (widget.patient.baselineWounds.isNotEmpty) {
+        final baselineWound = widget.patient.baselineWounds.first;
+        _woundTypeAndHistory = '${baselineWound.type} at ${baselineWound.location}';
+        print('✅ AI DEBUG: Built wound history from baseline: "$_woundTypeAndHistory"');
+      }
+    }
+    
+    if (widget.patient.woundOccurrence != null && widget.patient.woundOccurrence!.isNotEmpty) {
+      _woundOccurrenceDescription = widget.patient.woundOccurrence!;
+      print('✅ AI DEBUG: Pre-populated wound occurrence: "$_woundOccurrenceDescription"');
+    }
+    
+    // Pre-populate wound details from current session
+    if (widget.session.wounds.isNotEmpty) {
+      final wound = widget.session.wounds.first;
+      if (_woundDetailsClassification.isEmpty) {
+        _woundDetailsClassification = '${wound.type} - ${wound.location} (${wound.length}x${wound.width}x${wound.depth}cm)';
+      }
+    }
+    
+    // Pre-populate session notes if available
+    if (widget.session.notes.isNotEmpty) {
+      _additionalNotes = widget.session.notes;
+    }
+  }
+
+  String _buildPatientDataSummary() {
+    final summary = StringBuffer();
+    
+    // Basic demographics
+    summary.writeln('• Patient: ${widget.patient.fullNames} ${widget.patient.surname}');
+    summary.writeln('• Medical Aid: ${widget.patient.medicalAidSchemeName}');
+    summary.writeln('• Member Number: ${widget.patient.medicalAidNumber}');
+    
+    if (widget.patient.referringDoctorName != null) {
+      summary.writeln('• Referring Doctor: ${widget.patient.referringDoctorName}');
+    }
+    
+    // Wound history
+    if (widget.patient.woundHistory != null && widget.patient.woundHistory!.isNotEmpty) {
+      summary.writeln('• Wound History: ${widget.patient.woundHistory}');
+    } else if (widget.patient.baselineWounds.isNotEmpty) {
+      final wound = widget.patient.baselineWounds.first;
+      summary.writeln('• Wound History: ${wound.type} at ${wound.location} (from baseline)');
+    }
+    
+    if (widget.patient.woundOccurrence != null && widget.patient.woundOccurrence!.isNotEmpty) {
+      summary.writeln('• How Wound Occurred: ${widget.patient.woundOccurrence}');
+    }
+    
+    if (widget.patient.woundStartDate != null) {
+      summary.writeln('• Wound Start Date: ${widget.patient.woundStartDate!.day}/${widget.patient.woundStartDate!.month}/${widget.patient.woundStartDate!.year}');
+    }
+    
+    // Medical conditions
+    if (_patientComorbidities.isNotEmpty) {
+      summary.writeln('• Medical Conditions: $_patientComorbidities');
+    }
+    
+    return summary.toString();
+  }
+
+  String _buildSessionDataSummary() {
+    final summary = StringBuffer();
+    
+    summary.writeln('• Session Date: ${widget.session.date.day}/${widget.session.date.month}/${widget.session.date.year}');
+    summary.writeln('• Session Number: ${widget.session.sessionNumber}');
+    summary.writeln('• Weight: ${widget.session.weight} kg');
+    summary.writeln('• VAS Pain Score: ${widget.session.vasScore}/10');
+    
+    if (widget.session.wounds.isNotEmpty) {
+      final wound = widget.session.wounds.first;
+      summary.writeln('• Current Wound: ${wound.type} at ${wound.location}');
+      summary.writeln('• Wound Size: ${wound.length} x ${wound.width} x ${wound.depth} cm');
+      summary.writeln('• Wound Stage: ${wound.stage}');
+    }
+    
+    if (widget.session.notes.isNotEmpty) {
+      summary.writeln('• Session Notes: ${widget.session.notes}');
+    }
+    
+    if (widget.session.photos.isNotEmpty) {
+      summary.writeln('• Photos: ${widget.session.photos.length} photos taken');
+    }
+    
+    return summary.toString();
+  }
+
+
+
+  void _loadPatientWoundHistory() {
+    // Use existing wound history if available
+    if (widget.patient.woundHistory?.isNotEmpty == true) {
+      _woundTypeAndHistory = widget.patient.woundHistory!;
+    }
+    
+    // Use wound occurrence details if available
+    if (widget.patient.woundOccurrenceDetails?.isNotEmpty == true) {
+      _woundOccurrenceDescription = widget.patient.woundOccurrenceDetails!;
+    }
   }
 
   void _askNextQuestion() {
@@ -83,20 +404,83 @@ class _AIReportChatScreenState extends State<AIReportChatScreen> {
       case ConversationStep.practitionerName:
         question = 'What is your name for the report? (e.g., Sr. Sarah Smith)';
         break;
+      case ConversationStep.practitionerDetails:
+        question = 'Please provide your practice number and contact details for the report. For example: "Practice Number: 0168238, Tel: 082 828 2476, Email: wounds@hauteCare.co.za"';
+        break;
+      case ConversationStep.woundHistoryAndType:
+        print('🔍 AI DEBUG: Checking wound history step. _woundTypeAndHistory: "$_woundTypeAndHistory"');
+        if (_woundTypeAndHistory.isNotEmpty) {
+          print('✅ AI DEBUG: Skipping wound history step - already have data');
+          // Skip this step since we have the data
+          _advanceToNextStep();
+          _askNextQuestion();
+          return;
+        } else {
+          print('❌ AI DEBUG: No wound history found, asking question');
+          question = 'Please describe the wound history and type. For example: "Type 1 diabetic patient with a pressure injury stage 2 on her left heel after a left hip replacement." This helps determine the primary ICD-10 code.';
+        }
+        break;
+      case ConversationStep.woundOccurrence:
+        if (_woundOccurrenceDescription.isNotEmpty) {
+          // Skip this step since we have the data
+          _advanceToNextStep();
+          _askNextQuestion();
+          return;
+        } else {
+          question = 'How did the patient get this wound? For example, did they fall down stairs, off a bike, or is it due to a chronic condition like diabetes? This helps determine external cause codes.';
+        }
+        break;
+      case ConversationStep.comorbidities:
+        // Check if we have complete medical conditions from patient registration
+        final hasExistingConditions = widget.patient.medicalConditions.values.any((hasCondition) => hasCondition);
+        
+        if (hasExistingConditions && _patientComorbidities.isNotEmpty) {
+          // We have complete medical history from registration - skip this step
+          print('🏥 AI DEBUG: Skipping comorbidities step - data from registration: $_patientComorbidities');
+          _sessionComorbidities = [_patientComorbidities];
+          _advanceToNextStep();
+          _askNextQuestion();
+          return;
+        } else {
+          question = 'What comorbidities does the patient have, such as diabetes, hypertension, or vascular disease? Please list any relevant medical conditions.';
+        }
+        break;
       case ConversationStep.currentInfection:
         question = 'Does the patient have any signs of infection today? If yes, please describe the symptoms and any test results.';
         break;
       case ConversationStep.testsPerformed:
-        question = 'What tests were performed during this session? (e.g., HbA1c, CRP, ESR, wound swabs, ABPI, etc.) Please provide results if available.';
+        question = 'What tests were performed during this session? (e.g., HbA1c, CRP, ESR, wound swabs, ABPI, SWMT, etc.) Please provide results if available.';
+        break;
+      case ConversationStep.woundDetailsClassification:
+        // Check if we have complete wound data from session
+        if (widget.session.wounds.isNotEmpty) {
+          final wound = widget.session.wounds.first;
+          if (wound.length > 0 && wound.width > 0 && wound.depth >= 0) {
+            // We have complete measurements, skip this step
+            print('✅ AI DEBUG: Skipping wound details step - complete measurements available');
+            _advanceToNextStep();
+            _askNextQuestion();
+            return;
+          }
+        }
+        
+        if (_woundDetailsClassification.isNotEmpty) {
+          question = 'From the session data, I have these wound details: ${_woundDetailsClassification}. Is this accurate, or would you like to add any additional classification information?';
+        } else {
+          question = 'Please provide specific wound details: wound type/classification (e.g., NPUAP for pressure injuries, CEAP for leg ulcers), size measurements, and exact location on the body.';
+        }
         break;
       case ConversationStep.timesAssessment:
-        question = 'Please provide the current TIMES assessment:\n• Tissue type (red/yellow/black)\n• Inflammation/Infection signs\n• Moisture level (low/moderate/high)\n• Edge condition (advancing/non-advancing)\n• Surrounding skin status';
+        question = 'Please provide the current TIMES assessment:\n• Tissue type (red/yellow/black/mixed)\n• Inflammation/Infection signs\n• Moisture level (low/moderate/high) and exudate type\n• Edge condition (advancing/non-advancing)\n• Surrounding skin status';
         break;
       case ConversationStep.currentTreatment:
-        question = 'What treatments are being applied in this session? Include cleansing methods, dressings, medications, and any planned treatments.';
+        question = 'What treatments are being applied in this session? Include cleansing methods (e.g., HOCL), dressings, medications, and any planned treatments or products.';
+        break;
+      case ConversationStep.treatmentDates:
+        question = 'When are the treatment sessions scheduled? Please provide dates for this month and planned future sessions.';
         break;
       case ConversationStep.additionalNotes:
-        question = 'Any additional notes for this session? (Optional - or say "none" to proceed to report generation)';
+        question = 'Any additional notes? Is this treatment in lieu of hospitalization? Any other relevant clinical information? (Optional - or say "none" to proceed to report generation)';
         break;
       default:
         return;
@@ -160,17 +544,64 @@ class _AIReportChatScreenState extends State<AIReportChatScreen> {
       case ConversationStep.practitionerName:
         _practitionerName = answer;
         break;
+      case ConversationStep.practitionerDetails:
+        // Parse practice number and contact details from the response
+        _practitionerContactDetails = answer;
+        // Try to extract practice number if provided in a structured way
+        final practiceNumberMatch = RegExp(r'[Pp]ractice\s*[Nn]umber:?\s*([^\s,]+)').firstMatch(answer);
+        if (practiceNumberMatch != null) {
+          _practitionerPracticeNumber = practiceNumberMatch.group(1) ?? '';
+        }
+        break;
+      case ConversationStep.woundHistoryAndType:
+        // If we had existing data and user confirms it, keep existing data
+        if (_woundTypeAndHistory.isNotEmpty && 
+            (answer.toLowerCase().contains('yes') || answer.toLowerCase().contains('accurate') || answer.toLowerCase().contains('correct'))) {
+          // Keep existing wound history
+        } else {
+          // Update with new information
+          _woundTypeAndHistory = answer;
+        }
+        break;
+      case ConversationStep.woundOccurrence:
+        // If we had existing data and user confirms it, keep existing data
+        if (_woundOccurrenceDescription.isNotEmpty && 
+            (answer.toLowerCase().contains('yes') || answer.toLowerCase().contains('relevant') || answer.toLowerCase().contains('correct'))) {
+          // Keep existing occurrence description
+        } else {
+          // Update with new information
+          _woundOccurrenceDescription = answer;
+        }
+        break;
+      case ConversationStep.comorbidities:
+        // If we had existing comorbidities, combine with new information
+        if (_patientComorbidities.isNotEmpty) {
+          if (answer.toLowerCase().contains('no') || answer.toLowerCase().contains('none')) {
+            _sessionComorbidities = [_patientComorbidities]; // Use only existing
+          } else {
+            _sessionComorbidities = [_patientComorbidities, answer]; // Combine both
+          }
+        } else {
+          _sessionComorbidities = answer.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        }
+        break;
       case ConversationStep.currentInfection:
         _infectionStatus = answer;
         break;
       case ConversationStep.testsPerformed:
-        _testsPerformed = answer.split(',').map((e) => e.trim()).toList();
+        _testsPerformed = answer.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        break;
+      case ConversationStep.woundDetailsClassification:
+        _woundDetailsClassification = answer;
         break;
       case ConversationStep.timesAssessment:
         _timesAssessment = answer;
         break;
       case ConversationStep.currentTreatment:
         _currentTreatment = answer;
+        break;
+      case ConversationStep.treatmentDates:
+        _treatmentDates = answer.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
         break;
       case ConversationStep.additionalNotes:
         _additionalNotes = answer;
@@ -193,7 +624,7 @@ class _AIReportChatScreenState extends State<AIReportChatScreen> {
       String context = _buildConversationContext();
       String currentQuestion = _getCurrentQuestionContext();
       
-      // Ask AI to analyze the user's response and provide acknowledgment
+      // Ask AI to analyze the user's response (silent mode - only for corrections)
       final analysisResult = await _openAIService.analyzeUserResponseWithValidation(
         userResponse: lastUserMessage,
         conversationContext: context,
@@ -201,55 +632,78 @@ class _AIReportChatScreenState extends State<AIReportChatScreen> {
         stepType: _currentStep.toString(),
       );
       
-      final botMessage = AIMessage(
-        content: analysisResult['message'] as String,
-        isBot: true,
-        timestamp: DateTime.now(),
-      );
+      // Only add AI message if there's a correction needed (message is not empty)
+      final aiMessage = analysisResult['message'] as String;
+      if (aiMessage.isNotEmpty) {
+        final botMessage = AIMessage(
+          content: aiMessage,
+          isBot: true,
+          timestamp: DateTime.now(),
+        );
+        
+        setState(() {
+          _messages.add(botMessage);
+        });
+        
+        _scrollToBottom();
+      }
       
       setState(() {
-        _messages.add(botMessage);
         _isLoading = false;
       });
-      
-      _scrollToBottom();
       
       // Return whether we should proceed to next step
       return analysisResult['proceed'] as bool;
       
     } catch (e) {
-      // Fallback to simple acknowledgment and proceed if AI fails
-      final fallbackMessage = AIMessage(
-        content: 'Thank you for your response. Let me continue with the next question.',
-        isBot: true,
-        timestamp: DateTime.now(),
-      );
-      
+      // Fallback: proceed silently if AI analysis fails
       setState(() {
-        _messages.add(fallbackMessage);
         _isLoading = false;
       });
       
-      _scrollToBottom();
-      
-      // Default to proceeding if AI analysis fails
+      // Default to proceeding if AI analysis fails (silent mode)
       return true;
     }
   }
 
   String _buildConversationContext() {
+    // Build detailed wound information from session data
+    String woundMeasurements = 'No wound measurements available';
+    if (widget.session.wounds.isNotEmpty) {
+      final wound = widget.session.wounds.first;
+      woundMeasurements = 'Length: ${wound.length}cm, Width: ${wound.width}cm, Depth: ${wound.depth}cm, Stage: ${wound.stage}, Location: ${wound.location}';
+    }
+    
     return '''
 Patient: ${widget.patient.fullNames} ${widget.patient.surname}
 Session Date: ${widget.session.date.toString().split(' ')[0]}
 Session Number: ${widget.session.sessionNumber}
-Current Wounds: ${widget.session.wounds.map((w) => '${w.location} (${w.type})').join(', ')}
-VAS Score: ${widget.session.vasScore}
+Patient Weight: ${widget.session.weight}kg
+VAS Pain Score: ${widget.session.vasScore}/10
+
+WOUND MEASUREMENTS (Already Captured - DO NOT ASK AGAIN):
+$woundMeasurements
+
+PATIENT HISTORY (Already Available - DO NOT ASK AGAIN):
+- Medical Aid: ${widget.patient.medicalAidSchemeName} (${widget.patient.medicalAidNumber})
+- Wound History: ${widget.patient.woundHistory ?? 'Not specified'}
+- How Wound Occurred: ${widget.patient.woundOccurrence ?? 'Not specified'}
+- Wound Start Date: ${widget.patient.woundStartDate?.toString().split(' ')[0] ?? 'Not specified'}
+- Medical Conditions: ${widget.patient.medicalConditions.entries.where((e) => e.value).map((e) => e.key).join(', ')}
+
 Collected Information:
 - Practitioner: $_practitionerName
+- Practice Number: $_practitionerPracticeNumber
+- Contact Details: $_practitionerContactDetails
+- Wound History & Type: $_woundTypeAndHistory
+- Wound Occurrence: $_woundOccurrenceDescription
+- Session Comorbidities: ${_sessionComorbidities.join(', ')}
 - Infection Status: $_infectionStatus
 - Tests: ${_testsPerformed.join(', ')}
+- Wound Details: $_woundDetailsClassification
 - TIMES Assessment: $_timesAssessment
 - Treatment: $_currentTreatment
+- Treatment Dates: ${_treatmentDates.join(', ')}
 - Notes: $_additionalNotes
 ''';
   }
@@ -258,14 +712,26 @@ Collected Information:
     switch (_currentStep) {
       case ConversationStep.practitionerName:
         return 'Asking for practitioner name for report authorization';
+      case ConversationStep.practitionerDetails:
+        return 'Collecting practitioner practice number and contact details for report';
+      case ConversationStep.woundHistoryAndType:
+        return 'Collecting wound history and type for primary ICD-10 code determination';
+      case ConversationStep.woundOccurrence:
+        return 'Determining how wound occurred for external cause codes (V01-Y98)';
+      case ConversationStep.comorbidities:
+        return 'Identifying comorbidities for secondary codes and PMB eligibility';
       case ConversationStep.currentInfection:
         return 'Assessing current infection status and symptoms';
       case ConversationStep.testsPerformed:
         return 'Collecting objective test data and results';
+      case ConversationStep.woundDetailsClassification:
+        return 'Gathering specific wound classification and measurement details';
       case ConversationStep.timesAssessment:
         return 'Gathering structured TIMES wound assessment';
       case ConversationStep.currentTreatment:
         return 'Documenting current treatment protocols and interventions';
+      case ConversationStep.treatmentDates:
+        return 'Collecting treatment scheduling information';
       case ConversationStep.additionalNotes:
         return 'Collecting any additional clinical observations';
       default:
@@ -276,18 +742,36 @@ Collected Information:
   void _advanceToNextStep() {
     switch (_currentStep) {
       case ConversationStep.practitionerName:
+        _currentStep = ConversationStep.practitionerDetails;
+        break;
+      case ConversationStep.practitionerDetails:
+        _currentStep = ConversationStep.woundHistoryAndType;
+        break;
+      case ConversationStep.woundHistoryAndType:
+        _currentStep = ConversationStep.woundOccurrence;
+        break;
+      case ConversationStep.woundOccurrence:
+        _currentStep = ConversationStep.comorbidities;
+        break;
+      case ConversationStep.comorbidities:
         _currentStep = ConversationStep.currentInfection;
         break;
       case ConversationStep.currentInfection:
         _currentStep = ConversationStep.testsPerformed;
         break;
       case ConversationStep.testsPerformed:
+        _currentStep = ConversationStep.woundDetailsClassification;
+        break;
+      case ConversationStep.woundDetailsClassification:
         _currentStep = ConversationStep.timesAssessment;
         break;
       case ConversationStep.timesAssessment:
         _currentStep = ConversationStep.currentTreatment;
         break;
       case ConversationStep.currentTreatment:
+        _currentStep = ConversationStep.treatmentDates;
+        break;
+      case ConversationStep.treatmentDates:
         _currentStep = ConversationStep.additionalNotes;
         break;
       default:
@@ -305,24 +789,31 @@ Collected Information:
       // Create ExtractedClinicalData with patient data + session data
       final clinicalData = ExtractedClinicalData(
         // From patient file
-        patientName: widget.patient.name,
-        medicalAid: widget.patient.medicalAid,
-        membershipNumber: widget.patient.medicalAidNumber,
+        patientName: '${widget.patient.fullNames} ${widget.patient.surname}',
+        medicalAid: widget.patient.medicalAidSchemeName.isEmpty ? 'Not specified' : widget.patient.medicalAidSchemeName,
+        membershipNumber: widget.patient.medicalAidNumber.isEmpty ? 'Not specified' : widget.patient.medicalAidNumber,
         referringDoctor: widget.patient.referringDoctorName ?? 'Not specified',
         woundHistory: widget.patient.woundHistory,
         woundOccurrence: widget.patient.woundOccurrence,
-        comorbidities: _extractComorbidities(),
+        patientComorbidities: _extractComorbidities(),
         
         // From session conversation
         practitionerName: _practitionerName,
+        practitionerPracticeNumber: _practitionerPracticeNumber.isEmpty ? null : _practitionerPracticeNumber,
+        practitionerContactDetails: _practitionerContactDetails.isEmpty ? null : _practitionerContactDetails,
+        woundTypeAndHistory: _woundTypeAndHistory.isEmpty ? null : _woundTypeAndHistory,
+        woundOccurrenceDescription: _woundOccurrenceDescription.isEmpty ? null : _woundOccurrenceDescription,
+        sessionComorbidities: _sessionComorbidities,
         infectionStatus: _infectionStatus.isEmpty ? null : _infectionStatus,
         testsPerformed: _testsPerformed,
+        treatmentDates: _treatmentDates,
         additionalNotes: _additionalNotes.isEmpty ? null : _additionalNotes,
         
         // Wound details from session
         woundDetails: WoundDetails(
-          type: widget.session.wounds.isNotEmpty ? widget.session.wounds.first.type : 'Not specified',
-          size: widget.session.wounds.isNotEmpty ? '${widget.session.wounds.first.length} x ${widget.session.wounds.first.width} cm' : 'Not specified',
+          type: _woundDetailsClassification.isNotEmpty ? _woundDetailsClassification : 
+                (widget.session.wounds.isNotEmpty ? widget.session.wounds.first.type : 'Not specified'),
+          size: widget.session.wounds.isNotEmpty ? '${widget.session.wounds.first.length} x ${widget.session.wounds.first.width} x ${widget.session.wounds.first.depth} cm' : 'Not specified',
           location: widget.session.wounds.isNotEmpty ? widget.session.wounds.first.location : 'Not specified',
           timesAssessment: _parseTimesAssessment(),
         ),
@@ -335,10 +826,29 @@ Collected Information:
         ),
       );
 
-      // Generate the report using OpenAI
+      // Analyze conversation and generate ICD-10 code suggestions
+      final conversationText = _messages
+          .where((m) => !m.isBot)
+          .map((m) => m.content)
+          .join(' ');
+      
+      final allClinicalText = [
+        conversationText,
+        clinicalData.woundHistory,
+        clinicalData.woundOccurrence,
+        clinicalData.infectionStatus ?? '',
+        clinicalData.woundTypeAndHistory ?? '',
+        clinicalData.woundOccurrenceDescription ?? '',
+        ...clinicalData.patientComorbidities,
+        ...clinicalData.sessionComorbidities,
+      ].join(' ');
+      
+      final suggestedCodes = ICD10Service.autoSuggestFromConversation(allClinicalText);
+
+      // Generate the report using OpenAI with ICD-10 codes
       final report = await _openAIService.generateMotivationReport(
         clinicalData: clinicalData,
-        selectedCodes: [], // Would be populated with ICD-10 codes
+        selectedCodes: suggestedCodes,
         treatmentCodes: ['88002', '88031', '88045'], // Standard codes
       );
 
@@ -429,18 +939,108 @@ Collected Information:
     });
   }
 
+  String _cleanReportContent(String content) {
+    // Remove ** formatting from AI generated reports
+    String cleaned = content.replaceAll(RegExp(r'\*\*([^*]+)\*\*'), r'\1');
+    
+    // Remove tick boxes and checkbox patterns
+    cleaned = cleaned.replaceAll(RegExp(r'\[\s*[x✓]\s*\]'), '•'); // Replace checked boxes with bullet points
+    cleaned = cleaned.replaceAll(RegExp(r'\[\s*\]'), '•'); // Replace empty boxes with bullet points
+    cleaned = cleaned.replaceAll(RegExp(r'☐|☑|✓|✗|□|■'), '•'); // Replace various checkbox symbols with bullets
+    
+    return cleaned;
+  }
+
+  Widget _buildPDFExportButton() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            offset: const Offset(0, -2),
+            blurRadius: 10,
+            color: Colors.black.withOpacity(0.1),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Enhanced PDF export button with consolidated functionality
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: _exportEnhancedReport,
+              icon: const Icon(Icons.picture_as_pdf, size: 24),
+              label: const Text(
+                'Export Enhanced PDF Report',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: Text('AI Report Generator'),
-// subtitle: Text('${widget.patient.name} - Session ${widget.session.sessionNumber}'),
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Clinical Data Collection'),
+            Text(
+              'Answer questions to generate report',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            ),
+          ],
+        ),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => context.pop(),
         ),
         actions: [
+          // Add silent mode indicator
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.volume_off,
+                  size: 16,
+                  color: AppTheme.primaryColor,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Silent Mode',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (_generatedReport != null)
             IconButton(
               icon: const Icon(Icons.download),
@@ -472,6 +1072,10 @@ Collected Information:
           // Input field
           if (_currentStep != ConversationStep.completed && !_isGeneratingReport)
             _buildMessageInput(),
+          
+          // PDF Export button (when report is completed)
+          if (_currentStep == ConversationStep.completed && _generatedReport != null)
+            _buildPDFExportButton(),
         ],
       ),
     );
@@ -507,6 +1111,11 @@ Collected Information:
   }
 
   Widget _buildMessageBubble(AIMessage message) {
+    // Check if this is the final generated report
+    bool isFinalReport = message.isBot && 
+                        _currentStep == ConversationStep.completed && 
+                        message.content.contains(_generatedReport ?? '');
+    
     return Align(
       alignment: message.isBot ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
@@ -517,18 +1126,87 @@ Collected Information:
           borderRadius: BorderRadius.circular(16),
         ),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.8,
+          maxWidth: MediaQuery.of(context).size.width * 0.85,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              message.content,
-              style: TextStyle(
-                color: message.isBot ? AppTheme.textColor : Colors.white,
-                fontSize: 16,
+            if (isFinalReport && _isEditingReport)
+              // Editable text field for the report
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Edit Report:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _reportEditController,
+                    maxLines: null,
+                    minLines: 10,
+                    style: const TextStyle(fontSize: 14),
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Edit your report here...',
+                      contentPadding: EdgeInsets.all(12),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _saveEditedReport,
+                        icon: const Icon(Icons.save, size: 18),
+                        label: const Text('Save Changes'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: _cancelEditReport,
+                        icon: const Icon(Icons.cancel, size: 18),
+                        label: const Text('Cancel'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            else
+              // Regular text display
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _cleanReportContent(message.content),
+                    style: TextStyle(
+                      color: message.isBot ? AppTheme.textColor : Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                  if (isFinalReport && !_isEditingReport)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: TextButton.icon(
+                        onPressed: _startEditReport,
+                        icon: const Icon(Icons.edit, size: 18),
+                        label: const Text('Edit Report'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.primaryColor,
+                          backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ),
             const SizedBox(height: 4),
             Text(
               '${message.timestamp.hour.toString().padLeft(2, '0')}:${message.timestamp.minute.toString().padLeft(2, '0')}',
@@ -667,6 +1345,114 @@ Collected Information:
     );
   }
 
+  void _exportEnhancedReport() async {
+    if (_generatedReport == null) return;
+    
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 16),
+              Text('Generating Enhanced PDF report with photos and analytics...'),
+            ],
+          ),
+          duration: Duration(seconds: 5),
+        ),
+      );
+
+      // Generate enhanced PDF with photos and analytics
+      final practitionerInfo = _practitionerName.isNotEmpty 
+        ? '$_practitionerName${_practitionerPracticeNumber.isNotEmpty ? ' ($_practitionerPracticeNumber)' : ''}'
+        : 'MedWave Practitioner';
+      
+      // Get ICD10 codes for PDF
+      final conversationText = _messages
+          .where((m) => !m.isBot)
+          .map((m) => m.content)
+          .join(' ');
+      
+      final allClinicalText = [
+        conversationText,
+        widget.patient.woundHistory,
+        widget.patient.woundOccurrence,
+        _infectionStatus,
+        _woundTypeAndHistory,
+        _woundOccurrenceDescription,
+        ...widget.patient.medicalConditions.entries
+            .where((entry) => entry.value)
+            .map((entry) => entry.key),
+        ..._sessionComorbidities,
+      ].join(' ');
+      
+      final suggestedCodes = ICD10Service.autoSuggestFromConversation(allClinicalText);
+
+      final File pdfFile = await PDFGenerationService.generateEnhancedChatReportPDF(
+        reportContent: _cleanReportContent(_generatedReport!),
+        patient: widget.patient,
+        session: widget.session,
+        practitionerName: practitionerInfo,
+        selectedCodes: suggestedCodes,
+      );
+
+      // Automatically open the PDF for viewing
+      final opened = await PDFGenerationService.openPDF(pdfFile);
+      
+      // Show success message with action buttons
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('✅ Enhanced PDF generated successfully!'),
+              const SizedBox(height: 4),
+              Text(
+                'Includes: AI Report + Photos + Analytics',
+                style: const TextStyle(fontSize: 12, color: Colors.white70),
+              ),
+              if (opened)
+                Text(
+                  'PDF opened for viewing',
+                  style: TextStyle(fontSize: 11, color: Colors.green[200]),
+                )
+              else
+                Text(
+                  'Saved to: ${pdfFile.path.split('/').last}',
+                  style: const TextStyle(fontSize: 11, color: Colors.white60),
+                ),
+            ],
+          ),
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: opened ? 'Share' : 'View',
+            onPressed: () => opened 
+              ? _sharePDFFile(pdfFile)
+              : _showPDFActions(pdfFile),
+          ),
+        ),
+      );
+
+    } catch (e) {
+      // Show error message
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Failed to generate enhanced PDF: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   void _shareReport() async {
     if (_generatedReport == null) return;
     
@@ -690,14 +1476,21 @@ Collected Information:
       );
 
       // Generate PDF
+      final practitionerInfo = _practitionerName.isNotEmpty 
+        ? '$_practitionerName${_practitionerPracticeNumber.isNotEmpty ? ' (${ _practitionerPracticeNumber})' : ''}'
+        : 'MedWave Practitioner';
+      
       final File pdfFile = await PDFGenerationService.generateChatReportPDF(
         reportContent: _generatedReport!,
         patient: widget.patient,
         session: widget.session,
-        practitionerName: _practitionerName.isNotEmpty ? _practitionerName : 'MedWave Practitioner',
+        practitionerName: practitionerInfo,
       );
 
-      // Show success message with file path
+      // Automatically open the PDF for viewing
+      final opened = await PDFGenerationService.openPDF(pdfFile);
+      
+      // Show success message with action buttons
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -707,16 +1500,24 @@ Collected Information:
             children: [
               const Text('✅ PDF generated successfully!'),
               const SizedBox(height: 4),
-              Text(
-                'Saved to: ${pdfFile.path}',
-                style: const TextStyle(fontSize: 12, color: Colors.white70),
-              ),
+              if (opened)
+                Text(
+                  'PDF opened for viewing',
+                  style: TextStyle(fontSize: 11, color: Colors.green[200]),
+                )
+              else
+                Text(
+                  'Saved to: ${pdfFile.path.split('/').last}',
+                  style: const TextStyle(fontSize: 12, color: Colors.white70),
+                ),
             ],
           ),
-          duration: const Duration(seconds: 5),
+          duration: const Duration(seconds: 6),
           action: SnackBarAction(
-            label: 'View Info',
-            onPressed: () => _showPDFInfo(pdfFile),
+            label: opened ? 'Share' : 'View',
+            onPressed: () => opened 
+              ? _sharePDFFile(pdfFile)
+              : _showPDFActions(pdfFile),
           ),
         ),
       );
@@ -734,48 +1535,100 @@ Collected Information:
     }
   }
 
-  void _showPDFInfo(File pdfFile) {
-    // Show dialog with PDF file information
+
+
+  /// Share PDF file using system share sheet
+  void _sharePDFFile(File pdfFile) async {
+    try {
+      final shared = await PDFGenerationService.sharePDF(
+        pdfFile,
+        subject: 'MedWave Clinical Report - ${widget.patient.fullNames} ${widget.patient.surname}',
+      );
+      
+      if (shared) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ PDF shared successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not share PDF. File saved to: ${pdfFile.path.split('/').last}'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error sharing PDF: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  /// Show PDF action dialog with view and share options
+  void _showPDFActions(File pdfFile) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('PDF Generated'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Your clinical report has been saved as a PDF.'),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'File Location:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            const Text('Your clinical report has been saved successfully.'),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      final opened = await PDFGenerationService.openPDF(pdfFile);
+                      if (!opened) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Could not open PDF. File saved to Downloads folder.'),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.visibility, size: 18),
+                    label: const Text('View PDF'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    pdfFile.path,
-                    style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _sharePDFFile(pdfFile);
+                    },
+                    icon: const Icon(Icons.share, size: 18),
+                    label: const Text('Share PDF'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'File Size: ${(pdfFile.lengthSync() / 1024 / 1024).toStringAsFixed(2)} MB',
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Note: You can find this file in your device\'s Documents folder and share it via email or other apps.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            Text(
+              'File: ${pdfFile.path.split('/').last}',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ],
         ),

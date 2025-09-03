@@ -15,6 +15,7 @@ import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/patients/patient_list_screen.dart';
 import 'screens/patients/add_patient_screen.dart';
 import 'screens/patients/patient_profile_screen.dart';
+import 'screens/patients/patient_case_history_screen.dart';
 import 'screens/patients/session_detail_screen.dart';
 import 'screens/sessions/session_logging_screen.dart';
 import 'screens/reports/reports_screen.dart';
@@ -72,36 +73,29 @@ class MedWaveApp extends StatelessWidget {
               theme: AppTheme.lightTheme,
               debugShowCheckedModeBanner: false,
               home: Scaffold(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: Colors.white,
                 body: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
+                      // MedX Ai branded splash image
+                      Expanded(
+                        child: Container(
+                          width: double.infinity,
+                          decoration: const BoxDecoration(
+                            image: DecorationImage(
+                              image: AssetImage('images/medwave_spash.jpeg'),
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.medical_services,
-                          size: 60,
+                      ),
+                      // Loading indicator at the bottom
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 50.0),
+                        child: CircularProgressIndicator(
                           color: AppTheme.primaryColor,
                         ),
-                      ),
-                      const SizedBox(height: 32),
-                      const Text(
-                        'MedWave',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const CircularProgressIndicator(
-                        color: Colors.white,
                       ),
                     ],
                   ),
@@ -242,6 +236,14 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       builder: (context, state) {
         final patientId = state.pathParameters['patientId']!;
         return PatientProfileScreen(patientId: patientId);
+      },
+    ),
+    GoRoute(
+      path: '/patients/:patientId/case-history',
+      name: 'patient-case-history',
+      builder: (context, state) {
+        final patientId = state.pathParameters['patientId']!;
+        return PatientCaseHistoryScreen(patientId: patientId);
       },
     ),
     GoRoute(

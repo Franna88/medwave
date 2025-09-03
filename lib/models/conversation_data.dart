@@ -33,10 +33,16 @@ class AIMessage {
 enum ConversationStep {
   greeting,
   practitionerName,
+  practitionerDetails,
+  woundHistoryAndType,
+  woundOccurrence, 
+  comorbidities,
   currentInfection,
   testsPerformed,
+  woundDetailsClassification,
   timesAssessment,
   currentTreatment,
+  treatmentDates,
   additionalNotes,
   completed,
 }
@@ -47,15 +53,27 @@ extension ConversationStepExtension on ConversationStep {
       case ConversationStep.greeting:
         return 'Greeting';
       case ConversationStep.practitionerName:
-        return 'Practitioner Information';
+        return 'Practitioner Name';
+      case ConversationStep.practitionerDetails:
+        return 'Practitioner Details';
+      case ConversationStep.woundHistoryAndType:
+        return 'Wound History & Type';
+      case ConversationStep.woundOccurrence:
+        return 'How Wound Occurred';
+      case ConversationStep.comorbidities:
+        return 'Comorbidities';
       case ConversationStep.currentInfection:
         return 'Current Infection Status';
       case ConversationStep.testsPerformed:
         return 'Tests Performed';
+      case ConversationStep.woundDetailsClassification:
+        return 'Wound Details & Classification';
       case ConversationStep.timesAssessment:
         return 'TIMES Assessment';
       case ConversationStep.currentTreatment:
         return 'Current Treatment';
+      case ConversationStep.treatmentDates:
+        return 'Treatment Dates';
       case ConversationStep.additionalNotes:
         return 'Additional Information';
       case ConversationStep.completed:
@@ -74,16 +92,22 @@ class ExtractedClinicalData {
   
   // Session-specific information (from AI conversation)
   final String practitionerName;
+  final String? practitionerPracticeNumber;
+  final String? practitionerContactDetails;
+  final String? woundTypeAndHistory;
+  final String? woundOccurrenceDescription;
+  final List<String> sessionComorbidities;
   final String? infectionStatus;
   final List<String> testsPerformed;
   final WoundDetails? woundDetails;
   final TreatmentDetails? treatmentDetails;
+  final List<String> treatmentDates;
   final String? additionalNotes;
   
   // Historical information (from patient file)
   final String? woundHistory;
   final String? woundOccurrence;
-  final List<String> comorbidities;
+  final List<String> patientComorbidities;
 
   const ExtractedClinicalData({
     required this.patientName,
@@ -91,14 +115,20 @@ class ExtractedClinicalData {
     required this.membershipNumber,
     required this.referringDoctor,
     required this.practitionerName,
+    this.practitionerPracticeNumber,
+    this.practitionerContactDetails,
+    this.woundTypeAndHistory,
+    this.woundOccurrenceDescription,
+    this.sessionComorbidities = const [],
     this.infectionStatus,
     this.testsPerformed = const [],
     this.woundDetails,
     this.treatmentDetails,
+    this.treatmentDates = const [],
     this.additionalNotes,
     this.woundHistory,
     this.woundOccurrence,
-    this.comorbidities = const [],
+    this.patientComorbidities = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -108,14 +138,20 @@ class ExtractedClinicalData {
       'membershipNumber': membershipNumber,
       'referringDoctor': referringDoctor,
       'practitionerName': practitionerName,
+      'practitionerPracticeNumber': practitionerPracticeNumber,
+      'practitionerContactDetails': practitionerContactDetails,
+      'woundTypeAndHistory': woundTypeAndHistory,
+      'woundOccurrenceDescription': woundOccurrenceDescription,
+      'sessionComorbidities': sessionComorbidities,
       'infectionStatus': infectionStatus,
       'testsPerformed': testsPerformed,
       'woundDetails': woundDetails?.toMap(),
       'treatmentDetails': treatmentDetails?.toMap(),
+      'treatmentDates': treatmentDates,
       'additionalNotes': additionalNotes,
       'woundHistory': woundHistory,
       'woundOccurrence': woundOccurrence,
-      'comorbidities': comorbidities,
+      'patientComorbidities': patientComorbidities,
     };
   }
 }

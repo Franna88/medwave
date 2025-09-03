@@ -1,8 +1,8 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../providers/patient_provider.dart';
 import '../../models/patient.dart';
@@ -10,6 +10,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/localization.dart';
 import '../../utils/id_validation.dart';
 import '../../widgets/signature_pad.dart';
+import '../../services/firebase/patient_service.dart';
 
 class AddPatientScreen extends StatefulWidget {
   const AddPatientScreen({super.key});
@@ -58,37 +59,22 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   final _allergiesController = TextEditingController();
   bool _isSmoker = false;
 
-  // Baseline Measurements
-  final _weightController = TextEditingController();
-  final _vasScoreController = TextEditingController();
-  
-  // Wound Information
-  final _woundLocationController = TextEditingController();
-  final _woundLengthController = TextEditingController();
-  final _woundWidthController = TextEditingController();
-  final _woundDepthController = TextEditingController();
-  final _woundDescriptionController = TextEditingController();
-  WoundStage _selectedWoundStage = WoundStage.stage1;
-  String _selectedWoundType = 'Pressure Ulcer';
-  
-  // Enhanced Wound History (NEW - for AI report generation)
-  final _woundHistoryController = TextEditingController();
-  final _woundOccurrenceController = TextEditingController();
-  final _previousTreatmentsController = TextEditingController();
+  // Referring Doctor (moved from wound section)
   final _referringDoctorController = TextEditingController();
   final _referringDoctorContactController = TextEditingController();
-  DateTime? _woundStartDate;
-  String _selectedWoundOccurrence = 'Chronic condition';
+  
+  // Enhanced Medical History Details (for AI report generation)
   final Map<String, String> _detailedMedicalConditions = {};
-
-  List<String> _baselinePhotos = [];
-  List<String> _woundPhotos = [];
-  final ImagePicker _imagePicker = ImagePicker();
 
   // Signature pads
   final GlobalKey _accountSignatureKey = GlobalKey();
   final GlobalKey _woundConsentSignatureKey = GlobalKey();
   final GlobalKey _witnessSignatureKey = GlobalKey();
+  
+  // Store captured signature bytes
+  Uint8List? _accountSignatureBytes;
+  Uint8List? _woundConsentSignatureBytes;
+  Uint8List? _witnessSignatureBytes;
   
   bool? _trainingPhotosConsent;
 
@@ -114,16 +100,6 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     _mainMemberNameController.dispose();
     _currentMedicationsController.dispose();
     _allergiesController.dispose();
-    _weightController.dispose();
-    _vasScoreController.dispose();
-    _woundLocationController.dispose();
-    _woundLengthController.dispose();
-    _woundWidthController.dispose();
-    _woundDepthController.dispose();
-    _woundDescriptionController.dispose();
-    _woundHistoryController.dispose();
-    _woundOccurrenceController.dispose();
-    _previousTreatmentsController.dispose();
     _referringDoctorController.dispose();
     _referringDoctorContactController.dispose();
     super.dispose();
@@ -177,9 +153,6 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                 _buildResponsiblePersonPage(),
                 _buildMedicalAidPage(),
                 _buildMedicalHistoryPage(),
-                _buildBaselineMeasurementsPage(),
-                _buildWoundDetailsPage(),
-                _buildWoundHistoryPage(),
                 _buildConsentPage(),
                 _buildConfirmationPage(),
               ],
@@ -195,12 +168,12 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
-        children: List.generate(9, (index) {
+        children: List.generate(6, (index) {
           final isActive = index <= _currentPage;
           return Expanded(
             child: Container(
               height: 4,
-              margin: EdgeInsets.only(right: index < 7 ? 8 : 0),
+              margin: EdgeInsets.only(right: index < 5 ? 8 : 0),
               decoration: BoxDecoration(
                 color: isActive ? AppTheme.primaryColor : AppTheme.borderColor,
                 borderRadius: BorderRadius.circular(2),
@@ -732,211 +705,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     );
   }
 
-  Widget _buildWoundHistoryPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Wound History & Occurrence',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'This information is crucial for accurate ICD-10 coding and insurance claims',
-            style: TextStyle(color: AppTheme.secondaryColor),
-          ),
-          const SizedBox(height: 24),
-          
-          // When did the wound start?
-          const Text(
-            'When did the wound first appear?',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: () async {
-              final date = await showDatePicker(
-                context: context,
-                initialDate: _woundStartDate ?? DateTime.now().subtract(const Duration(days: 30)),
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
-              );
-              if (date != null) {
-                setState(() {
-                  _woundStartDate = date;
-                });
-              }
-            },
-            child: InputDecorator(
-              decoration: const InputDecoration(
-                labelText: 'Wound Start Date *',
-                prefixIcon: Icon(Icons.calendar_today),
-                border: OutlineInputBorder(),
-              ),
-              child: Text(
-                _woundStartDate != null
-                    ? '${_woundStartDate!.day}/${_woundStartDate!.month}/${_woundStartDate!.year}'
-                    : 'Select date when wound first appeared',
-                style: TextStyle(
-                  color: _woundStartDate != null ? AppTheme.textColor : AppTheme.secondaryColor,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // How did the wound occur?
-          const Text(
-            'How did the wound occur?',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            value: _selectedWoundOccurrence,
-            decoration: const InputDecoration(
-              labelText: 'Wound Cause/Occurrence *',
-              prefixIcon: Icon(Icons.help_outline),
-              border: OutlineInputBorder(),
-            ),
-            isExpanded: true,
-            items: [
-              'Chronic condition (diabetes, vascular disease)',
-              'Fall (down stairs, from height)',
-              'Motor vehicle accident',
-              'Sports injury',
-              'Work-related accident',
-              'Post-surgical complication',
-              'Pressure from prolonged bed rest',
-              'Other trauma/injury',
-              'Unknown/unclear cause',
-            ].map((cause) {
-              return DropdownMenuItem(
-                value: cause,
-                child: Text(
-                  cause,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
-                ),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedWoundOccurrence = value!;
-              });
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please select how the wound occurred';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          
-          TextFormField(
-            controller: _woundOccurrenceController,
-            decoration: const InputDecoration(
-              labelText: 'Additional details about wound occurrence',
-              hintText: 'Provide specific details (e.g., fell down 5 stairs, left ankle twisted)',
-              prefixIcon: Icon(Icons.notes),
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-            maxLines: 3,
-            validator: (value) {
-              if (_selectedWoundOccurrence.contains('Other') && 
-                  (value == null || value.trim().isEmpty)) {
-                return 'Please provide details when "Other" is selected';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 24),
-          
-          // Wound history and progression
-          const Text(
-            'Wound History & Previous Treatments',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _woundHistoryController,
-            decoration: const InputDecoration(
-              labelText: 'Wound progression and history',
-              hintText: 'How has the wound changed over time? Any improvements or worsening?',
-              prefixIcon: Icon(Icons.history),
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-            maxLines: 4,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please describe the wound history and progression';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          
-          TextFormField(
-            controller: _previousTreatmentsController,
-            decoration: const InputDecoration(
-              labelText: 'Previous treatments attempted',
-              hintText: 'List any previous treatments, dressings, medications, or therapies tried',
-              prefixIcon: Icon(Icons.medical_services),
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 24),
-          
-          // Information note
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: AppTheme.primaryColor),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'This information will be used to generate accurate ICD-10 codes and reduce repetitive questions during AI report generation.',
-                    style: TextStyle(
-                      color: AppTheme.primaryColor,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildConsentPage() {
     return SingleChildScrollView(
@@ -987,6 +756,11 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   label: AppLocalizations.get('signature'),
                   width: double.infinity,
                   height: 120,
+                  onSignatureChanged: (bytes) {
+                    setState(() {
+                      _accountSignatureBytes = bytes;
+                    });
+                  },
                 ),
               ],
             ),
@@ -1028,6 +802,11 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                         key: _woundConsentSignatureKey,
                         label: 'Patient ${AppLocalizations.get('signature')}',
                         height: 100,
+                        onSignatureChanged: (bytes) {
+                          setState(() {
+                            _woundConsentSignatureBytes = bytes;
+                          });
+                        },
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -1036,6 +815,11 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                         key: _witnessSignatureKey,
                         label: 'Witness ${AppLocalizations.get('signature')}',
                         height: 100,
+                        onSignatureChanged: (bytes) {
+                          setState(() {
+                            _witnessSignatureBytes = bytes;
+                          });
+                        },
                       ),
                     ),
                   ],
@@ -1105,284 +889,9 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     );
   }
 
-  Widget _buildBaselineMeasurementsPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Baseline Measurements',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Record initial measurements for tracking progress',
-            style: TextStyle(color: AppTheme.secondaryColor),
-          ),
-          const SizedBox(height: 24),
-          TextFormField(
-            controller: _weightController,
-            decoration: const InputDecoration(
-              labelText: 'Weight (kg)',
-              prefixIcon: Icon(Icons.monitor_weight),
-              suffixText: 'kg',
-            ),
-            keyboardType: TextInputType.number,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter the patient\'s weight';
-              }
-              final weight = double.tryParse(value);
-              if (weight == null || weight <= 0 || weight > 300) {
-                return 'Please enter a valid weight';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _vasScoreController,
-            decoration: const InputDecoration(
-              labelText: 'VAS Pain Score (0-10)',
-              prefixIcon: Icon(Icons.healing),
-              suffixText: '/10',
-              helperText: '0 = No pain, 10 = Worst pain imaginable',
-            ),
-            keyboardType: TextInputType.number,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter the VAS pain score';
-              }
-              final score = int.tryParse(value);
-              if (score == null || score < 0 || score > 10) {
-                return 'Please enter a score between 0 and 10';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Baseline Photos',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Take photos for baseline comparison',
-            style: TextStyle(color: AppTheme.secondaryColor),
-          ),
-          const SizedBox(height: 16),
-          _buildPhotoSection(_baselinePhotos, 'baseline'),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildWoundDetailsPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Wound Details',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Document wound characteristics and photos',
-            style: TextStyle(color: AppTheme.secondaryColor),
-          ),
-          const SizedBox(height: 24),
-          TextFormField(
-            controller: _woundLocationController,
-            decoration: const InputDecoration(
-              labelText: 'Wound Location',
-              prefixIcon: Icon(Icons.location_on),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter the wound location';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            value: _selectedWoundType,
-            decoration: const InputDecoration(
-              labelText: 'Wound Type',
-              prefixIcon: Icon(Icons.medical_information),
-            ),
-            isExpanded: true,
-            items: [
-              'Pressure Ulcer',
-              'Diabetic Foot Ulcer',
-              'Venous Leg Ulcer',
-              'Arterial Ulcer',
-              'Surgical Wound',
-              'Traumatic Wound',
-              'Burns',
-              'Other',
-            ].map((type) {
-              return DropdownMenuItem(
-                value: type,
-                child: Text(
-                  type,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedWoundType = value!;
-              });
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please select a wound type';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _woundLengthController,
-                  decoration: const InputDecoration(
-                    labelText: 'Length (cm)',
-                    suffixText: 'cm',
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Required';
-                    }
-                    final length = double.tryParse(value);
-                    if (length == null || length <= 0) {
-                      return 'Invalid';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextFormField(
-                  controller: _woundWidthController,
-                  decoration: const InputDecoration(
-                    labelText: 'Width (cm)',
-                    suffixText: 'cm',
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Required';
-                    }
-                    final width = double.tryParse(value);
-                    if (width == null || width <= 0) {
-                      return 'Invalid';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _woundDepthController,
-            decoration: const InputDecoration(
-              labelText: 'Depth (cm)',
-              suffixText: 'cm',
-            ),
-            keyboardType: TextInputType.number,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter the wound depth';
-              }
-              final depth = double.tryParse(value);
-              if (depth == null || depth <= 0) {
-                return 'Please enter a valid depth';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<WoundStage>(
-            value: _selectedWoundStage,
-            decoration: const InputDecoration(
-              labelText: 'Wound Stage',
-              prefixIcon: Icon(Icons.layers),
-            ),
-            isExpanded: true,
-            items: WoundStage.values.map((stage) {
-              return DropdownMenuItem(
-                value: stage,
-                child: Text(
-                  stage.description,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedWoundStage = value!;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _woundDescriptionController,
-            decoration: const InputDecoration(
-              labelText: 'Description',
-              prefixIcon: Icon(Icons.description),
-              alignLabelWithHint: true,
-            ),
-            maxLines: 3,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter a wound description';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Wound Photos',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Document the wound for progress tracking',
-            style: TextStyle(color: AppTheme.secondaryColor),
-          ),
-          const SizedBox(height: 16),
-          _buildPhotoSection(_woundPhotos, 'wound'),
-        ],
-      ),
-    );
-  }
+
+
 
   Widget _buildConfirmationPage() {
     return SingleChildScrollView(
@@ -1424,22 +933,11 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           ),
           const SizedBox(height: 16),
           _buildSummaryCard(
-            'Baseline Measurements',
+            'Registration Summary',
             [
-              'Weight: ${_weightController.text} kg',
-              'VAS Pain Score: ${_vasScoreController.text}/10',
-              'Baseline Photos: ${_baselinePhotos.length}',
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildSummaryCard(
-            'Wound Details',
-            [
-              'Location: ${_woundLocationController.text}',
-              'Type: $_selectedWoundType',
-              'Dimensions: ${_woundLengthController.text} × ${_woundWidthController.text} × ${_woundDepthController.text} cm',
-              'Stage: ${_selectedWoundStage.description}',
-              'Wound Photos: ${_woundPhotos.length}',
+              'Registration completed successfully',
+              'Patient Case History will be collected at first visit',
+              'All consent forms signed',
             ],
           ),
         ],
@@ -1623,85 +1121,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     );
   }
 
-  Widget _buildPhotoSection(List<String> photos, String type) {
-    return Column(
-      children: [
-        if (photos.isNotEmpty)
-          SizedBox(
-            height: 100,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: photos.length,
-              itemBuilder: (context, index) {
-                return Container(
-                  width: 100,
-                  height: 100,
-                  margin: const EdgeInsets.only(right: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: Icon(
-                          Icons.image,
-                          color: AppTheme.secondaryColor.withOpacity(0.5),
-                          size: 40,
-                        ),
-                      ),
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              photos.removeAt(index);
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: AppTheme.errorColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _pickImage(type, ImageSource.camera),
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Camera'),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _pickImage(type, ImageSource.gallery),
-                icon: const Icon(Icons.photo_library),
-                label: const Text('Gallery'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildNavigationButtons() {
     return Container(
@@ -1723,8 +1143,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           if (_currentPage > 0) const SizedBox(width: 16),
           Expanded(
             child: ElevatedButton(
-              onPressed: _currentPage == 8 ? _submitForm : _nextPage,
-              child: Text(_currentPage == 8 ? AppLocalizations.get('submit') : AppLocalizations.get('next')),
+              onPressed: _currentPage == 5 ? _submitForm : _nextPage,
+              child: Text(_currentPage == 5 ? AppLocalizations.get('submit') : AppLocalizations.get('next')),
             ),
           ),
         ],
@@ -1734,7 +1154,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
 
   void _nextPage() {
     if (_validateCurrentPage()) {
-      if (_currentPage < 8) {
+      if (_currentPage < 5) {
         _pageController.nextPage(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
@@ -1756,10 +1176,21 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         return _medicalAidSchemeController.text.isNotEmpty &&
                _medicalAidNumberController.text.isNotEmpty &&
                _mainMemberNameController.text.isNotEmpty;
-      case 6: // Consent
-        return (_accountSignatureKey.currentWidget as SignaturePad?) != null &&
-               (_woundConsentSignatureKey.currentWidget as SignaturePad?) != null &&
-               _trainingPhotosConsent != null;
+      case 3: // Medical History
+        return true; // No specific validation for medical history
+      case 4: // Consent
+        final hasAccountSig = _accountSignatureBytes != null;
+        final hasWoundSig = _woundConsentSignatureBytes != null;
+        final hasTrainingConsent = _trainingPhotosConsent != null;
+        
+        print('🔍 VALIDATION DEBUG: Account signature: $hasAccountSig (${_accountSignatureBytes?.length ?? 0} bytes)');
+        print('🔍 VALIDATION DEBUG: Wound consent signature: $hasWoundSig (${_woundConsentSignatureBytes?.length ?? 0} bytes)');
+        print('🔍 VALIDATION DEBUG: Training consent selected: $hasTrainingConsent ($_trainingPhotosConsent)');
+        
+        final isValid = hasAccountSig && hasWoundSig && hasTrainingConsent;
+        print('🔍 VALIDATION DEBUG: Page 4 (Consent) valid: $isValid');
+        
+        return isValid;
       default:
         return true;
     }
@@ -1775,24 +1206,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     });
   }
 
-  Future<void> _pickImage(String type, ImageSource source) async {
-    try {
-      final XFile? image = await _imagePicker.pickImage(source: source);
-      if (image != null) {
-        setState(() {
-          if (type == 'baseline') {
-            _baselinePhotos.add(image.path);
-          } else {
-            _woundPhotos.add(image.path);
-          }
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e')),
-      );
-    }
-  }
+
 
   Future<void> _submitForm() async {
     if (!_validateCurrentPage()) {
@@ -1802,24 +1216,67 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     final patientProvider = context.read<PatientProvider>();
     final now = DateTime.now();
 
-    // Create wound
-    final wound = Wound(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      location: _woundLocationController.text,
-      type: _selectedWoundType,
-      length: double.parse(_woundLengthController.text),
-      width: double.parse(_woundWidthController.text),
-      depth: double.parse(_woundDepthController.text),
-      description: _woundDescriptionController.text,
-      photos: _woundPhotos,
-      assessedAt: now,
-      stage: _selectedWoundStage,
-    );
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Creating patient profile...'),
+            ],
+          ),
+        ),
+      );
 
-    // Get signature bytes (simplified - storing as placeholder strings)
-    final accountSignature = 'signature_account_${DateTime.now().millisecondsSinceEpoch}';
-    final woundConsentSignature = 'signature_wound_${DateTime.now().millisecondsSinceEpoch}';
-    final witnessSignature = 'signature_witness_${DateTime.now().millisecondsSinceEpoch}';
+      // Note: Wound data will be collected during Patient Case History (first session)
+
+      // Use stored signature bytes
+      print('🖋️ FORM DEBUG: Using stored signatures...');
+      final accountSignatureBytes = _accountSignatureBytes;
+      final woundConsentSignatureBytes = _woundConsentSignatureBytes;
+      final witnessSignatureBytes = _witnessSignatureBytes;
+
+      print('🖋️ FORM DEBUG: Account signature: ${accountSignatureBytes?.length ?? 0} bytes');
+      print('🖋️ FORM DEBUG: Wound consent signature: ${woundConsentSignatureBytes?.length ?? 0} bytes');
+      print('🖋️ FORM DEBUG: Witness signature: ${witnessSignatureBytes?.length ?? 0} bytes');
+
+      // Create temporary patient ID for signature upload
+      final tempPatientId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      // Prepare signature bytes for upload
+      final signatureBytes = <String, Uint8List>{};
+      if (accountSignatureBytes != null) {
+        signatureBytes['account'] = accountSignatureBytes;
+      }
+      if (woundConsentSignatureBytes != null) {
+        signatureBytes['wound_consent'] = woundConsentSignatureBytes;
+      }
+      if (witnessSignatureBytes != null) {
+        signatureBytes['witness'] = witnessSignatureBytes;
+      }
+
+      // Upload signatures to Firebase Storage
+      String? accountSignatureUrl;
+      String? woundConsentSignatureUrl;
+      String? witnessSignatureUrl;
+
+      if (signatureBytes.isNotEmpty) {
+        print('🖋️ FORM DEBUG: Uploading signatures...');
+        final uploadResults = await PatientService.uploadSignatureBytes(tempPatientId, signatureBytes);
+        
+        accountSignatureUrl = uploadResults['account'];
+        woundConsentSignatureUrl = uploadResults['wound_consent'];
+        witnessSignatureUrl = uploadResults['witness'];
+        
+        print('✅ FORM DEBUG: Signatures uploaded successfully');
+      } else {
+        print('⚠️ FORM DEBUG: No signatures to upload');
+      }
 
     // Create medical condition details map
     final medicalConditionDetails = <String, String?>{};
@@ -1863,46 +1320,73 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       allergies: _allergiesController.text.isEmpty ? null : _allergiesController.text,
       isSmoker: _isSmoker,
       
-      // Enhanced Wound History
-      woundStartDate: _woundStartDate,
-      woundOccurrence: _selectedWoundOccurrence,
-      woundOccurrenceDetails: _woundOccurrenceController.text.isEmpty ? null : _woundOccurrenceController.text,
-      woundHistory: _woundHistoryController.text.isEmpty ? null : _woundHistoryController.text,
-      previousTreatments: _previousTreatmentsController.text.isEmpty ? null : _previousTreatmentsController.text,
+      // Enhanced Wound History (will be collected in Patient Case History)
+      woundStartDate: null,
+      woundOccurrence: null,
+      woundOccurrenceDetails: null,
+      woundHistory: null,
+      previousTreatments: null,
       
       // Signatures and consent
-      accountResponsibilitySignature: accountSignature,
+      accountResponsibilitySignature: accountSignatureUrl,
       accountResponsibilitySignatureDate: now,
-      woundPhotographyConsentSignature: woundConsentSignature,
-      witnessSignature: witnessSignature,
+      woundPhotographyConsentSignature: woundConsentSignatureUrl,
+      witnessSignature: witnessSignatureUrl,
       woundPhotographyConsentDate: now,
       trainingPhotosConsent: _trainingPhotosConsent,
       trainingPhotosConsentDate: _trainingPhotosConsent != null ? now : null,
       
       createdAt: now,
       practitionerId: '', // Will be set by the Firebase service
-      baselineWeight: double.parse(_weightController.text),
-      baselineVasScore: int.parse(_vasScoreController.text),
-      baselineWounds: [wound],
-      baselinePhotos: _baselinePhotos,
-      currentWeight: double.parse(_weightController.text),
-      currentVasScore: int.parse(_vasScoreController.text),
-      currentWounds: [wound],
+      baselineWeight: 0.0, // Will be set during Patient Case History
+      baselineVasScore: 0, // Will be set during Patient Case History
+      baselineWounds: [], // Will be populated during Patient Case History
+      baselinePhotos: [], // Will be populated during Patient Case History
+      currentWeight: null, // Will be set during Patient Case History
+      currentVasScore: null, // Will be set during Patient Case History
+      currentWounds: [], // Will be populated during Patient Case History
       sessions: [],
     );
 
-    try {
+      print('🏥 FORM DEBUG: Creating patient record...');
       await patientProvider.addPatient(patient);
+      print('✅ FORM DEBUG: Patient created successfully');
+      
       if (mounted) {
+        print('📱 FORM DEBUG: Dismissing loading dialog and navigating...');
+        try {
+          Navigator.of(context).pop(); // Close loading dialog
+          print('✅ FORM DEBUG: Loading dialog dismissed');
+        } catch (e) {
+          print('⚠️ FORM DEBUG: Error dismissing dialog: $e');
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Patient added successfully!')),
+          const SnackBar(
+            content: Text('Patient registration completed! Case history will be collected at first visit.'),
+            backgroundColor: Colors.green,
+          ),
         );
-        context.go('/patients');
+        
+        // Add small delay to ensure dialog is dismissed before navigation
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        if (mounted) {
+          // Ensure loading state is reset before navigation
+          patientProvider.resetLoadingState();
+          context.go('/patients');
+          print('🏠 FORM DEBUG: Navigation completed');
+        }
       }
     } catch (e) {
+      print('❌ FORM DEBUG: Error creating patient: $e');
       if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding patient: $e')),
+          SnackBar(
+            content: Text('Error creating patient: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

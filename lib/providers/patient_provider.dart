@@ -53,6 +53,12 @@ class PatientProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Force reset loading state (useful after navigation)
+  void resetLoadingState() {
+    _setLoading(false);
+    print('🔄 PATIENT PROVIDER: Loading state manually reset');
+  }
+
   void _setError(String? error) {
     _errorMessage = error;
     notifyListeners();

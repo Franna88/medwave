@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui' as ui;
 import 'dart:typed_data';
+import '../theme/app_theme.dart';
+import 'signature_popup_dialog.dart';
 
 class SignaturePad extends StatefulWidget {
   final double width;
@@ -23,10 +24,28 @@ class SignaturePad extends StatefulWidget {
 
   @override
   State<SignaturePad> createState() => _SignaturePadState();
+
+  // Static method to get signature from a GlobalKey
+  static Future<Uint8List?> getSignatureFromKey(GlobalKey key) async {
+    final signaturePad = key.currentState;
+    if (signaturePad is _SignaturePadState) {
+      return signaturePad._signatureBytes;
+    }
+    return null;
+  }
+  
+  // Static method to check if signature exists from a GlobalKey
+  static bool hasSignatureFromKey(GlobalKey key) {
+    final signaturePad = key.currentState;
+    if (signaturePad is _SignaturePadState) {
+      return signaturePad._hasSignature;
+    }
+    return false;
+  }
 }
 
 class _SignaturePadState extends State<SignaturePad> {
-  final List<Offset?> _points = [];
+  Uint8List? _signatureBytes;
   bool _hasSignature = false;
 
   @override
@@ -40,95 +59,157 @@ class _SignaturePadState extends State<SignaturePad> {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
+              color: AppTheme.textColor,
             ),
           ),
           const SizedBox(height: 8),
         ],
-        Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
-            color: Colors.white,
-          ),
-          child: Stack(
-            children: [
-              // Signature area
-              Positioned.fill(
-                child: GestureDetector(
-                  onPanStart: (details) {
-                    setState(() {
-                      _points.add(details.localPosition);
-                      _hasSignature = true;
-                    });
-                    HapticFeedback.lightImpact();
-                  },
-                  onPanUpdate: (details) {
-                    setState(() {
-                      _points.add(details.localPosition);
-                    });
-                  },
-                  onPanEnd: (details) {
-                    setState(() {
-                      _points.add(null); // Add null to separate strokes
-                    });
-                    _notifySignatureChanged();
-                  },
-                  child: CustomPaint(
-                    painter: SignaturePainter(
-                      points: _points,
-                      strokeColor: widget.strokeColor,
-                      strokeWidth: widget.strokeWidth,
-                    ),
-                    size: Size(widget.width, widget.height),
-                  ),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _openSignaturePopup,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: widget.width,
+              height: widget.height,
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: _hasSignature ? AppTheme.primaryColor : Colors.grey.shade300,
+                  width: _hasSignature ? 2 : 1,
                 ),
+                borderRadius: BorderRadius.circular(12),
+                color: _hasSignature ? AppTheme.primaryColor.withOpacity(0.05) : Colors.grey.shade50,
               ),
-              // Placeholder text when empty
-              if (!_hasSignature)
-                const Positioned.fill(
-                  child: Center(
-                    child: Text(
-                      'Sign here',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16,
+              child: Stack(
+                children: [
+                  // Signature preview or placeholder
+                  Positioned.fill(
+                    child: _hasSignature ? _buildSignaturePreview() : _buildPlaceholder(),
+                  ),
+                  // Edit button
+                  if (_hasSignature)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  // Tap indicator
+                  Positioned.fill(
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _hasSignature ? AppTheme.primaryColor : AppTheme.secondaryColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _hasSignature ? Icons.check_circle : Icons.touch_app,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _hasSignature ? 'Signed' : 'Tap to Sign',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              // Clear button
-              if (_hasSignature)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: _clearSignature,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.clear,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
+  Widget _buildPlaceholder() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.gesture,
+            size: 32,
+            color: AppTheme.secondaryColor.withOpacity(0.5),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap to add signature',
+            style: TextStyle(
+              color: AppTheme.secondaryColor.withOpacity(0.7),
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSignaturePreview() {
+    if (_signatureBytes == null) return _buildPlaceholder();
+    
+    return Container(
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppTheme.primaryColor.withOpacity(0.3),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.memory(
+          _signatureBytes!,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildPlaceholder();
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSignaturePopup() async {
+    HapticFeedback.lightImpact();
+    
+    await SignaturePopupDialog.show(
+      context: context,
+      title: widget.label ?? 'Digital Signature',
+      onSignatureComplete: (signatureBytes) {
+        setState(() {
+          _signatureBytes = signatureBytes;
+          _hasSignature = signatureBytes != null;
+        });
+        _notifySignatureChanged();
+      },
+    );
+  }
+
   void _clearSignature() {
     setState(() {
-      _points.clear();
+      _signatureBytes = null;
       _hasSignature = false;
     });
     HapticFeedback.lightImpact();
@@ -137,47 +218,11 @@ class _SignaturePadState extends State<SignaturePad> {
 
   void _notifySignatureChanged() {
     if (widget.onSignatureChanged != null) {
-      if (_hasSignature) {
-        _getSignatureBytes().then((bytes) {
-          widget.onSignatureChanged!(bytes);
-        });
-      } else {
-        widget.onSignatureChanged!(null);
-      }
+      widget.onSignatureChanged!(_signatureBytes);
     }
   }
 
-  Future<Uint8List?> _getSignatureBytes() async {
-    if (!_hasSignature) return null;
-    
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    
-    // Fill background with white
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, widget.width, widget.height),
-      Paint()..color = Colors.white,
-    );
-    
-    // Draw the signature
-    final painter = SignaturePainter(
-      points: _points,
-      strokeColor: widget.strokeColor,
-      strokeWidth: widget.strokeWidth,
-    );
-    painter.paint(canvas, Size(widget.width, widget.height));
-    
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(
-      widget.width.toInt(),
-      widget.height.toInt(),
-    );
-    
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    return byteData?.buffer.asUint8List();
-  }
-
-  Future<Uint8List?> getSignature() => _getSignatureBytes();
+  Future<Uint8List?> getSignature() async => _signatureBytes;
   
   bool get hasSignature => _hasSignature;
   

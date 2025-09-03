@@ -577,6 +577,12 @@ class Patient {
       'weightChange': weightChange,
       'painReduction': painReduction,
       'woundHealingProgress': woundHealingProgress,
+      // Enhanced Wound History fields  
+      'woundStartDate': woundStartDate != null ? Timestamp.fromDate(woundStartDate!) : null,
+      'woundOccurrence': woundOccurrence,
+      'woundOccurrenceDetails': woundOccurrenceDetails,
+      'woundHistory': woundHistory,
+      'previousTreatments': previousTreatments,
     };
   }
 
@@ -653,6 +659,12 @@ class Patient {
       weightChange: data['weightChange']?.toDouble(),
       painReduction: data['painReduction']?.toDouble(),
       woundHealingProgress: data['woundHealingProgress']?.toDouble(),
+      // Enhanced Wound History fields
+      woundStartDate: data['woundStartDate']?.toDate(),
+      woundOccurrence: data['woundOccurrence'],
+      woundOccurrenceDetails: data['woundOccurrenceDetails'],
+      woundHistory: data['woundHistory'],
+      previousTreatments: data['previousTreatments'],
     );
   }
 }

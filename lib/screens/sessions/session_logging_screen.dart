@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -50,26 +51,21 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
       orElse: () => throw Exception('Patient not found'),
     );
 
-    // Pre-fill with previous session data if available
-    if (_patient!.sessions.isNotEmpty) {
-      final lastSession = _patient!.sessions.last;
-      _weightController.text = lastSession.weight.toString();
-      _vasScoreController.text = lastSession.vasScore.toString();
-    } else {
-      // Use baseline data
-      _weightController.text = _patient!.baselineWeight.toString();
-      _vasScoreController.text = _patient!.baselineVasScore.toString();
-    }
-
-    // Pre-fill wound data if available
-    if (_patient!.currentWounds.isNotEmpty) {
-      final currentWound = _patient!.currentWounds.first;
-      _woundLengthController.text = currentWound.length.toString();
-      _woundWidthController.text = currentWound.width.toString();
-      _woundDepthController.text = currentWound.depth.toString();
-      _woundDescriptionController.text = currentWound.description;
-      _selectedWoundStage = currentWound.stage;
-    }
+    // Leave all form fields empty for fresh data entry
+    // Practitioners should enter current measurements for each session
+    _weightController.clear();
+    _vasScoreController.clear();
+    _notesController.clear();
+    _woundLengthController.clear();
+    _woundWidthController.clear();
+    _woundDepthController.clear();
+    _woundDescriptionController.clear();
+    
+    // Reset wound stage to default
+    _selectedWoundStage = WoundStage.stage1;
+    
+    // Clear any existing photos
+    _sessionPhotos.clear();
   }
 
   @override
@@ -722,11 +718,22 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
                   ),
                   child: Stack(
                     children: [
-                      const Center(
-                        child: Icon(
-                          Icons.image,
-                          color: AppTheme.secondaryColor,
-                          size: 40,
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(_sessionPhotos[index]),
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(
+                                Icons.broken_image,
+                                color: AppTheme.errorColor,
+                                size: 40,
+                              ),
+                            );
+                          },
                         ),
                       ),
                       Positioned(

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -544,19 +545,31 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
   }
 
   Widget _buildModernFAB(Patient patient) {
-    return FloatingActionButton.extended(
-      onPressed: () {
-        HapticFeedback.lightImpact();
-        context.push('/patients/${patient.id}/session');
+    return FutureBuilder<List<Session>>(
+      future: context.read<PatientProvider>().getPatientSessions(patient.id),
+      builder: (context, snapshot) {
+        final sessions = snapshot.data ?? [];
+        final hasNoSessions = sessions.isEmpty;
+        
+        return FloatingActionButton.extended(
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            if (hasNoSessions) {
+              context.push('/patients/${patient.id}/case-history');
+            } else {
+              context.push('/patients/${patient.id}/session');
+            }
+          },
+          backgroundColor: hasNoSessions ? AppTheme.warningColor : AppTheme.primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 8,
+          icon: Icon(hasNoSessions ? Icons.assignment_turned_in : Icons.add),
+          label: Text(
+            hasNoSessions ? 'Case History' : 'New Session',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        );
       },
-      backgroundColor: AppTheme.primaryColor,
-      foregroundColor: Colors.white,
-      elevation: 8,
-      icon: const Icon(Icons.add),
-      label: const Text(
-        'New Session',
-        style: TextStyle(fontWeight: FontWeight.w600),
-      ),
     );
   }
 
@@ -3227,47 +3240,131 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    width: 100,
-                    height: 100,
+                    width: 120,
+                    height: 120,
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(50),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppTheme.primaryColor.withOpacity(0.1),
+                          AppTheme.primaryColor.withOpacity(0.05),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(60),
+                      border: Border.all(
+                        color: AppTheme.primaryColor.withOpacity(0.2),
+                        width: 2,
+                      ),
                     ),
                     child: Icon(
-                      Icons.event_note_outlined,
-                      size: 50,
-                      color: AppTheme.primaryColor.withOpacity(0.7),
+                      Icons.assignment_outlined,
+                      size: 60,
+                      color: AppTheme.primaryColor.withOpacity(0.8),
                     ),
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'No sessions recorded yet',
+                    'Complete Patient Case History',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.textColor,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   const Text(
-                    'Start documenting patient sessions to track healing progress and treatment effectiveness.',
+                    'This patient needs their initial case history assessment to establish baseline data and wound information.',
                     style: TextStyle(
                       fontSize: 16,
                       color: AppTheme.secondaryColor,
+                      height: 1.4,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.warningColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppTheme.warningColor.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: AppTheme.warningColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Required before regular sessions',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.warningColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
                   ElevatedButton.icon(
                     onPressed: () {
-                      context.push('/patients/${patient.id}/session');
+                      context.push('/patients/${patient.id}/case-history');
                     },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add First Session'),
+                    icon: const Icon(Icons.assignment_turned_in),
+                    label: const Text('Complete Case History'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      elevation: 2,
+                      shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton.icon(
+                    onPressed: () {
+                      // Show info dialog about case history
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('About Patient Case History'),
+                          content: const Text(
+                            'The Patient Case History collects essential baseline information including:\n\n'
+                            '• Initial wound assessment and measurements\n'
+                            '• Patient weight and pain levels\n'
+                            '• Wound history and previous treatments\n'
+                            '• Baseline photos for progress tracking\n\n'
+                            'This information is crucial for AI report generation and treatment planning.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Got it'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    icon: Icon(
+                      Icons.help_outline,
+                      size: 16,
+                      color: AppTheme.secondaryColor,
+                    ),
+                    label: Text(
+                      'What is Case History?',
+                      style: TextStyle(
+                        color: AppTheme.secondaryColor,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ],
@@ -3792,13 +3889,42 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                   ),
                   child: Stack(
                     children: [
-                      // Main photo placeholder
-                      const Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          size: 40,
-                          color: AppTheme.secondaryColor,
+                      // Main photo
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16),
                         ),
+                        child: photoItem.photoPath.startsWith('http')
+                            ? Image.network(
+                                photoItem.photoPath,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Icon(
+                                      Icons.broken_image,
+                                      size: 40,
+                                      color: AppTheme.errorColor,
+                                    ),
+                                  );
+                                },
+                              )
+                            : Image.file(
+                                File(photoItem.photoPath),
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Icon(
+                                      Icons.broken_image,
+                                      size: 40,
+                                      color: AppTheme.errorColor,
+                                    ),
+                                  );
+                                },
+                              ),
                       ),
                       // Type badge
                       Positioned(
@@ -3938,32 +4064,80 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                 ],
               ),
             ),
-            // Photo placeholder
+            // Actual photo
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.image_outlined,
-                        size: 80,
-                        color: AppTheme.secondaryColor,
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Photo Preview',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: AppTheme.secondaryColor,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: photoItem.photoPath.startsWith('http')
+                      ? Image.network(
+                          photoItem.photoPath,
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          height: double.infinity,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.broken_image,
+                                    size: 80,
+                                    color: AppTheme.errorColor,
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Failed to load photo',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        )
+                      : Image.file(
+                          File(photoItem.photoPath),
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.broken_image,
+                                    size: 80,
+                                    color: AppTheme.errorColor,
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Failed to load photo',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),

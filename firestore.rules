@@ -41,9 +41,20 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
     
-    // Allow admin access for practitioner applications
-    match /practitioner_applications/{applicationId} {
+    // Practitioner Applications - for approval workflow
+    match /practitionerApplications/{applicationId} {
+      // Applicants can create and read their own applications
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // Allow read/write for all authenticated users (simplified for now)
       allow read, write: if request.auth != null;
+    }
+    
+    // AI Motivation conversations - practitioners can read/write their own conversations
+    match /motivation_conversations/{conversationId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.practitioner_id;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.practitioner_id;
     }
   }
 }

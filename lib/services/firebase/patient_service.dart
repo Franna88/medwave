@@ -3,6 +3,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
+import 'dart:typed_data';
 import '../../models/patient.dart';
 
 class PatientService {
@@ -180,7 +181,7 @@ class PatientService {
     }
   }
 
-  /// Upload signature images
+  /// Upload signature images from file paths
   static Future<Map<String, String>> uploadSignatures(
     String patientId,
     Map<String, String> signaturePaths, // 'account', 'wound', 'witness'
@@ -212,6 +213,61 @@ class PatientService {
       return uploadResults;
     } catch (e) {
       throw Exception('Failed to upload signatures: $e');
+    }
+  }
+
+  /// Upload signature images from bytes data
+  static Future<Map<String, String>> uploadSignatureBytes(
+    String patientId,
+    Map<String, Uint8List> signatureBytes, // 'account', 'wound', 'witness'
+  ) async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) throw Exception('User not authenticated');
+
+      print('🖋️ SIGNATURE DEBUG: Starting signature upload for patient $patientId');
+      print('🖋️ SIGNATURE DEBUG: Signatures to upload: ${signatureBytes.keys.toList()}');
+
+      final uploadResults = <String, String>{};
+
+      for (final entry in signatureBytes.entries) {
+        final signatureType = entry.key;
+        final bytes = entry.value;
+
+        if (bytes.isNotEmpty) {
+          print('🖋️ SIGNATURE DEBUG: Uploading $signatureType signature (${bytes.length} bytes)');
+          
+          final fileName = '${signatureType}_${DateTime.now().millisecondsSinceEpoch}.png';
+          final storageRef = _storage.ref().child('patients/$patientId/signatures/$fileName');
+
+          final uploadTask = storageRef.putData(
+            bytes,
+            SettableMetadata(
+              contentType: 'image/png',
+              customMetadata: {
+                'signatureType': signatureType,
+                'patientId': patientId,
+                'practitionerId': userId,
+                'uploadDate': DateTime.now().toIso8601String(),
+              },
+            ),
+          );
+          
+          final snapshot = await uploadTask;
+          final downloadUrl = await snapshot.ref.getDownloadURL();
+          
+          uploadResults[signatureType] = downloadUrl;
+          print('✅ SIGNATURE DEBUG: $signatureType signature uploaded: $downloadUrl');
+        } else {
+          print('⚠️ SIGNATURE DEBUG: Skipping empty $signatureType signature');
+        }
+      }
+
+      print('✅ SIGNATURE DEBUG: All signatures uploaded successfully');
+      return uploadResults;
+    } catch (e) {
+      print('❌ SIGNATURE DEBUG: Error uploading signatures: $e');
+      throw Exception('Failed to upload signature bytes: $e');
     }
   }
 
