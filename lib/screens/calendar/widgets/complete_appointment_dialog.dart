@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -30,6 +31,14 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
   final _woundWidthController = TextEditingController();
   final _woundDepthController = TextEditingController();
   
+  // Focus nodes for better keyboard management
+  final _weightFocusNode = FocusNode();
+  final _notesFocusNode = FocusNode();
+  final _woundDescriptionFocusNode = FocusNode();
+  final _woundLengthFocusNode = FocusNode();
+  final _woundWidthFocusNode = FocusNode();
+  final _woundDepthFocusNode = FocusNode();
+  
   int _vasScore = 5;
   List<String> _sessionPhotos = [];
   String _selectedWoundLocation = 'Left ankle';
@@ -53,6 +62,15 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
     _woundLengthController.dispose();
     _woundWidthController.dispose();
     _woundDepthController.dispose();
+    
+    // Dispose focus nodes
+    _weightFocusNode.dispose();
+    _notesFocusNode.dispose();
+    _woundDescriptionFocusNode.dispose();
+    _woundLengthFocusNode.dispose();
+    _woundWidthFocusNode.dispose();
+    _woundDepthFocusNode.dispose();
+    
     super.dispose();
   }
 
@@ -95,9 +113,34 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
     _vasScore = patient.currentVasScore ?? patient.baselineVasScore;
   }
 
+  // Enhanced keyboard dismissal for iOS compatibility
+  void _dismissKeyboard() {
+    // Method 1: Unfocus current focus
+    final currentFocus = FocusScope.of(context);
+    if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+      currentFocus.focusedChild!.unfocus();
+    }
+    
+    // Method 2: Unfocus the entire scope
+    FocusScope.of(context).unfocus();
+    
+    // Method 3: iOS-specific keyboard dismissal
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+    
+    // Method 4: Force keyboard dismissal with delay for iOS
+    Future.delayed(const Duration(milliseconds: 100), () {
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GestureDetector(
+      onTap: _dismissKeyboard,
+      onPanDown: (_) => _dismissKeyboard(), // Additional gesture handling
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        resizeToAvoidBottomInset: true, // Ensure proper keyboard handling
       appBar: AppBar(
         title: const Row(
           children: [
@@ -167,6 +210,7 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
         icon: const Icon(Icons.check_circle),
         label: const Text('Complete Session'),
         backgroundColor: AppTheme.greenColor,
+      ),
       ),
     );
   }
@@ -261,7 +305,12 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _weightController,
+                    focusNode: _weightFocusNode,
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) {
+                      FocusScope.of(context).requestFocus(_woundLengthFocusNode);
+                    },
                     decoration: const InputDecoration(
                       hintText: 'Enter weight',
                       suffixText: 'kg',
@@ -421,7 +470,12 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _woundLengthController,
+                      focusNode: _woundLengthFocusNode,
                       keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) {
+                        FocusScope.of(context).requestFocus(_woundWidthFocusNode);
+                      },
                       decoration: const InputDecoration(
                         labelText: 'Length',
                         hintText: 'cm',
@@ -434,7 +488,12 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _woundWidthController,
+                      focusNode: _woundWidthFocusNode,
                       keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) {
+                        FocusScope.of(context).requestFocus(_woundDepthFocusNode);
+                      },
                       decoration: const InputDecoration(
                         labelText: 'Width',
                         hintText: 'cm',
@@ -449,7 +508,12 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
               // Depth in separate row for more space
               TextFormField(
                 controller: _woundDepthController,
+                focusNode: _woundDepthFocusNode,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) {
+                  FocusScope.of(context).requestFocus(_woundDescriptionFocusNode);
+                },
                 decoration: const InputDecoration(
                   labelText: 'Depth',
                   hintText: 'Enter wound depth in centimeters',
@@ -492,7 +556,12 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
           // Wound description
           TextFormField(
             controller: _woundDescriptionController,
+            focusNode: _woundDescriptionFocusNode,
             maxLines: 4,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) {
+              FocusScope.of(context).requestFocus(_notesFocusNode);
+            },
             decoration: const InputDecoration(
               labelText: 'Wound Description',
               hintText: 'Describe wound appearance, drainage, healing progress, surrounding tissue condition...',
@@ -630,7 +699,12 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
       children: [
         TextFormField(
           controller: _notesController,
+          focusNode: _notesFocusNode,
           maxLines: 4,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) {
+            FocusScope.of(context).unfocus();
+          },
           decoration: const InputDecoration(
             hintText: 'Enter treatment notes, observations, patient response, next steps...',
             prefixIcon: Icon(Icons.edit_note),
@@ -846,6 +920,9 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
 
   Future<void> _completeAppointment() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Dismiss keyboard before processing
+    _dismissKeyboard();
 
     setState(() {
       _isLoading = true;

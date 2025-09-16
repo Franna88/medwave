@@ -3,6 +3,8 @@ import 'dart:async';
 import '../models/patient.dart';
 import '../models/progress_metrics.dart';
 import '../services/firebase/patient_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PatientProvider with ChangeNotifier {
   final List<Patient> _patients = [];
@@ -10,6 +12,7 @@ class PatientProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   StreamSubscription<List<Patient>>? _patientsSubscription;
+  int _totalSessionCount = 0;
   
   // Feature flag for development - allows switching between mock and Firebase
   static const bool _useFirebase = true;
@@ -18,6 +21,7 @@ class PatientProvider with ChangeNotifier {
   Patient? get selectedPatient => _selectedPatient;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  int get totalSessionCount => _totalSessionCount;
 
   // Get patients with recent updates (last 7 days)
   List<Patient> get recentlyUpdatedPatients {
@@ -80,6 +84,7 @@ class PatientProvider with ChangeNotifier {
         (patients) {
           _patients.clear();
           _patients.addAll(patients);
+          _loadSessionCount(); // Load session count when patients are updated
           _setLoading(false);
           notifyListeners();
         },
@@ -91,6 +96,35 @@ class PatientProvider with ChangeNotifier {
     } catch (e) {
       _setError('Failed to initialize patient stream: $e');
       _setLoading(false);
+    }
+  }
+
+  /// Load total session count from Firebase
+  Future<void> _loadSessionCount() async {
+    if (!_useFirebase) {
+      // For mock data, count sessions from patients
+      _totalSessionCount = _patients.fold<int>(0, (sum, p) => sum + p.sessions.length);
+      return;
+    }
+
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        _totalSessionCount = 0;
+        return;
+      }
+
+      // Query the main sessions collection for this practitioner
+      final snapshot = await FirebaseFirestore.instance
+          .collection('sessions')
+          .where('practitionerId', isEqualTo: userId)
+          .get();
+      
+      _totalSessionCount = snapshot.docs.length;
+      debugPrint('PatientProvider: Loaded $_totalSessionCount total sessions');
+    } catch (e) {
+      debugPrint('PatientProvider: Error loading session count: $e');
+      _totalSessionCount = 0;
     }
   }
 
@@ -108,12 +142,16 @@ class PatientProvider with ChangeNotifier {
       
       // The real-time listener will automatically update the UI
       debugPrint('Patient created with ID: $patientId');
+      
+      // Immediately set loading to false since patient creation is complete
+      // The real-time listener will handle UI updates without additional loading state
+      _setLoading(false);
+      
       return true;
     } catch (e) {
       _setError('Failed to add patient: $e');
-      return false;
-    } finally {
       _setLoading(false);
+      return false;
     }
   }
 
@@ -130,12 +168,12 @@ class PatientProvider with ChangeNotifier {
       await PatientService.updatePatient(patientId, patient);
       
       // The real-time listener will automatically update the UI
+      _setLoading(false);
       return true;
     } catch (e) {
       _setError('Failed to update patient: $e');
-      return false;
-    } finally {
       _setLoading(false);
+      return false;
     }
   }
 
@@ -152,12 +190,12 @@ class PatientProvider with ChangeNotifier {
       await PatientService.deletePatient(patientId);
       
       // The real-time listener will automatically update the UI
+      _setLoading(false);
       return true;
     } catch (e) {
       _setError('Failed to delete patient: $e');
-      return false;
-    } finally {
       _setLoading(false);
+      return false;
     }
   }
 
@@ -299,9 +337,9 @@ class PatientProvider with ChangeNotifier {
     
     // Calculate pain reduction percentage
     double painReductionPercentage = 0.0;
-    if (sessions.isNotEmpty && patient.baselineVasScore != null) {
+    if (sessions.isNotEmpty) {
       final latestVas = sessions.last.vasScore;
-      final baselineVas = patient.baselineVasScore!;
+      final baselineVas = patient.baselineVasScore;
       if (baselineVas > 0) {
         painReductionPercentage = ((baselineVas - latestVas) / baselineVas) * 100;
       }
@@ -309,9 +347,9 @@ class PatientProvider with ChangeNotifier {
     
     // Calculate weight change percentage
     double weightChangePercentage = 0.0;
-    if (sessions.isNotEmpty && patient.baselineWeight != null) {
+    if (sessions.isNotEmpty) {
       final latestWeight = sessions.last.weight;
-      final baselineWeight = patient.baselineWeight!;
+      final baselineWeight = patient.baselineWeight;
       if (baselineWeight > 0) {
         weightChangePercentage = ((latestWeight - baselineWeight) / baselineWeight) * 100;
       }
@@ -319,8 +357,8 @@ class PatientProvider with ChangeNotifier {
     
     // Calculate wound healing percentage
     double woundHealingPercentage = 0.0;
-    if (sessions.isNotEmpty && patient.baselineWounds != null && patient.baselineWounds!.isNotEmpty) {
-      final baselineArea = patient.baselineWounds!.fold(0.0, (sum, w) => sum + w.area);
+    if (sessions.isNotEmpty && patient.baselineWounds.isNotEmpty) {
+      final baselineArea = patient.baselineWounds.fold(0.0, (sum, w) => sum + w.area);
       final latestArea = sessions.last.wounds.fold(0.0, (sum, w) => sum + w.area);
       if (baselineArea > 0) {
         woundHealingPercentage = ((baselineArea - latestArea) / baselineArea) * 100;

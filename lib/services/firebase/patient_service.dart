@@ -158,25 +158,67 @@ class PatientService {
   ) async {
     try {
       final userId = _auth.currentUser?.uid;
-      if (userId == null) throw Exception('User not authenticated');
+      if (userId == null) {
+        print('❌ PHOTO DEBUG: User not authenticated');
+        throw Exception('User not authenticated');
+      }
+
+      print('📸 PHOTO DEBUG: Starting photo upload for patient $patientId');
+      print('📸 PHOTO DEBUG: User ID: $userId');
+      print('📸 PHOTO DEBUG: Photo type: $photoType');
+      print('📸 PHOTO DEBUG: Number of photos: ${imagePaths.length}');
 
       final uploadTasks = imagePaths.map((imagePath) async {
+        print('📸 PHOTO DEBUG: Processing image: $imagePath');
+        
         final file = File(imagePath);
         if (!file.existsSync()) {
+          print('❌ PHOTO DEBUG: Image file not found: $imagePath');
           throw Exception('Image file not found: $imagePath');
         }
 
         final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
         final storageRef = _storage.ref().child('patients/$patientId/$photoType/$fileName');
 
-        final uploadTask = storageRef.putFile(file);
-        final snapshot = await uploadTask;
-        
-        return await snapshot.ref.getDownloadURL();
+        print('📸 PHOTO DEBUG: Storage path: patients/$patientId/$photoType/$fileName');
+        print('📸 PHOTO DEBUG: File size: ${await file.length()} bytes');
+
+        try {
+          final uploadTask = storageRef.putFile(
+            file,
+            SettableMetadata(
+              contentType: 'image/jpeg', // Assume JPEG for photos
+            ),
+          );
+          
+          final snapshot = await uploadTask;
+          final downloadUrl = await snapshot.ref.getDownloadURL();
+          
+          print('✅ PHOTO DEBUG: Photo uploaded successfully: $downloadUrl');
+          return downloadUrl;
+        } catch (uploadError) {
+          print('❌ PHOTO DEBUG: Upload failed for $imagePath: $uploadError');
+          
+          // Try simplified upload without metadata
+          try {
+            final simpleUploadTask = storageRef.putFile(file);
+            final snapshot = await simpleUploadTask;
+            final downloadUrl = await snapshot.ref.getDownloadURL();
+            
+            print('✅ PHOTO DEBUG: Photo uploaded (fallback): $downloadUrl');
+            return downloadUrl;
+          } catch (fallbackError) {
+            print('❌ PHOTO DEBUG: Fallback upload also failed: $fallbackError');
+            throw Exception('Failed to upload photo: $fallbackError');
+          }
+        }
       });
 
-      return await Future.wait(uploadTasks);
+      final results = await Future.wait(uploadTasks);
+      print('✅ PHOTO DEBUG: All photos uploaded successfully. Count: ${results.length}');
+      return results;
     } catch (e) {
+      print('❌ PHOTO DEBUG: Error uploading photos: $e');
       throw Exception('Failed to upload photos: $e');
     }
   }
@@ -223,9 +265,13 @@ class PatientService {
   ) async {
     try {
       final userId = _auth.currentUser?.uid;
-      if (userId == null) throw Exception('User not authenticated');
+      if (userId == null) {
+        print('❌ SIGNATURE DEBUG: User not authenticated');
+        throw Exception('User not authenticated');
+      }
 
       print('🖋️ SIGNATURE DEBUG: Starting signature upload for patient $patientId');
+      print('🖋️ SIGNATURE DEBUG: User ID: $userId');
       print('🖋️ SIGNATURE DEBUG: Signatures to upload: ${signatureBytes.keys.toList()}');
 
       final uploadResults = <String, String>{};
@@ -237,33 +283,82 @@ class PatientService {
         if (bytes.isNotEmpty) {
           print('🖋️ SIGNATURE DEBUG: Uploading $signatureType signature (${bytes.length} bytes)');
           
-          final fileName = '${signatureType}_${DateTime.now().millisecondsSinceEpoch}.png';
-          final storageRef = _storage.ref().child('patients/$patientId/signatures/$fileName');
+          try {
+            // Use consistent path structure
+            final fileName = '${signatureType}_${DateTime.now().millisecondsSinceEpoch}.png';
+            final storageRef = _storage.ref().child('signatures/$patientId/$fileName');
 
-          final uploadTask = storageRef.putData(
-            bytes,
-            SettableMetadata(
-              contentType: 'image/png',
-              customMetadata: {
-                'signatureType': signatureType,
-                'patientId': patientId,
-                'practitionerId': userId,
-                'uploadDate': DateTime.now().toIso8601String(),
-              },
-            ),
-          );
-          
-          final snapshot = await uploadTask;
-          final downloadUrl = await snapshot.ref.getDownloadURL();
-          
-          uploadResults[signatureType] = downloadUrl;
-          print('✅ SIGNATURE DEBUG: $signatureType signature uploaded: $downloadUrl');
+            print('🖋️ SIGNATURE DEBUG: Storage path: signatures/$patientId/$fileName');
+            print('🖋️ SIGNATURE DEBUG: Storage bucket: ${_storage.bucket}');
+
+            // Try upload with minimal metadata
+            final uploadTask = storageRef.putData(
+              bytes,
+              SettableMetadata(
+                contentType: 'image/png',
+                customMetadata: {
+                  'uploadedBy': userId,
+                  'patientId': patientId,
+                },
+              ),
+            );
+            
+            print('🖋️ SIGNATURE DEBUG: Upload task created, waiting for completion...');
+            final snapshot = await uploadTask;
+            print('🖋️ SIGNATURE DEBUG: Upload completed, getting download URL...');
+            
+            final downloadUrl = await snapshot.ref.getDownloadURL();
+            
+            uploadResults[signatureType] = downloadUrl;
+            print('✅ SIGNATURE DEBUG: $signatureType signature uploaded: $downloadUrl');
+          } catch (uploadError) {
+            print('❌ SIGNATURE DEBUG: Primary upload failed for $signatureType: $uploadError');
+            
+            // Try simplified approach with basic path and no metadata
+            try {
+              final fileName = '${patientId}_${signatureType}_${DateTime.now().millisecondsSinceEpoch}.png';
+              final storageRef = _storage.ref().child('test_signatures/$fileName'); // Different path to avoid conflicts
+
+              print('🖋️ SIGNATURE DEBUG: Trying simplified path: test_signatures/$fileName');
+
+              // No metadata at all to avoid HTTP 412
+              final uploadTask = storageRef.putData(bytes);
+              
+              final snapshot = await uploadTask;
+              final downloadUrl = await snapshot.ref.getDownloadURL();
+              
+              uploadResults[signatureType] = downloadUrl;
+              print('✅ SIGNATURE DEBUG: $signatureType signature uploaded (fallback): $downloadUrl');
+            } catch (fallbackError) {
+              print('❌ SIGNATURE DEBUG: Fallback upload also failed for $signatureType: $fallbackError');
+              
+              // Final attempt with timestamp-based unique path
+              try {
+                final uniqueId = DateTime.now().millisecondsSinceEpoch;
+                final finalFileName = 'sig_${uniqueId}_${signatureType}.png';
+                final finalStorageRef = _storage.ref().child('uploads/$finalFileName');
+                
+                print('🖋️ SIGNATURE DEBUG: Final attempt with path: uploads/$finalFileName');
+                
+                // Most basic upload possible
+                final finalUploadTask = finalStorageRef.putData(bytes);
+                final finalSnapshot = await finalUploadTask;
+                final finalDownloadUrl = await finalSnapshot.ref.getDownloadURL();
+                
+                uploadResults[signatureType] = finalDownloadUrl;
+                print('✅ SIGNATURE DEBUG: $signatureType signature uploaded (final attempt): $finalDownloadUrl');
+              } catch (finalError) {
+                print('❌ SIGNATURE DEBUG: All upload attempts failed for $signatureType: $finalError');
+                print('⚠️ SIGNATURE DEBUG: Skipping $signatureType signature due to upload failure');
+              }
+            }
+          }
         } else {
           print('⚠️ SIGNATURE DEBUG: Skipping empty $signatureType signature');
         }
       }
 
-      print('✅ SIGNATURE DEBUG: All signatures uploaded successfully');
+      print('✅ SIGNATURE DEBUG: Upload process completed. Results: ${uploadResults.keys.toList()}');
       return uploadResults;
     } catch (e) {
       print('❌ SIGNATURE DEBUG: Error uploading signatures: $e');

@@ -10,8 +10,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../models/patient.dart';
-import '../models/progress_metrics.dart';
-import '../providers/patient_provider.dart';
 import 'firebase/patient_service.dart';
 import '../models/icd10_code.dart';
 import 'wound_management_service.dart';
@@ -220,6 +218,7 @@ class PDFGenerationService {
     List<String> treatmentCodes = const [],
     String? additionalNotes,
     Session? previousSession,
+    String? practitionerContact,
   }) async {
     final isMultiWound = WoundManagementService.hasMultipleWounds(patient);
     
@@ -233,6 +232,7 @@ class PDFGenerationService {
         treatmentCodes: treatmentCodes,
         additionalNotes: additionalNotes,
         previousSession: previousSession,
+        practitionerContact: practitionerContact,
       );
     } else {
       return generateClinicalMotivationPDF(
@@ -243,6 +243,7 @@ class PDFGenerationService {
         selectedCodes: selectedCodes,
         treatmentCodes: treatmentCodes,
         additionalNotes: additionalNotes,
+        practitionerContact: practitionerContact,
       );
     }
   }
@@ -255,6 +256,7 @@ class PDFGenerationService {
     List<SelectedICD10Code> selectedCodes = const [],
     List<String> treatmentCodes = const [],
     String? additionalNotes,
+    String? practitionerContact,
   }) async {
     final pdf = pw.Document();
     
@@ -272,7 +274,7 @@ class PDFGenerationService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
-        header: (context) => _buildHeader(logoImage, context),
+        header: (context) => _buildHeader(logoImage, context, practitionerName: practitionerName, practitionerContact: practitionerContact),
         footer: (context) => _buildFooter(context),
         build: (context) => [
           // 1. PATIENT INFORMATION SECTION (First Block)
@@ -310,19 +312,12 @@ class PDFGenerationService {
     required Session session,
     required String practitionerName,
     List<SelectedICD10Code>? selectedCodes,
+    String? practitionerContact,
   }) async {
     try {
       final pdf = pw.Document();
       
-      // Load patient progress analytics (with error handling)
-      ProgressMetrics? progressMetrics;
-      try {
-        final patientProvider = PatientProvider();
-        progressMetrics = await patientProvider.calculateProgress(patient.id);
-      } catch (e) {
-        print('⚠️ Warning: Could not load progress analytics: $e');
-        progressMetrics = null;
-      }
+      // Progress analytics removed - no longer needed for PDF generation
       
       // Get current and previous session photos (with error handling)
       List<Session> sessions = [];
@@ -341,6 +336,9 @@ class PDFGenerationService {
           ? await _buildWoundImagesSection(currentSessionPhotos, previousSessionPhotos)
           : null;
 
+      // Check if we have photos to determine where to put signature
+      final hasPhotos = woundImagesSection != null && (currentSessionPhotos.isNotEmpty || previousSessionPhotos.isNotEmpty);
+
       // PAGE 1: Patient Details, ICD-10 Codes, Clinical Motivational Report
       pdf.addPage(
         pw.Page(
@@ -348,7 +346,7 @@ class PDFGenerationService {
           margin: const pw.EdgeInsets.all(18),
           build: (context) => pw.Column(
             children: [
-              _buildHeader(null, context),
+              _buildHeader(null, context, practitionerName: practitionerName, practitionerContact: practitionerContact),
               pw.Expanded(
                 child: pw.Column(
                   children: [
@@ -366,6 +364,12 @@ class PDFGenerationService {
                     pw.Expanded(
                       child: _buildEnhancedChatReportContent(reportContent),
                     ),
+                    
+                    // Add signature here if no photos exist
+                    if (!hasPhotos) ...[
+                      pw.SizedBox(height: 20),
+                      _buildSignatureSection(practitionerName),
+                    ],
                   ],
                 ),
               ),
@@ -375,15 +379,15 @@ class PDFGenerationService {
         ),
       );
 
-      // PAGE 2: Clinical Documentation Photos (only if photos exist)
-      if (woundImagesSection != null && (currentSessionPhotos.isNotEmpty || previousSessionPhotos.isNotEmpty)) {
+      // PAGE 2: Clinical Documentation Photos with Signatures (only if photos exist)
+      if (hasPhotos) {
         pdf.addPage(
           pw.Page(
             pageFormat: PdfPageFormat.a4,
             margin: const pw.EdgeInsets.all(18),
             build: (context) => pw.Column(
               children: [
-                _buildHeader(null, context),
+                _buildHeader(null, context, practitionerName: practitionerName, practitionerContact: practitionerContact),
                 pw.Expanded(
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -391,6 +395,10 @@ class PDFGenerationService {
                       _buildSectionTitle('Clinical Documentation Photos'),
                       pw.SizedBox(height: 15),
                       pw.Expanded(child: woundImagesSection),
+                      pw.SizedBox(height: 20),
+                      
+                      // Add signature section below the images
+                      _buildSignatureSection(practitionerName),
                     ],
                   ),
                 ),
@@ -401,39 +409,11 @@ class PDFGenerationService {
         );
       }
 
-      // PAGE 3: Patient Progress Analytics & Signature
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(18),
-          build: (context) => pw.Column(
-            children: [
-              _buildHeader(null, context),
-              pw.Expanded(
-                child: pw.Column(
-                  children: [
-                    // Patient Progress Analytics Section
-                    _buildSectionTitle('Patient Progress Analytics'),
-                    pw.SizedBox(height: 15),
-                    _buildProgressAnalyticsSection(progressMetrics),
-                    pw.Spacer(),
-                    
-                    // Signature Section
-                    _buildSignatureSection(practitionerName),
-                  ],
-                ),
-              ),
-              _buildFooter(context),
-            ],
-          ),
-        ),
-      );
-
       return await _savePDF(pdf, 'enhanced_ai_report_${patient.surname}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf');
     } catch (e) {
       print('❌ Error generating enhanced PDF: $e');
       // Fallback to simplified version
-      return await _generateSimplifiedEnhancedPDF(reportContent, patient, session, practitionerName);
+      return await _generateSimplifiedEnhancedPDF(reportContent, patient, session, practitionerName, practitionerContact);
     }
   }
 
@@ -442,6 +422,7 @@ class PDFGenerationService {
     required Patient patient,
     required Session session,
     required String practitionerName,
+    String? practitionerContact,
   }) async {
     try {
       final pdf = pw.Document();
@@ -459,7 +440,7 @@ class PDFGenerationService {
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(40),
-          header: (context) => _buildHeader(logoImage, context),
+          header: (context) => _buildHeader(logoImage, context, practitionerName: practitionerName, practitionerContact: practitionerContact),
           footer: (context) => _buildFooter(context),
           build: (context) => [
             // 1. PATIENT INFORMATION SECTION (First Block)
@@ -483,14 +464,14 @@ class PDFGenerationService {
       // If PDF generation fails, create a simplified version
       print('PDF generation failed: $e');
       if (e.toString().contains('TooManyPagesException') || e.toString().contains('too many pages')) {
-        return await _generateSimplifiedPDF(reportContent, patient, practitionerName);
+        return await _generateSimplifiedPDF(reportContent, patient, practitionerName, practitionerContact);
       }
       rethrow;
     }
   }
   
   /// Generate a simplified PDF when the main generation fails
-  static Future<File> _generateSimplifiedPDF(String reportContent, Patient patient, String practitionerName) async {
+  static Future<File> _generateSimplifiedPDF(String reportContent, Patient patient, String practitionerName, String? practitionerContact) async {
     final pdf = pw.Document();
     
     // Very simple single page with just the essentials
@@ -542,6 +523,7 @@ class PDFGenerationService {
     List<String> treatmentCodes = const [],
     String? additionalNotes,
     Session? previousSession,
+    String? practitionerContact,
   }) async {
     final pdf = pw.Document();
     
@@ -559,7 +541,7 @@ class PDFGenerationService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
-        header: (context) => _buildHeader(logoImage, context),
+        header: (context) => _buildHeader(logoImage, context, practitionerName: practitionerName, practitionerContact: practitionerContact),
         footer: (context) => _buildFooter(context),
         build: (context) => [
           // Patient Information
@@ -591,7 +573,7 @@ class PDFGenerationService {
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(40),
-          header: (context) => _buildHeader(logoImage, context),
+          header: (context) => _buildHeader(logoImage, context, practitionerName: practitionerName, practitionerContact: practitionerContact),
           footer: (context) => _buildFooter(context),
           build: (context) => [
             _buildIndividualWoundSection(wound, previousWound, i + 1),
@@ -610,7 +592,7 @@ class PDFGenerationService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
-        header: (context) => _buildHeader(logoImage, context),
+        header: (context) => _buildHeader(logoImage, context, practitionerName: practitionerName, practitionerContact: practitionerContact),
         footer: (context) => _buildFooter(context),
         build: (context) => [
           _buildTreatmentSummarySection(session.wounds, previousSession?.wounds),
@@ -633,7 +615,21 @@ class PDFGenerationService {
     return file;
   }
   
-  static pw.Widget _buildHeader(pw.ImageProvider? logoImage, pw.Context context) {
+  static pw.Widget _buildHeader(pw.ImageProvider? logoImage, pw.Context context, {String? practitionerName, String? practitionerContact}) {
+    // Extract practitioner name and practice number if formatted as "Name (PracticeNumber)"
+    String displayName = 'Wound Care Specialist';
+    String subtitle = 'Advanced Wound Care Specialists';
+    String contactInfo = 'Contact: wounds@hauteCare.co.za | 082 828 2476';
+    
+    if (practitionerName != null && practitionerName.isNotEmpty) {
+      displayName = practitionerName;
+      subtitle = 'Wound Care Specialist';
+      
+      if (practitionerContact != null && practitionerContact.isNotEmpty) {
+        contactInfo = 'Contact: $practitionerContact';
+      }
+    }
+    
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 20),
       child: pw.Row(
@@ -648,7 +644,7 @@ class PDFGenerationService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  'MedWave Wound Care Clinic',
+                  displayName,
                   style: pw.TextStyle(
                     fontSize: 18,
                     fontWeight: pw.FontWeight.bold,
@@ -656,11 +652,11 @@ class PDFGenerationService {
                 ),
                 pw.SizedBox(height: 5),
                 pw.Text(
-                  'Advanced Wound Care Specialists',
+                  subtitle,
                   style: pw.TextStyle(fontSize: 12),
                 ),
                 pw.Text(
-                  'Contact: wounds@hauteCare.co.za | 082 828 2476',
+                  contactInfo,
                   style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
                 ),
               ],
@@ -1460,117 +1456,7 @@ class PDFGenerationService {
     );
   }
 
-  static pw.Widget _buildProgressAnalyticsSection(ProgressMetrics? progressMetrics) {
-    if (progressMetrics == null) {
-      return pw.Container(
-        padding: const pw.EdgeInsets.all(15),
-        decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: PdfColors.grey400),
-          borderRadius: pw.BorderRadius.circular(8),
-        ),
-        child: pw.Text(
-          'No progress analytics available',
-          style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
-        ),
-      );
-    }
 
-    return pw.Container(
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.blue400),
-        borderRadius: pw.BorderRadius.circular(8),
-      ),
-      child: pw.Column(
-        children: [
-          pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.all(12),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.blue100,
-              borderRadius: const pw.BorderRadius.only(
-                topLeft: pw.Radius.circular(8),
-                topRight: pw.Radius.circular(8),
-              ),
-            ),
-            child: pw.Text(
-              'PATIENT PROGRESS ANALYTICS',
-              style: _createTextStyle(
-                fontSize: 14,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.blue800,
-              ),
-            ),
-          ),
-          pw.Padding(
-            padding: const pw.EdgeInsets.all(15),
-            child: pw.Column(
-              children: [
-                // Summary stats
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildAnalyticsStat('Total Sessions', '${progressMetrics.totalSessions}'),
-                    _buildAnalyticsStat('Pain Reduction', '${progressMetrics.painReductionPercentage.toStringAsFixed(1)}%'),
-                    _buildAnalyticsStat('Wound Healing', '${progressMetrics.woundHealingPercentage.toStringAsFixed(1)}%'),
-                  ],
-                ),
-                pw.SizedBox(height: 15),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildAnalyticsStat('Weight Change', '${progressMetrics.weightChangePercentage.toStringAsFixed(1)}%'),
-                    _buildAnalyticsStat('Improvement', progressMetrics.hasSignificantImprovement ? 'Yes' : 'Monitored'),
-                    _buildAnalyticsStat('Data Points', '${progressMetrics.painHistory.length}'),
-                  ],
-                ),
-                pw.SizedBox(height: 15),
-                // Progress chart placeholder
-                pw.Container(
-                  height: 80,
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey300),
-                    borderRadius: pw.BorderRadius.circular(4),
-                  ),
-                  child: pw.Center(
-                    child: pw.Text(
-                      'Progress Chart\n(Pain Level Trend Over Time)',
-                      textAlign: pw.TextAlign.center,
-                      style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
-                    ),
-                  ),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  'Analytics based on ${progressMetrics.totalSessions} treatment sessions. Chart shows overall improvement trend.',
-                  style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500, fontStyle: pw.FontStyle.italic),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static pw.Widget _buildAnalyticsStat(String label, String value) {
-    return pw.Column(
-      children: [
-        pw.Text(
-          value,
-          style: _createTextStyle(
-            fontSize: 16,
-            fontWeight: pw.FontWeight.bold,
-            color: PdfColors.blue800,
-          ),
-        ),
-        pw.SizedBox(height: 2),
-        pw.Text(
-          label,
-          style: _createTextStyle(fontSize: 8, color: PdfColors.grey600),
-        ),
-      ],
-    );
-  }
 
   /// Build ICD10 codes summary section for quick admin reference
   static pw.Widget _buildICD10SummarySection(List<SelectedICD10Code> selectedCodes) {
@@ -1614,18 +1500,6 @@ class PDFGenerationService {
                 ),
                 ...selectedCodes.where((c) => c.type == ICD10CodeType.externalCause).map((code) => 
                   _buildCodeRow('EXTERNAL CAUSE', code.code.icd10Code, code.code.whoFullDescription, code.code.isPmbEligible)
-                ),
-                pw.SizedBox(height: 10),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(8),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.green50,
-                    borderRadius: pw.BorderRadius.circular(4),
-                  ),
-                  child: pw.Text(
-                    'PMB = Prescribed Minimum Benefits (Guaranteed Coverage)\nCodes marked with PMB qualify for automatic medical aid coverage',
-                    style: _createTextStyle(fontSize: 8, color: PdfColors.green800),
-                  ),
                 ),
               ],
             ),
@@ -1692,7 +1566,7 @@ class PDFGenerationService {
     );
   }
 
-  static Future<File> _generateSimplifiedEnhancedPDF(String reportContent, Patient patient, Session session, String practitionerName) async {
+  static Future<File> _generateSimplifiedEnhancedPDF(String reportContent, Patient patient, Session session, String practitionerName, String? practitionerContact) async {
     final pdf = pw.Document();
     
     pdf.addPage(

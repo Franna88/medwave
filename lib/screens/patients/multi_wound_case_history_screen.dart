@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -51,6 +52,26 @@ class _MultiWoundCaseHistoryScreenState extends State<MultiWoundCaseHistoryScree
     _initializeWounds();
   }
 
+  // Enhanced keyboard dismissal for iOS compatibility
+  void _dismissKeyboard() {
+    // Method 1: Unfocus current focus
+    final currentFocus = FocusScope.of(context);
+    if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+      currentFocus.focusedChild!.unfocus();
+    }
+    
+    // Method 2: Unfocus the entire scope
+    FocusScope.of(context).unfocus();
+    
+    // Method 3: iOS-specific keyboard dismissal
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+    
+    // Method 4: Force keyboard dismissal with delay for iOS
+    Future.delayed(const Duration(milliseconds: 100), () {
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    });
+  }
+
   void _loadPatientData() async {
     final patientProvider = context.read<PatientProvider>();
     final patient = patientProvider.patients.firstWhere(
@@ -97,9 +118,14 @@ class _MultiWoundCaseHistoryScreenState extends State<MultiWoundCaseHistoryScree
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: Column(
+    return GestureDetector(
+      onTap: _dismissKeyboard,
+      onPanDown: (_) => _dismissKeyboard(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        resizeToAvoidBottomInset: true,
+        body: Column(
         children: [
           _buildModernHeader(),
           _buildProgressIndicator(),
@@ -122,6 +148,7 @@ class _MultiWoundCaseHistoryScreenState extends State<MultiWoundCaseHistoryScree
           ),
           _buildNavigationButtons(),
         ],
+        ),
       ),
     );
   }
@@ -1124,11 +1151,35 @@ class _MultiWoundCaseHistoryScreenState extends State<MultiWoundCaseHistoryScree
             child: ElevatedButton(
               onPressed: _currentPage == 4 ? _submitMultiWoundCaseHistory : _nextPage,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: _currentPage == 4 ? AppTheme.primaryColor : AppTheme.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: _currentPage == 4 ? 4 : 2,
+                shadowColor: AppTheme.primaryColor.withOpacity(0.3),
               ),
-              child: Text(_currentPage == 4 ? 'Complete Case History' : 'Next'),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_currentPage == 4) ...[
+                    const Icon(Icons.check_circle_outline, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    _currentPage == 4 ? 'Complete Case History' : 'Next',
+                    style: TextStyle(
+                      fontSize: _currentPage == 4 ? 16 : 14,
+                      fontWeight: _currentPage == 4 ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                  if (_currentPage != 4) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward, size: 18),
+                  ],
+                ],
+              ),
             ),
           ),
         ],
@@ -1307,8 +1358,8 @@ class _MultiWoundCaseHistoryScreenState extends State<MultiWoundCaseHistoryScree
           ),
         );
         
-        // Navigate back to patient profile
-        context.pop();
+        // Navigate back to patient profile (go back 2 levels: case-history -> wound-selection -> patient-profile)
+        context.go('/patients/${widget.patientId}');
       }
     } catch (e) {
       print('Error creating multi-wound case history: $e');

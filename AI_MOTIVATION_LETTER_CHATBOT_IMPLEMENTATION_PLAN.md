@@ -328,7 +328,7 @@ All data will be stored in Firebase Firestore for consistency with the existing 
 // lib/services/ai/openai_service.dart
 class OpenAIService {
   static const String _baseUrl = 'https://api.openai.com/v1';
-  static const String _apiKey = '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';
+  static const String _apiKey = 'YOUR_OPENAI_API_KEY_HERE';
   
   Future<String> generateResponse({
     required String systemPrompt,

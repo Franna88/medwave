@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../theme/app_theme.dart';
@@ -31,11 +32,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _biometricEnabled = false;
   String _language = 'English';
   String _timezone = 'Africa/Johannesburg';
+  
+  // App info
+  String _appVersion = '';
+  String _buildNumber = '';
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadAppInfo();
+  }
+
+  void _loadAppInfo() async {
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    setState(() {
+      _appVersion = packageInfo.version;
+      _buildNumber = packageInfo.buildNumber;
+    });
   }
 
   @override
@@ -701,14 +715,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             
             _buildInfoRow(
               label: 'App Version',
-              value: '1.0.0',
+              value: _appVersion.isEmpty ? 'Loading...' : _appVersion,
               icon: Icons.app_settings_alt_outlined,
             ),
             const SizedBox(height: 16),
             
             _buildInfoRow(
               label: 'Build Number',
-              value: '2024.1.1',
+              value: _buildNumber.isEmpty ? 'Loading...' : _buildNumber,
               icon: Icons.build_outlined,
             ),
             const SizedBox(height: 16),

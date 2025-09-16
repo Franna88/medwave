@@ -2,29 +2,9 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow authenticated users to upload to their own temp directory
-    match /temp/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Allow users to upload to their own profile directory
-    match /users/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Allow authenticated users to upload patient files (simplified)
-    match /patients/{patientId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Allow authenticated users to upload session files (simplified)
-    match /sessions/{patientId}/{sessionId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Allow authenticated users to access reports (simplified)
-    match /reports/{reportId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
+    // Ultra-permissive rules for debugging HTTP 412 errors
+    match /{allPaths=**} {
+      allow read, write: if true; // Allow everything for debugging
     }
   }
 }

@@ -781,9 +781,20 @@ Collected Information:
   }
 
   Future<void> _generateReport() async {
+    // Dismiss keyboard first
+    FocusScope.of(context).unfocus();
+    
     setState(() {
       _isGeneratingReport = true;
+      // Add loading message immediately
+      _messages.add(AIMessage(
+        content: 'Report is being generated... Please wait while I create your clinical motivation letter.',
+        isBot: true,
+        timestamp: DateTime.now(),
+      ));
     });
+
+    _scrollToBottom();
 
     try {
       // Create ExtractedClinicalData with patient data + session data
@@ -1278,6 +1289,7 @@ Collected Information:
                 ),
               ),
               maxLines: null,
+              textInputAction: TextInputAction.send,
               onSubmitted: _sendMessage,
             ),
           ),
@@ -1360,7 +1372,7 @@ Collected Information:
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
               SizedBox(width: 16),
-              Text('Generating Enhanced PDF report with photos and analytics...'),
+              Text('Generating Enhanced PDF report with photos...'),
             ],
           ),
           duration: Duration(seconds: 5),

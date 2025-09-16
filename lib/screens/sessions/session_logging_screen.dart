@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,7 +9,6 @@ import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
 import '../../services/firebase/session_service.dart';
 import '../../services/firebase/patient_service.dart';
-import '../ai/ai_report_chat_screen.dart';
 
 class SessionLoggingScreen extends StatefulWidget {
   final String patientId;
@@ -30,6 +30,15 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
   final _woundWidthController = TextEditingController();
   final _woundDepthController = TextEditingController();
   final _woundDescriptionController = TextEditingController();
+  
+  // Focus nodes for better keyboard management
+  final _weightFocusNode = FocusNode();
+  final _vasScoreFocusNode = FocusNode();
+  final _notesFocusNode = FocusNode();
+  final _woundLengthFocusNode = FocusNode();
+  final _woundWidthFocusNode = FocusNode();
+  final _woundDepthFocusNode = FocusNode();
+  final _woundDescriptionFocusNode = FocusNode();
   WoundStage _selectedWoundStage = WoundStage.stage1;
 
   List<String> _sessionPhotos = [];
@@ -42,6 +51,26 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
   void initState() {
     super.initState();
     _loadPatientData();
+  }
+
+  // Enhanced keyboard dismissal for iOS compatibility
+  void _dismissKeyboard() {
+    // Method 1: Unfocus current focus
+    final currentFocus = FocusScope.of(context);
+    if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+      currentFocus.focusedChild!.unfocus();
+    }
+    
+    // Method 2: Unfocus the entire scope
+    FocusScope.of(context).unfocus();
+    
+    // Method 3: iOS-specific keyboard dismissal
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+    
+    // Method 4: Force keyboard dismissal with delay for iOS
+    Future.delayed(const Duration(milliseconds: 100), () {
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    });
   }
 
   void _loadPatientData() {
@@ -77,6 +106,16 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
     _woundWidthController.dispose();
     _woundDepthController.dispose();
     _woundDescriptionController.dispose();
+    
+    // Dispose focus nodes
+    _weightFocusNode.dispose();
+    _vasScoreFocusNode.dispose();
+    _notesFocusNode.dispose();
+    _woundLengthFocusNode.dispose();
+    _woundWidthFocusNode.dispose();
+    _woundDepthFocusNode.dispose();
+    _woundDescriptionFocusNode.dispose();
+    
     super.dispose();
   }
 
@@ -86,36 +125,38 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
       backgroundColor: AppTheme.backgroundColor,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                _buildModernHeader(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildSessionInfoCard(),
-                          const SizedBox(height: 16),
-                          _buildMeasurementsCard(),
-                          const SizedBox(height: 16),
-                          _buildWoundAssessmentCard(),
-                          const SizedBox(height: 16),
-                          _buildPhotosCard(),
-                          const SizedBox(height: 16),
-                          _buildNotesCard(),
-                          const SizedBox(height: 24),
-                          _buildSubmitButton(),
-                          const SizedBox(height: 16),
-                          _buildMotivationFormButton(),
-                        ],
+          : GestureDetector(
+              onTap: _dismissKeyboard,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                children: [
+                  _buildModernHeader(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSessionInfoCard(),
+                            const SizedBox(height: 16),
+                            _buildMeasurementsCard(),
+                            const SizedBox(height: 16),
+                            _buildWoundAssessmentCard(),
+                            const SizedBox(height: 16),
+                            _buildPhotosCard(),
+                            const SizedBox(height: 16),
+                            _buildNotesCard(),
+                            const SizedBox(height: 24),
+                            _buildSubmitButton(),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
     );
   }
@@ -339,12 +380,17 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _weightController,
+                    focusNode: _weightFocusNode,
                     decoration: const InputDecoration(
                       labelText: 'Weight (kg)',
                       prefixIcon: Icon(Icons.monitor_weight),
                       suffixText: 'kg',
                     ),
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) {
+                      FocusScope.of(context).requestFocus(_vasScoreFocusNode);
+                    },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Required';
@@ -361,12 +407,17 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _vasScoreController,
+                    focusNode: _vasScoreFocusNode,
                     decoration: const InputDecoration(
                       labelText: 'VAS Pain Score',
                       prefixIcon: Icon(Icons.healing),
                       suffixText: '/10',
                     ),
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) {
+                      FocusScope.of(context).requestFocus(_woundLengthFocusNode);
+                    },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Required';
@@ -497,11 +548,16 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _woundLengthController,
+                    focusNode: _woundLengthFocusNode,
                     decoration: const InputDecoration(
                       labelText: 'Length (cm)',
                       suffixText: 'cm',
                     ),
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) {
+                      FocusScope.of(context).requestFocus(_woundWidthFocusNode);
+                    },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Required';
@@ -518,11 +574,16 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _woundWidthController,
+                    focusNode: _woundWidthFocusNode,
                     decoration: const InputDecoration(
                       labelText: 'Width (cm)',
                       suffixText: 'cm',
                     ),
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) {
+                      FocusScope.of(context).requestFocus(_woundDepthFocusNode);
+                    },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Required';
@@ -539,11 +600,16 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _woundDepthController,
+                    focusNode: _woundDepthFocusNode,
                     decoration: const InputDecoration(
                       labelText: 'Depth (cm)',
                       suffixText: 'cm',
                     ),
                     keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) {
+                      FocusScope.of(context).requestFocus(_woundDescriptionFocusNode);
+                    },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Required';
@@ -584,12 +650,17 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _woundDescriptionController,
+              focusNode: _woundDescriptionFocusNode,
               decoration: const InputDecoration(
                 labelText: 'Wound Description',
                 prefixIcon: Icon(Icons.description),
                 alignLabelWithHint: true,
               ),
               maxLines: 2,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) {
+                FocusScope.of(context).requestFocus(_notesFocusNode);
+              },
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please provide a wound description';
@@ -807,12 +878,17 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _notesController,
+              focusNode: _notesFocusNode,
               decoration: const InputDecoration(
                 labelText: 'Treatment notes and observations',
                 alignLabelWithHint: true,
                 border: OutlineInputBorder(),
               ),
               maxLines: 4,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) {
+                FocusScope.of(context).unfocus();
+              },
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Please provide session notes';
@@ -842,161 +918,8 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
     );
   }
 
-  Widget _buildMotivationFormButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: _generateMotivationForm,
-        icon: const Icon(Icons.description_outlined),
-        label: const Text(
-          'Generate Motivation Form',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          side: BorderSide(color: AppTheme.primaryColor, width: 2),
-          foregroundColor: AppTheme.primaryColor,
-        ),
-      ),
-    );
-  }
 
-  void _generateMotivationForm() {
-    // Check if session is saved first
-    if (_patient == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please load patient data first'),
-          backgroundColor: AppTheme.warningColor,
-        ),
-      );
-      return;
-    }
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.smart_toy, color: AppTheme.primaryColor),
-            SizedBox(width: 12),
-            Text('Generate AI Report'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Generate a clinical motivation report for ${_patient!.name}?',
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.warningColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.warningColor.withOpacity(0.3)),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline, 
-                           color: AppTheme.warningColor, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Note: Save this session first to include current data in the report.',
-                          style: TextStyle(
-                            color: AppTheme.warningColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.schedule, 
-                           color: AppTheme.primaryColor, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'AI will ask 3-5 questions about this session.',
-                          style: TextStyle(
-                            color: AppTheme.primaryColor,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _launchAIReportForCurrentSession();
-            },
-            icon: const Icon(Icons.smart_toy),
-            label: const Text('Start AI Chat'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _launchAIReportForCurrentSession() {
-    // Create a temporary session object with current data
-    final temporarySession = Session(
-      id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
-      patientId: widget.patientId,
-      sessionNumber: (_patient?.sessions.length ?? 0) + 1,
-      date: DateTime.now(),
-      weight: double.tryParse(_weightController.text) ?? _patient?.currentWeight ?? 0,
-      vasScore: int.tryParse(_vasScoreController.text) ?? _patient?.currentVasScore ?? 0,
-      notes: _notesController.text,
-      photos: _sessionPhotos,
-      practitionerId: _patient?.practitionerId ?? '',
-      wounds: _patient?.currentWounds.isNotEmpty == true
-          ? [
-              _patient!.currentWounds.first.copyWith(
-                length: double.tryParse(_woundLengthController.text),
-                width: double.tryParse(_woundWidthController.text),
-                depth: double.tryParse(_woundDepthController.text),
-                description: _woundDescriptionController.text,
-                stage: _selectedWoundStage,
-              )
-            ]
-          : [],
-    );
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => AIReportChatScreen(
-          patientId: widget.patientId,
-          sessionId: temporarySession.id,
-          patient: _patient!,
-          session: temporarySession,
-        ),
-      ),
-    );
-  }
 
 
 
@@ -1017,6 +940,9 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
 
   Future<void> _submitSession() async {
     print('🔥 SESSION CREATION DEBUG: Starting _submitSession()');
+    
+    // Dismiss keyboard when submitting
+    FocusScope.of(context).unfocus();
     
     if (!_formKey.currentState!.validate()) {
       print('❌ SESSION CREATION DEBUG: Form validation failed');

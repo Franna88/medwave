@@ -25,11 +25,24 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
   final _confirmPasswordController = TextEditingController();
   final _phoneNumberController = TextEditingController();
   
+  // Focus nodes for better keyboard management - Personal Info
+  final _firstNameFocusNode = FocusNode();
+  final _lastNameFocusNode = FocusNode();
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+  final _confirmPasswordFocusNode = FocusNode();
+  final _phoneNumberFocusNode = FocusNode();
+  
   // Form Controllers - Professional Information
   final _licenseNumberController = TextEditingController();
   final _specializationController = TextEditingController();
   final _yearsOfExperienceController = TextEditingController();
   final _practiceLocationController = TextEditingController();
+  
+  // Focus nodes for better keyboard management - Professional Info
+  final _licenseNumberFocusNode = FocusNode();
+  final _yearsOfExperienceFocusNode = FocusNode();
+  final _practiceLocationFocusNode = FocusNode();
   
   // Form Controllers - Location Information
   final _addressController = TextEditingController();
@@ -37,6 +50,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
   final _provinceController = TextEditingController();
   final _postalCodeController = TextEditingController();
   final _countryController = TextEditingController();
+  
+  // Focus nodes for better keyboard management - Location Info
+  final _provinceFocusNode = FocusNode();
+  final _cityFocusNode = FocusNode();
+  final _addressFocusNode = FocusNode();
+  final _postalCodeFocusNode = FocusNode();
   
   // Form State
   bool _isLoading = false;
@@ -109,6 +128,26 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
     _animationController.forward();
   }
 
+  // Enhanced keyboard dismissal for iOS compatibility
+  void _dismissKeyboard() {
+    // Method 1: Unfocus current focus
+    final currentFocus = FocusScope.of(context);
+    if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+      currentFocus.focusedChild!.unfocus();
+    }
+    
+    // Method 2: Unfocus the entire scope
+    FocusScope.of(context).unfocus();
+    
+    // Method 3: iOS-specific keyboard dismissal
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+    
+    // Method 4: Force keyboard dismissal with delay for iOS
+    Future.delayed(const Duration(milliseconds: 100), () {
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    });
+  }
+
   @override
   void dispose() {
     _firstNameController.dispose();
@@ -126,6 +165,22 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
     _provinceController.dispose();
     _postalCodeController.dispose();
     _countryController.dispose();
+    
+    // Dispose focus nodes
+    _firstNameFocusNode.dispose();
+    _lastNameFocusNode.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
+    _confirmPasswordFocusNode.dispose();
+    _phoneNumberFocusNode.dispose();
+    _licenseNumberFocusNode.dispose();
+    _yearsOfExperienceFocusNode.dispose();
+    _practiceLocationFocusNode.dispose();
+    _provinceFocusNode.dispose();
+    _cityFocusNode.dispose();
+    _addressFocusNode.dispose();
+    _postalCodeFocusNode.dispose();
+    
     _pageController.dispose();
     _animationController.dispose();
     super.dispose();
@@ -248,6 +303,9 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
     if (!_formKey.currentState!.validate() || !_validateLocationInfo()) {
       return;
     }
+
+    // Dismiss keyboard before processing
+    _dismissKeyboard();
 
     setState(() {
       _isLoading = true;
@@ -404,7 +462,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
   Widget _buildTabletLayout() {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
+      body: GestureDetector(
+        onTap: () {
+          // Dismiss keyboard when tapping outside of text fields
+          FocusScope.of(context).unfocus();
+        },
+        child: SafeArea(
         child: Row(
           children: [
             // Left side - Hero section
@@ -657,6 +720,7 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
             ),
           ],
         ),
+        ),
       ),
     );
   }
@@ -676,41 +740,46 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           style: TextStyle(color: AppTheme.textColor),
         ),
       ),
-      body: Column(
-        children: [
-          // Progress Indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Column(
-              children: [
-                Row(
-                  children: List.generate(_totalSteps, (index) {
-                    final isActive = index <= _currentStep;
-                    final isCompleted = index < _currentStep;
-                    
-                    return Expanded(
-                      child: Container(
-                        margin: EdgeInsets.only(right: index < _totalSteps - 1 ? 8 : 0),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: isCompleted 
-                                    ? AppTheme.successColor
-                                    : isActive 
-                                        ? AppTheme.primaryColor
-                                        : AppTheme.borderColor,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: isCompleted
-                                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                                  : Center(
-                                      child: Text(
-                                        '${index + 1}',
-                                        style: TextStyle(
-                                          color: isActive ? Colors.white : AppTheme.secondaryColor,
+      body: GestureDetector(
+        onTap: () {
+          // Dismiss keyboard when tapping outside of text fields
+          FocusScope.of(context).unfocus();
+        },
+        child: Column(
+          children: [
+            // Progress Indicator
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                children: [
+                  Row(
+                    children: List.generate(_totalSteps, (index) {
+                      final isActive = index <= _currentStep;
+                      final isCompleted = index < _currentStep;
+                      
+                      return Expanded(
+                        child: Container(
+                          margin: EdgeInsets.only(right: index < _totalSteps - 1 ? 8 : 0),
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: isCompleted 
+                                      ? AppTheme.successColor
+                                      : isActive 
+                                          ? AppTheme.primaryColor
+                                          : AppTheme.borderColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: isCompleted
+                                    ? const Icon(Icons.check, color: Colors.white, size: 16)
+                                    : Center(
+                                        child: Text(
+                                          '${index + 1}',
+                                          style: TextStyle(
+                                            color: isActive ? Colors.white : AppTheme.secondaryColor,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
                                         ),
@@ -795,6 +864,7 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -826,7 +896,11 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
                 // First Name
                 TextFormField(
                   controller: _firstNameController,
+                  focusNode: _firstNameFocusNode,
                   textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(_lastNameFocusNode);
+                  },
                   decoration: const InputDecoration(
                     labelText: 'First Name *',
                     hintText: 'Enter your first name',
@@ -838,7 +912,11 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
                 // Last Name
                 TextFormField(
                   controller: _lastNameController,
+                  focusNode: _lastNameFocusNode,
                   textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(_emailFocusNode);
+                  },
                   decoration: const InputDecoration(
                     labelText: 'Last Name *',
                     hintText: 'Enter your last name',
@@ -850,8 +928,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
                 // Email
                 TextFormField(
                   controller: _emailController,
+                  focusNode: _emailFocusNode,
                   keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(_phoneNumberFocusNode);
+                  },
                   decoration: const InputDecoration(
                     labelText: 'Email Address *',
               hintText: 'Enter your professional email',
@@ -863,8 +945,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           // Phone Number
               TextFormField(
             controller: _phoneNumberController,
+            focusNode: _phoneNumberFocusNode,
             keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) {
+                  FocusScope.of(context).requestFocus(_passwordFocusNode);
+                },
                 decoration: const InputDecoration(
               labelText: 'Phone Number *',
               hintText: 'Enter your contact number',
@@ -876,8 +962,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           // Password
               TextFormField(
             controller: _passwordController,
+            focusNode: _passwordFocusNode,
             obscureText: !_passwordVisible,
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) {
+                  FocusScope.of(context).requestFocus(_confirmPasswordFocusNode);
+                },
             decoration: InputDecoration(
               labelText: 'Password *',
               hintText: 'Create a secure password',
@@ -897,8 +987,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           // Confirm Password
               TextFormField(
             controller: _confirmPasswordController,
+            focusNode: _confirmPasswordFocusNode,
             obscureText: !_confirmPasswordVisible,
                 textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) {
+                  FocusScope.of(context).unfocus();
+                },
             decoration: InputDecoration(
               labelText: 'Confirm Password *',
               hintText: 'Confirm your password',
@@ -945,7 +1039,11 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           // License Number
                 TextFormField(
             controller: _licenseNumberController,
+            focusNode: _licenseNumberFocusNode,
                   textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(_yearsOfExperienceFocusNode);
+                  },
                   decoration: const InputDecoration(
               labelText: 'License Number *',
               hintText: 'Enter your professional license number',
@@ -979,8 +1077,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           // Years of Experience
                 TextFormField(
             controller: _yearsOfExperienceController,
+            focusNode: _yearsOfExperienceFocusNode,
             keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(_practiceLocationFocusNode);
+                  },
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: const InputDecoration(
               labelText: 'Years of Experience *',
@@ -993,7 +1095,11 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           // Practice Location
                 TextFormField(
             controller: _practiceLocationController,
+            focusNode: _practiceLocationFocusNode,
                   textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).unfocus();
+                  },
             maxLines: 2,
                   decoration: const InputDecoration(
               labelText: 'Practice Location *',
@@ -1061,7 +1167,11 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           // Province/State
               TextFormField(
             controller: _provinceController,
+            focusNode: _provinceFocusNode,
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) {
+                  FocusScope.of(context).requestFocus(_cityFocusNode);
+                },
                 decoration: const InputDecoration(
               labelText: 'Province/State *',
               hintText: 'Enter your province or state',
@@ -1073,7 +1183,11 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           // City
               TextFormField(
             controller: _cityController,
+            focusNode: _cityFocusNode,
                 textInputAction: TextInputAction.next,
+                onFieldSubmitted: (_) {
+                  FocusScope.of(context).requestFocus(_addressFocusNode);
+                },
                 decoration: const InputDecoration(
               labelText: 'City *',
               hintText: 'Enter your city',
@@ -1085,7 +1199,11 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           // Address
           TextFormField(
             controller: _addressController,
+            focusNode: _addressFocusNode,
             textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) {
+              FocusScope.of(context).requestFocus(_postalCodeFocusNode);
+            },
             maxLines: 2,
             decoration: const InputDecoration(
               labelText: 'Address *',
@@ -1098,7 +1216,11 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
           // Postal Code
               TextFormField(
             controller: _postalCodeController,
+            focusNode: _postalCodeFocusNode,
                 textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) {
+                  FocusScope.of(context).unfocus();
+                },
                 decoration: const InputDecoration(
               labelText: 'Postal Code *',
               hintText: 'Enter your postal code',

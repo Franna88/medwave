@@ -4,13 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 import '../../providers/patient_provider.dart';
 import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/localization.dart';
 import '../../utils/id_validation.dart';
 import '../../widgets/signature_pad.dart';
+import '../../widgets/pmb_chip_selector.dart';
 import '../../services/firebase/patient_service.dart';
+import '../../services/storage_test_service.dart';
 
 class AddPatientScreen extends StatefulWidget {
   const AddPatientScreen({super.key});
@@ -65,6 +68,9 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   
   // Enhanced Medical History Details (for AI report generation)
   final Map<String, String> _detailedMedicalConditions = {};
+  
+  // PMB Conditions
+  List<String> _selectedPMBConditions = [];
 
   // Signature pads
   final GlobalKey _accountSignatureKey = GlobalKey();
@@ -82,6 +88,108 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   void initState() {
     super.initState();
     AppLocalizations.setLanguage(_currentLanguage);
+  }
+  
+
+  /// Test photo URL accessibility
+  Future<void> _testPhotoUrls() async {
+    try {
+      final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+      final patients = patientProvider.patients;
+      
+      for (final patient in patients.take(2)) { // Test first 2 patients
+        print('🔍 Testing photos for patient: ${patient.surname}');
+        final sessions = await patientProvider.getPatientSessions(patient.id);
+        
+        for (final session in sessions) {
+          print('📋 Session ${session.sessionNumber} has ${session.photos.length} photos');
+          for (int i = 0; i < session.photos.length; i++) {
+            final photoUrl = session.photos[i];
+            print('🔗 Testing URL: $photoUrl');
+            
+            // Try to make a simple HTTP request to test accessibility
+            try {
+              final response = await http.head(Uri.parse(photoUrl));
+              print('✅ URL accessible: ${response.statusCode}');
+            } catch (e) {
+              print('❌ URL failed: $e');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('❌ Photo URL test failed: $e');
+    }
+  }
+
+  /// Run storage connectivity test for debugging
+  Future<void> _runStorageTest() async {
+    print('🚀 Starting Firebase Storage connectivity test...');
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        title: Text('Testing Storage...'),
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Running diagnostics...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final results = await StorageTestService.runStorageConnectivityTest();
+      StorageTestService.printTestResults(results);
+      
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        // Show results dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Storage Test Results'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Authentication: ${results['authentication']?['status'] ?? 'UNKNOWN'}'),
+                  Text('Bucket Config: ${results['bucket_config']?['status'] ?? 'UNKNOWN'}'),
+                  Text('Read Permission: ${results['read_permission']?['status'] ?? 'UNKNOWN'}'),
+                  Text('Write Permission: ${results['write_permission']?['status'] ?? 'UNKNOWN'}'),
+                  const SizedBox(height: 8),
+                  const Text('Check console for detailed results.', 
+                            style: TextStyle(fontStyle: FontStyle.italic)),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Storage test failed: $e');
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Storage test failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -115,6 +223,18 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           onPressed: () => context.pop(),
         ),
         actions: [
+          // Photo URL test button (for debugging)
+          IconButton(
+            icon: const Icon(Icons.photo_library),
+            onPressed: _testPhotoUrls,
+            tooltip: 'Test Photo URLs',
+          ),
+          // Storage test button (for debugging)
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: _runStorageTest,
+            tooltip: 'Test Storage Connectivity',
+          ),
           // Language toggle
           PopupMenuButton<Language>(
             icon: const Icon(Icons.language),
@@ -137,29 +257,35 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _buildProgressIndicator(),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (page) {
-                setState(() {
-                  _currentPage = page;
-                });
-              },
-              children: [
-                _buildPatientDetailsPage(),
-                _buildResponsiblePersonPage(),
-                _buildMedicalAidPage(),
-                _buildMedicalHistoryPage(),
-                _buildConsentPage(),
-                _buildConfirmationPage(),
+      body: GestureDetector(
+        onTap: () {
+          // Dismiss keyboard when tapping outside of text fields
+          FocusScope.of(context).unfocus();
+        },
+        child: Column(
+          children: [
+            _buildProgressIndicator(),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (page) {
+                  setState(() {
+                    _currentPage = page;
+                  });
+                },
+                children: [
+                  _buildPatientDetailsPage(),
+                  _buildResponsiblePersonPage(),
+                  _buildMedicalAidPage(),
+                  _buildMedicalHistoryPage(),
+                  _buildConsentPage(),
+                  _buildConfirmationPage(),
               ],
             ),
           ),
           _buildNavigationButtons(),
         ],
+        ),
       ),
     );
   }
@@ -367,6 +493,12 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   _maritalStatus = value;
                 });
               },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return '${AppLocalizations.get('marital_status')} ${AppLocalizations.get('required')}';
+                }
+                return null;
+              },
             ),
           ],
         ),
@@ -553,6 +685,26 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           
           // Medical conditions checkboxes
           ..._medicalConditions.keys.map((condition) => _buildMedicalConditionTile(condition)),
+          
+          const SizedBox(height: 32),
+          
+          // PMB Conditions Section
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+            ),
+            child: PMBChipSelector(
+              selectedConditionIds: _selectedPMBConditions,
+              onSelectionChanged: (selectedIds) {
+                setState(() {
+                  _selectedPMBConditions = selectedIds;
+                });
+              },
+            ),
+          ),
           
           const SizedBox(height: 24),
           
@@ -1209,14 +1361,19 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
 
 
   Future<void> _submitForm() async {
+    print('🚀 SUBMIT DEBUG: _submitForm() started');
+    
     if (!_validateCurrentPage()) {
+      print('❌ SUBMIT DEBUG: Validation failed, exiting');
       return;
     }
 
+    print('✅ SUBMIT DEBUG: Validation passed, proceeding');
     final patientProvider = context.read<PatientProvider>();
     final now = DateTime.now();
 
     try {
+      print('🎬 SUBMIT DEBUG: Showing loading dialog...');
       // Show loading dialog
       showDialog(
         context: context,
@@ -1232,6 +1389,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           ),
         ),
       );
+      print('✅ SUBMIT DEBUG: Loading dialog shown successfully');
 
       // Note: Wound data will be collected during Patient Case History (first session)
 
@@ -1265,6 +1423,9 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       String? woundConsentSignatureUrl;
       String? witnessSignatureUrl;
 
+      print('📝 SUBMIT DEBUG: Preparing signature upload for patient ID: $tempPatientId');
+      print('📊 SUBMIT DEBUG: Signature count to upload: ${signatureBytes.length}');
+      
       if (signatureBytes.isNotEmpty) {
         print('🖋️ FORM DEBUG: Uploading signatures...');
         final uploadResults = await PatientService.uploadSignatureBytes(tempPatientId, signatureBytes);
@@ -1274,6 +1435,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         witnessSignatureUrl = uploadResults['witness'];
         
         print('✅ FORM DEBUG: Signatures uploaded successfully');
+        print('📋 SUBMIT DEBUG: Signature URLs received: ${uploadResults.keys.toList()}');
       } else {
         print('⚠️ FORM DEBUG: No signatures to upload');
       }
@@ -1320,6 +1482,9 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       allergies: _allergiesController.text.isEmpty ? null : _allergiesController.text,
       isSmoker: _isSmoker,
       
+      // PMB Conditions
+      pmbConditionIds: _selectedPMBConditions,
+      
       // Enhanced Wound History (will be collected in Patient Case History)
       woundStartDate: null,
       woundOccurrence: null,
@@ -1349,46 +1514,95 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     );
 
       print('🏥 FORM DEBUG: Creating patient record...');
+      print('🔄 SUBMIT DEBUG: Calling patientProvider.addPatient()...');
+      
       await patientProvider.addPatient(patient);
+      
       print('✅ FORM DEBUG: Patient created successfully');
+      print('✅ SUBMIT DEBUG: patientProvider.addPatient() completed');
       
       if (mounted) {
         print('📱 FORM DEBUG: Dismissing loading dialog and navigating...');
+        print('🎭 SUBMIT DEBUG: Component is still mounted, proceeding with dialog dismissal');
+        
+        // Ensure we close the loading dialog first
+        print('🔚 SUBMIT DEBUG: About to call Navigator.pop() to close loading dialog');
+        
+        // Try to close the loading dialog using rootNavigator to ensure it's dismissed
         try {
-          Navigator.of(context).pop(); // Close loading dialog
-          print('✅ FORM DEBUG: Loading dialog dismissed');
+          Navigator.of(context, rootNavigator: true).pop(); // Close loading dialog using root navigator
+          print('✅ FORM DEBUG: Loading dialog dismissed using rootNavigator');
         } catch (e) {
-          print('⚠️ FORM DEBUG: Error dismissing dialog: $e');
+          print('⚠️ SUBMIT DEBUG: Root navigator pop failed, trying regular navigator');
+          Navigator.of(context).pop(); // Fallback to regular navigator
+          print('✅ FORM DEBUG: Loading dialog dismissed using regular navigator');
         }
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Patient registration completed! Case history will be collected at first visit.'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        print('✅ SUBMIT DEBUG: Navigator.pop() completed');
         
-        // Add small delay to ensure dialog is dismissed before navigation
-        await Future.delayed(const Duration(milliseconds: 100));
+        // Add a small delay to ensure dialog is fully dismissed
+        print('⏰ SUBMIT DEBUG: Waiting 200ms for dialog dismissal...');
+        await Future.delayed(const Duration(milliseconds: 200));
+        print('✅ SUBMIT DEBUG: Delay completed');
         
         if (mounted) {
-          // Ensure loading state is reset before navigation
+          print('🎭 SUBMIT DEBUG: Component still mounted after delay, continuing');
+          
+          // Reset loading state immediately
+          print('🔄 SUBMIT DEBUG: Resetting patient provider loading state...');
           patientProvider.resetLoadingState();
-          context.go('/patients');
-          print('🏠 FORM DEBUG: Navigation completed');
+          print('✅ SUBMIT DEBUG: Loading state reset completed');
+          
+        print('🎪 SUBMIT DEBUG: About to navigate with success message...');
+        
+        // Force close any remaining dialogs before navigation
+        print('🔚 SUBMIT DEBUG: Force dismissing any remaining dialogs before navigation...');
+        while (Navigator.of(context, rootNavigator: true).canPop()) {
+          Navigator.of(context, rootNavigator: true).pop();
         }
+        
+        // Small delay to ensure all dialogs are fully closed
+        await Future.delayed(const Duration(milliseconds: 50));
+        
+        // Navigate immediately with a success parameter that the patients screen can detect
+        print('🧭 SUBMIT DEBUG: About to navigate to /patients immediately');
+        context.go('/patients?success=patient_created');
+        print('✅ SUBMIT DEBUG: Navigation completed successfully');
+        } else {
+          print('❌ SUBMIT DEBUG: Component not mounted after delay, skipping further steps');
+        }
+      } else {
+        print('❌ SUBMIT DEBUG: Component not mounted after patient creation, skipping dialog dismissal');
       }
     } catch (e) {
       print('❌ FORM DEBUG: Error creating patient: $e');
+      print('💥 SUBMIT DEBUG: Exception caught: ${e.toString()}');
+      print('📍 SUBMIT DEBUG: Stack trace: ${StackTrace.current}');
+      
       if (mounted) {
+        print('🎭 SUBMIT DEBUG: Component mounted during error handling');
+        // Ensure loading dialog is closed
+        print('🔚 SUBMIT DEBUG: About to close loading dialog in error handler');
         Navigator.of(context).pop(); // Close loading dialog
+        print('✅ SUBMIT DEBUG: Loading dialog closed in error handler');
+        
+        // Reset loading state
+        print('🔄 SUBMIT DEBUG: Resetting loading state in error handler');
+        patientProvider.resetLoadingState();
+        print('✅ SUBMIT DEBUG: Loading state reset in error handler');
+        
+        print('📢 SUBMIT DEBUG: Showing error snackbar');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error creating patient: $e'),
             backgroundColor: Colors.red,
           ),
         );
+        print('✅ SUBMIT DEBUG: Error snackbar shown');
+      } else {
+        print('❌ SUBMIT DEBUG: Component not mounted during error handling');
       }
     }
+    print('🏁 SUBMIT DEBUG: _submitForm() completed');
   }
 }

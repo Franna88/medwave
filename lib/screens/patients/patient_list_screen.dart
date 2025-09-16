@@ -10,7 +10,9 @@ import '../../theme/app_theme.dart';
 import '../../widgets/responsive_patient_list.dart';
 
 class PatientListScreen extends StatefulWidget {
-  const PatientListScreen({super.key});
+  final String? successMessage;
+  
+  const PatientListScreen({super.key, this.successMessage});
 
   @override
   State<PatientListScreen> createState() => _PatientListScreenState();
@@ -37,6 +39,39 @@ class _PatientListScreenState extends State<PatientListScreen>
     // Initialize patient loading
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PatientProvider>().loadPatients();
+      
+      // Show success message if present
+      if (widget.successMessage == 'patient_created') {
+        _showSuccessMessage();
+      }
+    });
+  }
+
+  void _showSuccessMessage() {
+    // Add a delay to ensure the screen is fully loaded
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            icon: const Icon(Icons.check_circle, color: Colors.green, size: 48),
+            title: const Text('Patient Created Successfully!'),
+            content: const Text(
+              'The new patient has been added to your patient list. You can now start their first session to complete their case history.',
+              style: TextStyle(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close success dialog
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
     });
   }
 

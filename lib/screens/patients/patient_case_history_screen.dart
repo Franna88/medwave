@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,12 +28,23 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
   final _weightController = TextEditingController();
   final _vasScoreController = TextEditingController();
   
+  // Focus nodes for keyboard management
+  final _weightFocusNode = FocusNode();
+  final _vasScoreFocusNode = FocusNode();
+  
   // Wound Assessment Controllers
   final _woundLocationController = TextEditingController();
   final _woundLengthController = TextEditingController();
   final _woundWidthController = TextEditingController();
   final _woundDepthController = TextEditingController();
   final _woundDescriptionController = TextEditingController();
+  
+  // Focus nodes for wound assessment
+  final _woundLocationFocusNode = FocusNode();
+  final _woundLengthFocusNode = FocusNode();
+  final _woundWidthFocusNode = FocusNode();
+  final _woundDepthFocusNode = FocusNode();
+  final _woundDescriptionFocusNode = FocusNode();
   WoundStage _selectedWoundStage = WoundStage.stage1;
   String _selectedWoundType = 'Pressure Ulcer';
   
@@ -40,6 +52,11 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
   final _woundHistoryController = TextEditingController();
   final _woundOccurrenceController = TextEditingController();
   final _previousTreatmentsController = TextEditingController();
+  
+  // Focus nodes for wound history
+  final _woundHistoryFocusNode = FocusNode();
+  final _woundOccurrenceFocusNode = FocusNode();
+  final _previousTreatmentsFocusNode = FocusNode();
   DateTime? _woundStartDate;
   String _selectedWoundOccurrence = 'Chronic condition (diabetes, vascular disease)';
 
@@ -53,6 +70,26 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
   void initState() {
     super.initState();
     _loadPatientData();
+  }
+
+  // Enhanced keyboard dismissal for iOS compatibility
+  void _dismissKeyboard() {
+    // Method 1: Unfocus current focus
+    final currentFocus = FocusScope.of(context);
+    if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+      currentFocus.focusedChild!.unfocus();
+    }
+    
+    // Method 2: Unfocus the entire scope
+    FocusScope.of(context).unfocus();
+    
+    // Method 3: iOS-specific keyboard dismissal
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+    
+    // Method 4: Force keyboard dismissal with delay for iOS
+    Future.delayed(const Duration(milliseconds: 100), () {
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    });
   }
 
   void _loadPatientData() async {
@@ -79,6 +116,19 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
     _woundHistoryController.dispose();
     _woundOccurrenceController.dispose();
     _previousTreatmentsController.dispose();
+    
+    // Dispose focus nodes
+    _weightFocusNode.dispose();
+    _vasScoreFocusNode.dispose();
+    _woundLocationFocusNode.dispose();
+    _woundLengthFocusNode.dispose();
+    _woundWidthFocusNode.dispose();
+    _woundDepthFocusNode.dispose();
+    _woundDescriptionFocusNode.dispose();
+    _woundHistoryFocusNode.dispose();
+    _woundOccurrenceFocusNode.dispose();
+    _previousTreatmentsFocusNode.dispose();
+    
     super.dispose();
   }
 
@@ -90,9 +140,14 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: Column(
+    return GestureDetector(
+      onTap: _dismissKeyboard,
+      onPanDown: (_) => _dismissKeyboard(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        resizeToAvoidBottomInset: true,
+        body: Column(
         children: [
           _buildModernHeader(),
           _buildProgressIndicator(),
@@ -114,6 +169,7 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
           ),
           _buildNavigationButtons(),
         ],
+        ),
       ),
     );
   }
@@ -1084,11 +1140,35 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
             child: ElevatedButton(
               onPressed: _currentPage == 3 ? _submitCaseHistory : _nextPage,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: _currentPage == 3 ? AppTheme.primaryColor : AppTheme.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: _currentPage == 3 ? 4 : 2,
+                shadowColor: AppTheme.primaryColor.withOpacity(0.3),
               ),
-              child: Text(_currentPage == 3 ? 'Complete Case History' : 'Next'),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_currentPage == 3) ...[
+                    const Icon(Icons.check_circle_outline, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    _currentPage == 3 ? 'Complete Case History' : 'Next',
+                    style: TextStyle(
+                      fontSize: _currentPage == 3 ? 16 : 14,
+                      fontWeight: _currentPage == 3 ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                  if (_currentPage != 3) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward, size: 18),
+                  ],
+                ],
+              ),
             ),
           ),
         ],
@@ -1260,8 +1340,8 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
           ),
         );
         
-        // Navigate back to patient profile
-        context.pop();
+        // Navigate back to patient profile (go back 2 levels: case-history -> wound-selection -> patient-profile)
+        context.go('/patients/${widget.patientId}');
       }
     } catch (e) {
       print('Error creating case history: $e');

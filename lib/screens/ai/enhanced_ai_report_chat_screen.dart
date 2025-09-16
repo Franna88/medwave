@@ -600,7 +600,15 @@ class _EnhancedAIReportChatScreenState extends State<EnhancedAIReportChatScreen>
   void _generateReport() async {
     setState(() {
       _isGeneratingReport = true;
+      // Add loading message immediately
+      _messages.add(AIMessage(
+        content: 'Report is being generated... Please wait while I create your ${_isMultiWound ? 'comprehensive multi-wound' : ''} clinical motivation letter.',
+        isBot: true,
+        timestamp: DateTime.now(),
+      ));
     });
+
+    _scrollToBottom();
 
     try {
       // Extract clinical data from conversation

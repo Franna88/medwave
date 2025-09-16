@@ -43,3 +43,62 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase & Google Services - SENSITIVE DATA
+google-services.json
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+firebase_options.dart
+/lib/firebase_options.dart
+
+# Firebase Admin SDK Keys - HIGHLY SENSITIVE
+*firebase-adminsdk*
+/scripts/firebase-key.json
+bhl-obe-firebase-adminsdk-*.json
+
+# Local Configuration - SENSITIVE
+/android/key.properties
+/android/local.properties
+/ios/firebase_app_id_file.json
+
+# User Data & Test Data - SENSITIVE
+/users.json
+test_users.json
+patient_data.json
+
+# Environment Variables
+.env*
+*.env
+
+# API Keys and Secrets
+config/secrets.dart
+lib/config/secrets.dart
+lib/config/api_keys.dart
+api_keys.dart
+
+# Local Database Files
+*.db
+*.sqlite
+*.sqlite3
+
+# Certificates and Keys
+*.p12
+*.mobileprovision
+*.cer
+*.certSigningRequest
+*.p8
+*.pem
+keystore.jks
+key.jks
+release-key.jks
+
+# Fastlane
+ios/fastlane/report.xml
+android/fastlane/report.xml
+ios/fastlane/Preview.html
+android/fastlane/Preview.html
+
+# Temporary and Cache Files
+.flutter-plugins-dependencies
+.packages
+.dart_tool/package_config.json

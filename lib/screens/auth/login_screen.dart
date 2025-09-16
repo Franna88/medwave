@@ -18,6 +18,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   
+  // Focus nodes for better keyboard management
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
+  
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   bool _rememberMe = false;
@@ -53,16 +57,41 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _animationController.forward();
   }
 
+  // Enhanced keyboard dismissal for iOS compatibility
+  void _dismissKeyboard() {
+    // Method 1: Unfocus current focus
+    final currentFocus = FocusScope.of(context);
+    if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+      currentFocus.focusedChild!.unfocus();
+    }
+    
+    // Method 2: Unfocus the entire scope
+    FocusScope.of(context).unfocus();
+    
+    // Method 3: iOS-specific keyboard dismissal
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+    
+    // Method 4: Force keyboard dismissal with delay for iOS
+    Future.delayed(const Duration(milliseconds: 100), () {
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    });
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     _animationController.dispose();
     super.dispose();
   }
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Dismiss keyboard before processing
+    _dismissKeyboard();
 
     setState(() {
       _isLoading = true;
@@ -115,13 +144,16 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   Widget _buildTabletLayout() {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
-        child: Row(
-          children: [
-            // Left side - Hero section
-            Expanded(
-              flex: 3,
-              child: Container(
+      body: GestureDetector(
+        onTap: _dismissKeyboard,
+        behavior: HitTestBehavior.opaque,
+        child: SafeArea(
+          child: Row(
+            children: [
+              // Left side - Hero section
+              Expanded(
+                flex: 3,
+                child: Container(
                 padding: const EdgeInsets.all(48),
                 child: SingleChildScrollView(
                   child: Column(
@@ -283,8 +315,13 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                               // Email Field
                               TextFormField(
                                 controller: _emailController,
+                                focusNode: _emailFocusNode,
                                 keyboardType: TextInputType.emailAddress,
                                 textInputAction: TextInputAction.next,
+                                onFieldSubmitted: (_) {
+                                  // Move focus to password field when "next" is pressed
+                                  FocusScope.of(context).requestFocus(_passwordFocusNode);
+                                },
                                 decoration: InputDecoration(
                                   labelText: 'Email Address',
                                   hintText: 'Enter your email',
@@ -318,8 +355,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                               // Password Field
                               TextFormField(
                                 controller: _passwordController,
+                                focusNode: _passwordFocusNode,
                                 obscureText: !_isPasswordVisible,
                                 textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) {
+                                  // Dismiss keyboard and attempt login when "done" is pressed
+                                  _dismissKeyboard();
+                                  if (!_isLoading) _handleLogin();
+                                },
                                 decoration: InputDecoration(
                                   labelText: 'Password',
                                   hintText: 'Enter your password',
@@ -511,19 +554,23 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           ],
         ),
       ),
+    )
     );
   }
 
   Widget _buildMobileLayout() {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Container(
-            height: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
+      body: GestureDetector(
+        onTap: _dismissKeyboard,
+        behavior: HitTestBehavior.opaque,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Container(
+              height: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top,
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
                 const SizedBox(height: 40),
                 
                 // Logo and Welcome Section
@@ -593,8 +640,13 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           // Email Field
                           TextFormField(
                             controller: _emailController,
+                            focusNode: _emailFocusNode,
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
+                            onFieldSubmitted: (_) {
+                              // Move focus to password field when "next" is pressed
+                              FocusScope.of(context).requestFocus(_passwordFocusNode);
+                            },
                             decoration: InputDecoration(
                               labelText: 'Email Address',
                               hintText: 'Enter your email',
@@ -628,8 +680,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           // Password Field
                           TextFormField(
                             controller: _passwordController,
+                            focusNode: _passwordFocusNode,
                             obscureText: !_isPasswordVisible,
                             textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) {
+                              // Dismiss keyboard and attempt login when "done" is pressed
+                              FocusScope.of(context).unfocus();
+                              if (!_isLoading) _handleLogin();
+                            },
                             decoration: InputDecoration(
                               labelText: 'Password',
                               hintText: 'Enter your password',
@@ -862,7 +920,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     ),
                   ),
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../providers/patient_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
 import '../../services/firebase/session_service.dart';
@@ -26,6 +26,11 @@ class _MultiWoundSessionLoggingScreenState extends State<MultiWoundSessionLoggin
   final _weightController = TextEditingController();
   final _vasScoreController = TextEditingController();
   final _notesController = TextEditingController();
+  
+  // Focus nodes for better keyboard management
+  final _weightFocusNode = FocusNode();
+  final _vasScoreFocusNode = FocusNode();
+  final _notesFocusNode = FocusNode();
 
   Patient? _patient;
   List<Session> _previousSessions = [];
@@ -40,6 +45,26 @@ class _MultiWoundSessionLoggingScreenState extends State<MultiWoundSessionLoggin
   void initState() {
     super.initState();
     _loadPatientData();
+  }
+
+  // Enhanced keyboard dismissal for iOS compatibility
+  void _dismissKeyboard() {
+    // Method 1: Unfocus current focus
+    final currentFocus = FocusScope.of(context);
+    if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+      currentFocus.focusedChild!.unfocus();
+    }
+    
+    // Method 2: Unfocus the entire scope
+    FocusScope.of(context).unfocus();
+    
+    // Method 3: iOS-specific keyboard dismissal
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
+    
+    // Method 4: Force keyboard dismissal with delay for iOS
+    Future.delayed(const Duration(milliseconds: 100), () {
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    });
   }
 
   Future<void> _loadPatientData() async {
@@ -110,6 +135,12 @@ class _MultiWoundSessionLoggingScreenState extends State<MultiWoundSessionLoggin
     _weightController.dispose();
     _vasScoreController.dispose();
     _notesController.dispose();
+    
+    // Dispose focus nodes
+    _weightFocusNode.dispose();
+    _vasScoreFocusNode.dispose();
+    _notesFocusNode.dispose();
+    
     super.dispose();
   }
 
@@ -124,36 +155,38 @@ class _MultiWoundSessionLoggingScreenState extends State<MultiWoundSessionLoggin
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: Column(
-        children: [
-          _buildModernHeader(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSessionInfoCard(),
-                    const SizedBox(height: 16),
-                    _buildMeasurementsCard(),
-                    const SizedBox(height: 16),
-                    _buildMultiWoundAssessmentCard(),
-                    const SizedBox(height: 16),
-                    _buildSessionPhotosCard(),
-                    const SizedBox(height: 16),
-                    _buildNotesCard(),
-                    const SizedBox(height: 24),
-                    _buildSubmitButton(),
-                    const SizedBox(height: 16),
-                    _buildMotivationFormButton(),
-                  ],
+      body: GestureDetector(
+        onTap: _dismissKeyboard,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          children: [
+            _buildModernHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSessionInfoCard(),
+                      const SizedBox(height: 16),
+                      _buildMeasurementsCard(),
+                      const SizedBox(height: 16),
+                      _buildMultiWoundAssessmentCard(),
+                      const SizedBox(height: 16),
+                      _buildSessionPhotosCard(),
+                      const SizedBox(height: 16),
+                      _buildNotesCard(),
+                      const SizedBox(height: 24),
+                      _buildSubmitButton(),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -489,12 +522,17 @@ class _MultiWoundSessionLoggingScreenState extends State<MultiWoundSessionLoggin
               Expanded(
                 child: TextFormField(
                   controller: _weightController,
+                  focusNode: _weightFocusNode,
                   decoration: const InputDecoration(
                     labelText: 'Weight (kg) *',
                     prefixIcon: Icon(Icons.monitor_weight),
                     suffixText: 'kg',
                   ),
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(_vasScoreFocusNode);
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Required';
@@ -511,12 +549,17 @@ class _MultiWoundSessionLoggingScreenState extends State<MultiWoundSessionLoggin
               Expanded(
                 child: TextFormField(
                   controller: _vasScoreController,
+                  focusNode: _vasScoreFocusNode,
                   decoration: const InputDecoration(
                     labelText: 'VAS Score *',
                     prefixIcon: Icon(Icons.healing),
                     suffixText: '/10',
                   ),
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) {
+                    FocusScope.of(context).requestFocus(_notesFocusNode);
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Required';
@@ -787,12 +830,17 @@ class _MultiWoundSessionLoggingScreenState extends State<MultiWoundSessionLoggin
           const SizedBox(height: 20),
           TextFormField(
             controller: _notesController,
+            focusNode: _notesFocusNode,
             decoration: const InputDecoration(
               labelText: 'Session Notes',
               hintText: 'Record any observations, treatments, or changes...',
               alignLabelWithHint: true,
             ),
             maxLines: 4,
+            textInputAction: TextInputAction.done,
+            onFieldSubmitted: (_) {
+              FocusScope.of(context).unfocus();
+            },
           ),
         ],
       ),
@@ -929,78 +977,6 @@ class _MultiWoundSessionLoggingScreenState extends State<MultiWoundSessionLoggin
     );
   }
 
-  Widget _buildMotivationFormButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () async {
-          // First save the session, then navigate to AI chat
-          if (_patient == null) return;
-          
-          try {
-            // Create session object
-            final session = Session(
-              id: '', // Will be set by Firestore
-              patientId: widget.patientId,
-              sessionNumber: _previousSessions.length + 1,
-              date: DateTime.now(),
-              weight: double.tryParse(_weightController.text) ?? _patient!.baselineWeight,
-              vasScore: int.tryParse(_vasScoreController.text) ?? 0,
-              notes: _notesController.text,
-              wounds: _currentWoundsData.map((data) => Wound(
-                id: data.id,
-                location: data.location,
-                type: data.type,
-                stage: data.stage,
-                length: data.length,
-                width: data.width,
-                depth: data.depth,
-                photos: data.photos,
-                description: data.description,
-                assessedAt: DateTime.now(),
-              )).toList(),
-              photos: _sessionPhotos,
-              practitionerId: context.read<AuthProvider>().user?.uid ?? '',
-            );
-            
-            // Save session to get ID
-            final savedSessionId = await SessionService.createSession(widget.patientId, session);
-            
-            // Create session object with the returned ID for navigation
-            final savedSession = session.copyWith(id: savedSessionId);
-            
-            // Navigate to Enhanced AI Report Chat
-            if (mounted) {
-              context.push(
-                '/patients/${widget.patientId}/sessions/$savedSessionId/enhanced-ai-chat',
-                extra: {
-                  'patient': _patient,
-                  'session': savedSession,
-                },
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error creating session: $e'),
-                  backgroundColor: AppTheme.errorColor,
-                ),
-              );
-            }
-          }
-        },
-        icon: const Icon(Icons.psychology),
-        label: const Text('Generate AI Report'),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
-    );
-  }
 
   Future<void> _pickImage(ImageSource source) async {
     try {

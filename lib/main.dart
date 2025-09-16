@@ -198,7 +198,10 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         GoRoute(
           path: '/patients',
           name: 'patients',
-          builder: (context, state) => const PatientListScreen(),
+          builder: (context, state) {
+            final successMessage = state.uri.queryParameters['success'];
+            return PatientListScreen(successMessage: successMessage);
+          },
         ),
         GoRoute(
           path: '/reports',

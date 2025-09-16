@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../widgets/firebase_image.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../providers/patient_provider.dart';
 import '../../models/patient.dart';
@@ -3764,9 +3765,14 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
 
     // Add session photos from fetched sessions
     for (Session session in sessions) {
+      print('📷 PHOTO DEBUG: Session ${session.sessionNumber} has ${session.photos.length} photos');
       for (int i = 0; i < session.photos.length; i++) {
+        final photoUrl = session.photos[i];
+        print('📷 PHOTO DEBUG: Photo ${i + 1}: $photoUrl');
+        print('📷 PHOTO DEBUG: Photo URL starts with http: ${photoUrl.startsWith('http')}');
+        
         photoItems.add(PhotoItem(
-          photoPath: session.photos[i],
+          photoPath: photoUrl,
           type: PhotoType.session,
           timestamp: session.date,
           sessionNumber: session.sessionNumber,
@@ -3897,37 +3903,12 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(16),
                         ),
-                        child: photoItem.photoPath.startsWith('http')
-                            ? Image.network(
-                                photoItem.photoPath,
-                                width: double.infinity,
-                                height: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Center(
-                                    child: Icon(
-                                      Icons.broken_image,
-                                      size: 40,
-                                      color: AppTheme.errorColor,
-                                    ),
-                                  );
-                                },
-                              )
-                            : Image.file(
-                                File(photoItem.photoPath),
-                                width: double.infinity,
-                                height: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Center(
-                                    child: Icon(
-                                      Icons.broken_image,
-                                      size: 40,
-                                      color: AppTheme.errorColor,
-                                    ),
-                                  );
-                                },
-                              ),
+                        child: FirebaseImage(
+                          imagePath: photoItem.photoPath,
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                       // Type badge
                       Positioned(

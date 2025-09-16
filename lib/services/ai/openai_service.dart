@@ -2,11 +2,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../models/conversation_data.dart';
 import '../../models/icd10_code.dart';
+import '../../config/api_keys.dart';
 import 'icd10_service.dart';
 
 class OpenAIService {
   static const String _baseUrl = 'https://api.openai.com/v1';
-  static const String _apiKey = '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';
+  static const String _apiKey = ApiKeys.openaiApiKey;
   
   static const String _systemPrompt = '''
 You are an AI chatbot designed to assist wound care practitioners in South Africa with generating clinical motivation reports for medical aid claims. Your goal is to gather SESSION-SPECIFIC information through a conversational interview of 3-5 targeted questions, then use that data combined with existing patient data to compile a detailed report in the exact format of the provided example document. Make sure that you capture the nurses name to put into the Report and you don't want to say Sr. Rene Black, because other nurses might use this AI chat. The report must include relevant ICD-10 codes (primary, secondary, and external cause where applicable) extracted from the South African ICD-10 Master Industry Table (MIT, 2021 version), treatment codes (e.g., 88002 for wound debridement), and check for Prescribed Minimum Benefits (PMB) eligibility using the 2022 PMB ICD-10 Coded List from the Council for Medical Schemes.

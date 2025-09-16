@@ -3,13 +3,14 @@ import 'package:http/http.dart' as http;
 import '../../models/conversation_data.dart';
 import '../../models/icd10_code.dart';
 import '../../models/patient.dart';
+import '../../config/api_keys.dart';
 import '../wound_management_service.dart';
 import 'icd10_service.dart';
 import 'openai_service.dart';
 
 class MultiWoundAIService {
   static const String _baseUrl = 'https://api.openai.com/v1';
-  static const String _apiKey = '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';
+  static const String _apiKey = ApiKeys.openaiApiKey;
   
   /// Enhanced system prompt for multi-wound scenarios
   static String _buildMultiWoundSystemPrompt(Patient patient, Session session) {

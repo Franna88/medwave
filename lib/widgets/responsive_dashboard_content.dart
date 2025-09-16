@@ -425,7 +425,6 @@ class ResponsiveDashboardContent extends StatelessWidget {
     final totalPatients = patients.length;
     final improvingPatients = patients.where((p) => p.sessions.isNotEmpty && 
         p.woundHealingProgress != null && p.woundHealingProgress! > 0).length;
-    final totalSessions = patients.fold<int>(0, (sum, p) => sum + p.sessions.length);
     
     return Row(
       children: [
@@ -433,7 +432,7 @@ class ResponsiveDashboardContent extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(child: _buildStatCard('Improving', improvingPatients.toString(), Icons.trending_up, AppTheme.greenColor)),
         const SizedBox(width: 16),
-        Expanded(child: _buildStatCard('Total Sessions', totalSessions.toString(), Icons.assignment, AppTheme.pinkColor)),
+        Expanded(child: _buildStatCard('Total Sessions', patientProvider.totalSessionCount.toString(), Icons.assignment, AppTheme.pinkColor)),
         const SizedBox(width: 16),
         Expanded(child: _buildStatCard('This Month', '12', Icons.calendar_today, AppTheme.redColor)),
       ],
@@ -847,7 +846,7 @@ class ResponsiveDashboardContent extends StatelessWidget {
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: _buildStatCard('Sessions', '24', Icons.assignment, AppTheme.greenColor),
+          child: _buildStatCard('Sessions', patientProvider.totalSessionCount.toString(), Icons.assignment, AppTheme.greenColor),
         ),
       ],
     );

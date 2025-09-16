@@ -53,6 +53,9 @@ class Patient {
   final bool isSmoker;
   final String? naturalTreatments;
   
+  // PMB Conditions
+  final List<String> pmbConditionIds; // List of selected PMB condition IDs
+  
   // Enhanced Wound History (for AI report generation)
   final DateTime? woundStartDate;
   final String? woundOccurrence;
@@ -143,6 +146,8 @@ class Patient {
     this.allergies,
     required this.isSmoker,
     this.naturalTreatments,
+    // PMB Conditions
+    this.pmbConditionIds = const [],
     // Enhanced Wound History
     this.woundStartDate,
     this.woundOccurrence,
@@ -257,6 +262,7 @@ class Patient {
     String? allergies,
     bool? isSmoker,
     String? naturalTreatments,
+    List<String>? pmbConditionIds,
     DateTime? woundStartDate,
     String? woundOccurrence,
     String? woundOccurrenceDetails,
@@ -328,6 +334,7 @@ class Patient {
       allergies: allergies ?? this.allergies,
       isSmoker: isSmoker ?? this.isSmoker,
       naturalTreatments: naturalTreatments ?? this.naturalTreatments,
+      pmbConditionIds: pmbConditionIds ?? this.pmbConditionIds,
       woundStartDate: woundStartDate ?? this.woundStartDate,
       woundOccurrence: woundOccurrence ?? this.woundOccurrence,
       woundOccurrenceDetails: woundOccurrenceDetails ?? this.woundOccurrenceDetails,
@@ -402,6 +409,7 @@ class Patient {
       'allergies': allergies,
       'isSmoker': isSmoker,
       'naturalTreatments': naturalTreatments,
+      'pmbConditionIds': pmbConditionIds,
       'accountResponsibilitySignature': accountResponsibilitySignature,
       'accountResponsibilitySignatureDate': accountResponsibilitySignatureDate?.toIso8601String(),
       'woundPhotographyConsentSignature': woundPhotographyConsentSignature,
@@ -471,6 +479,7 @@ class Patient {
       allergies: json['allergies'],
       isSmoker: json['isSmoker'] ?? false,
       naturalTreatments: json['naturalTreatments'],
+      pmbConditionIds: List<String>.from(json['pmbConditionIds'] ?? []),
       accountResponsibilitySignature: json['accountResponsibilitySignature'],
       accountResponsibilitySignatureDate: json['accountResponsibilitySignatureDate'] != null 
           ? DateTime.parse(json['accountResponsibilitySignatureDate']) 
@@ -547,6 +556,7 @@ class Patient {
       'allergies': allergies,
       'isSmoker': isSmoker,
       'naturalTreatments': naturalTreatments,
+      'pmbConditionIds': pmbConditionIds,
       'accountResponsibilitySignature': accountResponsibilitySignature,
       'accountResponsibilitySignatureDate': accountResponsibilitySignatureDate != null 
           ? Timestamp.fromDate(accountResponsibilitySignatureDate!) 
@@ -631,6 +641,7 @@ class Patient {
       allergies: data['allergies'],
       isSmoker: data['isSmoker'] ?? false,
       naturalTreatments: data['naturalTreatments'],
+      pmbConditionIds: List<String>.from(data['pmbConditionIds'] ?? []),
       accountResponsibilitySignature: data['accountResponsibilitySignature'],
       accountResponsibilitySignatureDate: data['accountResponsibilitySignatureDate']?.toDate(),
       woundPhotographyConsentSignature: data['woundPhotographyConsentSignature'],
