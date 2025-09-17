@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../providers/patient_provider.dart';
 import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
-
+import '../../utils/responsive_utils.dart';
 import '../../widgets/responsive_patient_list.dart';
 
 class PatientListScreen extends StatefulWidget {

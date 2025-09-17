@@ -31,9 +31,12 @@ import 'screens/auth/pending_approval_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/notifications/notification_preferences_screen.dart';
+import 'screens/web/mobile_warning_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'services/firebase/fcm_service.dart';
+import 'services/web_image_service.dart';
+import 'utils/responsive_utils.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,6 +54,9 @@ void main() async {
 
   // Initialize Firebase Cloud Messaging
   await FCMService.initialize();
+
+  // Configure web image caching
+  WebImageService.configureWebImageCache();
 
   runApp(const MedWaveApp());
 }
@@ -127,6 +133,24 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
     
     debugPrint('Router redirect: currentPath=$currentPath, isAuthenticated=${authProvider.isAuthenticated}, canAccessApp=${authProvider.canAccessApp}, isLoading=${authProvider.isLoading}');
     
+    // Check for mobile browser warning on web platform
+    if (ResponsiveUtils.isWeb() && 
+        ResponsiveUtils.shouldShowMobileWarning(context) && 
+        currentPath != '/mobile-warning') {
+      return '/mobile-warning';
+    }
+    
+    // Block session creation routes on web platform, but allow viewing
+    if (ResponsiveUtils.shouldRestrictSessions()) {
+      // Block session creation and wound selection (conducting sessions)
+      if ((currentPath.contains('/session') && !currentPath.contains('/sessions/')) ||  // '/session' but not '/sessions/:id'
+          currentPath.contains('/wound-selection') ||
+          currentPath.contains('/case-history')) {
+        return '/'; // Redirect to dashboard
+      }
+      // Note: Allow session viewing routes like '/sessions/:sessionId' to pass through
+    }
+    
     // Wait for auth to initialize
     if (authProvider.isLoading) {
       return null; // Stay on current route while loading
@@ -136,7 +160,8 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
     if (!authProvider.isAuthenticated) {
       if (currentPath.startsWith('/welcome') || 
           currentPath.startsWith('/login') || 
-          currentPath.startsWith('/signup')) {
+          currentPath.startsWith('/signup') ||
+          currentPath.startsWith('/mobile-warning')) {
         return null; // Allow access
       }
       return '/welcome'; // Redirect to welcome for protected routes
@@ -163,6 +188,12 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
     return null; // No redirect needed
   },
   routes: [
+    // Mobile warning screen (web only)
+    GoRoute(
+      path: '/mobile-warning',
+      name: 'mobile-warning',
+      builder: (context, state) => const MobileWarningScreen(),
+    ),
     // Welcome screen
     GoRoute(
       path: '/welcome',

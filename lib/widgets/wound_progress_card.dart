@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/patient.dart';
 import '../theme/app_theme.dart';
+import 'firebase_image.dart';
 
 class WoundProgressCard extends StatelessWidget {
   final Wound currentWound;
@@ -374,19 +375,21 @@ class WoundProgressCard extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    currentWound.photos[index],
+                  child: FirebaseImage(
+                    imagePath: currentWound.photos[index],
+                    width: 80,
+                    height: 80,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: AppTheme.backgroundColor,
-                        child: const Icon(
-                          Icons.image_not_supported,
-                          color: AppTheme.secondaryColor,
-                          size: 30,
-                        ),
-                      );
-                    },
+                    errorWidget: Container(
+                      width: 80,
+                      height: 80,
+                      color: AppTheme.backgroundColor,
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        color: AppTheme.secondaryColor,
+                        size: 30,
+                      ),
+                    ),
                   ),
                 ),
               );

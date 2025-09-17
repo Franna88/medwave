@@ -1,12 +1,12 @@
 {
-    "name": "medwave_app",
-    "short_name": "medwave_app",
+    "name": "MedWave Provider",
+    "short_name": "MedWave",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#hexcode",
-    "theme_color": "#hexcode",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#FFFFFF",
+    "theme_color": "#EC2B00",
+    "description": "Professional wound care management platform for healthcare practitioners.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

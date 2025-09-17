@@ -11,7 +11,9 @@ import '../../models/patient.dart';
 import '../../models/progress_metrics.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/export_utils.dart';
+import '../../utils/responsive_utils.dart';
 import '../../services/wound_management_service.dart';
+import '../../widgets/session_restriction_card.dart';
 
 enum PhotoType { baseline, session, wound }
 
@@ -547,6 +549,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
   }
 
   Widget _buildModernFAB(Patient patient) {
+    // Don't show FAB for session logging on web platform
+    if (ResponsiveUtils.shouldRestrictSessions()) {
+      return const SizedBox.shrink();
+    }
+
     return FutureBuilder<List<Session>>(
       future: context.read<PatientProvider>().getPatientSessions(patient.id),
       builder: (context, snapshot) {
@@ -3237,6 +3244,13 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
         final sessions = snapshot.data ?? [];
         
         if (sessions.isEmpty) {
+          // Show session restriction card for web platform
+          if (ResponsiveUtils.shouldRestrictSessions()) {
+            return const Center(
+              child: SessionRestrictionCard(),
+            );
+          }
+          
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(32),
@@ -3903,11 +3917,11 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(16),
                         ),
-                        child: FirebaseImage(
-                          imagePath: photoItem.photoPath,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
+                        child: SizedBox.expand(
+                          child: FirebaseImage(
+                            imagePath: photoItem.photoPath,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                       // Type badge
@@ -4058,47 +4072,39 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: photoItem.photoPath.startsWith('http')
-                      ? Image.network(
-                          photoItem.photoPath,
+                      ? FirebaseImage(
+                          imagePath: photoItem.photoPath,
                           fit: BoxFit.contain,
-                          width: double.infinity,
-                          height: double.infinity,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.broken_image,
-                                    size: 80,
-                                    color: AppTheme.errorColor,
+                          loadingWidget: const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          ),
+                          errorWidget: const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.broken_image,
+                                  size: 80,
+                                  color: AppTheme.errorColor,
+                                ),
+                                SizedBox(height: 16),
+                                Text(
+                                  'Failed to load photo',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white70,
                                   ),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'Failed to load photo',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white70,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                                ),
+                              ],
+                            ),
+                          ),
                         )
-                      : Image.file(
-                          File(photoItem.photoPath),
-                          fit: BoxFit.contain,
-                          width: double.infinity,
-                          height: double.infinity,
+                      : SizedBox.expand(
+                          child: Image.file(
+                            File(photoItem.photoPath),
+                            fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return const Center(
                               child: Column(
@@ -4121,6 +4127,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                               ),
                             );
                           },
+                          ),
                         ),
                 ),
               ),

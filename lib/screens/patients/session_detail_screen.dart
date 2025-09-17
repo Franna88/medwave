@@ -10,6 +10,7 @@ import '../../services/firebase/patient_service.dart';
 import '../../services/wound_management_service.dart';
 import '../../widgets/wound_progress_card.dart';
 import '../../widgets/multi_wound_summary.dart';
+import '../../widgets/firebase_image.dart';
 
 class SessionDetailScreen extends StatefulWidget {
   final String patientId;
@@ -1969,29 +1970,22 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(16),
                         ),
-                        child: Image.network(
-                          widget.session.photos[index],
-                          width: double.infinity,
-                          height: double.infinity,
+                        child: FirebaseImage(
+                          imagePath: widget.session.photos[index],
                           fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppTheme.primaryColor,
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Center(
-                              child: Icon(
-                                Icons.broken_image_outlined,
-                                size: 40,
-                                color: AppTheme.secondaryColor,
-                              ),
-                            );
-                          },
+                          loadingWidget: const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                          errorWidget: const Center(
+                            child: Icon(
+                              Icons.broken_image_outlined,
+                              size: 40,
+                              color: AppTheme.secondaryColor,
+                            ),
+                          ),
                         ),
                       ),
                       // Session badge
@@ -2077,6 +2071,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                         ),
                         const SizedBox(width: 3),
                         Expanded(
+                          flex: 2,
                           child: Text(
                             DateFormat('MMM d').format(widget.session.date),
                             style: const TextStyle(
@@ -2087,11 +2082,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text(
-                          DateFormat('HH:mm').format(widget.session.date),
-                          style: const TextStyle(
-                            fontSize: 9,
-                            color: AppTheme.secondaryColor,
+                        Expanded(
+                          flex: 1,
+                          child: Text(
+                            DateFormat('HH:mm').format(widget.session.date),
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: AppTheme.secondaryColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
                           ),
                         ),
                       ],
@@ -2154,53 +2155,46 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    widget.session.photos[index],
-                    width: double.infinity,
-                    height: double.infinity,
+                  child: FirebaseImage(
+                    imagePath: widget.session.photos[index],
                     fit: BoxFit.contain,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              color: AppTheme.primaryColor,
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'Loading photo...',
-                              style: TextStyle(
-                                color: AppTheme.secondaryColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.broken_image_outlined,
-                              size: 80,
+                    loadingWidget: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: AppTheme.primaryColor,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Loading photo...',
+                            style: TextStyle(
                               color: AppTheme.secondaryColor,
                             ),
-                            SizedBox(height: 16),
-                            Text(
-                              'Failed to load photo',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: AppTheme.secondaryColor,
-                              ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    errorWidget: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.broken_image_outlined,
+                            size: 80,
+                            color: AppTheme.secondaryColor,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Failed to load photo',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: AppTheme.secondaryColor,
                             ),
-                          ],
-                        ),
-                      );
-                    },
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

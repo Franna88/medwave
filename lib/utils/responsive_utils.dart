@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 class ResponsiveUtils {
   // Breakpoints for different screen sizes
@@ -84,5 +85,48 @@ class ResponsiveUtils {
     } else {
       return 1.2;
     }
+  }
+
+  // Platform detection methods
+  static bool isWeb() {
+    return kIsWeb;
+  }
+
+  static bool isMobileDevice(BuildContext context) {
+    if (!kIsWeb) return true; // Native mobile app
+    
+    // On web, check if accessing from mobile browser
+    final userAgent = _getUserAgent();
+    return _isMobileUserAgent(userAgent) || MediaQuery.of(context).size.width < mobileMaxWidth;
+  }
+
+  static bool shouldRestrictSessions() {
+    return kIsWeb; // Restrict sessions on web platform
+  }
+
+  static bool shouldShowMobileWarning(BuildContext context) {
+    if (!kIsWeb) return false;
+    
+    // Show warning if accessing web from mobile device
+    final userAgent = _getUserAgent();
+    return _isMobileUserAgent(userAgent);
+  }
+
+  // Helper methods for user agent detection
+  static String _getUserAgent() {
+    // This will need to be implemented with a web-specific approach
+    if (kIsWeb) {
+      // For now, return empty string - we'll detect mobile primarily by screen size
+      return '';
+    }
+    return '';
+  }
+
+  static bool _isMobileUserAgent(String userAgent) {
+    final mobilePatterns = [
+      'android', 'iphone', 'ipad', 'ipod', 'windows phone', 'mobile'
+    ];
+    return mobilePatterns.any((pattern) => 
+      userAgent.toLowerCase().contains(pattern));
   }
 }
