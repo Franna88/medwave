@@ -136,8 +136,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildStatsCards(PatientProvider patientProvider) {
     final totalPatients = patientProvider.patients.length;
     final recentUpdates = patientProvider.recentlyUpdatedPatients.length;
-    final upcomingAppointments = patientProvider.patientsWithUpcomingAppointments.length;
     final improvements = patientProvider.patientsWithImprovement.length;
+    final totalSessions = patientProvider.totalSessionCount;
 
     return Column(
       children: [
@@ -155,11 +155,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(width: 16),
             Expanded(
               child: _buildStatCard(
-                'Recent Updates',
-                recentUpdates.toString(),
-                Icons.trending_up,
-                AppTheme.warningColor,
-                'Updated this week',
+                'Total Sessions',
+                totalSessions.toString(),
+                Icons.assignment_outlined,
+                AppTheme.secondaryColor,
+                'Sessions completed',
               ),
             ),
           ],
@@ -169,11 +169,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Expanded(
               child: _buildStatCard(
-                'Appointments',
-                upcomingAppointments.toString(),
-                Icons.calendar_today_outlined,
-                AppTheme.primaryColor,
-                'Scheduled for today',
+                'Recent Updates',
+                recentUpdates.toString(),
+                Icons.trending_up,
+                AppTheme.warningColor,
+                'Updated this week',
               ),
             ),
             const SizedBox(width: 16),
@@ -538,196 +538,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildUpcomingAppointments(PatientProvider patientProvider) {
-    final upcomingPatients = patientProvider.patientsWithUpcomingAppointments;
+  // Appointment system disabled - methods commented out
+  // Widget _buildUpcomingAppointments(PatientProvider patientProvider) {
+  //   final upcomingPatients = patientProvider.patientsWithUpcomingAppointments;
+  //   return Container(
+  //     margin: const EdgeInsets.symmetric(horizontal: 16),
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         const Text(
+  //           'Upcoming Appointments',
+  //           style: TextStyle(
+  //             fontSize: 22,
+  //             fontWeight: FontWeight.bold,
+  //             color: AppTheme.textColor,
+  //           ),
+  //         ),
+  //         const SizedBox(height: 16),
+  //         if (upcomingPatients.isEmpty)
+  //           Container(
+  //             padding: const EdgeInsets.all(24),
+  //             decoration: BoxDecoration(
+  //               color: Colors.white,
+  //               borderRadius: BorderRadius.circular(16),
+  //               boxShadow: [
+  //                 BoxShadow(
+  //                   color: Colors.black.withOpacity(0.05),
+  //                   blurRadius: 10,
+  //                   offset: const Offset(0, 4),
+  //                 ),
+  //               ],
+  //             ),
+  //             child: Row(
+  //               children: [
+  //                 Container(
+  //                   padding: const EdgeInsets.all(12),
+  //                   decoration: BoxDecoration(
+  //                     color: AppTheme.infoColor.withOpacity(0.1),
+  //                     borderRadius: BorderRadius.circular(12),
+  //                   ),
+  //                   child: const Icon(
+  //                     Icons.calendar_today_outlined,
+  //                     color: AppTheme.infoColor,
+  //                     size: 24,
+  //                   ),
+  //                 ),
+  //                 const SizedBox(width: 16),
+  //                 const Expanded(
+  //                   child: Column(
+  //                     crossAxisAlignment: CrossAxisAlignment.start,
+  //                     children: [
+  //                       Text(
+  //                         'No appointments today',
+  //                         style: TextStyle(
+  //                           fontSize: 16,
+  //                           fontWeight: FontWeight.w600,
+  //                           color: AppTheme.textColor,
+  //                         ),
+  //                       ),
+  //                       SizedBox(height: 4),
+  //                       Text(
+  //                         'Your schedule is clear for today',
+  //                         style: TextStyle(
+  //                           fontSize: 14,
+  //                           color: AppTheme.secondaryColor,
+  //                         ),
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           )
+  //         else
+  //           ...upcomingPatients.map((patient) => _buildAppointmentCard(patient)),
+  //       ],
+  //     ),
+  //   );
+  // }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Upcoming Appointments',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textColor,
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (upcomingPatients.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.infoColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.calendar_today_outlined,
-                      color: AppTheme.infoColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'No appointments today',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textColor,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Your schedule is clear for today',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.secondaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            ...upcomingPatients.map((patient) => _buildAppointmentCard(patient)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAppointmentCard(Patient patient) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => context.push('/patients/${patient.id}'),
-        borderRadius: BorderRadius.circular(16),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppTheme.primaryColor,
-                    AppTheme.primaryColor.withOpacity(0.8),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  patient.name.split(' ').map((n) => n[0]).take(2).join(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    patient.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.infoColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'Loading...',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.infoColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (patient.nextAppointment != null) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.schedule,
-                          size: 14,
-                          color: AppTheme.secondaryColor.withOpacity(0.6),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          DateFormat('MMM d, yyyy - HH:mm').format(patient.nextAppointment!),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.secondaryColor.withOpacity(0.8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: AppTheme.secondaryColor.withOpacity(0.4),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Appointment system disabled
+  // Widget _buildAppointmentCard(Patient patient) { ... }
 
   Widget _buildRecentlyUpdatedPatients(PatientProvider patientProvider) {
     final recentPatients = patientProvider.recentlyUpdatedPatients.take(3).toList();

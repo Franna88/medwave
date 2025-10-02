@@ -9,6 +9,7 @@ import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
 import '../../services/firebase/session_service.dart';
 import '../../services/firebase/patient_service.dart';
+import '../../utils/validation_utils.dart';
 
 class SessionLoggingScreen extends StatefulWidget {
   final String patientId;
@@ -328,6 +329,7 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
 
   Widget _buildInfoItem(String label, String value, IconData icon) {
     return Container(
+      height: 100, // Fixed height to ensure consistency
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(right: 8),
       decoration: BoxDecoration(
@@ -335,6 +337,7 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: AppTheme.primaryColor),
           const SizedBox(height: 8),
@@ -842,16 +845,34 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _pickImage(ImageSource.camera),
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Camera'),
+                icon: const Icon(Icons.camera_alt, size: 20),
+                label: const Text(
+                  'Camera',
+                  style: TextStyle(fontSize: 14),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _pickImage(ImageSource.gallery),
-                icon: const Icon(Icons.photo_library),
-                label: const Text('Gallery'),
+                icon: const Icon(Icons.photo_library, size: 20),
+                label: const Text(
+                  'Gallery',
+                  style: TextStyle(fontSize: 14),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
             ),
           ],
@@ -943,6 +964,29 @@ class _SessionLoggingScreenState extends State<SessionLoggingScreen> {
     
     // Dismiss keyboard when submitting
     FocusScope.of(context).unfocus();
+    
+    // Validate required fields with popup
+    List<String> missingFields = [];
+    
+    if (_weightController.text.trim().isEmpty) {
+      missingFields.add('Patient Weight');
+    }
+    if (_vasScoreController.text.trim().isEmpty) {
+      missingFields.add('VAS Pain Score');
+    }
+    if (_notesController.text.trim().isEmpty) {
+      missingFields.add('Session Notes');
+    }
+    
+    if (missingFields.isNotEmpty) {
+      await ValidationUtils.showValidationDialog(
+        context,
+        title: 'Session Incomplete',
+        missingFields: missingFields,
+        additionalMessage: 'All session information is required for proper patient care documentation.',
+      );
+      return;
+    }
     
     if (!_formKey.currentState!.validate()) {
       print('❌ SESSION CREATION DEBUG: Form validation failed');

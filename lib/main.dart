@@ -9,7 +9,7 @@ import 'theme/app_theme.dart';
 import 'models/patient.dart';
 import 'providers/patient_provider.dart';
 import 'providers/notification_provider.dart';
-import 'providers/appointment_provider.dart';
+// import 'providers/appointment_provider.dart'; // Disabled until appointment system is complete
 import 'screens/main_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/patients/patient_list_screen.dart';
@@ -23,7 +23,7 @@ import 'screens/patients/session_detail_screen.dart';
 import 'screens/sessions/session_logging_screen.dart';
 import 'screens/sessions/multi_wound_session_logging_screen.dart';
 import 'screens/reports/reports_screen.dart';
-import 'screens/calendar/calendar_screen.dart';
+// import 'screens/calendar/calendar_screen.dart'; // Disabled until appointment system is complete
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/auth/welcome_screen.dart';
@@ -71,7 +71,8 @@ class MedWaveApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PatientProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()..loadNotifications()..initializeFCM()),
-        ChangeNotifierProvider(create: (_) => AppointmentProvider()),
+        // AppointmentProvider disabled until appointment system is complete
+        // ChangeNotifierProvider(create: (_) => AppointmentProvider()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
       ],
       child: Consumer<AuthProvider>(
@@ -239,11 +240,12 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           name: 'reports',
           builder: (context, state) => const ReportsScreen(),
         ),
-        GoRoute(
-          path: '/calendar',
-          name: 'calendar',
-          builder: (context, state) => const CalendarScreen(),
-        ),
+        // TODO: Re-enable when appointment system is complete
+        // GoRoute(
+        //   path: '/calendar',
+        //   name: 'calendar',
+        //   builder: (context, state) => const CalendarScreen(),
+        // ),
         GoRoute(
           path: '/profile',
           name: 'profile',

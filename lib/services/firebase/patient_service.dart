@@ -493,37 +493,29 @@ class PatientService {
 
   /// Get patient sessions
   static Future<List<Session>> getPatientSessions(String patientId) async {
-    print('📋 GET SESSIONS DEBUG: getPatientSessions started - MAIN COLLECTION');
-    print('📋 GET SESSIONS DEBUG: Patient ID: $patientId');
+    // Reduced debug logging to improve performance
+    print('📋 SESSIONS: Getting sessions for patient $patientId');
     
     try {
-      print('📋 GET SESSIONS DEBUG: Querying main sessions collection...');
       final snapshot = await FirebaseFirestore.instance
           .collection('sessions')
           .where('patientId', isEqualTo: patientId)
           .orderBy('sessionNumber')
           .get();
       
-      print('📋 GET SESSIONS DEBUG: Query completed');
-      print('📋 GET SESSIONS DEBUG: Number of session documents found: ${snapshot.docs.length}');
-      
       if (snapshot.docs.isEmpty) {
-        print('📋 GET SESSIONS DEBUG: No sessions found for patient $patientId');
+        print('📋 SESSIONS: No sessions found for patient $patientId');
         return [];
       }
       
-      print('📋 GET SESSIONS DEBUG: Converting documents to Session objects...');
       final sessions = snapshot.docs.map((doc) {
-        print('📋 GET SESSIONS DEBUG: Processing session doc ID: ${doc.id}');
-        print('📋 GET SESSIONS DEBUG: Session doc data keys: ${doc.data().keys.toList()}');
         return Session.fromFirestore(doc);
       }).toList();
       
-      print('✅ GET SESSIONS DEBUG: Successfully converted ${sessions.length} sessions');
-      print('📋 GET SESSIONS DEBUG: Session IDs: ${sessions.map((s) => s.id).toList()}');
+      print('✅ SESSIONS: Loaded ${sessions.length} sessions for patient $patientId');
       return sessions;
     } catch (e) {
-      print('❌ GET SESSIONS DEBUG: Error getting sessions: $e');
+      print('❌ SESSIONS: Error getting sessions: $e');
       throw Exception('Failed to get patient sessions: $e');
     }
   }

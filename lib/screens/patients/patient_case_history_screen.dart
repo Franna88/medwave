@@ -9,6 +9,7 @@ import '../../providers/patient_provider.dart';
 import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
 import '../../services/firebase/session_service.dart';
+import '../../utils/validation_utils.dart';
 
 class PatientCaseHistoryScreen extends StatefulWidget {
   final String patientId;
@@ -1176,7 +1177,19 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
     );
   }
 
-  void _nextPage() {
+  void _nextPage() async {
+    List<String> missingFields = _getMissingFieldsForCurrentPage();
+    
+    if (missingFields.isNotEmpty) {
+      await ValidationUtils.showValidationDialog(
+        context,
+        title: 'Section Incomplete',
+        missingFields: missingFields,
+        additionalMessage: 'Please complete all required fields before proceeding to the next section.',
+      );
+      return;
+    }
+    
     if (_validateCurrentPage()) {
       if (_currentPage < 3) {
         _pageController.nextPage(
@@ -1185,6 +1198,48 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
         );
       }
     }
+  }
+
+  List<String> _getMissingFieldsForCurrentPage() {
+    List<String> missingFields = [];
+    
+    switch (_currentPage) {
+      case 0: // Baseline Measurements
+        if (_weightController.text.trim().isEmpty) {
+          missingFields.add('Patient Weight');
+        }
+        if (_vasScoreController.text.trim().isEmpty) {
+          missingFields.add('VAS Pain Score');
+        }
+        break;
+      case 1: // Wound Assessment
+        if (_woundLocationController.text.trim().isEmpty) {
+          missingFields.add('Wound Location');
+        }
+        if (_woundLengthController.text.trim().isEmpty) {
+          missingFields.add('Wound Length');
+        }
+        if (_woundWidthController.text.trim().isEmpty) {
+          missingFields.add('Wound Width');
+        }
+        if (_woundDepthController.text.trim().isEmpty) {
+          missingFields.add('Wound Depth');
+        }
+        if (_woundDescriptionController.text.trim().isEmpty) {
+          missingFields.add('Wound Description');
+        }
+        break;
+      case 2: // Wound History
+        if (_woundStartDate == null) {
+          missingFields.add('Wound Start Date');
+        }
+        if (_woundHistoryController.text.trim().isEmpty) {
+          missingFields.add('Wound History and Progression');
+        }
+        break;
+    }
+    
+    return missingFields;
   }
 
   bool _validateCurrentPage() {

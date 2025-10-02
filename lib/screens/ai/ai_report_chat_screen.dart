@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../models/patient.dart';
 import '../../models/conversation_data.dart';
 import '../../services/ai/openai_service.dart';
@@ -1024,34 +1025,6 @@ Collected Information:
           onPressed: () => context.pop(),
         ),
         actions: [
-          // Add silent mode indicator
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.volume_off,
-                  size: 16,
-                  color: AppTheme.primaryColor,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Silent Mode',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
           if (_generatedReport != null)
             IconButton(
               icon: const Icon(Icons.download),
@@ -1349,7 +1322,7 @@ Collected Information:
   }
 
   void _exportAsPDF() {
-    // TODO: Implement PDF export
+    // PDF export functionality coming soon
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('PDF export feature coming soon!'),
@@ -1467,6 +1440,39 @@ Collected Information:
 
   void _shareReport() async {
     if (_generatedReport == null) return;
+    
+    // Check if running on web and show helpful message
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'PDF Generation Not Available on Web',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Please use the mobile app to generate and share PDF reports. This feature requires native file system access.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+          backgroundColor: AppTheme.infoColor,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Got it',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
+      return;
+    }
     
     try {
       // Show loading indicator

@@ -56,36 +56,12 @@ class ResponsiveDashboardContent extends StatelessWidget {
             _buildTabletStatsGrid(patientProvider),
             const SizedBox(height: 32),
             
-            // Main Content Grid
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Left Column
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    children: [
-                      _buildTabletNotificationsCard(notificationProvider),
-                      const SizedBox(height: 24),
-                      _buildTabletUpcomingAppointments(patientProvider),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 24),
-                
-                // Right Column
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    children: [
-                      _buildTabletQuickActions(context),
-                      const SizedBox(height: 24),
-                      _buildTabletRecentPatients(patientProvider),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            // Recent Patients Section (moved from right column)
+            _buildTabletRecentPatients(context, patientProvider),
+            const SizedBox(height: 32),
+            
+            // Quick Actions (moved to full width)
+            _buildTabletQuickActions(context),
           ],
         ),
       ),
@@ -118,7 +94,8 @@ class ResponsiveDashboardContent extends StatelessWidget {
                   const SizedBox(height: 32),
                   _buildNotificationsSection(notificationProvider),
                   const SizedBox(height: 32),
-                  _buildUpcomingAppointments(patientProvider),
+                  // Appointment system disabled
+                  // _buildUpcomingAppointments(patientProvider),
                   const SizedBox(height: 32),
                   _buildRecentlyUpdatedPatients(patientProvider),
                   const SizedBox(height: 24),
@@ -566,7 +543,7 @@ class ResponsiveDashboardContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // Placeholder for appointments
+          // Appointment system disabled - coming soon
           Container(
             height: 200,
             decoration: BoxDecoration(
@@ -574,11 +551,24 @@ class ResponsiveDashboardContent extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
-              child: Text(
-                'No upcoming appointments',
-                style: TextStyle(
-                  color: AppTheme.secondaryColor.withOpacity(0.6),
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.schedule,
+                    size: 48,
+                    color: AppTheme.secondaryColor.withOpacity(0.6),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Appointment System Coming Soon',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.secondaryColor.withOpacity(0.8),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -590,7 +580,8 @@ class ResponsiveDashboardContent extends StatelessWidget {
   Widget _buildTabletQuickActions(BuildContext context) {
     final actions = [
       {'icon': Icons.person_add, 'label': 'Add Patient', 'route': '/patients/add'},
-      {'icon': Icons.calendar_today, 'label': 'Schedule', 'action': 'add_appointment'},
+      // Schedule disabled until appointment system is complete
+      // {'icon': Icons.calendar_today, 'label': 'Schedule', 'action': 'add_appointment'},
       {'icon': Icons.bar_chart, 'label': 'Reports', 'route': '/reports'},
     ];
 
@@ -625,8 +616,8 @@ class ResponsiveDashboardContent extends StatelessWidget {
     );
   }
 
-  Widget _buildTabletRecentPatients(PatientProvider patientProvider) {
-    final recentPatients = patientProvider.patients.take(4).toList();
+  Widget _buildTabletRecentPatients(BuildContext context, PatientProvider patientProvider) {
+    final recentPatients = patientProvider.patients.take(8).toList();
     
     return Container(
       padding: const EdgeInsets.all(24),
@@ -644,16 +635,69 @@ class ResponsiveDashboardContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Recent Patients',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textColor,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recent Patients',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textColor,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => GoRouter.of(context).go('/patients'),
+                icon: const Icon(Icons.arrow_forward, size: 16),
+                label: const Text('View All'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.primaryColor,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          ...recentPatients.map((patient) => _buildRecentPatientItem(patient)),
+          const SizedBox(height: 20),
+          if (recentPatients.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      size: 48,
+                      color: AppTheme.secondaryColor.withOpacity(0.4),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No patients yet',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppTheme.secondaryColor.withOpacity(0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: () => GoRouter.of(context).go('/patients/add'),
+                      child: const Text('Add First Patient'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 3.5,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 12,
+              ),
+              itemCount: recentPatients.length,
+              itemBuilder: (context, index) => _buildRecentPatientCard(context, recentPatients[index]),
+            ),
         ],
       ),
     );
@@ -823,6 +867,82 @@ class ResponsiveDashboardContent extends StatelessWidget {
     );
   }
 
+  Widget _buildRecentPatientCard(BuildContext context, Patient patient) {
+    return InkWell(
+      onTap: () => GoRouter.of(context).push('/patients/${patient.id}'),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.borderColor.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primaryColor,
+                    AppTheme.primaryColor.withOpacity(0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  patient.name.split(' ').map((n) => n[0]).take(2).join(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    patient.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'ID: ${patient.id.substring(0, 8)}...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.secondaryColor.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 12,
+              color: AppTheme.secondaryColor.withOpacity(0.4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Color _getNotificationColor(NotificationType type) {
     switch (type) {
       case NotificationType.improvement:
@@ -872,25 +992,25 @@ class ResponsiveDashboardContent extends StatelessWidget {
     );
   }
 
-  Widget _buildUpcomingAppointments(PatientProvider patientProvider) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Upcoming Appointments',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 16),
-          Text('No upcoming appointments'),
-        ],
-      ),
-    );
-  }
+  // Widget _buildUpcomingAppointments(PatientProvider patientProvider) {
+  //   return Container(
+  //     margin: const EdgeInsets.symmetric(horizontal: 16),
+  //     child: const Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Text(
+  //           'Upcoming Appointments',
+  //           style: TextStyle(
+  //             fontSize: 18,
+  //             fontWeight: FontWeight.bold,
+  //           ),
+  //         ),
+  //         SizedBox(height: 16),
+  //         Text('No upcoming appointments'),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildRecentlyUpdatedPatients(PatientProvider patientProvider) {
     return Container(

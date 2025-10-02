@@ -2020,10 +2020,9 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
               if (progress.woundSizeHistory.isNotEmpty)
                 _buildModernWoundSizeChart(progress.woundSizeHistory),
               const SizedBox(height: 24),
-              // TODO: Implement treatment timeline
+              // Treatment timeline and goals features coming soon
               // _buildTreatmentTimelineCard(patient, progress),
               // const SizedBox(height: 24),
-              // TODO: Implement goals and milestones
               // _buildGoalsAndMilestonesCard(patient, progress),
               const SizedBox(height: 100), // Space for FAB
             ],

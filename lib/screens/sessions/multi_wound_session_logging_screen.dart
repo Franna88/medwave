@@ -10,6 +10,7 @@ import '../../theme/app_theme.dart';
 import '../../services/firebase/session_service.dart';
 import '../../services/firebase/patient_service.dart';
 import '../../widgets/wound_assessment_widget.dart';
+import '../../utils/validation_utils.dart';
 
 
 class MultiWoundSessionLoggingScreen extends StatefulWidget {
@@ -918,10 +919,16 @@ class _MultiWoundSessionLoggingScreenState extends State<MultiWoundSessionLoggin
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _pickImage(ImageSource.camera),
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Camera'),
+                icon: const Icon(Icons.camera_alt, size: 20),
+                label: const Text(
+                  'Camera',
+                  style: TextStyle(fontSize: 14),
+                ),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ),
@@ -929,10 +936,16 @@ class _MultiWoundSessionLoggingScreenState extends State<MultiWoundSessionLoggin
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _pickImage(ImageSource.gallery),
-                icon: const Icon(Icons.photo_library),
-                label: const Text('Gallery'),
+                icon: const Icon(Icons.photo_library, size: 20),
+                label: const Text(
+                  'Gallery',
+                  style: TextStyle(fontSize: 14),
+                ),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ),
@@ -994,6 +1007,35 @@ class _MultiWoundSessionLoggingScreenState extends State<MultiWoundSessionLoggin
   }
 
   Future<void> _submitSession() async {
+    // Validate required fields with popup
+    List<String> missingFields = [];
+    
+    if (_weightController.text.trim().isEmpty) {
+      missingFields.add('Patient Weight');
+    }
+    if (_vasScoreController.text.trim().isEmpty) {
+      missingFields.add('VAS Pain Score');
+    }
+    if (_notesController.text.trim().isEmpty) {
+      missingFields.add('Session Notes');
+    }
+    
+    // Check if all wounds are properly assessed
+    final incompleteWounds = _currentWoundsData.where((w) => !w.isValid).toList();
+    if (incompleteWounds.isNotEmpty) {
+      missingFields.add('Complete assessment for ${incompleteWounds.length} wound(s)');
+    }
+    
+    if (missingFields.isNotEmpty) {
+      await ValidationUtils.showValidationDialog(
+        context,
+        title: 'Multi-Wound Session Incomplete',
+        missingFields: missingFields,
+        additionalMessage: 'All session information and wound assessments must be completed for proper documentation.',
+      );
+      return;
+    }
+    
     if (!_formKey.currentState!.validate()) {
       return;
     }

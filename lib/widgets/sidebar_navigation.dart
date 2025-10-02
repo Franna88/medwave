@@ -74,13 +74,14 @@ class SidebarNavigation extends StatelessWidget {
         route: '/patients',
         isActive: currentLocation.startsWith('/patients'),
       ),
-      _NavigationItem(
-        icon: Icons.calendar_today_outlined,
-        activeIcon: Icons.calendar_today,
-        label: 'Calendar',
-        route: '/calendar',
-        isActive: currentLocation.startsWith('/calendar'),
-      ),
+      // TODO: Re-enable when appointment system is complete
+      // _NavigationItem(
+      //   icon: Icons.calendar_today_outlined,
+      //   activeIcon: Icons.calendar_today,
+      //   label: 'Calendar',
+      //   route: '/calendar',
+      //   isActive: currentLocation.startsWith('/calendar'),
+      // ),
       _NavigationItem(
         icon: Icons.assessment_outlined,
         activeIcon: Icons.assessment,

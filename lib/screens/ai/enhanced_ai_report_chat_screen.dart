@@ -5,6 +5,7 @@ import '../../models/conversation_data.dart';
 import '../../services/ai/openai_service.dart';
 import '../../services/ai/multi_wound_ai_service.dart';
 import '../../services/pdf_generation_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../services/firebase/practitioner_service.dart';
 import '../../services/wound_management_service.dart';
 import '../../theme/app_theme.dart';
@@ -741,6 +742,39 @@ class _EnhancedAIReportChatScreenState extends State<EnhancedAIReportChatScreen>
 
   void _generatePDF() async {
     if (_generatedReport == null) return;
+
+    // Check if running on web and show helpful message
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'PDF Generation Not Available on Web',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Please use the mobile app to generate and download PDF reports. This feature requires native file system access.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+          backgroundColor: AppTheme.infoColor,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Got it',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
+      return;
+    }
 
     try {
       const practitionerName = 'Wound Care Specialist'; // Placeholder - would be from user session

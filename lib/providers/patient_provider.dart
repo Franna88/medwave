@@ -14,6 +14,11 @@ class PatientProvider with ChangeNotifier {
   StreamSubscription<List<Patient>>? _patientsSubscription;
   int _totalSessionCount = 0;
   
+  // Session caching to prevent excessive database queries
+  final Map<String, List<Session>> _sessionCache = {};
+  final Map<String, DateTime> _sessionCacheTimestamps = {};
+  static const Duration _cacheExpiration = Duration(minutes: 5);
+  
   // Feature flag for development - allows switching between mock and Firebase
   static const bool _useFirebase = true;
 
@@ -260,6 +265,9 @@ class PatientProvider with ChangeNotifier {
       await PatientService.addPatientSession(patientId, session);
       print('✅ PATIENT PROVIDER DEBUG: PatientService.addPatientSession completed successfully');
       
+      // Clear the session cache since we've added a new session
+      clearSessionCache(patientId);
+      
       // The real-time listener will automatically update the UI
       print('🏥 PATIENT PROVIDER DEBUG: Returning true (success)');
       return true;
@@ -273,19 +281,51 @@ class PatientProvider with ChangeNotifier {
     }
   }
 
-  /// Get patient sessions
+  /// Get patient sessions with caching to prevent excessive database queries
   Future<List<Session>> getPatientSessions(String patientId) async {
     if (!_useFirebase) {
       final patient = _getMockPatient(patientId);
       return patient?.sessions ?? [];
     }
 
+    // Check cache first
+    final now = DateTime.now();
+    final cacheTimestamp = _sessionCacheTimestamps[patientId];
+    
+    if (cacheTimestamp != null && 
+        now.difference(cacheTimestamp) < _cacheExpiration &&
+        _sessionCache.containsKey(patientId)) {
+      print('📋 CACHE: Using cached sessions for patient $patientId');
+      return _sessionCache[patientId]!;
+    }
+
     try {
-      return await PatientService.getPatientSessions(patientId);
+      print('📋 CACHE: Fetching fresh sessions for patient $patientId');
+      final sessions = await PatientService.getPatientSessions(patientId);
+      
+      // Update cache
+      _sessionCache[patientId] = sessions;
+      _sessionCacheTimestamps[patientId] = now;
+      
+      return sessions;
     } catch (e) {
       _setError('Failed to get patient sessions: $e');
       return [];
     }
+  }
+
+  /// Clear session cache for a specific patient (call when sessions are added/updated)
+  void clearSessionCache(String patientId) {
+    _sessionCache.remove(patientId);
+    _sessionCacheTimestamps.remove(patientId);
+    print('📋 CACHE: Cleared session cache for patient $patientId');
+  }
+
+  /// Clear all session caches
+  void clearAllSessionCaches() {
+    _sessionCache.clear();
+    _sessionCacheTimestamps.clear();
+    print('📋 CACHE: Cleared all session caches');
   }
 
   /// Upload patient photos

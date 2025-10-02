@@ -711,7 +711,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           TextFormField(
             controller: _currentMedicationsController,
             decoration: InputDecoration(
-              labelText: AppLocalizations.get('current_medications'),
+              labelText: 'Current Medications',
+              hintText: AppLocalizations.get('current_medications'),
               prefixIcon: const Icon(Icons.medication),
               alignLabelWithHint: true,
             ),
@@ -722,7 +723,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           TextFormField(
             controller: _allergiesController,
             decoration: InputDecoration(
-              labelText: AppLocalizations.get('allergies'),
+              labelText: 'Allergies',
+              hintText: AppLocalizations.get('allergies'),
               prefixIcon: const Icon(Icons.warning),
               alignLabelWithHint: true,
             ),
@@ -833,8 +835,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
             const SizedBox(height: 12),
             TextFormField(
               decoration: InputDecoration(
-                labelText: 'Please provide details about ${AppLocalizations.get(condition).toLowerCase()}',
-                hintText: 'e.g., Type 1/2 diabetes, specific cardiac condition, etc.',
+                labelText: 'Condition Details',
+                hintText: 'Please provide details about ${AppLocalizations.get(condition).toLowerCase()} (e.g., Type 1/2 diabetes, specific cardiac condition, etc.)',
                 border: const OutlineInputBorder(),
                 isDense: true,
               ),

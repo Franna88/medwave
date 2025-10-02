@@ -137,7 +137,7 @@ class TabletMainScreen extends StatelessWidget {
         _buildActionButton(
           icon: Icons.search_outlined,
           onPressed: () {
-            // TODO: Implement global search
+            // Global search functionality coming soon
           },
         ),
         const SizedBox(width: 8),
@@ -162,7 +162,7 @@ class TabletMainScreen extends StatelessWidget {
         _buildActionButton(
           icon: Icons.settings_outlined,
           onPressed: () {
-            // TODO: Show settings
+            // Settings panel coming soon
           },
         ),
         const SizedBox(width: 12),

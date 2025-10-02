@@ -503,7 +503,7 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen>
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () {
-                      // TODO: Add support contact functionality
+                      // Support contact functionality coming soon
                     },
                     child: const Text('Contact Support'),
                   ),

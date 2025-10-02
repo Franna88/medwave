@@ -1,0 +1,47 @@
+MedWave APK Security Verification
+================================
+
+File: app-release.apk
+Version: 1.2.7 (Build 9)
+Size: 66,800,598 bytes (66.8 MB)
+SHA-256: 49643b89a2b59edb5ce83fb25feb7aa231c6d8db37d3c213bdd57c1311719874
+
+Verification Instructions:
+-------------------------
+
+For Android Users:
+1. After downloading, check file size matches exactly: 66.8 MB
+2. Optional: Use a file manager app to verify SHA-256 checksum
+3. Ensure download source is trusted
+
+For Advanced Users:
+Use terminal/command prompt to verify checksum:
+- Windows: certutil -hashfile app-release.apk SHA256
+- macOS/Linux: shasum -a 256 app-release.apk
+- Android: Use apps like "Hash Droid" or "File Hash"
+
+Expected SHA-256: 49643b89a2b59edb5ce83fb25feb7aa231c6d8db37d3c213bdd57c1311719874
+
+Digital Signature:
+-----------------
+This APK is signed with a valid certificate.
+Certificate Details:
+- Alias: medwave
+- Valid certificate chain
+- Release build configuration
+
+Security Notes:
+--------------
+✓ Built in release mode
+✓ Code obfuscation enabled
+✓ Signed with release keystore
+✓ No debug keys or backdoors
+✓ Firebase security rules configured
+✓ Network security config applied
+
+Report Issues:
+-------------
+If the checksum doesn't match or you suspect tampering,
+do NOT install and contact support immediately.
+
+Last Updated: September 19, 2025

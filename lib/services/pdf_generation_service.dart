@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -606,13 +607,9 @@ class PDFGenerationService {
       ),
     );
     
-    // Save and return file
-    final directory = await getApplicationDocumentsDirectory();
+    // Save and return file using the platform-aware save method
     final fileName = 'multi_wound_report_${patient.surname}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
-    final file = File('${directory.path}/$fileName');
-    await file.writeAsBytes(await pdf.save());
-    
-    return file;
+    return await _savePDF(pdf, fileName);
   }
   
   static pw.Widget _buildHeader(pw.ImageProvider? logoImage, pw.Context context, {String? practitionerName, String? practitionerContact}) {
@@ -1134,6 +1131,22 @@ class PDFGenerationService {
   }
   
   static Future<File> _savePDF(pw.Document pdf, String fileName) async {
+    if (kIsWeb) {
+      // Web platform: Show helpful message instead of failing
+      throw UnsupportedError(
+        'PDF generation is currently not supported on web browsers. '
+        'Please use the mobile app for PDF report generation. '
+        'This feature requires native file system access which is not available in web browsers.'
+      );
+    } else {
+      // Mobile/desktop platforms: save to file system
+      final pdfBytes = await pdf.save();
+      return _saveMobilePDF(pdfBytes, fileName);
+    }
+  }
+
+  /// Save PDF on mobile/desktop platforms to file system
+  static Future<File> _saveMobilePDF(Uint8List pdfBytes, String fileName) async {
     try {
       // Request storage permissions on Android
       if (Platform.isAndroid) {
@@ -1186,7 +1199,6 @@ class PDFGenerationService {
       }
 
       final file = File('${directory.path}/$fileName');
-      final pdfBytes = await pdf.save();
       await file.writeAsBytes(pdfBytes);
       
       // Debug logging for testing
@@ -1200,7 +1212,6 @@ class PDFGenerationService {
       // Fallback to app's documents directory
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/$fileName');
-      final pdfBytes = await pdf.save();
       await file.writeAsBytes(pdfBytes);
       
       print('📄 PDF Generated (Fallback): ${file.path}');
@@ -1210,6 +1221,12 @@ class PDFGenerationService {
 
   /// Open the generated PDF file for viewing
   static Future<bool> openPDF(File pdfFile) async {
+    if (kIsWeb) {
+      // On web, PDF generation is not supported
+      print('ℹ️ PDF opening not available on web platform');
+      return false;
+    }
+    
     try {
       print('📱 Attempting to open PDF: ${pdfFile.path}');
       
@@ -1236,6 +1253,12 @@ class PDFGenerationService {
 
   /// Share the PDF file via system share sheet
   static Future<bool> sharePDF(File pdfFile, {String? subject}) async {
+    if (kIsWeb) {
+      // On web, PDF generation is not supported
+      print('ℹ️ PDF sharing not available on web platform');
+      return false;
+    }
+    
     try {
       print('📤 Attempting to share PDF: ${pdfFile.path}');
       
