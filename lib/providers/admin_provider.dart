@@ -1,329 +1,709 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+import '../models/admin/healthcare_provider.dart';
+import '../models/admin/country_analytics.dart';
+import '../models/admin/admin_report.dart';
+import '../models/admin/admin_user.dart';
 import '../models/practitioner_application.dart';
-import '../models/country_analytics.dart';
-import '../models/user_profile.dart';
+import '../services/firebase/admin_service.dart';
 
+/// Provider for managing admin-specific data and operations
+/// Handles healthcare provider management, analytics, and reporting
 class AdminProvider extends ChangeNotifier {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // Local state
+  List<HealthcareProvider> _providers = [];
+  List<HealthcareProvider> _pendingApprovals = [];
+  List<CountryAnalytics> _countryAnalytics = [];
+  List<AdminReport> _reports = [];
   
-  List<PractitionerApplication> _pendingApplications = [];
-  List<PractitionerApplication> _allApplications = [];
-  Map<String, CountryAnalytics> _countryAnalytics = {};
-  List<UserProfile> _practitioners = [];
+  // Real Firebase data
+  List<PractitionerApplication> _realPractitioners = [];
+  List<PractitionerApplication> _realPendingApprovals = [];
+
+  // Admin User Management
+  List<AdminUser> _adminUsers = [];
+  StreamSubscription<List<AdminUser>>? _adminUsersSubscription;
+  Map<String, dynamic> _adminAnalytics = {};
+  
+  // Streams subscriptions
+  StreamSubscription<List<PractitionerApplication>>? _practitionersSubscription;
+  StreamSubscription<List<PractitionerApplication>>? _pendingSubscription;
+  
   bool _isLoading = false;
-  String? _errorMessage;
+  String? _error;
+  String? _selectedCountry;
+  
+  // Feature flag for development - allows switching between mock and Firebase
+  static const bool _useFirebase = true;
   
   // Getters
-  List<PractitionerApplication> get pendingApplications => List.unmodifiable(_pendingApplications);
-  List<PractitionerApplication> get allApplications => List.unmodifiable(_allApplications);
-  Map<String, CountryAnalytics> get countryAnalytics => Map.unmodifiable(_countryAnalytics);
-  List<UserProfile> get practitioners => List.unmodifiable(_practitioners);
+  List<HealthcareProvider> get providers => _providers;
+  List<HealthcareProvider> get pendingApprovals => _pendingApprovals;
+  List<HealthcareProvider> get approvedProviders => 
+      _providers.where((p) => p.isApproved).toList();
+  List<CountryAnalytics> get countryAnalytics => _countryAnalytics;
+  List<AdminReport> get reports => _reports;
+  
+  // Real Firebase data getters
+  List<PractitionerApplication> get realPractitioners => _realPractitioners;
+  List<PractitionerApplication> get realPendingApprovals => _realPendingApprovals;
+
+  // Admin User Management getters
+  List<AdminUser> get adminUsers => _adminUsers;
+  bool get hasAdminUsers => _adminUsers.isNotEmpty;
+  List<PractitionerApplication> get realApprovedPractitioners => 
+      _realPractitioners.where((p) => p.status == 'approved').toList();
+  Map<String, dynamic> get adminAnalytics => _adminAnalytics;
+  
   bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
+  String? get error => _error;
+  String? get selectedCountry => _selectedCountry;
+
+  // Filtered data based on country selection
+  List<HealthcareProvider> get filteredProviders {
+    if (_selectedCountry == null) return _providers;
+    return _providers.where((p) => p.country == _selectedCountry).toList();
+  }
+
+  List<HealthcareProvider> get filteredPendingApprovals {
+    if (_selectedCountry == null) return _pendingApprovals;
+    return _pendingApprovals.where((p) => p.country == _selectedCountry).toList();
+  }
+
+  // Statistics
+  int get totalProviders {
+    if (_useFirebase) {
+      return _realPractitioners.length;
+    }
+    return _providers.length;
+  }
   
-  // Filtered getters
-  List<PractitionerApplication> get approvedApplications => 
-      _allApplications.where((app) => app.isApproved).toList();
-      
-  List<PractitionerApplication> get rejectedApplications => 
-      _allApplications.where((app) => app.isRejected).toList();
-      
-  List<PractitionerApplication> get underReviewApplications => 
-      _allApplications.where((app) => app.isUnderReview).toList();
-
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
+  int get totalPendingApprovals {
+    if (_useFirebase) {
+      return _realPendingApprovals.length;
+    }
+    return _pendingApprovals.length;
   }
   
-  void _setError(String? error) {
-    _errorMessage = error;
+  int get totalApprovedProviders {
+    if (_useFirebase) {
+      return realApprovedPractitioners.length;
+    }
+    return approvedProviders.length;
+  }
+  
+  double get approvalRate {
+    final total = totalProviders + totalPendingApprovals;
+    if (total == 0) return 0.0;
+    return (totalApprovedProviders / total) * 100;
+  }
+
+  /// Initialize with real Firebase data or mock data for development
+  void initializeWithMockData() {
+    if (_useFirebase) {
+      _loadFirebaseData();
+    } else {
+      _loadMockDataOnly();
+    }
+  }
+
+  /// Load real Firebase data
+  void _loadFirebaseData() {
+    _isLoading = true;
     notifyListeners();
-  }
 
-  /// Load pending practitioner applications
-  Future<void> loadPendingApplications() async {
-    _setLoading(true);
-    _setError(null);
-    
     try {
-      final snapshot = await _firestore
-        .collection('practitionerApplications')
-        .where('status', 'in', ['pending', 'under_review'])
-        .orderBy('submittedAt', descending: true)
-        .get();
-      
-      _pendingApplications = snapshot.docs
-        .map((doc) => PractitionerApplication.fromFirestore(doc))
-        .toList();
-        
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to load pending applications: $e');
-      debugPrint('Error loading pending applications: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Load all practitioner applications with pagination
-  Future<void> loadAllApplications({DocumentSnapshot? startAfter, int limit = 20}) async {
-    _setLoading(true);
-    _setError(null);
-    
-    try {
-      Query query = _firestore
-        .collection('practitionerApplications')
-        .orderBy('submittedAt', descending: true)
-        .limit(limit);
-        
-      if (startAfter != null) {
-        query = query.startAfterDocument(startAfter);
-      }
-      
-      final snapshot = await query.get();
-      
-      final applications = snapshot.docs
-        .map((doc) => PractitionerApplication.fromFirestore(doc))
-        .toList();
-        
-      if (startAfter == null) {
-        _allApplications = applications;
-      } else {
-        _allApplications.addAll(applications);
-      }
-      
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to load applications: $e');
-      debugPrint('Error loading applications: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Load country analytics data
-  Future<void> loadCountryAnalytics() async {
-    _setLoading(true);
-    _setError(null);
-    
-    try {
-      final snapshot = await _firestore
-        .collection('countryAnalytics')
-        .orderBy('totalPractitioners', descending: true)
-        .get();
-      
-      _countryAnalytics.clear();
-      for (final doc in snapshot.docs) {
-        final analytics = CountryAnalytics.fromFirestore(doc);
-        _countryAnalytics[analytics.countryCode] = analytics;
-      }
-      
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to load country analytics: $e');
-      debugPrint('Error loading country analytics: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Load all practitioners
-  Future<void> loadPractitioners({String? country}) async {
-    _setLoading(true);
-    _setError(null);
-    
-    try {
-      Query query = _firestore
-        .collection('users')
-        .where('role', isEqualTo: 'practitioner')
-        .orderBy('createdAt', descending: true);
-        
-      if (country != null && country.isNotEmpty) {
-        query = query.where('country', isEqualTo: country);
-      }
-      
-      final snapshot = await query.get();
-      
-      _practitioners = snapshot.docs
-        .map((doc) => UserProfile.fromFirestore(doc))
-        .toList();
-        
-      notifyListeners();
-    } catch (e) {
-      _setError('Failed to load practitioners: $e');
-      debugPrint('Error loading practitioners: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Review (approve/reject) a practitioner application
-  Future<bool> reviewApplication(
-    String applicationId, 
-    bool approved, {
-    String? rejectionReason,
-    String? reviewNotes,
-  }) async {
-    _setLoading(true);
-    _setError(null);
-    
-    try {
-      // Note: In a real implementation, this would call a Cloud Function
-      // For now, we'll implement it directly in the client
-      
-      final batch = _firestore.batch();
-      
-      // Update application status
-      final appRef = _firestore.collection('practitionerApplications').doc(applicationId);
-      batch.update(appRef, {
-        'status': approved ? 'approved' : 'rejected',
-        'reviewedAt': FieldValue.serverTimestamp(),
-        'reviewedBy': _auth.currentUser?.uid,
-        'reviewNotes': reviewNotes,
-        'rejectionReason': approved ? null : rejectionReason,
-      });
-      
-      // Get application data to update user profile
-      final appDoc = await appRef.get();
-      if (appDoc.exists) {
-        final appData = appDoc.data() as Map<String, dynamic>;
-        final userId = appData['userId'] as String;
-        
-        // Update user account status
-        final userRef = _firestore.collection('users').doc(userId);
-        batch.update(userRef, {
-          'accountStatus': approved ? 'approved' : 'rejected',
-          'approvalDate': approved ? FieldValue.serverTimestamp() : null,
-          'approvedBy': approved ? _auth.currentUser?.uid : null,
-          'rejectionReason': approved ? null : rejectionReason,
-          'lastUpdated': FieldValue.serverTimestamp(),
-        });
-      }
-      
-      await batch.commit();
-      
-      // Refresh applications list
-      await loadPendingApplications();
-      
-      return true;
-    } catch (e) {
-      _setError('Failed to review application: $e');
-      debugPrint('Error reviewing application: $e');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Update application verification status
-  Future<bool> updateVerificationStatus(
-    String applicationId, {
-    bool? documentsVerified,
-    bool? licenseVerified,
-    bool? referencesVerified,
-  }) async {
-    try {
-      final updateData = <String, dynamic>{};
-      
-      if (documentsVerified != null) {
-        updateData['documentsVerified'] = documentsVerified;
-      }
-      if (licenseVerified != null) {
-        updateData['licenseVerified'] = licenseVerified;
-      }
-      if (referencesVerified != null) {
-        updateData['referencesVerified'] = referencesVerified;
-      }
-      
-      if (updateData.isNotEmpty) {
-        await _firestore
-          .collection('practitionerApplications')
-          .doc(applicationId)
-          .update(updateData);
+      // Subscribe to approved practitioners
+      _practitionersSubscription = AdminService.getApprovedPractitionersStream().listen(
+        (practitioners) {
+          _realPractitioners = practitioners;
+          _isLoading = false;
+          _error = null;
+          notifyListeners();
           
-        // Refresh applications
-        await loadPendingApplications();
+          if (kDebugMode) {
+            print('✅ AdminProvider: Loaded ${practitioners.length} approved practitioners from Firebase');
+          }
+        },
+        onError: (error) {
+          _error = 'Failed to load practitioners: $error';
+          _isLoading = false;
+          notifyListeners();
+          
+          if (kDebugMode) {
+            print('❌ AdminProvider ERROR: Failed to load practitioners: $error');
+          }
+        },
+      );
+
+      // Subscribe to pending approvals
+      _pendingSubscription = AdminService.getPendingPractitionersStream().listen(
+        (pendingPractitioners) {
+          _realPendingApprovals = pendingPractitioners;
+          notifyListeners();
+          
+          if (kDebugMode) {
+            print('✅ AdminProvider: Loaded ${pendingPractitioners.length} pending applications from Firebase');
+          }
+        },
+        onError: (error) {
+          _error = 'Failed to load pending applications: $error';
+          notifyListeners();
+          
+          if (kDebugMode) {
+            print('❌ AdminProvider ERROR: Failed to load pending applications: $error');
+          }
+        },
+      );
+
+      // Load analytics data
+      _loadAnalyticsData();
+      
+    } catch (e) {
+      _error = 'Failed to initialize Firebase data: $e';
+      _isLoading = false;
+      notifyListeners();
+      
+      if (kDebugMode) {
+        print('❌ AdminProvider ERROR: Failed to initialize Firebase data: $e');
+      }
+    }
+  }
+
+  /// Load analytics data from Firebase
+  Future<void> _loadAnalyticsData() async {
+    try {
+      _adminAnalytics = await AdminService.getAdminAnalytics();
+      notifyListeners();
+      
+      if (kDebugMode) {
+        print('✅ AdminProvider: Loaded analytics data from Firebase');
+        print('   - Total Patients: ${_adminAnalytics['totalPatients']}');
+        print('   - Total Sessions: ${_adminAnalytics['totalSessions']}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ AdminProvider ERROR: Failed to load analytics: $e');
+      }
+    }
+  }
+
+  /// Load mock data only (for development)
+  void _loadMockDataOnly() {
+    _isLoading = true;
+    notifyListeners();
+
+    // Simulate API delay
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      _loadMockData();
+      _isLoading = false;
+      notifyListeners();
+    });
+  }
+
+  /// Load mock data for development and testing
+  void _loadMockData() {
+    // Mock approved providers
+    _providers = [
+      HealthcareProvider(
+        id: '1',
+        firstName: 'Dr. Sarah',
+        lastName: 'Johnson',
+        email: 'sarah.johnson@clinic.com',
+        directPhoneNumber: '+1-555-0101',
+        fullCompanyName: 'Johnson Wound Care Clinic',
+        businessAddress: '123 Medical Center Dr, Boston, MA',
+        salesPerson: 'John Smith',
+        purchasePlan: 'Premium',
+        shippingAddress: '123 Medical Center Dr, Boston, MA',
+        package: 'Complete Wound Care System',
+        isApproved: true,
+        registrationDate: DateTime.now().subtract(const Duration(days: 30)),
+        approvalDate: DateTime.now().subtract(const Duration(days: 25)),
+        country: 'USA',
+      ),
+      HealthcareProvider(
+        id: '2',
+        firstName: 'Dr. Michael',
+        lastName: 'Chen',
+        email: 'michael.chen@healthcare.com',
+        directPhoneNumber: '+1-555-0102',
+        fullCompanyName: 'Chen Medical Associates',
+        businessAddress: '456 Health Plaza, San Francisco, CA',
+        salesPerson: 'Jane Doe',
+        purchasePlan: 'Standard',
+        shippingAddress: '456 Health Plaza, San Francisco, CA',
+        package: 'Basic Wound Care System',
+        isApproved: true,
+        registrationDate: DateTime.now().subtract(const Duration(days: 45)),
+        approvalDate: DateTime.now().subtract(const Duration(days: 40)),
+        country: 'USA',
+      ),
+    ];
+
+    // Mock pending approvals
+    _pendingApprovals = [
+      HealthcareProvider(
+        id: '3',
+        firstName: 'Dr. Emily',
+        lastName: 'Rodriguez',
+        email: 'emily.rodriguez@clinic.com',
+        directPhoneNumber: '+1-555-0103',
+        fullCompanyName: 'Rodriguez Dermatology',
+        businessAddress: '789 Skin Care Ave, Miami, FL',
+        salesPerson: 'Bob Wilson',
+        purchasePlan: 'Premium',
+        shippingAddress: '789 Skin Care Ave, Miami, FL',
+        package: 'Complete Wound Care System',
+        isApproved: false,
+        registrationDate: DateTime.now().subtract(const Duration(days: 5)),
+        country: 'USA',
+      ),
+      HealthcareProvider(
+        id: '4',
+        firstName: 'Dr. James',
+        lastName: 'Wilson',
+        email: 'james.wilson@medical.com',
+        directPhoneNumber: '+1-555-0104',
+        fullCompanyName: 'Wilson Family Medicine',
+        businessAddress: '321 Family Dr, Chicago, IL',
+        salesPerson: 'Alice Brown',
+        purchasePlan: 'Standard',
+        shippingAddress: '321 Family Dr, Chicago, IL',
+        package: 'Basic Wound Care System',
+        isApproved: false,
+        registrationDate: DateTime.now().subtract(const Duration(days: 3)),
+        country: 'USA',
+      ),
+    ];
+
+    // Mock country analytics
+    _countryAnalytics = [
+      CountryAnalytics(
+        id: 'USA',
+        countryName: 'United States',
+        totalPractitioners: 45,
+        activePractitioners: 38,
+        pendingApplications: 8,
+        approvedThisMonth: 12,
+        rejectedThisMonth: 2,
+        totalPatients: 234,
+        newPatientsThisMonth: 45,
+        totalSessions: 1456,
+        sessionsThisMonth: 234,
+        averageSessionsPerPractitioner: 32.4,
+        averagePatientsPerPractitioner: 5.2,
+        averageWoundHealingRate: 78.5,
+        provinces: {
+          'California': ProvinceStats(
+            totalPractitioners: 12,
+            totalPatients: 78,
+            totalSessions: 456,
+          ),
+          'Texas': ProvinceStats(
+            totalPractitioners: 10,
+            totalPatients: 65,
+            totalSessions: 398,
+          ),
+          'Florida': ProvinceStats(
+            totalPractitioners: 8,
+            totalPatients: 52,
+            totalSessions: 312,
+          ),
+        },
+        lastCalculated: DateTime.now().subtract(const Duration(hours: 2)),
+        calculatedBy: 'admin_system',
+      ),
+      CountryAnalytics(
+        id: 'RSA',
+        countryName: 'South Africa',
+        totalPractitioners: 23,
+        activePractitioners: 19,
+        pendingApplications: 4,
+        approvedThisMonth: 6,
+        rejectedThisMonth: 1,
+        totalPatients: 145,
+        newPatientsThisMonth: 28,
+        totalSessions: 892,
+        sessionsThisMonth: 156,
+        averageSessionsPerPractitioner: 38.8,
+        averagePatientsPerPractitioner: 6.3,
+        averageWoundHealingRate: 82.1,
+        provinces: {
+          'Gauteng': ProvinceStats(
+            totalPractitioners: 8,
+            totalPatients: 52,
+            totalSessions: 312,
+          ),
+          'Western Cape': ProvinceStats(
+            totalPractitioners: 6,
+            totalPatients: 39,
+            totalSessions: 234,
+          ),
+          'KwaZulu-Natal': ProvinceStats(
+            totalPractitioners: 5,
+            totalPatients: 32,
+            totalSessions: 198,
+          ),
+        },
+        lastCalculated: DateTime.now().subtract(const Duration(hours: 3)),
+        calculatedBy: 'admin_system',
+      ),
+    ];
+
+    if (kDebugMode) {
+      print('✅ AdminProvider: Mock data loaded successfully');
+      print('   - Providers: ${_providers.length}');
+      print('   - Pending: ${_pendingApprovals.length}');
+      print('   - Analytics: ${_countryAnalytics.length}');
+    }
+  }
+
+  /// Set country filter
+  void setCountryFilter(String? country) {
+    _selectedCountry = country;
+    notifyListeners();
+  }
+
+  /// Approve a provider application
+  Future<void> approveProvider(String providerId, String reason) async {
+    if (_useFirebase) {
+      return _approveProviderFirebase(providerId, reason);
+    } else {
+      return _approveProviderMock(providerId, reason);
+    }
+  }
+
+  /// Approve provider using Firebase
+  Future<void> _approveProviderFirebase(String providerId, String reason) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await AdminService.approvePractitioner(providerId, reason);
+
+      _isLoading = false;
+      _error = null;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('✅ AdminProvider: Provider approved via Firebase: $providerId');
+      }
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      
+      if (kDebugMode) {
+        print('❌ AdminProvider ERROR: Failed to approve provider: $e');
+      }
+    }
+  }
+
+  /// Approve provider using mock data
+  Future<void> _approveProviderMock(String providerId, String reason) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Find the provider in pending approvals
+      final providerIndex = _pendingApprovals.indexWhere((p) => p.id == providerId);
+      if (providerIndex == -1) {
+        throw Exception('Provider not found in pending approvals');
+      }
+
+      final provider = _pendingApprovals[providerIndex];
+      
+      // Move to approved providers
+      final approvedProvider = provider.copyWith(
+        isApproved: true,
+        approvalDate: DateTime.now(),
+      );
+
+      _providers.add(approvedProvider);
+      _pendingApprovals.removeAt(providerIndex);
+
+      _isLoading = false;
+      _error = null;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('✅ Provider approved: ${provider.fullName}');
+      }
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      
+      if (kDebugMode) {
+        print('❌ Error approving provider: $e');
+      }
+    }
+  }
+
+  /// Reject a provider application
+  Future<void> rejectProvider(String providerId, String reason) async {
+    if (_useFirebase) {
+      return _rejectProviderFirebase(providerId, reason);
+    } else {
+      return _rejectProviderMock(providerId, reason);
+    }
+  }
+
+  /// Reject provider using Firebase
+  Future<void> _rejectProviderFirebase(String providerId, String reason) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await AdminService.rejectPractitioner(providerId, reason);
+
+      _isLoading = false;
+      _error = null;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('✅ AdminProvider: Provider rejected via Firebase: $providerId');
+      }
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      
+      if (kDebugMode) {
+        print('❌ AdminProvider ERROR: Failed to reject provider: $e');
+      }
+    }
+  }
+
+  /// Reject provider using mock data
+  Future<void> _rejectProviderMock(String providerId, String reason) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Remove from pending approvals
+      _pendingApprovals.removeWhere((p) => p.id == providerId);
+
+      _isLoading = false;
+      _error = null;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('✅ Provider rejected: $providerId, Reason: $reason');
+      }
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      
+      if (kDebugMode) {
+        print('❌ Error rejecting provider: $e');
+      }
+    }
+  }
+
+  /// Get analytics for specific country
+  CountryAnalytics? getCountryAnalytics(String countryCode) {
+    try {
+      return _countryAnalytics.firstWhere((analytics) => analytics.id == countryCode);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Refresh analytics data
+  Future<void> refreshAnalytics() async {
+    _isLoading = true;
+    notifyListeners();
+
+    // Simulate refresh delay
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    // Update analytics with current timestamp
+    _countryAnalytics = _countryAnalytics.map((analytics) => 
+      analytics.copyWith(lastCalculated: DateTime.now())
+    ).toList();
+
+    _isLoading = false;
+    notifyListeners();
+
+    if (kDebugMode) {
+      print('✅ Analytics refreshed');
+    }
+  }
+
+  /// Clear error state
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    // Cancel Firebase subscriptions
+    _practitionersSubscription?.cancel();
+    _pendingSubscription?.cancel();
+    _adminUsersSubscription?.cancel();
+    super.dispose();
+  }
+
+  // ============================================================================
+  // ADMIN USER MANAGEMENT METHODS
+  // ============================================================================
+
+  /// Load admin users (Super Admin only)
+  Future<void> loadAdminUsers() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Cancel existing subscription
+      _adminUsersSubscription?.cancel();
+
+      // Subscribe to admin users stream
+      _adminUsersSubscription = AdminService.getAdminUsersStream().listen(
+        (adminUsers) {
+          _adminUsers = adminUsers;
+          _isLoading = false;
+          notifyListeners();
+
+          if (kDebugMode) {
+            print('✅ ADMIN PROVIDER: Loaded ${adminUsers.length} admin users');
+          }
+        },
+        onError: (error) {
+          _error = 'Failed to load admin users: $error';
+          _isLoading = false;
+          notifyListeners();
+
+          if (kDebugMode) {
+            print('❌ ADMIN PROVIDER ERROR: Failed to load admin users: $error');
+          }
+        },
+      );
+    } catch (e) {
+      _error = 'Failed to load admin users: $e';
+      _isLoading = false;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to load admin users: $e');
+      }
+    }
+  }
+
+  /// Create a new admin user (Super Admin only)
+  Future<bool> createAdminUser({
+    required String email,
+    required String firstName,
+    required String lastName,
+    required AdminRole role,
+    required String country,
+    String? countryName,
+    required String createdBy,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await AdminService.createAdminUser(
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        role: role,
+        country: country,
+        countryName: countryName,
+        createdBy: createdBy,
+        notes: notes,
+      );
+
+      _isLoading = false;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Created admin user: $firstName $lastName ($email)');
       }
       
       return true;
     } catch (e) {
-      _setError('Failed to update verification status: $e');
-      debugPrint('Error updating verification status: $e');
+      _error = 'Failed to create admin user: $e';
+      _isLoading = false;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to create admin user: $e');
+      }
+
       return false;
     }
   }
 
-  /// Suspend or reactivate a practitioner
-  Future<bool> updatePractitionerStatus(String userId, String status) async {
-    _setLoading(true);
-    _setError(null);
-    
+  /// Update admin user status
+  Future<bool> updateAdminUserStatus(String adminUserId, AdminUserStatus status) async {
     try {
-      await _firestore.collection('users').doc(userId).update({
-        'accountStatus': status,
-        'lastUpdated': FieldValue.serverTimestamp(),
-      });
-      
-      // Refresh practitioners list
-      await loadPractitioners();
+      await AdminService.updateAdminUserStatus(adminUserId, status);
+
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Updated admin user status: $adminUserId -> ${status.value}');
+      }
       
       return true;
     } catch (e) {
-      _setError('Failed to update practitioner status: $e');
-      debugPrint('Error updating practitioner status: $e');
+      _error = 'Failed to update admin user status: $e';
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to update admin user status: $e');
+      }
+
       return false;
-    } finally {
-      _setLoading(false);
     }
   }
 
-  /// Get applications by country
-  List<PractitionerApplication> getApplicationsByCountry(String country) {
-    return _allApplications.where((app) => app.country == country).toList();
+  /// Update admin user details
+  Future<bool> updateAdminUser(String adminUserId, Map<String, dynamic> updates) async {
+    try {
+      await AdminService.updateAdminUser(adminUserId, updates);
+
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Updated admin user: $adminUserId');
+      }
+      
+      return true;
+    } catch (e) {
+      _error = 'Failed to update admin user: $e';
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to update admin user: $e');
+      }
+
+      return false;
+    }
   }
 
-  /// Get applications by status
-  List<PractitionerApplication> getApplicationsByStatus(ApplicationStatus status) {
-    return _allApplications.where((app) => app.status == status).toList();
-  }
+  /// Delete admin user (Super Admin only)
+  Future<bool> deleteAdminUser(String adminUserId, String userId) async {
+    try {
+      await AdminService.deleteAdminUser(adminUserId, userId);
 
-  /// Search applications by name or email
-  List<PractitionerApplication> searchApplications(String query) {
-    if (query.isEmpty) return _allApplications;
-    
-    final lowercaseQuery = query.toLowerCase();
-    return _allApplications.where((app) {
-      return app.firstName.toLowerCase().contains(lowercaseQuery) ||
-             app.lastName.toLowerCase().contains(lowercaseQuery) ||
-             app.email.toLowerCase().contains(lowercaseQuery) ||
-             app.licenseNumber.toLowerCase().contains(lowercaseQuery);
-    }).toList();
-  }
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Deleted admin user: $adminUserId');
+      }
 
-  /// Get summary statistics
-  Map<String, int> getSummaryStats() {
-    return {
-      'total': _allApplications.length,
-      'pending': _pendingApplications.length,
-      'approved': approvedApplications.length,
-      'rejected': rejectedApplications.length,
-      'underReview': underReviewApplications.length,
-    };
-  }
+      return true;
+    } catch (e) {
+      _error = 'Failed to delete admin user: $e';
+      notifyListeners();
 
-  /// Clear all data
-  void clearData() {
-    _pendingApplications.clear();
-    _allApplications.clear();
-    _countryAnalytics.clear();
-    _practitioners.clear();
-    _errorMessage = null;
-    notifyListeners();
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to delete admin user: $e');
+      }
+
+      return false;
+    }
   }
 }

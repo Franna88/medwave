@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_profile.dart';
+import '../utils/role_manager.dart';
 
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -42,6 +43,22 @@ class AuthProvider extends ChangeNotifier {
     if (!_useFirebase) return _mockAuthenticated;
     return _userProfile?.accountStatus == 'approved' || 
            _userProfile?.role == 'super_admin';
+  }
+  
+  // Get user role for role-based access control
+  UserRole get userRole {
+    if (!_useFirebase) return UserRole.practitioner;
+    return UserRole.fromString(_userProfile?.role ?? 'practitioner');
+  }
+  
+  // Check if user has admin privileges
+  bool get isAdmin {
+    return RoleManager.canAccessAdminPanel(userRole);
+  }
+  
+  // Get appropriate dashboard route based on user role
+  String get dashboardRoute {
+    return RoleManager.getDashboardRoute(userRole);
   }
   
   AuthProvider() {
@@ -321,6 +338,56 @@ class AuthProvider extends ChangeNotifier {
       _mockAuthenticated = true;
       _mockEmail = email;
       _mockUserName = email.split('@')[0];
+      
+      // Create mock user profile based on email for testing different roles
+      String role = 'practitioner';
+      String accountStatus = _autoApprovePractitioners ? 'approved' : 'pending';
+      
+      // Special test accounts for different roles
+      if (email.toLowerCase() == 'admin@medwave.com' || 
+          email.toLowerCase() == 'superadmin@medwave.com') {
+        role = 'super_admin';
+        accountStatus = 'approved';
+      } else if (email.toLowerCase() == 'countryadmin@medwave.com') {
+        role = 'country_admin';
+        accountStatus = 'approved';
+      }
+      
+      // Create mock user profile for testing
+      _userProfile = UserProfile(
+        id: 'mock-${DateTime.now().millisecondsSinceEpoch}',
+        email: email,
+        firstName: 'Test',
+        lastName: role == 'super_admin' ? 'Super Admin' : 
+                 role == 'country_admin' ? 'Country Admin' : 'Practitioner',
+        phoneNumber: '+1-555-0123',
+        licenseNumber: 'TEST123',
+        specialization: 'Wound Care',
+        yearsOfExperience: 5,
+        practiceLocation: 'Test Clinic',
+        country: 'USA',
+        countryName: 'United States',
+        province: 'California',
+        city: 'San Francisco',
+        address: '123 Test Street',
+        postalCode: '94102',
+        accountStatus: accountStatus,
+        role: role,
+        licenseVerified: true,
+        professionalReferences: [],
+        totalPatients: 0,
+        totalSessions: 0,
+        settings: UserSettings(
+          notificationsEnabled: true,
+          darkModeEnabled: false,
+          biometricEnabled: false,
+          language: 'en',
+          timezone: 'UTC',
+        ),
+        createdAt: DateTime.now(),
+        lastLogin: DateTime.now(),
+      );
+      
       notifyListeners();
       return true;
     }

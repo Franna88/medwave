@@ -32,8 +32,17 @@ import 'screens/profile_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/notifications/notification_preferences_screen.dart';
 import 'screens/web/mobile_warning_screen.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/admin/admin_provider_management_screen.dart';
+import 'screens/admin/admin_provider_approvals_screen.dart';
+import 'screens/admin/admin_analytics_screen.dart';
+import 'screens/admin/admin_patient_management_screen.dart';
+import 'screens/admin/admin_advert_performance_screen.dart';
+import 'screens/admin/admin_user_management_screen.dart';
+import 'screens/admin/admin_report_builder_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/user_profile_provider.dart';
+import 'providers/admin_provider.dart';
 import 'services/firebase/fcm_service.dart';
 import 'services/web_image_service.dart';
 import 'utils/responsive_utils.dart';
@@ -74,6 +83,8 @@ class MedWaveApp extends StatelessWidget {
         // AppointmentProvider disabled until appointment system is complete
         // ChangeNotifierProvider(create: (_) => AppointmentProvider()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
+        // Admin provider for superadmin functionality
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
@@ -182,7 +193,8 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           currentPath == '/login' || 
           currentPath == '/signup' || 
           currentPath == '/pending-approval') {
-        return '/'; // Redirect to dashboard
+        // Redirect to role-appropriate dashboard
+        return authProvider.dashboardRoute;
       }
     }
     
@@ -225,6 +237,18 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         GoRoute(
           path: '/',
           name: 'dashboard',
+          redirect: (context, state) {
+            final authProvider = Provider.of<AuthProvider>(context, listen: false);
+            if (authProvider.isAuthenticated && authProvider.canAccessApp) {
+              // Redirect admin users to admin dashboard
+              if (authProvider.isAdmin) {
+                return '/admin/dashboard';
+              }
+              // Regular users stay on practitioner dashboard
+              return null;
+            }
+            return null;
+          },
           builder: (context, state) => const DashboardScreen(),
         ),
         GoRoute(
@@ -262,6 +286,48 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
               builder: (context, state) => const NotificationPreferencesScreen(),
             ),
           ],
+        ),
+        
+        // Admin routes - protected by role-based access control
+        GoRoute(
+          path: '/admin/dashboard',
+          name: 'admin-dashboard',
+          builder: (context, state) => const AdminDashboardScreen(),
+        ),
+        GoRoute(
+          path: '/admin/providers',
+          name: 'admin-providers',
+          builder: (context, state) => const AdminProviderManagementScreen(),
+        ),
+        GoRoute(
+          path: '/admin/approvals',
+          name: 'admin-approvals',
+          builder: (context, state) => const AdminProviderApprovalsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/analytics',
+          name: 'admin-analytics',
+          builder: (context, state) => const AdminAnalyticsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/patients',
+          name: 'admin-patients',
+          builder: (context, state) => const AdminPatientManagementScreen(),
+        ),
+        GoRoute(
+          path: '/admin/adverts',
+          name: 'admin-adverts',
+          builder: (context, state) => const AdminAdvertPerformanceScreen(),
+        ),
+        GoRoute(
+          path: '/admin/users',
+          name: 'admin-users',
+          builder: (context, state) => const AdminUserManagementScreen(),
+        ),
+        GoRoute(
+          path: '/admin/report-builder',
+          name: 'admin-report-builder',
+          builder: (context, state) => const AdminReportBuilderScreen(),
         ),
       ],
     ),

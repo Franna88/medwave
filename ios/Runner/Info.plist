@@ -46,10 +46,70 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>MedWave needs camera access to take photos for wound documentation and patient session records to track treatment progress.</string>
+	<string>MedWave requires camera access to capture wound photographs for medical documentation and treatment progress tracking. This is essential for clinical wound care management.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>MedWave needs photo library access to select existing images for patient documentation and wound comparison photos.</string>
+	<string>MedWave requires photo library access to select existing wound images for medical documentation, treatment comparisons, and clinical progress tracking.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>MedWave needs permission to save patient photos and wound documentation images to your photo library for record keeping.</string>
+	<string>MedWave requires permission to save medical wound documentation photos to your photo library for healthcare record keeping and clinical continuity.</string>
+	
+	<!-- iOS Privacy Configuration for Healthcare App -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	
+	<!-- App Transport Security for Healthcare Data -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>firebase.googleapis.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.2</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	
+	<!-- Document Types for PDF Sharing -->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>PDF Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.adobe.pdf</string>
+			</array>
+		</dict>
+	</array>
+	
+	<!-- Exported Type Identifiers for Medical Reports -->
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.medwave.clinical-report</string>
+			<key>UTTypeDescription</key>
+			<string>MedWave Clinical Report</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>com.adobe.pdf</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>pdf</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>
