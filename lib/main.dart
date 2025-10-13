@@ -43,6 +43,7 @@ import 'screens/admin/admin_report_builder_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/admin_provider.dart';
+import 'providers/gohighlevel_provider.dart';
 import 'services/firebase/fcm_service.dart';
 import 'services/web_image_service.dart';
 import 'utils/responsive_utils.dart';
@@ -85,6 +86,8 @@ class MedWaveApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         // Admin provider for superadmin functionality
         ChangeNotifierProvider(create: (_) => AdminProvider()),
+        // GoHighLevel CRM provider for advertisement performance monitoring
+        ChangeNotifierProvider(create: (_) => GoHighLevelProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {

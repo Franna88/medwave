@@ -20,7 +20,7 @@ class PatientProvider with ChangeNotifier {
   static const Duration _cacheExpiration = Duration(minutes: 5);
   
   // Feature flag for development - allows switching between mock and Firebase
-  static const bool _useFirebase = false;
+  static const bool _useFirebase = true;
 
   List<Patient> get patients => List.unmodifiable(_patients);
   Patient? get selectedPatient => _selectedPatient;

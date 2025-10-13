@@ -1,7 +1,7 @@
 # MedWave Provider - Privacy Policy
 
 **Effective Date:** January 9, 2025  
-**Last Updated:** January 9, 2025
+**Last Updated:** October 13, 2025
 
 ## Introduction
 
@@ -15,9 +15,12 @@ MedWave Provider ("we," "our," or "us") is committed to protecting the privacy a
 As a healthcare application, we collect and process the following patient information under your direction as a healthcare professional:
 
 - **Personal Identifiers**: Patient names, ID numbers, dates of birth, contact information
-- **Medical Information**: Medical history, current conditions, medications, allergies
-- **Treatment Data**: Wound measurements, healing progress, VAS pain scores, weight measurements
-- **Medical Images**: Wound photographs for documentation and progress tracking
+- **Medical Information**: Medical history, current conditions, medications, allergies, wound diagnoses
+- **Treatment Data**: Wound measurements, healing progress, VAS pain scores, weight measurements, nutritional assessments
+- **Disease and Condition Management**: Wound care tracking, healing status, complication monitoring
+- **Medication and Treatment Management**: Prescribed treatments, medication schedules, treatment protocols
+- **Physical Therapy and Rehabilitation Data**: Wound healing progress, mobility assessments, rehabilitation milestones
+- **Medical Images**: Wound photographs for documentation and progress tracking (stored encrypted)
 - **Session Notes**: Treatment observations, progress notes, clinical assessments
 - **Consent Records**: Digital signatures and consent forms
 
@@ -35,10 +38,16 @@ As a healthcare application, we collect and process the following patient inform
 
 ### Primary Purposes (Healthcare Treatment)
 - **Patient Care**: Document wound healing progress and treatment outcomes
+- **Clinical Decision Support**: Provide evidence-based recommendations for wound care management
+- **Disease and Condition Management**: Track wound healing, monitor complications, and manage chronic wound conditions
+- **Medication and Treatment Management**: Document prescribed treatments, track medication adherence, and manage treatment protocols
+- **Physical Therapy and Rehabilitation**: Monitor wound healing progress, track mobility improvements, and document rehabilitation milestones
+- **Nutritional Management**: Track weight changes and nutritional factors affecting wound healing
 - **Clinical Documentation**: Maintain accurate medical records and treatment histories
 - **Progress Tracking**: Monitor healing progress with visual analytics and measurements
 - **Report Generation**: Create treatment summaries and motivation letters for medical aid
 - **Communication**: Facilitate communication between healthcare providers
+- **Medical Reference and Education**: Provide access to wound care protocols, best practices, and educational resources
 
 ### Secondary Purposes (App Functionality)
 - **Authentication**: Verify healthcare professional identity and credentials
@@ -140,12 +149,36 @@ We may update this Privacy Policy to reflect changes in our practices or legal r
 - **Effective Date**: Clearly indicate when changes take effect
 - **Review Options**: Allow reasonable time to review changes before they take effect
 
+## Health App Features Declaration
+
+MedWave Provider is a **Health App** as defined by Google Play Store policies. Our app includes the following health-related features:
+
+### Medical Features
+- **Clinical Decision Support**: AI-powered wound assessment and treatment recommendations
+- **Healthcare Services and Management**: Comprehensive patient and wound care management system
+- **Medical Reference and Education**: Access to wound care protocols, ICD-10 codes, and clinical guidelines
+- **Diseases and Conditions Management**: Tracking and management of wound conditions, healing progress, and complications
+- **Medication and Treatment Management**: Documentation of prescribed treatments, medications, and treatment protocols
+- **Physical Therapy and Rehabilitation**: Monitoring wound healing progress and rehabilitation milestones
+
+### Health and Fitness Features
+- **Nutrition and Weight Management**: Tracking weight changes and nutritional factors affecting wound healing
+
+### Data Handling for Health Features
+All health data collected through these features is:
+- **Encrypted**: AES-256 encryption at rest, TLS 1.3 in transit
+- **Access-Controlled**: Only accessible by the treating healthcare professional
+- **HIPAA-Compliant**: Stored in HIPAA-compliant infrastructure with Business Associate Agreements
+- **Audit-Logged**: All access and modifications are logged for security and compliance
+- **Not Shared**: Never sold or shared with third parties for marketing purposes
+
 ## Regulatory Compliance
 
 This Privacy Policy and our practices comply with:
 - **HIPAA** (Health Insurance Portability and Accountability Act) - United States
 - **POPIA** (Protection of Personal Information Act) - South Africa  
 - **GDPR** (General Data Protection Regulation) - European Union
+- **Google Play Health Apps Policy** - Health data handling requirements
 - **Local Privacy Laws** in jurisdictions where the app is used
 
 ## Contact Information
