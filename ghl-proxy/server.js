@@ -301,6 +301,24 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
     
     console.log('📋 Stage ID to Name mapping created:', Object.keys(stageIdToName).length, 'stages');
     
+    // Fetch users to get agent names
+    let userIdToName = {};
+    try {
+      const usersResponse = await axios.get(`${GHL_BASE_URL}/users/`, {
+        headers: getGHLHeaders(),
+        params: { locationId }
+      });
+      
+      if (usersResponse.data.users) {
+        usersResponse.data.users.forEach(user => {
+          userIdToName[user.id] = user.name || user.email || user.id;
+        });
+        console.log('👥 User ID to Name mapping created:', Object.keys(userIdToName).length, 'users');
+      }
+    } catch (error) {
+      console.log('⚠️  Could not fetch users, will use IDs as names:', error.message);
+    }
+    
     // Fetch opportunities from both pipelines
     console.log(`🔍 Fetching opportunities for Altus (${altusPipelineId}) and Andries (${andriesPipelineId})...`);
     
@@ -444,7 +462,9 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
         const stageCategory = matchStageCategory(stageName);
         const monetaryValue = opp.monetaryValue || 0;
         const salesAgent = opp.assignedTo || 'unassigned';
-        const salesAgentName = opp.assignedToName || opp.assignedTo || 'Unassigned';
+        const salesAgentName = salesAgent === 'unassigned' 
+          ? 'Unassigned' 
+          : (userIdToName[salesAgent] || opp.assignedToName || salesAgent);
         
         // Extract campaign/ad information from attributions
         const lastAttribution = opp.attributions && opp.attributions.length > 0 
