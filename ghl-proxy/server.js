@@ -265,6 +265,275 @@ app.get('/api/ghl/opportunities', async (req, res) => {
   }
 });
 
+// Pipeline Performance Analytics Endpoint (Altus + Andries)
+app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
+  try {
+    console.log('📊 Calculating pipeline performance analytics for Altus and Andries...');
+    
+    const locationId = 'QdLXaFEqrdF0JbVbpKLw';
+    
+    // Pipeline IDs for Altus and Andries
+    const altusPipelineId = req.query.altusPipelineId || 'ALTUS_PIPELINE_ID'; // TODO: Get actual ID
+    const andriesPipelineId = req.query.andriesPipelineId || 'ANDRIES_PIPELINE_ID'; // TODO: Get actual ID
+    
+    // Fetch opportunities from both pipelines
+    const [altusResponse, andriesResponse] = await Promise.all([
+      axios.get(`${GHL_BASE_URL}/opportunities/search`, {
+        headers: getGHLHeaders(),
+        params: {
+          location_id: locationId,
+          limit: 200,
+          pipeline_id: altusPipelineId
+        }
+      }).catch(err => {
+        console.warn('⚠️ Failed to fetch Altus pipeline:', err.message);
+        return { data: { opportunities: [] } };
+      }),
+      axios.get(`${GHL_BASE_URL}/opportunities/search`, {
+        headers: getGHLHeaders(),
+        params: {
+          location_id: locationId,
+          limit: 200,
+          pipeline_id: andriesPipelineId
+        }
+      }).catch(err => {
+        console.warn('⚠️ Failed to fetch Andries pipeline:', err.message);
+        return { data: { opportunities: [] } };
+      })
+    ]);
+    
+    const altusOpportunities = altusResponse.data.opportunities || [];
+    const andriesOpportunities = andriesResponse.data.opportunities || [];
+    const allOpportunities = [...altusOpportunities, ...andriesOpportunities];
+    
+    console.log(`✅ Fetched ${altusOpportunities.length} Altus + ${andriesOpportunities.length} Andries opportunities`);
+    
+    // Define the 5 key stages to track (these are stage NAMES, not IDs)
+    // We'll need to map these dynamically based on stage names from the opportunities
+    const keyStageNames = {
+      bookedAppointments: ['booked', 'appointment', 'scheduled'],
+      callCompleted: ['call completed', 'contacted', 'responded'],
+      noShowCancelledDisqualified: ['no show', 'cancelled', 'disqualified', 'lost', 'reschedule'],
+      deposits: ['deposit', 'paid deposit'],
+      cashCollected: ['sold', 'purchased', 'cash collected', 'payment received']
+    };
+    
+    // Helper function to match stage name to key stage category
+    const matchStageCategory = (stageName) => {
+      if (!stageName) return 'other';
+      const lowerStageName = stageName.toLowerCase();
+      
+      if (keyStageNames.bookedAppointments.some(keyword => lowerStageName.includes(keyword))) {
+        return 'bookedAppointments';
+      }
+      if (keyStageNames.callCompleted.some(keyword => lowerStageName.includes(keyword))) {
+        return 'callCompleted';
+      }
+      if (keyStageNames.noShowCancelledDisqualified.some(keyword => lowerStageName.includes(keyword))) {
+        return 'noShowCancelledDisqualified';
+      }
+      if (keyStageNames.deposits.some(keyword => lowerStageName.includes(keyword))) {
+        return 'deposits';
+      }
+      if (keyStageNames.cashCollected.some(keyword => lowerStageName.includes(keyword))) {
+        return 'cashCollected';
+      }
+      return 'other';
+    };
+    
+    // Initialize stats structure
+    const stats = {
+      overview: {
+        totalOpportunities: allOpportunities.length,
+        altusCount: altusOpportunities.length,
+        andriesCount: andriesOpportunities.length,
+        bookedAppointments: 0,
+        callCompleted: 0,
+        noShowCancelledDisqualified: 0,
+        deposits: 0,
+        cashCollected: 0,
+        totalMonetaryValue: 0
+      },
+      byPipeline: {
+        altus: {
+          pipelineId: altusPipelineId,
+          pipelineName: 'Altus Pipeline - DDM',
+          totalOpportunities: altusOpportunities.length,
+          bookedAppointments: 0,
+          callCompleted: 0,
+          noShowCancelledDisqualified: 0,
+          deposits: 0,
+          cashCollected: 0,
+          totalMonetaryValue: 0,
+          salesAgents: {}
+        },
+        andries: {
+          pipelineId: andriesPipelineId,
+          pipelineName: 'Andries Pipeline - DDM',
+          totalOpportunities: andriesOpportunities.length,
+          bookedAppointments: 0,
+          callCompleted: 0,
+          noShowCancelledDisqualified: 0,
+          deposits: 0,
+          cashCollected: 0,
+          totalMonetaryValue: 0,
+          salesAgents: {}
+        }
+      },
+      bySalesAgent: {}
+    };
+    
+    // Process opportunities
+    const processOpportunities = (opportunities, pipelineKey) => {
+      opportunities.forEach(opp => {
+        const stageName = opp.pipelineStageName || '';
+        const stageCategory = matchStageCategory(stageName);
+        const monetaryValue = opp.monetaryValue || 0;
+        const salesAgent = opp.assignedTo || 'unassigned';
+        const salesAgentName = opp.assignedToName || opp.assignedTo || 'Unassigned';
+        
+        // Update overview stats
+        if (stageCategory === 'bookedAppointments') stats.overview.bookedAppointments++;
+        if (stageCategory === 'callCompleted') stats.overview.callCompleted++;
+        if (stageCategory === 'noShowCancelledDisqualified') stats.overview.noShowCancelledDisqualified++;
+        if (stageCategory === 'deposits') stats.overview.deposits++;
+        if (stageCategory === 'cashCollected') {
+          stats.overview.cashCollected++;
+          stats.overview.totalMonetaryValue += monetaryValue;
+        }
+        
+        // Update pipeline-specific stats
+        const pipelineStats = stats.byPipeline[pipelineKey];
+        if (stageCategory === 'bookedAppointments') pipelineStats.bookedAppointments++;
+        if (stageCategory === 'callCompleted') pipelineStats.callCompleted++;
+        if (stageCategory === 'noShowCancelledDisqualified') pipelineStats.noShowCancelledDisqualified++;
+        if (stageCategory === 'deposits') pipelineStats.deposits++;
+        if (stageCategory === 'cashCollected') {
+          pipelineStats.cashCollected++;
+          pipelineStats.totalMonetaryValue += monetaryValue;
+        }
+        
+        // Initialize sales agent if not exists (pipeline level)
+        if (!pipelineStats.salesAgents[salesAgent]) {
+          pipelineStats.salesAgents[salesAgent] = {
+            agentId: salesAgent,
+            agentName: salesAgentName,
+            pipelineName: pipelineStats.pipelineName,
+            totalOpportunities: 0,
+            bookedAppointments: 0,
+            callCompleted: 0,
+            noShowCancelledDisqualified: 0,
+            deposits: 0,
+            cashCollected: 0,
+            totalMonetaryValue: 0
+          };
+        }
+        
+        // Update sales agent stats (pipeline level)
+        const agentStats = pipelineStats.salesAgents[salesAgent];
+        agentStats.totalOpportunities++;
+        if (stageCategory === 'bookedAppointments') agentStats.bookedAppointments++;
+        if (stageCategory === 'callCompleted') agentStats.callCompleted++;
+        if (stageCategory === 'noShowCancelledDisqualified') agentStats.noShowCancelledDisqualified++;
+        if (stageCategory === 'deposits') agentStats.deposits++;
+        if (stageCategory === 'cashCollected') {
+          agentStats.cashCollected++;
+          agentStats.totalMonetaryValue += monetaryValue;
+        }
+        
+        // Initialize sales agent if not exists (global level)
+        if (!stats.bySalesAgent[salesAgent]) {
+          stats.bySalesAgent[salesAgent] = {
+            agentId: salesAgent,
+            agentName: salesAgentName,
+            pipelines: {},
+            totalOpportunities: 0,
+            bookedAppointments: 0,
+            callCompleted: 0,
+            noShowCancelledDisqualified: 0,
+            deposits: 0,
+            cashCollected: 0,
+            totalMonetaryValue: 0
+          };
+        }
+        
+        // Update global sales agent stats
+        const globalAgentStats = stats.bySalesAgent[salesAgent];
+        globalAgentStats.totalOpportunities++;
+        if (stageCategory === 'bookedAppointments') globalAgentStats.bookedAppointments++;
+        if (stageCategory === 'callCompleted') globalAgentStats.callCompleted++;
+        if (stageCategory === 'noShowCancelledDisqualified') globalAgentStats.noShowCancelledDisqualified++;
+        if (stageCategory === 'deposits') globalAgentStats.deposits++;
+        if (stageCategory === 'cashCollected') {
+          globalAgentStats.cashCollected++;
+          globalAgentStats.totalMonetaryValue += monetaryValue;
+        }
+        
+        // Track pipeline breakdown for this agent
+        if (!globalAgentStats.pipelines[pipelineKey]) {
+          globalAgentStats.pipelines[pipelineKey] = {
+            pipelineName: pipelineStats.pipelineName,
+            totalOpportunities: 0,
+            bookedAppointments: 0,
+            callCompleted: 0,
+            noShowCancelledDisqualified: 0,
+            deposits: 0,
+            cashCollected: 0,
+            totalMonetaryValue: 0
+          };
+        }
+        
+        const agentPipelineStats = globalAgentStats.pipelines[pipelineKey];
+        agentPipelineStats.totalOpportunities++;
+        if (stageCategory === 'bookedAppointments') agentPipelineStats.bookedAppointments++;
+        if (stageCategory === 'callCompleted') agentPipelineStats.callCompleted++;
+        if (stageCategory === 'noShowCancelledDisqualified') agentPipelineStats.noShowCancelledDisqualified++;
+        if (stageCategory === 'deposits') agentPipelineStats.deposits++;
+        if (stageCategory === 'cashColleted') {
+          agentPipelineStats.cashCollected++;
+          agentPipelineStats.totalMonetaryValue += monetaryValue;
+        }
+      });
+    };
+    
+    // Process both pipelines
+    processOpportunities(altusOpportunities, 'altus');
+    processOpportunities(andriesOpportunities, 'andries');
+    
+    // Convert sales agents objects to arrays
+    stats.byPipeline.altus.salesAgentsList = Object.values(stats.byPipeline.altus.salesAgents);
+    stats.byPipeline.andries.salesAgentsList = Object.values(stats.byPipeline.andries.salesAgents);
+    stats.salesAgentsList = Object.values(stats.bySalesAgent);
+    
+    // Clean up (remove the objects, keep only arrays)
+    delete stats.byPipeline.altus.salesAgents;
+    delete stats.byPipeline.andries.salesAgents;
+    delete stats.bySalesAgent;
+    
+    console.log('✅ Pipeline performance analytics calculated successfully');
+    
+    res.json({
+      success: true,
+      ...stats,
+      locationUsed: { id: locationId, name: 'MedWave™ (SA)' },
+      pipelinesUsed: [
+        { id: altusPipelineId, name: 'Altus Pipeline - DDM' },
+        { id: andriesPipelineId, name: 'Andries Pipeline - DDM' }
+      ]
+    });
+    
+  } catch (error) {
+    console.error('❌ Error calculating pipeline performance:', error.message);
+    console.error('❌ Response status:', error.response?.status);
+    console.error('❌ Response data:', error.response?.data);
+    res.status(error.response?.status || 500).json({
+      success: false,
+      error: error.response?.data || error.message,
+      message: 'Failed to calculate pipeline performance'
+    });
+  }
+});
+
 // Campaign Performance Analytics Endpoint
 app.get('/api/ghl/analytics/campaign-performance', async (req, res) => {
   try {

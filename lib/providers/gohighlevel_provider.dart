@@ -19,6 +19,9 @@ class GoHighLevelProvider extends ChangeNotifier {
   // Campaign analytics data (from new analytics endpoint)
   Map<String, dynamic>? _campaignAnalytics;
   
+  // Pipeline performance analytics (Altus + Andries)
+  Map<String, dynamic>? _pipelinePerformance;
+  
   // State management
   bool _isLoading = false;
   bool _isInitialized = false;
@@ -36,6 +39,7 @@ class GoHighLevelProvider extends ChangeNotifier {
   GHLAnalytics? get erichAnalytics => _erichAnalytics;
   List<GHLAnalytics> get allPipelineAnalytics => _allPipelineAnalytics;
   Map<String, dynamic>? get campaignAnalytics => _campaignAnalytics;
+  Map<String, dynamic>? get pipelinePerformance => _pipelinePerformance;
   
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
@@ -53,6 +57,38 @@ class GoHighLevelProvider extends ChangeNotifier {
   int get totalCampaignAppointments => campaignSummary['totalAppointments'] ?? 0;
   int get totalCampaignSales => campaignSummary['totalSales'] ?? 0;
   double get totalCampaignRevenue => (campaignSummary['totalRevenue'] ?? 0).toDouble();
+  
+  // Pipeline performance getters (Altus + Andries)
+  Map<String, dynamic> get pipelineOverview => _pipelinePerformance?['overview'] ?? {};
+  Map<String, dynamic> get pipelineByPipeline => _pipelinePerformance?['byPipeline'] ?? {};
+  List<dynamic> get pipelineSalesAgents => _pipelinePerformance?['salesAgentsList'] ?? [];
+  
+  // Overview stats
+  int get totalPipelineOpportunities => pipelineOverview['totalOpportunities'] ?? 0;
+  int get bookedAppointments => pipelineOverview['bookedAppointments'] ?? 0;
+  int get callCompleted => pipelineOverview['callCompleted'] ?? 0;
+  int get noShowCancelledDisqualified => pipelineOverview['noShowCancelledDisqualified'] ?? 0;
+  int get deposits => pipelineOverview['deposits'] ?? 0;
+  int get cashCollected => pipelineOverview['cashCollected'] ?? 0;
+  double get totalMonetaryValue => (pipelineOverview['totalMonetaryValue'] ?? 0).toDouble();
+  
+  // Altus pipeline stats
+  Map<String, dynamic> get altusPipeline => pipelineByPipeline['altus'] ?? {};
+  int get altusOpportunities => altusPipeline['totalOpportunities'] ?? 0;
+  int get altusBookedAppointments => altusPipeline['bookedAppointments'] ?? 0;
+  int get altusCallCompleted => altusPipeline['callCompleted'] ?? 0;
+  int get altusNoShowCancelledDisqualified => altusPipeline['noShowCancelledDisqualified'] ?? 0;
+  int get altusDeposits => altusPipeline['deposits'] ?? 0;
+  int get altusCashCollected => altusPipeline['cashCollected'] ?? 0;
+  
+  // Andries pipeline stats
+  Map<String, dynamic> get andriesPipeline => pipelineByPipeline['andries'] ?? {};
+  int get andriesOpportunities => andriesPipeline['totalOpportunities'] ?? 0;
+  int get andriesBookedAppointments => andriesPipeline['bookedAppointments'] ?? 0;
+  int get andriesCallCompleted => andriesPipeline['callCompleted'] ?? 0;
+  int get andriesNoShowCancelledDisqualified => andriesPipeline['noShowCancelledDisqualified'] ?? 0;
+  int get andriesDeposits => andriesPipeline['deposits'] ?? 0;
+  int get andriesCashCollected => andriesPipeline['cashCollected'] ?? 0;
   
   // Erich Pipeline specific getters
   GHLPipeline? get erichPipeline => 
@@ -154,6 +190,24 @@ class GoHighLevelProvider extends ChangeNotifier {
           print('⚠️ GHL PROVIDER: Failed to load campaign analytics: $e');
         }
         // Don't rethrow - campaign analytics is optional
+      }
+      
+      // Load pipeline performance analytics (Altus + Andries pipelines)
+      try {
+        _pipelinePerformance = await GoHighLevelService.getPipelinePerformanceAnalytics();
+        if (kDebugMode) {
+          print('✅ GHL PROVIDER: Loaded pipeline performance - ${totalPipelineOpportunities} opportunities');
+          print('   - Booked Appointments: $bookedAppointments');
+          print('   - Call Completed: $callCompleted');
+          print('   - No Show/Cancelled: $noShowCancelledDisqualified');
+          print('   - Deposits: $deposits');
+          print('   - Cash Collected: $cashCollected');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('⚠️ GHL PROVIDER: Failed to load pipeline performance: $e');
+        }
+        // Don't rethrow - pipeline performance is optional
       }
       
     } catch (e) {
@@ -274,6 +328,28 @@ class GoHighLevelProvider extends ChangeNotifier {
       }
     }
     return agents.toList()..sort();
+  }
+
+  /// Get unique sales agents from pipeline performance (Altus + Andries)
+  List<String> getPipelineSalesAgents() {
+    final agents = <String>{};
+    for (final agent in pipelineSalesAgents) {
+      final agentName = agent['agentName'] as String?;
+      if (agentName != null && agentName.isNotEmpty && agentName != 'Unassigned') {
+        agents.add(agentName);
+      }
+    }
+    return agents.toList()..sort();
+  }
+
+  /// Get pipeline stats for a specific sales agent
+  Map<String, dynamic>? getPipelineStatsForAgent(String agentName) {
+    for (final agent in pipelineSalesAgents) {
+      if (agent['agentName'] == agentName) {
+        return agent as Map<String, dynamic>;
+      }
+    }
+    return null;
   }
 
   /// Get sales agent metrics

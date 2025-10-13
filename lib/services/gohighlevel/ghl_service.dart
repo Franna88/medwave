@@ -659,6 +659,59 @@ class GoHighLevelService {
       rethrow;
     }
   }
+
+  /// Get pipeline performance analytics for Altus and Andries pipelines
+  /// Returns aggregated metrics for the 5 key stages across both pipelines
+  /// with breakdown by sales agent
+  static Future<Map<String, dynamic>> getPipelinePerformanceAnalytics({
+    String? altusPipelineId,
+    String? andriesPipelineId,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print('🔄 GHL SERVICE: Fetching pipeline performance analytics...');
+      }
+
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (altusPipelineId != null) {
+        queryParams['altusPipelineId'] = altusPipelineId;
+      }
+      if (andriesPipelineId != null) {
+        queryParams['andriesPipelineId'] = andriesPipelineId;
+      }
+
+      final uri = Uri.parse('$_baseUrl/analytics/pipeline-performance')
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+      final response = await http.get(uri, headers: _headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        if (kDebugMode) {
+          print('✅ GHL SERVICE: Loaded pipeline performance analytics');
+          print('   - Total Opportunities: ${data['overview']?['totalOpportunities']}');
+          print('   - Booked Appointments: ${data['overview']?['bookedAppointments']}');
+          print('   - Call Completed: ${data['overview']?['callCompleted']}');
+          print('   - Sales Agents: ${data['salesAgentsList']?.length ?? 0}');
+        }
+
+        return data;
+      } else {
+        throw GHLApiException(
+          'Failed to fetch pipeline performance analytics',
+          response.statusCode,
+          response.body,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ GHL SERVICE ERROR: Failed to fetch pipeline performance analytics: $e');
+      }
+      rethrow;
+    }
+  }
 }
 
 /// Custom exception for GoHighLevel API errors

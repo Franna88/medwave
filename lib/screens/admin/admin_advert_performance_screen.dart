@@ -50,7 +50,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                 const SizedBox(height: 24),
                 _buildFiltersSection(ghlProvider),
                 const SizedBox(height: 24),
-                _buildErichPipelineMetrics(ghlProvider),
+                _buildPipelinePerformanceMetrics(ghlProvider),
                 const SizedBox(height: 24),
                 _buildPerformanceMetrics(),
                 const SizedBox(height: 24),
@@ -137,35 +137,33 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
             ),
           ],
         ),
-        if (ghlProvider.hasErichPipeline) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.trending_up,
-                  size: 16,
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.trending_up,
+                size: 16,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Altus + Andries Pipelines Active',
+                style: TextStyle(
                   color: AppTheme.primaryColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  'Erich Pipeline Active',
-                  style: TextStyle(
-                    color: AppTheme.primaryColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-          ),
-        ],
+        ),
       ],
     );
   }
@@ -1125,7 +1123,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              items: ['All', ...ghlProvider.getUniqueSalesAgents()].map((agent) {
+              items: ['All', ...ghlProvider.getPipelineSalesAgents()].map((agent) {
                 return DropdownMenuItem(value: agent, child: Text(agent));
               }).toList(),
               onChanged: (value) => setState(() => _selectedSalesAgent = value!),
@@ -1136,9 +1134,13 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
     );
   }
 
-  /// Build Erich Pipeline specific metrics (prominently displayed)
-  Widget _buildErichPipelineMetrics(GoHighLevelProvider ghlProvider) {
-    if (!ghlProvider.hasErichPipeline) {
+  /// Build Pipeline Performance metrics for Altus + Andries (prominently displayed)
+  Widget _buildPipelinePerformanceMetrics(GoHighLevelProvider ghlProvider) {
+    // Check if we have pipeline performance data
+    final hasData = ghlProvider.pipelinePerformance != null && 
+                    ghlProvider.totalPipelineOpportunities > 0;
+
+    if (!hasData) {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -1152,7 +1154,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Erich Pipeline not found in GoHighLevel. Please ensure the pipeline is properly configured.',
+                'Pipeline performance data is loading or unavailable. Please check that Altus and Andries pipelines are properly configured in GoHighLevel.',
                 style: TextStyle(color: Colors.orange[700]),
               ),
             ),
@@ -1161,6 +1163,15 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
       );
     }
 
+    // Determine which view to show based on selected sales agent
+    final isFiltered = _selectedSalesAgent != 'All';
+    
+    if (isFiltered) {
+      // Show filtered view for specific sales agent
+      return _buildFilteredAgentView(ghlProvider, _selectedSalesAgent);
+    }
+
+    // Show overview (combined stats from both pipelines)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1169,7 +1180,144 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
             Icon(Icons.star, color: AppTheme.primaryColor, size: 20),
             const SizedBox(width: 8),
             Text(
-              'Erich Pipeline Performance',
+              'Pipeline Performance Overview',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Altus: ${ghlProvider.altusOpportunities} | Andries: ${ghlProvider.andriesOpportunities}',
+                style: TextStyle(
+                  color: Colors.blue[700],
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Live Data',
+                style: TextStyle(
+                  color: Colors.green[700],
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Row 1: The 5 key metrics
+        Row(
+          children: [
+            Expanded(
+              child: _buildPipelineMetricCard(
+                'Booked Appointments',
+                ghlProvider.bookedAppointments.toString(),
+                Icons.calendar_today,
+                Colors.green,
+                ghlProvider.totalPipelineOpportunities,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildPipelineMetricCard(
+                'Call Completed',
+                ghlProvider.callCompleted.toString(),
+                Icons.phone,
+                Colors.blue,
+                ghlProvider.totalPipelineOpportunities,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildPipelineMetricCard(
+                'No Show/Cancelled/Disqualified',
+                ghlProvider.noShowCancelledDisqualified.toString(),
+                Icons.cancel,
+                Colors.orange,
+                ghlProvider.totalPipelineOpportunities,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildPipelineMetricCard(
+                'Deposits',
+                ghlProvider.deposits.toString(),
+                Icons.account_balance_wallet,
+                Colors.purple,
+                ghlProvider.totalPipelineOpportunities,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildPipelineMetricCard(
+                'Cash Collected',
+                '${ghlProvider.cashCollected}\n\$${ghlProvider.totalMonetaryValue.toStringAsFixed(0)}',
+                Icons.payments,
+                Colors.teal,
+                ghlProvider.totalPipelineOpportunities,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Build filtered view for a specific sales agent showing their pipeline breakdown
+  Widget _buildFilteredAgentView(GoHighLevelProvider ghlProvider, String agentName) {
+    final agentStats = ghlProvider.getPipelineStatsForAgent(agentName);
+    
+    if (agentStats == null) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text('No data found for agent: $agentName'),
+      );
+    }
+
+    final pipelines = agentStats['pipelines'] as Map<String, dynamic>? ?? {};
+    final altusStats = pipelines['altus'] as Map<String, dynamic>?;
+    final andriesStats = pipelines['andries'] as Map<String, dynamic>?;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+              child: Text(
+                agentName.isNotEmpty ? agentName[0].toUpperCase() : 'A',
+                style: TextStyle(
+                  color: AppTheme.primaryColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '$agentName - Pipeline Performance',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppTheme.primaryColor,
@@ -1194,122 +1342,192 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
           ],
         ),
         const SizedBox(height: 16),
+        // Combined stats for this agent
+        Text(
+          'Combined Stats (Both Pipelines)',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
-              child: _buildErichMetricCard(
-                'Total Leads',
-                ghlProvider.erichTotalLeads.toString(),
-                Icons.people,
-                AppTheme.primaryColor,
-                _calculateChange(ghlProvider.erichTotalLeads, 45), // Mock previous value
-                true,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildErichMetricCard(
-                'HQL Leads',
-                ghlProvider.erichHQLLeads.toString(),
-                Icons.star,
-                Colors.amber,
-                _calculateChange(ghlProvider.erichHQLLeads, 28),
-                true,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildErichMetricCard(
-                'Ave Leads',
-                ghlProvider.erichAveLeads.toString(),
-                Icons.trending_up,
-                Colors.blue,
-                _calculateChange(ghlProvider.erichAveLeads, 17),
-                true,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildErichMetricCard(
-                'Appointments',
-                '${ghlProvider.erichAppointments} (${ghlProvider.erichAppointmentRate.toStringAsFixed(1)}%)',
+              child: _buildAgentMetricCard(
+                'Booked Appointments',
+                (agentStats['bookedAppointments'] ?? 0).toString(),
                 Icons.calendar_today,
                 Colors.green,
-                _calculateChange(ghlProvider.erichAppointments, 32),
-                true,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _buildErichMetricCard(
-                'Sales',
-                '${ghlProvider.erichSales} (${ghlProvider.erichSaleConversionRate.toStringAsFixed(1)}%)',
-                Icons.attach_money,
-                Colors.purple,
-                _calculateChange(ghlProvider.erichSales, 18),
-                true,
+              child: _buildAgentMetricCard(
+                'Call Completed',
+                (agentStats['callCompleted'] ?? 0).toString(),
+                Icons.phone,
+                Colors.blue,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
+            const SizedBox(width: 16),
             Expanded(
-              child: _buildErichMetricCard(
-                'Deposits',
-                '${ghlProvider.erichDeposits}',
-                Icons.account_balance_wallet,
+              child: _buildAgentMetricCard(
+                'No Show/Cancelled',
+                (agentStats['noShowCancelledDisqualified'] ?? 0).toString(),
+                Icons.cancel,
                 Colors.orange,
-                _calculateChange(ghlProvider.erichDeposits, 15),
-                true,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _buildErichMetricCard(
-                'Installations',
-                '${ghlProvider.erichInstallations} (${ghlProvider.erichInstallationRate.toStringAsFixed(1)}%)',
-                Icons.build,
-                Colors.teal,
-                _calculateChange(ghlProvider.erichInstallations, 12),
-                true,
+              child: _buildAgentMetricCard(
+                'Deposits',
+                (agentStats['deposits'] ?? 0).toString(),
+                Icons.account_balance_wallet,
+                Colors.purple,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _buildErichMetricCard(
-                'Total Deposits',
-                '\$${ghlProvider.erichTotalDeposits.toStringAsFixed(0)}',
-                Icons.savings,
-                Colors.indigo,
-                _calculateChange(ghlProvider.erichTotalDeposits.toInt(), 45000),
-                true,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildErichMetricCard(
+              child: _buildAgentMetricCard(
                 'Cash Collected',
-                '\$${ghlProvider.erichTotalCashCollected.toStringAsFixed(0)}',
+                '\$${((agentStats['totalMonetaryValue'] ?? 0) as num).toStringAsFixed(0)}',
                 Icons.payments,
-                Colors.red,
-                _calculateChange(ghlProvider.erichTotalCashCollected.toInt(), 67000),
-                true,
+                Colors.teal,
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Container(), // Empty space for alignment
             ),
           ],
         ),
+        const SizedBox(height: 24),
+        // Altus Pipeline Stats
+        if (altusStats != null) ...[
+          Text(
+            'Altus Pipeline',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Colors.blue[700],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildAgentMetricCard(
+                  'Booked',
+                  (altusStats['bookedAppointments'] ?? 0).toString(),
+                  Icons.calendar_today,
+                  Colors.green,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildAgentMetricCard(
+                  'Calls',
+                  (altusStats['callCompleted'] ?? 0).toString(),
+                  Icons.phone,
+                  Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildAgentMetricCard(
+                  'No Show',
+                  (altusStats['noShowCancelledDisqualified'] ?? 0).toString(),
+                  Icons.cancel,
+                  Colors.orange,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildAgentMetricCard(
+                  'Deposits',
+                  (altusStats['deposits'] ?? 0).toString(),
+                  Icons.account_balance_wallet,
+                  Colors.purple,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildAgentMetricCard(
+                  'Cash',
+                  '\$${((altusStats['totalMonetaryValue'] ?? 0) as num).toStringAsFixed(0)}',
+                  Icons.payments,
+                  Colors.teal,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
+        // Andries Pipeline Stats
+        if (andriesStats != null) ...[
+          Text(
+            'Andries Pipeline',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Colors.purple[700],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildAgentMetricCard(
+                  'Booked',
+                  (andriesStats['bookedAppointments'] ?? 0).toString(),
+                  Icons.calendar_today,
+                  Colors.green,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildAgentMetricCard(
+                  'Calls',
+                  (andriesStats['callCompleted'] ?? 0).toString(),
+                  Icons.phone,
+                  Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildAgentMetricCard(
+                  'No Show',
+                  (andriesStats['noShowCancelledDisqualified'] ?? 0).toString(),
+                  Icons.cancel,
+                  Colors.orange,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildAgentMetricCard(
+                  'Deposits',
+                  (andriesStats['deposits'] ?? 0).toString(),
+                  Icons.account_balance_wallet,
+                  Colors.purple,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildAgentMetricCard(
+                  'Cash',
+                  '\$${((andriesStats['totalMonetaryValue'] ?? 0) as num).toStringAsFixed(0)}',
+                  Icons.payments,
+                  Colors.teal,
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
 
-  /// Build metric card for Erich Pipeline
-  Widget _buildErichMetricCard(String title, String value, IconData icon, Color color, String change, bool isPositive) {
+  /// Build metric card for pipeline performance
+  Widget _buildPipelineMetricCard(String title, String value, IconData icon, Color color, int total) {
+    // Calculate percentage
+    final numValue = int.tryParse(value.split('\n')[0]) ?? 0;
+    final percentage = total > 0 ? (numValue / total * 100).toStringAsFixed(1) : '0.0';
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1335,25 +1553,21 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 20,
-                ),
+                child: Icon(icon, color: color, size: 20),
               ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isPositive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  change,
+                  '$percentage%',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: isPositive ? Colors.green[700] : Colors.red[700],
+                    color: color,
                   ),
                 ),
               ),
@@ -1380,6 +1594,49 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
       ),
     );
   }
+
+  /// Build metric card for agent stats
+  Widget _buildAgentMetricCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Colors.grey,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
 
   /// Build GoHighLevel charts section
   Widget _buildGoHighLevelChartsSection(GoHighLevelProvider ghlProvider) {
@@ -1689,11 +1946,4 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
     );
   }
 
-  /// Helper method to calculate percentage change
-  String _calculateChange(int current, int previous) {
-    if (previous == 0) return '+0%';
-    final change = ((current - previous) / previous) * 100;
-    final sign = change >= 0 ? '+' : '';
-    return '$sign${change.toStringAsFixed(1)}%';
-  }
 }
