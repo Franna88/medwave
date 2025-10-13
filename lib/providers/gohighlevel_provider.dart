@@ -62,6 +62,7 @@ class GoHighLevelProvider extends ChangeNotifier {
   Map<String, dynamic> get pipelineOverview => _pipelinePerformance?['overview'] ?? {};
   Map<String, dynamic> get pipelineByPipeline => _pipelinePerformance?['byPipeline'] ?? {};
   List<dynamic> get pipelineSalesAgents => _pipelinePerformance?['salesAgentsList'] ?? [];
+  List<dynamic> get pipelineCampaigns => _pipelinePerformance?['campaignsList'] ?? [];
   
   // Overview stats
   int get totalPipelineOpportunities => pipelineOverview['totalOpportunities'] ?? 0;

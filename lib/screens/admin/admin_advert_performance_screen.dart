@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/gohighlevel_provider.dart';
 import '../../theme/app_theme.dart';
+import 'dart:html' as html;
 
 class AdminAdvertPerformanceScreen extends StatefulWidget {
   const AdminAdvertPerformanceScreen({super.key});
@@ -16,6 +17,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
   String _selectedTimeframe = 'Last 30 Days';
   String _selectedCountry = 'All';
   String _selectedSalesAgent = 'All';
+  String? _expandedCampaignKey; // Track which campaign is expanded
 
   @override
   void initState() {
@@ -51,6 +53,8 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                 _buildFiltersSection(ghlProvider),
                 const SizedBox(height: 24),
                 _buildPipelinePerformanceMetrics(ghlProvider),
+                const SizedBox(height: 24),
+                _buildCampaignPerformanceByStage(ghlProvider),
                 const SizedBox(height: 24),
                 _buildPerformanceMetrics(),
                 const SizedBox(height: 24),
@@ -1519,6 +1523,430 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
           ),
         ],
       ],
+    );
+  }
+
+  /// Build Campaign Performance by Stage section
+  Widget _buildCampaignPerformanceByStage(GoHighLevelProvider ghlProvider) {
+    final campaigns = ghlProvider.pipelineCampaigns;
+    
+    if (campaigns.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.orange[700]),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'No campaign data available yet. Campaigns will appear once opportunities have attribution data.',
+                style: TextStyle(color: Colors.orange[700]),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Show top 10 campaigns
+    final topCampaigns = campaigns.take(10).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.campaign, color: AppTheme.primaryColor, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Ad Campaign Performance by Stage',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Top ${topCampaigns.length} Campaigns',
+                style: TextStyle(
+                  color: Colors.purple[700],
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Live Data',
+                style: TextStyle(
+                  color: Colors.green[700],
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Campaign performance table
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Header row
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      flex: 3,
+                      child: Text(
+                        'Campaign Name',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildTableHeader('Total', Colors.grey),
+                    const SizedBox(width: 8),
+                    _buildTableHeader('Booked', Colors.green),
+                    const SizedBox(width: 8),
+                    _buildTableHeader('Call', Colors.blue),
+                    const SizedBox(width: 8),
+                    _buildTableHeader('No Show', Colors.orange),
+                    const SizedBox(width: 8),
+                    _buildTableHeader('Deposits', Colors.purple),
+                    const SizedBox(width: 8),
+                    _buildTableHeader('Cash', Colors.teal),
+                  ],
+                ),
+              ),
+              // Campaign rows
+              ...topCampaigns.asMap().entries.map((entry) {
+                final index = entry.key;
+                final campaign = entry.value as Map<String, dynamic>;
+                final isEven = index % 2 == 0;
+                final campaignKey = campaign['campaignKey'] ?? '';
+                final isExpanded = _expandedCampaignKey == campaignKey;
+                final ads = (campaign['adsList'] as List?) ?? [];
+                
+                return Column(
+                  children: [
+                    // Campaign row (clickable)
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _expandedCampaignKey = isExpanded ? null : campaignKey;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isEven ? Colors.white : Colors.grey[50],
+                          borderRadius: index == topCampaigns.length - 1 && !isExpanded
+                              ? const BorderRadius.only(
+                                  bottomLeft: Radius.circular(12),
+                                  bottomRight: Radius.circular(12),
+                                )
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            // Expand/collapse icon
+                            Icon(
+                              isExpanded ? Icons.expand_less : Icons.expand_more,
+                              size: 20,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          campaign['campaignName'] ?? 'Unknown',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (ads.isNotEmpty)
+                                        Container(
+                                          margin: const EdgeInsets.only(left: 4),
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryColor.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            '${ads.length} ads',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.primaryColor,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  if ((campaign['campaignSource'] ?? '').isNotEmpty)
+                                    Text(
+                                      campaign['campaignSource'],
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[600],
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildTableCell(
+                              (campaign['totalOpportunities'] ?? 0).toString(),
+                              Colors.grey,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildTableCell(
+                              (campaign['bookedAppointments'] ?? 0).toString(),
+                              Colors.green,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildTableCell(
+                              (campaign['callCompleted'] ?? 0).toString(),
+                              Colors.blue,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildTableCell(
+                              (campaign['noShowCancelledDisqualified'] ?? 0).toString(),
+                              Colors.orange,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildTableCell(
+                              (campaign['deposits'] ?? 0).toString(),
+                              Colors.purple,
+                            ),
+                            const SizedBox(width: 8),
+                            _buildTableCell(
+                              (campaign['cashCollected'] ?? 0).toString(),
+                              Colors.teal,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Expanded ads section
+                    if (isExpanded && ads.isNotEmpty)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isEven ? Colors.grey[50] : Colors.white,
+                          border: Border(
+                            left: BorderSide(color: AppTheme.primaryColor, width: 3),
+                          ),
+                        ),
+                        child: Column(
+                          children: ads.asMap().entries.map((adEntry) {
+                            final ad = adEntry.value as Map<String, dynamic>;
+                            final adIndex = adEntry.key;
+                            
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: adIndex % 2 == 0 
+                                    ? (isEven ? Colors.grey[100] : Colors.grey[50])
+                                    : (isEven ? Colors.grey[50] : Colors.white),
+                                borderRadius: adIndex == ads.length - 1 && index == topCampaigns.length - 1
+                                    ? const BorderRadius.only(
+                                        bottomLeft: Radius.circular(12),
+                                        bottomRight: Radius.circular(12),
+                                      )
+                                    : null,
+                              ),
+                              child: Row(
+                                children: [
+                                  const SizedBox(width: 28), // Indent for hierarchy
+                                  Icon(Icons.ads_click, size: 14, color: Colors.grey[500]),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    flex: 3,
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Tooltip(
+                                            message: 'Ad ID: ${ad['adId'] ?? 'Unknown'}',
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  ad['adName'] ?? ad['adId'] ?? 'Unknown',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Colors.grey[800],
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                if (ad['adSource'] != null && ad['adSource'].toString().isNotEmpty)
+                                                  Text(
+                                                    '${ad['adSource']}',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.grey[500],
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        if (ad['adUrl'] != null && ad['adUrl'].toString().isNotEmpty)
+                                          Tooltip(
+                                            message: 'View ad in Facebook Ads Library',
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(left: 4),
+                                              child: InkWell(
+                                                onTap: () {
+                                                  final url = ad['adUrl'] as String;
+                                                  html.window.open(url, '_blank');
+                                                },
+                                                child: Icon(
+                                                  Icons.open_in_new,
+                                                  size: 14,
+                                                  color: Colors.blue[600],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildCompactCell((ad['totalOpportunities'] ?? 0).toString(), Colors.grey),
+                                  const SizedBox(width: 8),
+                                  _buildCompactCell((ad['bookedAppointments'] ?? 0).toString(), Colors.green),
+                                  const SizedBox(width: 8),
+                                  _buildCompactCell((ad['callCompleted'] ?? 0).toString(), Colors.blue),
+                                  const SizedBox(width: 8),
+                                  _buildCompactCell((ad['noShowCancelledDisqualified'] ?? 0).toString(), Colors.orange),
+                                  const SizedBox(width: 8),
+                                  _buildCompactCell((ad['deposits'] ?? 0).toString(), Colors.purple),
+                                  const SizedBox(width: 8),
+                                  _buildCompactCell((ad['cashCollected'] ?? 0).toString(), Colors.teal),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                  ],
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTableHeader(String text, Color color) {
+    return Expanded(
+      child: Text(
+        text,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+          color: color,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildTableCell(String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            color: color,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactCell(String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 11,
+            color: color,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 
