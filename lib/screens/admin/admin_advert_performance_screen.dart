@@ -58,9 +58,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                 const SizedBox(height: 24),
                 _buildPerformanceMetrics(),
                 const SizedBox(height: 24),
-                _buildGoHighLevelChartsSection(ghlProvider),
-                const SizedBox(height: 24),
-                _buildChartsSection(ghlProvider),
+                _buildSalesAgentChartsSection(ghlProvider),
                 const SizedBox(height: 24),
                 _buildSalesAgentMetrics(ghlProvider),
                 const SizedBox(height: 24),
@@ -300,19 +298,328 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
     );
   }
 
-  Widget _buildChartsSection(GoHighLevelProvider ghlProvider) {
+  /// Build Sales Agent Charts Section (replaces old charts)
+  Widget _buildSalesAgentChartsSection(GoHighLevelProvider ghlProvider) {
     return Row(
       children: [
         Expanded(
           flex: 2,
-          child: _buildPerformanceTrendChart(ghlProvider),
+          child: _buildSalesAgentPerformanceTrendChart(ghlProvider),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: _buildChannelDistributionChart(ghlProvider),
+          child: _buildSalesAgentDistributionChart(ghlProvider),
         ),
       ],
     );
+  }
+
+  /// Build Sales Agent Performance Trend Chart (replaces Campaign Performance Trends)
+  Widget _buildSalesAgentPerformanceTrendChart(GoHighLevelProvider ghlProvider) {
+    // Get agents and ensure uniqueness by agent name
+    final allAgents = ghlProvider.pipelineSalesAgents;
+    
+    // Group by agent name and aggregate their data
+    final Map<String, Map<String, dynamic>> agentMap = {};
+    for (final agent in allAgents) {
+      final agentData = agent as Map<String, dynamic>;
+      final agentName = agentData['agentName'] as String? ?? 'Unknown';
+      
+      if (agentMap.containsKey(agentName)) {
+        // Agent already exists, aggregate the data
+        final existing = agentMap[agentName]!;
+        existing['totalOpportunities'] = (existing['totalOpportunities'] as int? ?? 0) + (agentData['totalOpportunities'] as int? ?? 0);
+        existing['bookedAppointments'] = (existing['bookedAppointments'] as int? ?? 0) + (agentData['bookedAppointments'] as int? ?? 0);
+        existing['callCompleted'] = (existing['callCompleted'] as int? ?? 0) + (agentData['callCompleted'] as int? ?? 0);
+        existing['noShowCancelledDisqualified'] = (existing['noShowCancelledDisqualified'] as int? ?? 0) + (agentData['noShowCancelledDisqualified'] as int? ?? 0);
+        existing['deposits'] = (existing['deposits'] as int? ?? 0) + (agentData['deposits'] as int? ?? 0);
+        existing['cashCollected'] = (existing['cashCollected'] as int? ?? 0) + (agentData['cashCollected'] as int? ?? 0);
+      } else {
+        // New agent, add to map
+        agentMap[agentName] = Map<String, dynamic>.from(agentData);
+      }
+    }
+    
+    // Convert back to list and sort by total opportunities
+    final uniqueAgents = agentMap.values.toList()
+      ..sort((a, b) {
+        final aOpps = a['totalOpportunities'] as int? ?? 0;
+        final bOpps = b['totalOpportunities'] as int? ?? 0;
+        return bOpps.compareTo(aOpps); // Descending order
+      });
+    
+    // Take top 5 agents
+    final agents = uniqueAgents.take(5).toList();
+    
+    return Container(
+      height: 300,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Sales Agent Performance',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _buildLegendItem('Conversion Rate (%)', AppTheme.primaryColor),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: agents.isEmpty
+                ? Center(
+                    child: Text(
+                      'No agent data available',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  )
+                : LineChart(
+                    LineChartData(
+                      gridData: FlGridData(show: true),
+                      titlesData: FlTitlesData(
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true, 
+                            reservedSize: 50,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                '${value.toInt()}%',
+                                style: const TextStyle(fontSize: 10),
+                              );
+                            },
+                          ),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, meta) {
+                              if (value.toInt() >= 0 && value.toInt() < agents.length) {
+                                final agentMap = agents[value.toInt()] as Map<String, dynamic>;
+                                final agentName = agentMap['agentName'] as String? ?? 'Unknown';
+                                return Text(
+                                  agentName.length > 8 ? '${agentName.substring(0, 8)}...' : agentName,
+                                  style: const TextStyle(fontSize: 10),
+                                );
+                              }
+                              return const Text('');
+                            },
+                          ),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: true),
+                      minY: 0,
+                      maxY: 100,
+                      lineBarsData: [
+                        // Conversion Rate Line
+                        LineChartBarData(
+                          spots: agents.asMap().entries.map((entry) {
+                            final agentMap = entry.value as Map<String, dynamic>;
+                            final totalOpportunities = agentMap['totalOpportunities'] as int? ?? 0;
+                            final bookedAppointments = agentMap['bookedAppointments'] as int? ?? 0;
+                            final conversionRate = totalOpportunities > 0 
+                                ? (bookedAppointments / totalOpportunities * 100) 
+                                : 0.0;
+                            return FlSpot(entry.key.toDouble(), conversionRate);
+                          }).toList(),
+                          isCurved: true,
+                          color: AppTheme.primaryColor,
+                          barWidth: 4,
+                          dotData: const FlDotData(show: true),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: AppTheme.primaryColor.withOpacity(0.1),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build Sales Agent Distribution Chart (replaces Campaign Distribution)
+  Widget _buildSalesAgentDistributionChart(GoHighLevelProvider ghlProvider) {
+    final agents = ghlProvider.pipelineSalesAgents;
+    
+    return Container(
+      height: 300,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Sales Agent Distribution',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: agents.isEmpty
+                ? Center(
+                    child: Text(
+                      'No agent data available',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  )
+                : PieChart(
+                    PieChartData(
+                      sections: _getSalesAgentSections(ghlProvider),
+                      sectionsSpace: 2,
+                      centerSpaceRadius: 40,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Get pie chart sections for sales agents
+  List<PieChartSectionData> _getSalesAgentSections(GoHighLevelProvider ghlProvider) {
+    // Get agents and ensure uniqueness by agent name
+    final allAgents = ghlProvider.pipelineSalesAgents;
+    
+    // Group by agent name and aggregate their data
+    final Map<String, Map<String, dynamic>> agentMap = {};
+    for (final agent in allAgents) {
+      final agentData = agent as Map<String, dynamic>;
+      final agentName = agentData['agentName'] as String? ?? 'Unknown';
+      
+      if (agentMap.containsKey(agentName)) {
+        // Agent already exists, aggregate the data
+        final existing = agentMap[agentName]!;
+        existing['totalOpportunities'] = (existing['totalOpportunities'] as int? ?? 0) + (agentData['totalOpportunities'] as int? ?? 0);
+        existing['bookedAppointments'] = (existing['bookedAppointments'] as int? ?? 0) + (agentData['bookedAppointments'] as int? ?? 0);
+        existing['callCompleted'] = (existing['callCompleted'] as int? ?? 0) + (agentData['callCompleted'] as int? ?? 0);
+        existing['noShowCancelledDisqualified'] = (existing['noShowCancelledDisqualified'] as int? ?? 0) + (agentData['noShowCancelledDisqualified'] as int? ?? 0);
+        existing['deposits'] = (existing['deposits'] as int? ?? 0) + (agentData['deposits'] as int? ?? 0);
+        existing['cashCollected'] = (existing['cashCollected'] as int? ?? 0) + (agentData['cashCollected'] as int? ?? 0);
+      } else {
+        // New agent, add to map
+        agentMap[agentName] = Map<String, dynamic>.from(agentData);
+      }
+    }
+    
+    // Convert back to list and sort by total opportunities
+    final uniqueAgents = agentMap.values.toList()
+      ..sort((a, b) {
+        final aOpps = a['totalOpportunities'] as int? ?? 0;
+        final bOpps = b['totalOpportunities'] as int? ?? 0;
+        return bOpps.compareTo(aOpps); // Descending order
+      });
+    
+    // Take top 5 agents
+    final agents = uniqueAgents.take(5).toList();
+    if (agents.isEmpty) {
+      return [
+        PieChartSectionData(
+          value: 100,
+          color: Colors.grey[300]!,
+          title: 'No Data',
+          radius: 60,
+          titleStyle: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.black54,
+          ),
+        ),
+      ];
+    }
+
+    // Calculate total opportunities across all agents
+    final totalOpportunities = agents.fold<int>(
+      0,
+      (sum, agent) {
+        final agentMap = agent as Map<String, dynamic>;
+        return sum + (agentMap['totalOpportunities'] as int? ?? 0);
+      },
+    );
+
+    if (totalOpportunities == 0) {
+      return [
+        PieChartSectionData(
+          value: 100,
+          color: Colors.grey[300]!,
+          title: 'No Data',
+          radius: 60,
+          titleStyle: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.black54,
+          ),
+        ),
+      ];
+    }
+
+    // Define colors for agents
+    final colors = [
+      AppTheme.primaryColor,
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.pink,
+      Colors.amber,
+    ];
+
+    // Create pie chart sections for each agent
+    return agents.asMap().entries.map((entry) {
+      final index = entry.key;
+      final agentMap = entry.value as Map<String, dynamic>;
+      final agentName = agentMap['agentName'] as String? ?? 'Unknown';
+      final opportunities = agentMap['totalOpportunities'] as int? ?? 0;
+      final percentage = (opportunities / totalOpportunities * 100).toStringAsFixed(1);
+
+      return PieChartSectionData(
+        value: opportunities.toDouble(),
+        color: colors[index % colors.length],
+        title: '${agentName.length > 12 ? '${agentName.substring(0, 12)}...' : agentName}\n$percentage%',
+        radius: 60,
+        titleStyle: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      );
+    }).toList();
   }
 
   Widget _buildPerformanceTrendChart(GoHighLevelProvider ghlProvider) {
