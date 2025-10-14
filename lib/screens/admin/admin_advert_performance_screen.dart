@@ -363,7 +363,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                       showTitles: true, 
                       reservedSize: 40,
                       getTitlesWidget: (value, meta) {
-                        final campaigns = ghlProvider.campaigns;
+                        final campaigns = ghlProvider.pipelineCampaigns;
                         if (value.toInt() >= 0 && value.toInt() < campaigns.length) {
                           final campaignName = campaigns[value.toInt()]['campaignName'] as String? ?? '';
                           // Show abbreviated campaign name
@@ -458,7 +458,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
   Widget _buildCampaignsList() {
     return Consumer<GoHighLevelProvider>(
       builder: (context, ghlProvider, child) {
-        final campaigns = ghlProvider.campaigns;
+        final campaigns = ghlProvider.pipelineCampaigns;
         
         if (campaigns.isEmpty) {
           return Container(
@@ -516,12 +516,12 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                 ),
                 const Spacer(),
                     Chip(
-                      label: Text('${ghlProvider.totalCampaigns} Campaigns'),
+                      label: Text('${ghlProvider.pipelineCampaigns.length} Campaigns'),
                       backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
                     ),
                     const SizedBox(width: 8),
                     Chip(
-                      label: Text('${ghlProvider.totalAds} Ads'),
+                      label: Text('${ghlProvider.pipelineCampaigns.fold<int>(0, (sum, c) => sum + ((c['adsList'] as List?)?.length ?? 0))} Ads'),
                       backgroundColor: Colors.green.withOpacity(0.1),
                 ),
               ],
@@ -545,8 +545,15 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
   }
 
   Widget _buildCampaignCard(Map<String, dynamic> campaign) {
-    final ads = campaign['ads'] as List<dynamic>? ?? [];
-    final conversionRates = campaign['conversionRates'] as Map<String, dynamic>? ?? {};
+    final ads = campaign['adsList'] as List<dynamic>? ?? [];
+    final totalOpportunities = campaign['totalOpportunities'] ?? 0;
+    final bookedAppointments = campaign['bookedAppointments'] ?? 0;
+    final cashCollected = campaign['cashCollected'] ?? 0;
+    
+    // Calculate conversion rate (booked appointments / total opportunities)
+    final conversionRate = totalOpportunities > 0 
+        ? ((bookedAppointments / totalOpportunities) * 100).toStringAsFixed(1) 
+        : '0';
     
     return ExpansionTile(
       tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -575,11 +582,11 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
           spacing: 16,
           runSpacing: 4,
           children: [
-            _buildCampaignStat(Icons.people, '${campaign['totalLeads']} Leads', Colors.blue),
-            _buildCampaignStat(Icons.star, '${campaign['hqlLeads']} HQL', Colors.amber),
-            _buildCampaignStat(Icons.calendar_today, '${campaign['appointments']?['booked'] ?? 0} Meetings', Colors.green),
-            _buildCampaignStat(Icons.shopping_cart, '${campaign['sales']?['sold'] ?? 0} Sales', Colors.purple),
-            _buildCampaignStat(Icons.ads_click, '${ads.length} Ads', Colors.orange),
+            _buildCampaignStat(Icons.people, '${totalOpportunities} Opportunities', Colors.blue),
+            _buildCampaignStat(Icons.calendar_today, '${bookedAppointments} Booked', Colors.green),
+            _buildCampaignStat(Icons.phone, '${campaign['callCompleted'] ?? 0} Calls', Colors.orange),
+            _buildCampaignStat(Icons.money, '\$${cashCollected} Cash', Colors.purple),
+            _buildCampaignStat(Icons.ads_click, '${ads.length} Ads', Colors.amber),
           ],
         ),
       ),
@@ -588,7 +595,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
-            '${conversionRates['appointmentRate'] ?? '0'}%',
+            '$conversionRate%',
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -625,9 +632,13 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
   }
 
   Widget _buildAdCard(Map<String, dynamic> ad) {
-    final conversionRates = ad['conversionRates'] as Map<String, dynamic>? ?? {};
-    final appointments = ad['appointments'] as Map<String, dynamic>? ?? {};
-    final sales = ad['sales'] as Map<String, dynamic>? ?? {};
+    final totalOpportunities = ad['totalOpportunities'] ?? 0;
+    final bookedAppointments = ad['bookedAppointments'] ?? 0;
+    
+    // Calculate conversion rate
+    final conversionRate = totalOpportunities > 0 
+        ? ((bookedAppointments / totalOpportunities) * 100).toStringAsFixed(1) 
+        : '0';
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -680,7 +691,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${conversionRates['appointmentRate'] ?? '0'}% Conv.',
+                  '$conversionRate% Conv.',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -695,26 +706,26 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                   children: [
               Expanded(
                 child: _buildAdMetric(
-                  'Total Leads',
-                  '${ad['totalLeads'] ?? 0}',
+                  'Total',
+                  '${totalOpportunities}',
                   Icons.people,
                   Colors.blue,
                 ),
               ),
               Expanded(
                 child: _buildAdMetric(
-                  'HQL',
-                  '${ad['hqlLeads'] ?? 0}',
-                  Icons.star,
-                  Colors.amber,
+                  'Booked',
+                  '${bookedAppointments}',
+                  Icons.calendar_today,
+                  Colors.green,
                 ),
               ),
               Expanded(
                 child: _buildAdMetric(
-                  'Ave',
-                  '${ad['aveLeads'] ?? 0}',
-                  Icons.trending_down,
-                  Colors.grey,
+                  'Calls',
+                  '${ad['callCompleted'] ?? 0}',
+                  Icons.phone,
+                  Colors.orange,
                 ),
               ),
             ],
@@ -724,26 +735,26 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
             children: [
               Expanded(
                 child: _buildAdMetric(
-                  'Meetings',
-                  '${appointments['booked'] ?? 0}',
-                  Icons.calendar_today,
-                  Colors.green,
-                ),
-              ),
-              Expanded(
-                child: _buildAdMetric(
                   'No Show',
-                  '${appointments['rescheduled'] ?? 0}',
+                  '${ad['noShowCancelledDisqualified'] ?? 0}',
                   Icons.event_busy,
-                  Colors.orange,
+                  Colors.red,
                 ),
               ),
               Expanded(
                 child: _buildAdMetric(
-                  'Sales',
-                  '${sales['sold'] ?? 0}',
-                  Icons.shopping_cart,
+                  'Deposits',
+                  '${ad['deposits'] ?? 0}',
+                  Icons.account_balance_wallet,
                   Colors.purple,
+                ),
+              ),
+              Expanded(
+                child: _buildAdMetric(
+                  'Cash',
+                  '${ad['cashCollected'] ?? 0}',
+                  Icons.attach_money,
+                  Colors.green,
                 ),
                     ),
                   ],
@@ -820,48 +831,46 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
 
   // Real data methods using GoHighLevel campaign data
   List<FlSpot> _getLeadsSpots(GoHighLevelProvider ghlProvider) {
-    final campaigns = ghlProvider.campaigns;
+    final campaigns = ghlProvider.pipelineCampaigns;
     if (campaigns.isEmpty) {
       return [const FlSpot(0, 0)];
     }
     return campaigns.asMap().entries.map((entry) {
       final index = entry.key;
       final campaign = entry.value;
-      final totalLeads = (campaign['totalLeads'] as int? ?? 0).toDouble();
-      return FlSpot(index.toDouble(), totalLeads);
+      final totalOpportunities = (campaign['totalOpportunities'] as int? ?? 0).toDouble();
+      return FlSpot(index.toDouble(), totalOpportunities);
     }).toList();
   }
 
   List<FlSpot> _getMeetingsSpots(GoHighLevelProvider ghlProvider) {
-    final campaigns = ghlProvider.campaigns;
+    final campaigns = ghlProvider.pipelineCampaigns;
     if (campaigns.isEmpty) {
       return [const FlSpot(0, 0)];
     }
     return campaigns.asMap().entries.map((entry) {
       final index = entry.key;
       final campaign = entry.value;
-      final appointments = campaign['appointments'] as Map<String, dynamic>? ?? {};
-      final booked = (appointments['booked'] as int? ?? 0).toDouble();
+      final booked = (campaign['bookedAppointments'] as int? ?? 0).toDouble();
       return FlSpot(index.toDouble(), booked);
     }).toList();
   }
 
   List<FlSpot> _getSalesSpots(GoHighLevelProvider ghlProvider) {
-    final campaigns = ghlProvider.campaigns;
+    final campaigns = ghlProvider.pipelineCampaigns;
     if (campaigns.isEmpty) {
       return [const FlSpot(0, 0)];
     }
     return campaigns.asMap().entries.map((entry) {
       final index = entry.key;
       final campaign = entry.value;
-      final sales = campaign['sales'] as Map<String, dynamic>? ?? {};
-      final sold = (sales['sold'] as int? ?? 0).toDouble();
-      return FlSpot(index.toDouble(), sold);
+      final cashCollected = (campaign['cashCollected'] as int? ?? 0).toDouble();
+      return FlSpot(index.toDouble(), cashCollected);
     }).toList();
   }
 
   List<PieChartSectionData> _getCampaignSections(GoHighLevelProvider ghlProvider) {
-    final campaigns = ghlProvider.campaigns;
+    final campaigns = ghlProvider.pipelineCampaigns;
     if (campaigns.isEmpty) {
     return [
         PieChartSectionData(
@@ -878,18 +887,18 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
       ];
     }
 
-    // Calculate total leads across all campaigns
-    final totalLeads = campaigns.fold<int>(
+    // Calculate total opportunities across all campaigns
+    final totalOpportunities = campaigns.fold<int>(
       0, 
-      (sum, campaign) => sum + (campaign['totalLeads'] as int? ?? 0),
+      (sum, campaign) => sum + (campaign['totalOpportunities'] as int? ?? 0),
     );
 
-    if (totalLeads == 0) {
+    if (totalOpportunities == 0) {
     return [
       PieChartSectionData(
           value: 100,
           color: Colors.grey[300]!,
-          title: 'No Leads',
+          title: 'No Data',
         radius: 60,
         titleStyle: const TextStyle(
           fontSize: 12,
@@ -917,11 +926,11 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
       final index = entry.key;
       final campaign = entry.value;
       final campaignName = campaign['campaignName'] as String? ?? 'Unknown';
-      final leads = campaign['totalLeads'] as int? ?? 0;
-      final percentage = (leads / totalLeads * 100).toStringAsFixed(1);
+      final opportunities = campaign['totalOpportunities'] as int? ?? 0;
+      final percentage = (opportunities / totalOpportunities * 100).toStringAsFixed(1);
       
       return PieChartSectionData(
-        value: leads.toDouble(),
+        value: opportunities.toDouble(),
         color: colors[index % colors.length],
         title: '${campaignName.length > 15 ? '${campaignName.substring(0, 15)}...' : campaignName}\n$percentage%',
         radius: 60,
@@ -2254,7 +2263,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
 
   /// Build sales agent metrics section
   Widget _buildSalesAgentMetrics(GoHighLevelProvider ghlProvider) {
-    final agentMetrics = ghlProvider.getSalesAgentMetrics();
+    final agentMetrics = ghlProvider.pipelineSalesAgents;
     
     if (agentMetrics.isEmpty) {
       return Container(
@@ -2321,17 +2330,27 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
             child: DataTable(
               columns: const [
                 DataColumn(label: Text('Agent')),
-                DataColumn(label: Text('Total Leads')),
-                DataColumn(label: Text('HQL')),
-                DataColumn(label: Text('Ave Lead')),
-                DataColumn(label: Text('Appointments')),
-                DataColumn(label: Text('Sales')),
-                DataColumn(label: Text('Conversion %')),
+                DataColumn(label: Text('Total Opportunities')),
+                DataColumn(label: Text('Booked')),
+                DataColumn(label: Text('Calls')),
+                DataColumn(label: Text('No Show')),
                 DataColumn(label: Text('Deposits')),
                 DataColumn(label: Text('Cash Collected')),
-                DataColumn(label: Text('Installations')),
+                DataColumn(label: Text('Conversion %')),
               ],
               rows: agentMetrics.map((agent) {
+                final agentMap = agent as Map<String, dynamic>;
+                final agentName = agentMap['agentName'] as String? ?? 'Unknown';
+                final totalOpportunities = agentMap['totalOpportunities'] as int? ?? 0;
+                final bookedAppointments = agentMap['bookedAppointments'] as int? ?? 0;
+                final callCompleted = agentMap['callCompleted'] as int? ?? 0;
+                final noShow = agentMap['noShowCancelledDisqualified'] as int? ?? 0;
+                final deposits = agentMap['deposits'] as int? ?? 0;
+                final cashCollected = agentMap['cashCollected'] as int? ?? 0;
+                final conversionRate = totalOpportunities > 0 
+                    ? (bookedAppointments / totalOpportunities * 100) 
+                    : 0.0;
+                
                 return DataRow(
                   cells: [
                     DataCell(
@@ -2342,7 +2361,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                             radius: 16,
                             backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
                             child: Text(
-                              agent.agentName.isNotEmpty ? agent.agentName[0].toUpperCase() : 'A',
+                              agentName.isNotEmpty ? agentName[0].toUpperCase() : 'A',
                               style: TextStyle(
                                 color: AppTheme.primaryColor,
                                 fontWeight: FontWeight.bold,
@@ -2351,19 +2370,17 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(agent.agentName),
+                          Text(agentName),
                         ],
                       ),
                     ),
-                    DataCell(Text(agent.totalLeads.toString())),
-                    DataCell(Text(agent.hqlLeads.toString())),
-                    DataCell(Text(agent.aveLeads.toString())),
-                    DataCell(Text(agent.appointments.toString())),
-                    DataCell(Text(agent.sales.toString())),
-                    DataCell(Text('${agent.saleConversionRate.toStringAsFixed(1)}%')),
-                    DataCell(Text('\$${agent.totalDeposits.toStringAsFixed(0)}')),
-                    DataCell(Text('\$${agent.totalCashCollected.toStringAsFixed(0)}')),
-                    DataCell(Text(agent.installations.toString())),
+                    DataCell(Text(totalOpportunities.toString())),
+                    DataCell(Text(bookedAppointments.toString())),
+                    DataCell(Text(callCompleted.toString())),
+                    DataCell(Text(noShow.toString())),
+                    DataCell(Text(deposits.toString())),
+                    DataCell(Text('\$$cashCollected')),
+                    DataCell(Text('${conversionRate.toStringAsFixed(1)}%')),
                   ],
                 );
               }).toList(),

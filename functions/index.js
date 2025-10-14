@@ -5,17 +5,17 @@ const axios = require('axios');
 
 const app = express();
 
-// CORS configuration - Allow your Firebase hosting domain
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:61997',
-    /^http:\/\/localhost:\d+$/,
-    'https://medx-ai.web.app',
-    'https://medx-ai.firebaseapp.com'
-  ],
-  credentials: true
-}));
+// CORS configuration - Allow all origins with explicit configuration
+const corsOptions = {
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 
 app.use(express.json());
 
@@ -550,7 +550,7 @@ app.all('/api/ghl/*', async (req, res) => {
   }
 });
 
-// Export the Express app as a Firebase Cloud Function (2nd gen)
+// Export the Express app as a Firebase Cloud Function (1st gen)
 exports.api = functions
   .runWith({
     timeoutSeconds: 300,

@@ -179,21 +179,8 @@ class GoHighLevelProvider extends ChangeNotifier {
         print('✅ GHL PROVIDER: Loaded ${_pipelines.length} pipelines');
       }
       
-      // Load campaign analytics (for Advert Performance screen)
-      // This endpoint provides all the aggregated data we need
-      try {
-        _campaignAnalytics = await GoHighLevelService.getCampaignAnalytics();
-        if (kDebugMode) {
-          print('✅ GHL PROVIDER: Loaded campaign analytics - ${totalCampaigns} campaigns, ${totalCampaignLeads} leads');
-        }
-      } catch (e) {
-        if (kDebugMode) {
-          print('⚠️ GHL PROVIDER: Failed to load campaign analytics: $e');
-        }
-        // Don't rethrow - campaign analytics is optional
-      }
-      
       // Load pipeline performance analytics (Altus + Andries pipelines)
+      // This now includes campaign analytics in the campaignsList field
       try {
         _pipelinePerformance = await GoHighLevelService.getPipelinePerformanceAnalytics();
         if (kDebugMode) {
