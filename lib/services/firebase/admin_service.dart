@@ -13,12 +13,134 @@ class AdminService {
   // Collection references
   static CollectionReference get _practitionerApplicationsCollection => 
       _firestore.collection('practitionerApplications');
+  static CollectionReference get _usersCollection => 
+      _firestore.collection('users');
   static CollectionReference get _patientsCollection => 
       _firestore.collection('patients');
   static CollectionReference get _sessionsCollection => 
       _firestore.collection('sessions');
   static CollectionReference get _adminUsersCollection => 
       _firestore.collection('adminUsers');
+
+  // ============================================================================
+  // REAL PRACTITIONERS FROM USERS COLLECTION (Mobile App Data)
+  // ============================================================================
+
+  /// Get all real practitioners from users collection (approved practitioners using the app)
+  static Stream<List<Map<String, dynamic>>> getRealPractitionersStream() {
+    return _usersCollection
+        .where('role', isEqualTo: 'practitioner')
+        .snapshots()
+        .map((snapshot) {
+      if (kDebugMode) {
+        print('👥 ADMIN SERVICE: Found ${snapshot.docs.length} real practitioners from users collection');
+      }
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        data['uid'] = doc.id; // User ID
+        return data;
+      }).toList();
+    });
+  }
+
+  /// Get practitioner statistics from users collection
+  static Future<Map<String, int>> getRealPractitionerStats() async {
+    try {
+      final practitionersSnapshot = await _usersCollection
+          .where('role', isEqualTo: 'practitioner')
+          .get();
+      
+      final approved = practitionersSnapshot.docs
+          .where((doc) => (doc.data() as Map<String, dynamic>)['isApproved'] == true)
+          .length;
+      
+      final pending = practitionersSnapshot.docs
+          .where((doc) => (doc.data() as Map<String, dynamic>)['isApproved'] != true)
+          .length;
+
+      return {
+        'total': practitionersSnapshot.docs.length,
+        'approved': approved,
+        'pending': pending,
+        'rejected': 0, // Not tracked in users collection
+      };
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to get real practitioner stats: $e');
+      }
+      return {
+        'total': 0,
+        'approved': 0,
+        'pending': 0,
+        'rejected': 0,
+      };
+    }
+  }
+
+  /// Get real practitioners by country from users collection
+  static Stream<List<Map<String, dynamic>>> getRealPractitionersByCountry(String country) {
+    return _usersCollection
+        .where('role', isEqualTo: 'practitioner')
+        .where('country', isEqualTo: country)
+        .snapshots()
+        .map((snapshot) {
+      if (kDebugMode) {
+        print('🌍 ADMIN SERVICE: Found ${snapshot.docs.length} real practitioners in $country');
+      }
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        data['uid'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
+
+  /// Approve a real practitioner (update isApproved in users collection)
+  static Future<void> approveRealPractitioner(String userId) async {
+    try {
+      await _usersCollection.doc(userId).update({
+        'isApproved': true,
+        'approvedAt': FieldValue.serverTimestamp(),
+        'approvedBy': _auth.currentUser?.uid,
+      });
+
+      if (kDebugMode) {
+        print('✅ ADMIN SERVICE: Approved practitioner $userId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to approve practitioner: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Reject a real practitioner (update isApproved in users collection)
+  static Future<void> rejectRealPractitioner(String userId, String reason) async {
+    try {
+      await _usersCollection.doc(userId).update({
+        'isApproved': false,
+        'rejectedAt': FieldValue.serverTimestamp(),
+        'rejectedBy': _auth.currentUser?.uid,
+        'rejectionReason': reason,
+      });
+
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE: Rejected practitioner $userId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to reject practitioner: $e');
+      }
+      rethrow;
+    }
+  }
+
+  // ============================================================================
+  // PRACTITIONER APPLICATIONS (For New Applicants - may be empty)
+  // ============================================================================
 
   /// Get all practitioner applications (for admin use)
   static Stream<List<PractitionerApplication>> getAllPractitionersStream() {
@@ -173,12 +295,17 @@ class AdminService {
     }
   }
 
-  /// Get analytics data for admin dashboard
+  /// Get analytics data for admin dashboard (uses REAL practitioners from users collection)
   static Future<Map<String, dynamic>> getAdminAnalytics() async {
     try {
-      final practitionerStats = await getPractitionerStats();
+      // Use REAL practitioners from users collection (not applications)
+      final practitionerStats = await getRealPractitionerStats();
       final totalPatients = await getTotalPatientsCount();
       final totalSessions = await getTotalSessionsCount();
+
+      if (kDebugMode) {
+        print('📊 ADMIN SERVICE: Analytics - Practitioners: ${practitionerStats['total']}, Patients: $totalPatients, Sessions: $totalSessions');
+      }
 
       return {
         'practitioners': practitionerStats,
@@ -196,6 +323,96 @@ class AdminService {
         'totalSessions': 0,
         'lastUpdated': DateTime.now(),
       };
+    }
+  }
+
+  /// Get ALL patients stream for admin (not filtered by practitioner)
+  static Stream<List<Map<String, dynamic>>> getAllPatientsStream() {
+    return _patientsCollection
+        .orderBy('lastUpdated', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      if (kDebugMode) {
+        print('👥 ADMIN SERVICE: Found ${snapshot.docs.length} total patients');
+      }
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
+
+  /// Get ALL sessions stream for admin (not filtered by practitioner)
+  static Stream<List<Map<String, dynamic>>> getAllSessionsStream() {
+    return _sessionsCollection
+        .orderBy('date', descending: true)
+        .limit(100) // Limit to recent 100 sessions for performance
+        .snapshots()
+        .map((snapshot) {
+      if (kDebugMode) {
+        print('📋 ADMIN SERVICE: Found ${snapshot.docs.length} total sessions');
+      }
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
+
+  /// Get patients by country for admin
+  static Stream<List<Map<String, dynamic>>> getPatientsByCountry(String country) {
+    return _patientsCollection
+        .where('country', isEqualTo: country)
+        .orderBy('lastUpdated', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      if (kDebugMode) {
+        print('🌍 ADMIN SERVICE: Found ${snapshot.docs.length} patients in $country');
+      }
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
+
+  /// Get sessions by country for admin
+  static Future<int> getSessionsCountByCountry(String country) async {
+    try {
+      // Get all practitioners in the country first
+      final practitionersSnapshot = await _practitionerApplicationsCollection
+          .where('country', isEqualTo: country)
+          .where('status', isEqualTo: 'approved')
+          .get();
+      
+      final practitionerIds = practitionersSnapshot.docs
+          .map((doc) {
+            final data = doc.data() as Map<String, dynamic>?;
+            return data?['userId'] as String?;
+          })
+          .whereType<String>()
+          .toList();
+      
+      if (practitionerIds.isEmpty) return 0;
+      
+      // Count sessions for these practitioners
+      int totalSessions = 0;
+      for (final practitionerId in practitionerIds) {
+        final sessionsSnapshot = await _sessionsCollection
+            .where('practitionerId', isEqualTo: practitionerId)
+            .get();
+        totalSessions += sessionsSnapshot.docs.length;
+      }
+      
+      return totalSessions;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to get sessions count by country: $e');
+      }
+      return 0;
     }
   }
 

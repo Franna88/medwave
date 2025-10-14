@@ -40,6 +40,18 @@ class PatientService {
     });
   }
 
+  /// Get ALL patients stream (for admin users only)
+  static Stream<List<Patient>> getAllPatientsStream() {
+    debugPrint('PatientService: Querying ALL patients (admin mode)');
+    return _patientsCollection
+        .orderBy('lastUpdated', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      debugPrint('Found ${snapshot.docs.length} total patients in database');
+      return snapshot.docs.map((doc) => Patient.fromFirestore(doc)).toList();
+    });
+  }
+
   /// Get a specific patient by ID
   static Future<Patient?> getPatient(String patientId) async {
     try {

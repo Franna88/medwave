@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/patient_provider.dart';
@@ -18,10 +17,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize both admin and patient data
+    // Initialize both admin and patient data (admin mode - load ALL patients)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AdminProvider>().initializeWithMockData();
-      context.read<PatientProvider>().loadPatients();
+      context.read<PatientProvider>().loadPatients(isAdmin: true);
     });
   }
 
@@ -80,23 +79,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildStatsCards(AdminProvider adminProvider, PatientProvider patientProvider) {
-    // Calculate real statistics from actual data
-    final totalProviders = adminProvider.totalProviders + adminProvider.totalPendingApprovals;
-    final pendingApprovals = adminProvider.totalPendingApprovals;
-    final approvalRate = adminProvider.approvalRate;
+    // Use system-wide analytics from AdminProvider (not practitioner-filtered)
+    final analytics = adminProvider.adminAnalytics;
+    final practitionerStats = analytics['practitioners'] as Map<String, dynamic>? ?? {};
     
-    // Use real patient data
-    final totalPatients = patientProvider.patients.length;
-    final totalSessions = patientProvider.totalSessionCount;
+    final totalProviders = (practitionerStats['total'] as int? ?? 0);
+    final approvedProviders = (practitionerStats['approved'] as int? ?? 0);
+    final pendingApprovals = (practitionerStats['pending'] as int? ?? 0);
     
-    // Calculate active patients (patients with recent sessions)
-    final now = DateTime.now();
-    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-    final activePatients = patientProvider.patients.where((patient) {
-      if (patient.sessions.isEmpty) return false;
-      final lastSession = patient.sessions.last;
-      return lastSession.date.isAfter(thirtyDaysAgo);
-    }).length;
+    // Use system-wide patient and session counts (ALL practitioners)
+    final totalPatients = analytics['totalPatients'] as int? ?? 0;
+    final totalSessions = analytics['totalSessions'] as int? ?? 0;
+    
+    // Calculate active patients (patients with sessions in last 30 days)
+    final activePatients = _calculateActivePatients(patientProvider.patients);
+    
+    // Calculate average wound healing rate
+    final avgHealingRate = _calculateAverageHealingRate(patientProvider.patients);
+    
+    // Calculate sessions this month
+    final sessionsThisMonth = _calculateSessionsThisMonth(patientProvider.patients);
 
     final stats = [
       _StatCard(
@@ -104,7 +106,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         value: totalProviders.toString(),
         icon: Icons.business,
         color: AppTheme.primaryColor,
-        subtitle: '${adminProvider.totalApprovedProviders} approved',
+        subtitle: '$approvedProviders active',
+        trend: pendingApprovals > 0 ? '+$pendingApprovals pending' : 'All approved',
+        trendPositive: true,
       ),
       _StatCard(
         title: 'Total Patients',
@@ -112,20 +116,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         icon: Icons.people,
         color: Colors.green,
         subtitle: '$activePatients active',
+        trend: totalPatients > 0 ? '${((activePatients / totalPatients) * 100).toStringAsFixed(0)}% active rate' : 'No patients',
+        trendPositive: activePatients > (totalPatients * 0.5),
       ),
       _StatCard(
         title: 'Total Sessions',
         value: totalSessions.toString(),
         icon: Icons.medical_services,
         color: Colors.blue,
-        subtitle: 'All providers',
+        subtitle: '$sessionsThisMonth this month',
+        trend: totalSessions > 0 ? '${(totalSessions / (totalProviders > 0 ? totalProviders : 1)).toStringAsFixed(1)} per provider' : 'No sessions',
+        trendPositive: true,
       ),
       _StatCard(
-        title: 'Approval Rate',
-        value: '${approvalRate.toStringAsFixed(1)}%',
+        title: 'Healing Rate',
+        value: '${avgHealingRate.toStringAsFixed(1)}%',
         icon: Icons.trending_up,
         color: Colors.orange,
-        subtitle: '$pendingApprovals pending',
+        subtitle: 'Avg improvement',
+        trend: avgHealingRate > 50 ? 'Excellent progress' : avgHealingRate > 30 ? 'Good progress' : 'Needs attention',
+        trendPositive: avgHealingRate > 50,
       ),
     ];
 
@@ -175,13 +185,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
               const Spacer(),
+              if (stat.trend != null)
+                Icon(
+                  stat.trendPositive ? Icons.trending_up : Icons.trending_down,
+                  color: stat.trendPositive ? Colors.green : Colors.red,
+                  size: 20,
+                ),
             ],
           ),
           const SizedBox(height: 16),
           Text(
             stat.value,
             style: const TextStyle(
-              fontSize: 24,
+              fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -194,130 +210,39 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               fontWeight: FontWeight.w500,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             stat.subtitle,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey[500],
+              fontWeight: FontWeight.w500,
             ),
           ),
+          if (stat.trend != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              stat.trend!,
+              style: TextStyle(
+                fontSize: 11,
+                color: stat.trendPositive ? Colors.green[700] : Colors.red[700],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildChartsSection(AdminProvider adminProvider, PatientProvider patientProvider) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: _buildProviderDistributionChart(adminProvider),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          flex: 3,
-          child: _buildPatientProgressChart(patientProvider),
-        ),
-      ],
-    );
+    // Display Patient Overview cards side by side (no container)
+    return _buildPatientOverviewCards(patientProvider);
   }
 
-  Widget _buildProviderDistributionChart(AdminProvider adminProvider) {
-    return Container(
-      height: 300,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Provider Status',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: PieChart(
-              PieChartData(
-                sections: [
-                  PieChartSectionData(
-                    value: adminProvider.totalApprovedProviders.toDouble(),
-                    color: Colors.green,
-                    title: 'Approved\n${adminProvider.totalApprovedProviders}',
-                    radius: 60,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  PieChartSectionData(
-                    value: adminProvider.totalPendingApprovals.toDouble(),
-                    color: Colors.orange,
-                    title: 'Pending\n${adminProvider.totalPendingApprovals}',
-                    radius: 60,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-                sectionsSpace: 2,
-                centerSpaceRadius: 40,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildPatientProgressChart(PatientProvider patientProvider) {
-    return Container(
-      height: 300,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Patient Overview',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: _buildPatientStatsGrid(patientProvider),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPatientStatsGrid(PatientProvider patientProvider) {
+  /// Build Patient Overview cards side by side (no container wrapper)
+  Widget _buildPatientOverviewCards(PatientProvider patientProvider) {
     final patients = patientProvider.patients;
     final totalPatients = patients.length;
     final totalSessions = patientProvider.totalSessionCount;
@@ -334,54 +259,99 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     // Calculate average sessions per patient
     final avgSessions = totalPatients > 0 ? (totalSessions / totalPatients).toStringAsFixed(1) : '0';
     
-    return GridView.count(
-      crossAxisCount: 2,
-      childAspectRatio: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
+    return Row(
       children: [
-        _buildMiniStatCard('Total Patients', totalPatients.toString(), Icons.people, Colors.blue),
-        _buildMiniStatCard('Total Sessions', totalSessions.toString(), Icons.medical_services, Colors.green),
-        _buildMiniStatCard('Recently Active', recentlyActive.toString(), Icons.trending_up, Colors.orange),
-        _buildMiniStatCard('Avg Sessions/Patient', avgSessions, Icons.analytics, Colors.purple),
+        Expanded(
+          child: _buildPatientOverviewCard(
+            'Total Patients',
+            totalPatients.toString(),
+            Icons.people,
+            Colors.blue,
+            '$recentlyActive recently active',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildPatientOverviewCard(
+            'Total Sessions',
+            totalSessions.toString(),
+            Icons.medical_services,
+            Colors.green,
+            '$avgSessions avg per patient',
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildMiniStatCard(String title, String value, IconData icon, Color color) {
+  /// Build individual patient overview card
+  Widget _buildPatientOverviewCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+    String subtitle,
+  ) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.2)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 32),
+              ),
+              const Spacer(),
+            ],
+          ),
+          const SizedBox(height: 20),
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 36,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               color: Colors.grey[600],
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
+
 
   Widget _buildRecentActivity(AdminProvider adminProvider, PatientProvider patientProvider) {
     return Container(
@@ -443,6 +413,135 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     );
   }
+
+  int _calculateActivePatients(List patients) {
+    if (patients.isEmpty) return 0;
+    
+    try {
+      final now = DateTime.now();
+      final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+      
+      int activeCount = 0;
+      for (final patient in patients) {
+        try {
+          final sessions = patient.sessions as List;
+          if (sessions.isEmpty) continue;
+          
+          for (final sessionData in sessions) {
+            try {
+              final date = sessionData.date as DateTime;
+              if (date.isAfter(thirtyDaysAgo)) {
+                activeCount++;
+                break; // Patient is active, count once and move to next patient
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      return activeCount;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  double _calculateAverageHealingRate(List patients) {
+    if (patients.isEmpty) return 0.0;
+    
+    try {
+      double totalImprovement = 0.0;
+      int count = 0;
+      
+      for (final patient in patients) {
+        try {
+          final sessions = patient.sessions as List;
+          if (sessions.length < 2) continue;
+          
+          final firstSession = sessions.first;
+          final lastSession = sessions.last;
+          
+          try {
+            final firstWounds = firstSession.wounds as List;
+            final lastWounds = lastSession.wounds as List;
+            
+            if (firstWounds.isEmpty || lastWounds.isEmpty) continue;
+            
+            double firstTotalSize = 0.0;
+            for (final wound in firstWounds) {
+              try {
+                final length = (wound.length as num).toDouble();
+                final width = (wound.width as num).toDouble();
+                firstTotalSize += length * width;
+              } catch (e) {
+                continue;
+              }
+            }
+            final firstAvgSize = firstTotalSize / firstWounds.length;
+            
+            double lastTotalSize = 0.0;
+            for (final wound in lastWounds) {
+              try {
+                final length = (wound.length as num).toDouble();
+                final width = (wound.width as num).toDouble();
+                lastTotalSize += length * width;
+              } catch (e) {
+                continue;
+              }
+            }
+            final lastAvgSize = lastTotalSize / lastWounds.length;
+            
+            if (firstAvgSize > 0) {
+              final improvement = ((firstAvgSize - lastAvgSize) / firstAvgSize) * 100;
+              totalImprovement += improvement.clamp(0.0, 100.0);
+              count++;
+            }
+          } catch (e) {
+            continue;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      return count > 0 ? totalImprovement / count : 0.0;
+    } catch (e) {
+      return 0.0;
+    }
+  }
+
+  int _calculateSessionsThisMonth(List patients) {
+    if (patients.isEmpty) return 0;
+    
+    try {
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      
+      int total = 0;
+      for (final patient in patients) {
+        try {
+          final sessions = patient.sessions as List;
+          for (final sessionData in sessions) {
+            try {
+              final date = sessionData.date as DateTime;
+              if (date.isAfter(startOfMonth)) {
+                total++;
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      return total;
+    } catch (e) {
+      return 0;
+    }
+  }
 }
 
 class _StatCard {
@@ -451,6 +550,8 @@ class _StatCard {
   final IconData icon;
   final Color color;
   final String subtitle;
+  final String? trend;
+  final bool trendPositive;
 
   _StatCard({
     required this.title,
@@ -458,5 +559,7 @@ class _StatCard {
     required this.icon,
     required this.color,
     required this.subtitle,
+    this.trend,
+    this.trendPositive = true,
   });
 }

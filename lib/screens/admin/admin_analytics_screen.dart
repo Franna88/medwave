@@ -93,18 +93,22 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
           const SizedBox(width: 16),
           DropdownButton<String>(
             value: _selectedCountry,
-            items: ['All', 'USA', 'RSA'].map((country) {
-              return DropdownMenuItem(
-                value: country,
-                child: Row(
-                  children: [
-                    Text(_getCountryFlag(country)),
-                    const SizedBox(width: 8),
-                    Text(country == 'All' ? 'All Countries' : country),
-                  ],
-                ),
-              );
-            }).toList(),
+              items: [
+                {'code': 'All', 'name': 'All Countries'},
+                {'code': 'US', 'name': 'United States'},
+                {'code': 'ZA', 'name': 'South Africa'},
+              ].map((country) {
+                return DropdownMenuItem(
+                  value: country['code'],
+                  child: Row(
+                    children: [
+                      Text(_getCountryFlag(country['code']!)),
+                      const SizedBox(width: 8),
+                      Text(country['name']!),
+                    ],
+                  ),
+                );
+              }).toList(),
             onChanged: (value) => setState(() => _selectedCountry = value!),
           ),
         ],
@@ -458,7 +462,10 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
 
   int _getTotalPractitioners(AdminProvider adminProvider) {
     if (_selectedCountry == 'All') {
-      return adminProvider.countryAnalytics.fold(0, (sum, analytics) => sum + analytics.totalPractitioners);
+      // Use system-wide analytics
+      final analytics = adminProvider.adminAnalytics;
+      final practitionerStats = analytics['practitioners'] as Map<String, dynamic>? ?? {};
+      return (practitionerStats['total'] as int? ?? 0);
     }
     final analytics = adminProvider.getCountryAnalytics(_selectedCountry);
     return analytics?.totalPractitioners ?? 0;
@@ -466,7 +473,10 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
 
   int _getActivePractitioners(AdminProvider adminProvider) {
     if (_selectedCountry == 'All') {
-      return adminProvider.countryAnalytics.fold(0, (sum, analytics) => sum + analytics.activePractitioners);
+      // Use system-wide analytics (approved practitioners)
+      final analytics = adminProvider.adminAnalytics;
+      final practitionerStats = analytics['practitioners'] as Map<String, dynamic>? ?? {};
+      return (practitionerStats['approved'] as int? ?? 0);
     }
     final analytics = adminProvider.getCountryAnalytics(_selectedCountry);
     return analytics?.activePractitioners ?? 0;
@@ -474,7 +484,9 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
 
   int _getTotalPatients(AdminProvider adminProvider) {
     if (_selectedCountry == 'All') {
-      return adminProvider.countryAnalytics.fold(0, (sum, analytics) => sum + analytics.totalPatients);
+      // Use system-wide analytics
+      final analytics = adminProvider.adminAnalytics;
+      return analytics['totalPatients'] as int? ?? 0;
     }
     final analytics = adminProvider.getCountryAnalytics(_selectedCountry);
     return analytics?.totalPatients ?? 0;
@@ -492,8 +504,10 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
 
   String _getCountryFlag(String country) {
     switch (country) {
+      case 'US':
       case 'USA':
         return '🇺🇸';
+      case 'ZA':
       case 'RSA':
         return '🇿🇦';
       case 'All':

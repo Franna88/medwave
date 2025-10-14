@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:data_table_2/data_table_2.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/admin_provider.dart';
 import '../../models/admin/healthcare_provider.dart';
 import '../../models/practitioner_application.dart';
@@ -28,11 +29,11 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Use real Firebase data instead of mock data
-          final realPractitioners = adminProvider.realPractitioners;
-          final filteredProviders = _getFilteredRealProviders(realPractitioners);
-
-          return SingleChildScrollView(
+          // Use real practitioners from users collection (actual app users)
+          final realPractitioners = adminProvider.realPractitionersFromUsers;
+          final filteredRealPractitioners = _getFilteredRealPractitionersFromUsers(realPractitioners);
+        
+        return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,7 +44,7 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
                 const SizedBox(height: 24),
                 _buildFiltersSection(),
                 const SizedBox(height: 24),
-                _buildProvidersTable(filteredProviders),
+                _buildRealProvidersTable(filteredRealPractitioners),
               ],
             ),
           );
@@ -52,32 +53,37 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
     );
   }
 
-  /// Filter real practitioner applications based on search and filter criteria
-  List<PractitionerApplication> _getFilteredRealProviders(List<PractitionerApplication> practitioners) {
+  /// Filter real practitioners from users collection
+  List<Map<String, dynamic>> _getFilteredRealPractitionersFromUsers(List<Map<String, dynamic>> practitioners) {
     var filtered = practitioners;
 
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((practitioner) {
         final searchLower = _searchQuery.toLowerCase();
-        return practitioner.firstName.toLowerCase().contains(searchLower) ||
-               practitioner.lastName.toLowerCase().contains(searchLower) ||
-               practitioner.email.toLowerCase().contains(searchLower) ||
-               practitioner.practiceLocation.toLowerCase().contains(searchLower);
+        final name = (practitioner['name'] as String? ?? '').toLowerCase();
+        final email = (practitioner['email'] as String? ?? '').toLowerCase();
+        final specialization = (practitioner['specialization'] as String? ?? '').toLowerCase();
+        
+        return name.contains(searchLower) ||
+               email.contains(searchLower) ||
+               specialization.contains(searchLower);
       }).toList();
     }
 
     // Filter by status
     if (_statusFilter != 'All') {
-      final statusToFilter = _statusFilter.toLowerCase();
-      filtered = filtered.where((practitioner) => 
-          practitioner.status.name.toLowerCase() == statusToFilter).toList();
+      if (_statusFilter == 'Approved') {
+        filtered = filtered.where((p) => p['isApproved'] == true).toList();
+      } else if (_statusFilter == 'Pending') {
+        filtered = filtered.where((p) => p['isApproved'] != true).toList();
+      }
     }
 
     // Filter by country
     if (_countryFilter != 'All') {
       filtered = filtered.where((practitioner) => 
-          practitioner.country == _countryFilter).toList();
+          practitioner['country'] == _countryFilter).toList();
     }
 
     return filtered;
@@ -106,12 +112,18 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
   }
 
   Widget _buildStatisticsCards(AdminProvider adminProvider) {
+    // Use real practitioners from users collection
+    final total = adminProvider.realPractitionersCount;
+    final approved = adminProvider.realApprovedPractitionersCount;
+    final pending = adminProvider.realPendingPractitionersCount;
+    final approvalRate = total > 0 ? (approved / total * 100) : 0.0;
+    
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
             'Total Providers',
-            adminProvider.totalProviders.toString(),
+            total.toString(),
             Icons.business,
             AppTheme.primaryColor,
           ),
@@ -120,7 +132,7 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
         Expanded(
           child: _buildStatCard(
             'Approved',
-            adminProvider.totalApprovedProviders.toString(),
+            approved.toString(),
             Icons.check_circle,
             Colors.green,
           ),
@@ -129,7 +141,7 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
         Expanded(
           child: _buildStatCard(
             'Pending',
-            adminProvider.totalPendingApprovals.toString(),
+            pending.toString(),
             Icons.pending,
             Colors.orange,
           ),
@@ -138,7 +150,7 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
         Expanded(
           child: _buildStatCard(
             'Approval Rate',
-            '${adminProvider.approvalRate.toStringAsFixed(1)}%',
+            '${approvalRate.toStringAsFixed(1)}%',
             Icons.trending_up,
             Colors.blue,
           ),
@@ -258,8 +270,15 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              items: ['All', 'USA', 'RSA'].map((country) {
-                return DropdownMenuItem(value: country, child: Text(country));
+              items: [
+                {'code': 'All', 'name': 'All Countries'},
+                {'code': 'US', 'name': 'United States'},
+                {'code': 'ZA', 'name': 'South Africa'},
+              ].map((country) {
+                return DropdownMenuItem(
+                  value: country['code'],
+                  child: Text(country['name']!),
+                );
               }).toList(),
               onChanged: (value) => setState(() => _countryFilter = value!),
             ),
@@ -269,7 +288,30 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
     );
   }
 
-  Widget _buildProvidersTable(List<PractitionerApplication> practitioners) {
+  /// Build table for real practitioners from users collection
+  Widget _buildRealProvidersTable(List<Map<String, dynamic>> practitioners) {
+    if (practitioners.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'No practitioners found',
+                style: TextStyle(color: Colors.grey[600], fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -306,7 +348,7 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
                   size: ColumnSize.L,
                 ),
                 DataColumn2(
-                  label: Text('Company'),
+                  label: Text('Specialization'),
                   size: ColumnSize.L,
                 ),
                 DataColumn2(
@@ -314,15 +356,15 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
                   size: ColumnSize.S,
                 ),
                 DataColumn2(
-                  label: Text('Package'),
-                  size: ColumnSize.M,
+                  label: Text('Patients'),
+                  size: ColumnSize.S,
                 ),
                 DataColumn2(
                   label: Text('Status'),
                   size: ColumnSize.S,
                 ),
                 DataColumn2(
-                  label: Text('Registration'),
+                  label: Text('Registered'),
                   size: ColumnSize.M,
                 ),
                 DataColumn2(
@@ -331,6 +373,14 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
                 ),
               ],
               rows: practitioners.map((practitioner) {
+                final name = practitioner['name'] as String? ?? 'Unknown';
+                final email = practitioner['email'] as String? ?? '';
+                final specialization = practitioner['specialization'] as String? ?? 'General';
+                final country = practitioner['country'] as String? ?? 'Unknown';
+                final isApproved = practitioner['isApproved'] as bool? ?? false;
+                final patientCount = practitioner['patientCount'] as int? ?? 0;
+                final createdAt = practitioner['createdAt'];
+                
                 return DataRow2(
                   cells: [
                     DataCell(
@@ -339,34 +389,51 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '${practitioner.firstName} ${practitioner.lastName}',
+                            name,
                             style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
-                          Text(
-                            practitioner.email,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
+                          if (email.isNotEmpty)
+                            Text(
+                              email,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),
-                    DataCell(Text(practitioner.practiceLocation)),
+                    DataCell(Text(specialization)),
                     DataCell(
                       Row(
                         children: [
-                          Text(_getCountryFlag(practitioner.country)),
+                          Text(_getCountryFlag(country)),
                           const SizedBox(width: 4),
-                          Text(practitioner.country),
+                          Text(country),
                         ],
                       ),
                     ),
-                    DataCell(Text(practitioner.specialization)),
-                    DataCell(_buildStatusChipForPractitioner(practitioner)),
+                    DataCell(Text(patientCount.toString())),
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isApproved ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          isApproved ? 'Approved' : 'Pending',
+                          style: TextStyle(
+                            color: isApproved ? Colors.green : Colors.orange,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
                     DataCell(
                       Text(
-                        _formatDate(practitioner.submittedAt),
+                        createdAt != null ? _formatTimestamp(createdAt) : 'N/A',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -379,21 +446,9 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
                         children: [
                           IconButton(
                             icon: const Icon(Icons.visibility),
-                            onPressed: () => _viewPractitioner(practitioner),
+                            onPressed: () => _viewRealPractitioner(practitioner),
                             tooltip: 'View Details',
                           ),
-                          if (practitioner.status != 'approved') ...[
-                            IconButton(
-                              icon: const Icon(Icons.check, color: Colors.green),
-                              onPressed: () => _approvePractitioner(practitioner),
-                              tooltip: 'Approve',
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, color: Colors.red),
-                              onPressed: () => _rejectPractitioner(practitioner),
-                              tooltip: 'Reject',
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -457,8 +512,10 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
 
   String _getCountryFlag(String country) {
     switch (country) {
+      case 'US':
       case 'USA':
         return '🇺🇸';
+      case 'ZA':
       case 'RSA':
         return '🇿🇦';
       default:
@@ -664,6 +721,69 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
             ),
           ),
           Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  /// Format timestamp from Firebase
+  String _formatTimestamp(dynamic timestamp) {
+    try {
+      if (timestamp == null) return 'N/A';
+      
+      DateTime date;
+      if (timestamp is Timestamp) {
+        date = timestamp.toDate();
+      } else if (timestamp is DateTime) {
+        date = timestamp;
+      } else {
+        return 'N/A';
+      }
+      
+      final now = DateTime.now();
+      final difference = now.difference(date);
+      
+      if (difference.inDays < 1) {
+        return 'Today';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays}d ago';
+      } else if (difference.inDays < 30) {
+        return '${(difference.inDays / 7).floor()}w ago';
+      } else {
+        return '${date.day}/${date.month}/${date.year}';
+      }
+    } catch (e) {
+      return 'N/A';
+    }
+  }
+
+  /// View real practitioner details from users collection
+  void _viewRealPractitioner(Map<String, dynamic> practitioner) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(practitioner['name'] as String? ?? 'Practitioner Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailRow('Name', practitioner['name'] as String? ?? 'N/A'),
+              _buildDetailRow('Email', practitioner['email'] as String? ?? 'N/A'),
+              _buildDetailRow('Specialization', practitioner['specialization'] as String? ?? 'N/A'),
+              _buildDetailRow('Country', practitioner['country'] as String? ?? 'N/A'),
+              _buildDetailRow('Status', (practitioner['isApproved'] == true) ? 'Approved' : 'Pending'),
+              _buildDetailRow('Patient Count', (practitioner['patientCount'] as int? ?? 0).toString()),
+              _buildDetailRow('User ID', practitioner['uid'] as String? ?? practitioner['id'] as String? ?? 'N/A'),
+              _buildDetailRow('Registered', _formatTimestamp(practitioner['createdAt'])),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );

@@ -17,7 +17,10 @@ class AdminProvider extends ChangeNotifier {
   List<CountryAnalytics> _countryAnalytics = [];
   List<AdminReport> _reports = [];
   
-  // Real Firebase data
+  // Real Firebase data (from users collection)
+  List<Map<String, dynamic>> _realPractitionersFromUsers = [];
+  
+  // Practitioner applications (from practitionerApplications collection - may be empty)
   List<PractitionerApplication> _realPractitioners = [];
   List<PractitionerApplication> _realPendingApprovals = [];
 
@@ -45,7 +48,17 @@ class AdminProvider extends ChangeNotifier {
   List<CountryAnalytics> get countryAnalytics => _countryAnalytics;
   List<AdminReport> get reports => _reports;
   
-  // Real Firebase data getters
+  // Real practitioners from users collection (actual users of the app)
+  List<Map<String, dynamic>> get realPractitionersFromUsers => _realPractitionersFromUsers;
+  int get realPractitionersCount => _realPractitionersFromUsers.length;
+  int get realApprovedPractitionersCount => _realPractitionersFromUsers
+      .where((p) => p['isApproved'] == true)
+      .length;
+  int get realPendingPractitionersCount => _realPractitionersFromUsers
+      .where((p) => p['isApproved'] != true)
+      .length;
+  
+  // Real Firebase data getters (from applications - may be empty)
   List<PractitionerApplication> get realPractitioners => _realPractitioners;
   List<PractitionerApplication> get realPendingApprovals => _realPendingApprovals;
 
@@ -53,7 +66,7 @@ class AdminProvider extends ChangeNotifier {
   List<AdminUser> get adminUsers => _adminUsers;
   bool get hasAdminUsers => _adminUsers.isNotEmpty;
   List<PractitionerApplication> get realApprovedPractitioners => 
-      _realPractitioners.where((p) => p.status == 'approved').toList();
+      _realPractitioners.where((p) => p.isApproved).toList();
   Map<String, dynamic> get adminAnalytics => _adminAnalytics;
   
   bool get isLoading => _isLoading;
@@ -114,25 +127,40 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Subscribe to approved practitioners
-      _practitionersSubscription = AdminService.getApprovedPractitionersStream().listen(
+      // Subscribe to REAL practitioners from users collection (actual app users)
+      _practitionersSubscription?.cancel();
+      AdminService.getRealPractitionersStream().listen(
         (practitioners) {
-          _realPractitioners = practitioners;
+          _realPractitionersFromUsers = practitioners;
           _isLoading = false;
           _error = null;
           notifyListeners();
           
           if (kDebugMode) {
-            print('✅ AdminProvider: Loaded ${practitioners.length} approved practitioners from Firebase');
+            print('✅ AdminProvider: Loaded ${practitioners.length} REAL practitioners from users collection');
+            print('   - Approved: ${practitioners.where((p) => p['isApproved'] == true).length}');
+            print('   - Pending: ${practitioners.where((p) => p['isApproved'] != true).length}');
           }
         },
         onError: (error) {
-          _error = 'Failed to load practitioners: $error';
+          _error = 'Failed to load real practitioners: $error';
           _isLoading = false;
           notifyListeners();
           
           if (kDebugMode) {
-            print('❌ AdminProvider ERROR: Failed to load practitioners: $error');
+            print('❌ AdminProvider ERROR: Failed to load real practitioners: $error');
+          }
+        },
+      );
+      
+      // Also subscribe to practitioner applications (may be empty)
+      AdminService.getAllPractitionersStream().listen(
+        (practitioners) {
+          _realPractitioners = practitioners;
+          notifyListeners();
+          
+          if (kDebugMode) {
+            print('📋 AdminProvider: Loaded ${practitioners.length} practitioner applications');
           }
         },
       );
@@ -439,6 +467,38 @@ class AdminProvider extends ChangeNotifier {
       if (kDebugMode) {
         print('❌ Error approving provider: $e');
       }
+    }
+  }
+
+  /// Approve a real practitioner (in users collection)
+  Future<void> approveRealPractitioner(String userId) async {
+    try {
+      await AdminService.approveRealPractitioner(userId);
+      
+      if (kDebugMode) {
+        print('✅ AdminProvider: Real practitioner approved: $userId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ AdminProvider ERROR: Failed to approve real practitioner: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Reject a real practitioner (in users collection)
+  Future<void> rejectRealPractitioner(String userId, String reason) async {
+    try {
+      await AdminService.rejectRealPractitioner(userId, reason);
+      
+      if (kDebugMode) {
+        print('❌ AdminProvider: Real practitioner rejected: $userId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ AdminProvider ERROR: Failed to reject real practitioner: $e');
+      }
+      rethrow;
     }
   }
 

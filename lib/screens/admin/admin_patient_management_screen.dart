@@ -5,6 +5,7 @@ import '../../providers/admin_provider.dart';
 import '../../providers/patient_provider.dart';
 import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
+import 'admin_patient_detail_screen.dart';
 
 // Define PatientStatus enum since it's not in the model
 enum PatientStatus { active, recovered, inactive }
@@ -24,9 +25,9 @@ class _AdminPatientManagementScreenState extends State<AdminPatientManagementScr
   @override
   void initState() {
     super.initState();
-    // Initialize patient data when the screen loads
+    // Initialize patient data when the screen loads (admin mode - load ALL patients)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PatientProvider>().loadPatients();
+      context.read<PatientProvider>().loadPatients(isAdmin: true);
     });
   }
 
@@ -536,54 +537,11 @@ class _AdminPatientManagementScreenState extends State<AdminPatientManagementScr
   }
 
   void _viewPatientDetails(Patient patient) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(_getPatientFullName(patient)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDetailRow('Age', '${_getPatientAge(patient)} years'),
-              _buildDetailRow('Gender', _getPatientGender(patient)),
-              _buildDetailRow('Primary Condition', _getPatientPrimaryCondition(patient)),
-              if (_getPatientWoundType(patient) != null)
-                _buildDetailRow('Wound Type', _getPatientWoundType(patient)!),
-              _buildDetailRow('Status', _getPatientStatus(patient).name),
-              _buildDetailRow('Total Sessions', '${patient.sessions.length}'),
-              if (_getPatientLastSessionDate(patient) != null)
-                _buildDetailRow('Last Session', _getPatientLastSessionDate(patient)!.toString().split(' ')[0]),
-              if (_getPatientNotes(patient).isNotEmpty)
-                _buildDetailRow('Notes', _getPatientNotes(patient)),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
+    // Navigate to detailed patient screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AdminPatientDetailScreen(patient: patient),
       ),
     );
   }
@@ -667,12 +625,4 @@ class _AdminPatientManagementScreenState extends State<AdminPatientManagementScr
     return patient.sessions.map((s) => s.date).reduce((a, b) => a.isAfter(b) ? a : b);
   }
 
-  String _getPatientNotes(Patient patient) {
-    // Get notes from the latest session if available
-    if (patient.sessions.isNotEmpty) {
-      final latestSession = patient.sessions.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
-      return latestSession.notes;
-    }
-    return '';
-  }
 }

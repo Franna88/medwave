@@ -74,7 +74,8 @@ class PatientProvider with ChangeNotifier {
   }
 
   /// Initialize patient data stream
-  Future<void> loadPatients() async {
+  /// If isAdmin is true, loads ALL patients; otherwise loads only practitioner's patients
+  Future<void> loadPatients({bool isAdmin = false}) async {
     if (!_useFirebase) {
       return _loadMockPatients();
     }
@@ -85,11 +86,19 @@ class PatientProvider with ChangeNotifier {
       
       // Subscribe to real-time patient updates
       _patientsSubscription?.cancel();
-      _patientsSubscription = PatientService.getPatientsStream().listen(
+      
+      // Use different stream based on user role
+      final stream = isAdmin 
+          ? PatientService.getAllPatientsStream()
+          : PatientService.getPatientsStream();
+      
+      debugPrint('PatientProvider: Loading patients (admin mode: $isAdmin)');
+      
+      _patientsSubscription = stream.listen(
         (patients) {
           _patients.clear();
           _patients.addAll(patients);
-          _loadSessionCount(); // Load session count when patients are updated
+          _loadSessionCount(isAdmin: isAdmin); // Load session count when patients are updated
           _setLoading(false);
           notifyListeners();
         },
@@ -105,7 +114,8 @@ class PatientProvider with ChangeNotifier {
   }
 
   /// Load total session count from Firebase
-  Future<void> _loadSessionCount() async {
+  /// If isAdmin is true, counts ALL sessions; otherwise counts only practitioner's sessions
+  Future<void> _loadSessionCount({bool isAdmin = false}) async {
     if (!_useFirebase) {
       // For mock data, count sessions from patients
       _totalSessionCount = _patients.fold<int>(0, (sum, p) => sum + p.sessions.length);
@@ -119,14 +129,24 @@ class PatientProvider with ChangeNotifier {
         return;
       }
 
-      // Query the main sessions collection for this practitioner
-      final snapshot = await FirebaseFirestore.instance
-          .collection('sessions')
-          .where('practitionerId', isEqualTo: userId)
-          .get();
+      // Query the main sessions collection
+      QuerySnapshot snapshot;
+      if (isAdmin) {
+        // Admin: get ALL sessions
+        snapshot = await FirebaseFirestore.instance
+            .collection('sessions')
+            .get();
+        debugPrint('PatientProvider: Loaded $_totalSessionCount total sessions (admin mode)');
+      } else {
+        // Practitioner: get only their sessions
+        snapshot = await FirebaseFirestore.instance
+            .collection('sessions')
+            .where('practitionerId', isEqualTo: userId)
+            .get();
+        debugPrint('PatientProvider: Loaded $_totalSessionCount sessions for practitioner $userId');
+      }
       
       _totalSessionCount = snapshot.docs.length;
-      debugPrint('PatientProvider: Loaded $_totalSessionCount total sessions');
     } catch (e) {
       debugPrint('PatientProvider: Error loading session count: $e');
       _totalSessionCount = 0;

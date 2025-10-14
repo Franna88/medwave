@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/admin_provider.dart';
-import '../../models/admin/healthcare_provider.dart';
 import '../../theme/app_theme.dart';
 
 class AdminProviderApprovalsScreen extends StatefulWidget {
@@ -132,14 +131,18 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
-              items: ['All', 'USA', 'RSA'].map((country) {
+              items: [
+                {'code': 'All', 'name': 'All Countries'},
+                {'code': 'US', 'name': 'United States'},
+                {'code': 'ZA', 'name': 'South Africa'},
+              ].map((country) {
                 return DropdownMenuItem(
-                  value: country,
+                  value: country['code'],
                   child: Row(
                     children: [
-                      Text(_getCountryFlag(country)),
+                      Text(_getCountryFlag(country['code']!)),
                       const SizedBox(width: 8),
-                      Text(country == 'All' ? 'All Countries' : country),
+                      Text(country['name']!),
                     ],
                   ),
                 );
@@ -153,9 +156,24 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
   }
 
   Widget _buildPendingApprovalsList(AdminProvider adminProvider) {
-    final pendingProviders = adminProvider.pendingApprovals;
+    // Get REAL practitioners from users collection
+    var practitioners = adminProvider.realPractitionersFromUsers;
     
-    if (pendingProviders.isEmpty) {
+    // Apply status filter
+    if (_statusFilter == 'Pending') {
+      practitioners = practitioners.where((p) => p['isApproved'] != true).toList();
+    } else if (_statusFilter == 'Approved') {
+      practitioners = practitioners.where((p) => p['isApproved'] == true).toList();
+    }
+    // Note: 'Rejected' status not tracked in users collection
+    // If 'All Applications', show all
+    
+    // Apply country filter
+    if (_countryFilter != 'All') {
+      practitioners = practitioners.where((p) => p['country'] == _countryFilter).toList();
+    }
+    
+    if (practitioners.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(40),
         decoration: BoxDecoration(
@@ -198,7 +216,36 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
     }
 
     return Column(
-      children: pendingProviders.map((provider) {
+      children: practitioners.map((practitioner) {
+        // Extract data from Map
+        final name = practitioner['name'] as String? ?? 'Unknown';
+        final email = practitioner['email'] as String? ?? '';
+        final specialization = practitioner['specialization'] as String? ?? 'General';
+        final country = practitioner['country'] as String? ?? 'Unknown';
+        final isApproved = practitioner['isApproved'] as bool? ?? false;
+        final createdAt = practitioner['createdAt'];
+        final patientCount = practitioner['patientCount'] as int? ?? 0;
+        
+        // Calculate days since registration
+        int daysSince = 0;
+        if (createdAt != null) {
+          try {
+            final date = createdAt is DateTime ? createdAt : (createdAt as dynamic).toDate();
+            daysSince = DateTime.now().difference(date).inDays;
+          } catch (e) {
+            daysSince = 0;
+          }
+        }
+        
+        final statusColor = isApproved ? Colors.green : Colors.orange;
+        final statusText = isApproved ? 'Approved' : 'Pending';
+        
+        // Get initials from name
+        final nameParts = name.split(' ');
+        final initials = nameParts.length >= 2 
+            ? nameParts[0][0] + nameParts[1][0]
+            : name.length >= 2 ? name.substring(0, 2) : name[0];
+        
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
@@ -214,40 +261,40 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
           ),
           child: ExpansionTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.orange.withOpacity(0.1),
+              backgroundColor: statusColor.withOpacity(0.1),
               child: Text(
-                provider.firstName[0] + provider.lastName[0],
+                initials.toUpperCase(),
                 style: TextStyle(
-                  color: Colors.orange,
+                  color: statusColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
             title: Text(
-              provider.fullName,
+              name,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(provider.fullCompanyName),
+                Text('$specialization${email.isNotEmpty ? " • $email" : ""}'),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text(_getCountryFlag(provider.country)),
+                    Text(_getCountryFlag(country)),
                     const SizedBox(width: 4),
-                    Text(provider.country),
+                    Text(country),
                     const SizedBox(width: 16),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
+                        color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'Submitted ${provider.daysSinceRegistration} days ago',
+                        'Registered ${daysSince > 0 ? "$daysSince days ago" : "today"}',
                         style: TextStyle(
-                          color: Colors.orange,
+                          color: statusColor,
                           fontSize: 12,
                         ),
                       ),
@@ -256,11 +303,11 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
                 ),
               ],
             ),
-            trailing: Row(
+            trailing: !isApproved ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () => _approveProvider(provider, adminProvider),
+                  onPressed: () => _approvePractitioner(practitioner, adminProvider),
                   icon: const Icon(Icons.check, size: 16),
                   label: const Text('Approve'),
                   style: ElevatedButton.styleFrom(
@@ -271,7 +318,7 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
-                  onPressed: () => _rejectProvider(provider, adminProvider),
+                  onPressed: () => _rejectPractitioner(practitioner, adminProvider),
                   icon: const Icon(Icons.close, size: 16),
                   label: const Text('Reject'),
                   style: OutlinedButton.styleFrom(
@@ -281,6 +328,19 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
                   ),
                 ),
               ],
+            ) : Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                statusText,
+                style: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             children: [
               Padding(
@@ -288,15 +348,15 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDetailRow('Email', provider.email),
-                    _buildDetailRow('Phone', provider.directPhoneNumber),
-                    _buildDetailRow('Business Address', provider.businessAddress),
-                    _buildDetailRow('Shipping Address', provider.shippingAddress),
-                    _buildDetailRow('Package', provider.package),
-                    _buildDetailRow('Purchase Plan', provider.purchasePlan),
-                    _buildDetailRow('Sales Person', provider.salesPerson),
-                    if (provider.additionalNotes != null && provider.additionalNotes!.isNotEmpty)
-                      _buildDetailRow('Additional Notes', provider.additionalNotes!),
+                    _buildDetailRow('Name', name),
+                    _buildDetailRow('Email', email),
+                    _buildDetailRow('Specialization', specialization),
+                    _buildDetailRow('Country', country),
+                    _buildDetailRow('Patient Count', patientCount.toString()),
+                    _buildDetailRow('Status', statusText),
+                    _buildDetailRow('User ID', practitioner['uid'] as String? ?? practitioner['id'] as String? ?? 'N/A'),
+                    if (daysSince > 0)
+                      _buildDetailRow('Registered', '$daysSince days ago'),
                   ],
                 ),
               ),
@@ -338,8 +398,10 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
 
   String _getCountryFlag(String country) {
     switch (country) {
+      case 'US':
       case 'USA':
         return '🇺🇸';
+      case 'ZA':
       case 'RSA':
         return '🇿🇦';
       case 'All':
@@ -349,52 +411,98 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
     }
   }
 
-  void _approveProvider(HealthcareProvider provider, AdminProvider adminProvider) {
-    showDialog(
+  /// Approve a practitioner
+  void _approvePractitioner(Map<String, dynamic> practitioner, AdminProvider adminProvider) async {
+    final name = practitioner['name'] as String? ?? 'Unknown';
+    final userId = practitioner['uid'] as String? ?? practitioner['id'] as String?;
+    
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: Unable to identify practitioner'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Approve Provider'),
-        content: Text('Are you sure you want to approve ${provider.fullName}?'),
+        title: const Text('Approve Practitioner'),
+        content: Text('Are you sure you want to approve $name?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              adminProvider.approveProvider(provider.id, 'Approved by super admin');
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${provider.fullName} has been approved'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             child: const Text('Approve'),
           ),
         ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    try {
+      // Call the admin service to approve
+      await adminProvider.approveRealPractitioner(userId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ $name has been approved'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error approving practitioner: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
-  void _rejectProvider(HealthcareProvider provider, AdminProvider adminProvider) {
-    final reasonController = TextEditingController();
+  /// Reject a practitioner
+  void _rejectPractitioner(Map<String, dynamic> practitioner, AdminProvider adminProvider) async {
+    final name = practitioner['name'] as String? ?? 'Unknown';
+    final userId = practitioner['uid'] as String? ?? practitioner['id'] as String?;
     
-    showDialog(
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: Unable to identify practitioner'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final reasonController = TextEditingController();
+
+    // Show confirmation dialog with reason
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reject Provider'),
+        title: const Text('Reject Practitioner'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Are you sure you want to reject ${provider.fullName}?'),
+            Text('Are you sure you want to reject $name?'),
             const SizedBox(height: 16),
             TextField(
               controller: reasonController,
               decoration: const InputDecoration(
-                labelText: 'Rejection Reason',
+                labelText: 'Rejection Reason (optional)',
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
@@ -403,28 +511,46 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              final reason = reasonController.text.isEmpty 
-                  ? 'Rejected by super admin' 
-                  : reasonController.text;
-              adminProvider.rejectProvider(provider.id, reason);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${provider.fullName} has been rejected'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Reject'),
           ),
         ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    try {
+      final reason = reasonController.text.isEmpty 
+          ? 'Rejected by admin' 
+          : reasonController.text;
+      
+      // Call the admin service to reject
+      await adminProvider.rejectRealPractitioner(userId, reason);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ $name has been rejected'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error rejecting practitioner: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
+
 }
