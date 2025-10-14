@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:data_table_2/data_table_2.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/patient_provider.dart';
 import '../../models/patient.dart';
@@ -21,6 +22,9 @@ class _AdminPatientManagementScreenState extends State<AdminPatientManagementScr
   String _searchQuery = '';
   String _countryFilter = 'All';
   String _statusFilter = 'All';
+  
+  // Map to store last session date for each patient
+  final Map<String, DateTime> _patientLastSessions = {};
 
   @override
   void initState() {
@@ -28,7 +32,43 @@ class _AdminPatientManagementScreenState extends State<AdminPatientManagementScr
     // Initialize patient data when the screen loads (admin mode - load ALL patients)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PatientProvider>().loadPatients(isAdmin: true);
+      _loadPatientSessions();
     });
+  }
+  
+  /// Load last session dates for all patients from the main sessions collection
+  Future<void> _loadPatientSessions() async {
+    try {
+      // Query the main sessions collection
+      final sessionsSnapshot = await FirebaseFirestore.instance
+          .collection('sessions')
+          .orderBy('date', descending: true)
+          .get();
+      
+      // Build a map of patientId to last session date
+      final Map<String, DateTime> lastSessions = {};
+      for (final doc in sessionsSnapshot.docs) {
+        final data = doc.data();
+        final patientId = data['patientId'] as String?;
+        final date = (data['date'] as Timestamp?)?.toDate();
+        
+        if (patientId != null && date != null) {
+          // Only keep the most recent session for each patient (since ordered by date desc)
+          if (!lastSessions.containsKey(patientId)) {
+            lastSessions[patientId] = date;
+          }
+        }
+      }
+      
+      setState(() {
+        _patientLastSessions.clear();
+        _patientLastSessions.addAll(lastSessions);
+      });
+      
+      debugPrint('✅ Loaded session data for ${lastSessions.length} patients');
+    } catch (e) {
+      debugPrint('❌ Error loading patient sessions: $e');
+    }
   }
 
   @override
@@ -599,9 +639,13 @@ class _AdminPatientManagementScreenState extends State<AdminPatientManagementScr
   }
 
   PatientStatus _getPatientStatus(Patient patient) {
-    // Mock status based on patient data - in real app this would be a field
-    if (patient.sessions.isEmpty) return PatientStatus.inactive;
-    if (patient.sessions.length > 10) return PatientStatus.recovered;
+    // Determine status based on last session date
+    final lastSession = _patientLastSessions[patient.id];
+    if (lastSession == null) return PatientStatus.inactive;
+    
+    final daysSinceLastSession = DateTime.now().difference(lastSession).inDays;
+    if (daysSinceLastSession > 60) return PatientStatus.inactive;
+    if (daysSinceLastSession > 30) return PatientStatus.recovered;
     return PatientStatus.active;
   }
 
@@ -615,14 +659,20 @@ class _AdminPatientManagementScreenState extends State<AdminPatientManagementScr
   }
 
   String? _getPatientWoundType(Patient patient) {
-    // Mock wound type - in real app this might be derived from sessions
-    return patient.sessions.isNotEmpty ? 'Chronic wound' : null;
+    // Check if patient has any current wounds
+    if (patient.currentWounds.isNotEmpty) {
+      return patient.currentWounds.first.type;
+    }
+    // Fall back to baseline wounds
+    if (patient.baselineWounds.isNotEmpty) {
+      return patient.baselineWounds.first.type;
+    }
+    return null;
   }
 
   DateTime? _getPatientLastSessionDate(Patient patient) {
-    if (patient.sessions.isEmpty) return null;
-    // Return the latest session date
-    return patient.sessions.map((s) => s.date).reduce((a, b) => a.isAfter(b) ? a : b);
+    // Check if we have session data loaded from Firebase
+    return _patientLastSessions[patient.id];
   }
 
 }

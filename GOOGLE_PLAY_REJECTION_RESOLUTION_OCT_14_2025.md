@@ -110,7 +110,7 @@ double get weightChangePercentage =>
 - `medicalConditions: Map<String, bool>` (diabetes, hypertension, heart disease, etc.)
 - `Wound.stage: WoundStage`
 - `Wound.type: String` (pressure ulcer, diabetic ulcer, venous ulcer, etc.)
-- Disease-specific treatment prRotocols
+- Disease-specific treatment protocols
 
 **Where Found in Code:**
 ```dart
