@@ -16,6 +16,22 @@ service cloud.firestore {
       allow write: if false; // Only backend/Cloud Functions can write
     }
     
+    // Products - Admin only access for performance cost tracking
+    match /products/{productId} {
+      allow read, write: if request.auth != null && isAdmin();
+    }
+    
+    // Ad Performance Costs - Admin only access for budget and profit tracking
+    match /adPerformanceCosts/{costId} {
+      allow read, write: if request.auth != null && isAdmin();
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin' ||
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
     // SUPER PERMISSIVE RULES - Allow all authenticated users to do everything
     match /{document=**} {
       allow read, write: if request.auth != null;

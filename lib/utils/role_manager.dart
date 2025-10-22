@@ -101,6 +101,7 @@ class RoleManager {
         if (role == UserRole.superAdmin) {
           adminItems.addAll([
             NavigationItem('Advertisement Performance', '/admin/adverts', 'campaign'),
+            NavigationItem('Sales Performance', '/admin/sales-performance', 'trending_up'),
             NavigationItem('Admin Management', '/admin/users', 'admin_panel_settings'),
             NavigationItem('Report Builder', '/admin/report-builder', 'build'),
           ]);

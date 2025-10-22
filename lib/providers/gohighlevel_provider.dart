@@ -37,7 +37,7 @@ class GoHighLevelProvider extends ChangeNotifier {
   String _selectedTimeframe = 'Last 30 Days';
   
   // View mode (snapshot vs cumulative)
-  String _viewMode = 'snapshot'; // 'snapshot' or 'cumulative'
+  String _viewMode = 'cumulative'; // Default to cumulative mode
   
   // Configuration
   static const Duration _refreshInterval = Duration(minutes: 5);

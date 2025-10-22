@@ -950,6 +950,12 @@ app.all('/api/ghl/*', async (req, res) => {
   }
 });
 
+// ============================================================================
+// SCHEDULED FUNCTIONS - Automatic Background Sync
+// ============================================================================
+// Note: Scheduled function moved to Google Cloud Console for direct scheduling
+// The sync logic is available via the existing /api/ghl/sync-opportunity-history endpoint
+
 // Export the Express app as a Firebase Cloud Function (1st gen)
 exports.api = functions
   .runWith({

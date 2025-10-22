@@ -5,7 +5,6 @@ import '../../providers/admin_provider.dart';
 import '../../providers/gohighlevel_provider.dart';
 import '../../theme/app_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../widgets/admin/performance_cost_manager.dart';
 
 class AdminAdvertPerformanceScreen extends StatefulWidget {
   const AdminAdvertPerformanceScreen({super.key});
@@ -53,9 +52,6 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                 _buildHeader(ghlProvider),
                 const SizedBox(height: 24),
                 _buildFiltersSection(ghlProvider),
-                const SizedBox(height: 24),
-                // Performance Cost Manager - AT THE TOP
-                const PerformanceCostManager(),
                 const SizedBox(height: 24),
                 _buildPipelinePerformanceMetrics(ghlProvider),
                 const SizedBox(height: 24),
@@ -126,32 +122,21 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                         ),
                       ),
                     const SizedBox(width: 8),
-                    // Manual sync button
-                    ElevatedButton.icon(
-                      onPressed: ghlProvider.isSyncing 
-                          ? null 
-                          : () => ghlProvider.syncOpportunityHistory(),
-                      icon: ghlProvider.isSyncing
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.sync, size: 18),
-                      label: Text(ghlProvider.isSyncing ? 'Syncing...' : 'Manual Sync'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.secondaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
+                    // Sync button
+                    if (ghlProvider.isSyncing)
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      IconButton(
+                        onPressed: () => ghlProvider.syncOpportunityHistory(),
+                        icon: const Icon(Icons.sync),
+                        tooltip: 'Sync Opportunity Data',
+                        color: AppTheme.primaryColor,
                       ),
-                    ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 4),
                     IconButton(
                       onPressed: ghlProvider.refreshData,
                       icon: const Icon(Icons.refresh),
@@ -171,65 +156,64 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
           ],
         ),
         const SizedBox(height: 12),
-        // View mode toggle - Hidden by default, keep for development
-        if (false) // Change to true to show toggle for admin testing
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.trending_up,
-                      size: 16,
+        // View mode toggle
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.trending_up,
+                    size: 16,
+                    color: AppTheme.primaryColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Altus + Andries Pipelines Active',
+                    style: TextStyle(
                       color: AppTheme.primaryColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Altus + Andries Pipelines Active',
-                      style: TextStyle(
-                        color: AppTheme.primaryColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              // View mode toggle switch
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildViewModeButton(
-                      ghlProvider,
-                      'snapshot',
-                      'Snapshot',
-                      Icons.photo_camera_outlined,
-                    ),
-                    const SizedBox(width: 4),
-                    _buildViewModeButton(
-                      ghlProvider,
-                      'cumulative',
-                      'Cumulative',
-                      Icons.stacked_line_chart,
-                    ),
-                  ],
-                ),
+            ),
+            const SizedBox(width: 16),
+            // View mode toggle switch
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(20),
               ),
-            ],
-          ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildViewModeButton(
+                    ghlProvider,
+                    'snapshot',
+                    'Snapshot',
+                    Icons.photo_camera_outlined,
+                  ),
+                  const SizedBox(width: 4),
+                  _buildViewModeButton(
+                    ghlProvider,
+                    'cumulative',
+                    'Cumulative',
+                    Icons.stacked_line_chart,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -2182,6 +2166,42 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
               ),
             ),
             const Spacer(),
+            // View mode indicator
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: ghlProvider.viewMode == 'cumulative' 
+                    ? Colors.purple.withOpacity(0.1)
+                    : Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    ghlProvider.viewMode == 'cumulative' 
+                        ? Icons.stacked_line_chart 
+                        : Icons.photo_camera_outlined,
+                    size: 12,
+                    color: ghlProvider.viewMode == 'cumulative' 
+                        ? Colors.purple[700]
+                        : Colors.blue[700],
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    ghlProvider.viewMode == 'cumulative' ? 'Cumulative' : 'Snapshot',
+                    style: TextStyle(
+                      color: ghlProvider.viewMode == 'cumulative' 
+                          ? Colors.purple[700]
+                          : Colors.blue[700],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -2665,6 +2685,500 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
       ),
     );
   }
+
+  /// Build GoHighLevel charts section
+  Widget _buildGoHighLevelChartsSection(GoHighLevelProvider ghlProvider) {
+    return Row(
+    
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.withOpacity(0.3), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with title and filters
+          Row(
+            children: [
+              Text(
+                'Appointments',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[700],
+                ),
+              ),
+              const Spacer(),
+              // Pipeline selector dropdown
+              _buildFilterDropdown(
+                value: _appointmentsPipeline,
+                items: ['altus', 'andries'],
+                displayNames: {'altus': 'Altus (Erich)', 'andries': 'Andries'},
+                color: Colors.blue,
+                onChanged: (value) {
+                  setState(() {
+                    _appointmentsPipeline = value!;
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+              // Sales agent filter dropdown
+              _buildFilterDropdown(
+                value: _appointmentsSalesAgent,
+                items: ['All', ...ghlProvider.pipelineSalesAgents.map((a) => a['agentName'] as String).toList()],
+                displayNames: null,
+                color: Colors.purple,
+                onChanged: (value) {
+                  setState(() {
+                    _appointmentsSalesAgent = value!;
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+              // Days filter dropdown
+              _buildFilterDropdown(
+                value: _appointmentsTimeframe,
+                items: ['Last 7 Days', 'Last 14 Days', 'Last 30 Days'],
+                displayNames: null,
+                color: Colors.grey,
+                onChanged: (value) {
+                  setState(() {
+                    _appointmentsTimeframe = value!;
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Metrics Grid (2x2)
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricBox(
+                  'QTY Booked',
+                  filteredData['booked'].toString(),
+                  '(From System)',
+                  Colors.green,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildMetricBox(
+                  'QTY Showed',
+                  filteredData['showed'].toString(),
+                  '(From System)',
+                  Colors.blue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricBox(
+                  'QTY No Show',
+                  filteredData['noShow'].toString(),
+                  '(From System)',
+                  Colors.orange,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildMetricBox(
+                  'QTY Leads',
+                  filteredData['leads'].toString(),
+                  '(From System)',
+                  Colors.purple,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build Sales Performance Tile (Andries Pipeline)
+  Widget _buildSalesTile(GoHighLevelProvider ghlProvider) {
+    // Get filtered data based on selections
+    final filteredData = _getFilteredSalesData(ghlProvider);
+    
+    final bookedAppointments = filteredData['booked'] ?? 0;
+    final callCompleted = filteredData['showed'] ?? 0;
+    final noShow = filteredData['noShow'] ?? 0;
+    final deposits = filteredData['deposits'] ?? 0;
+    final cashCollected = filteredData['cashCollected'] ?? 0;
+
+    final bookingsPercent = callCompleted > 0 
+        ? (bookedAppointments / callCompleted * 100).toStringAsFixed(1)
+        : '0.0';
+    final noShowPercent = bookedAppointments > 0
+        ? (noShow / bookedAppointments * 100).toStringAsFixed(1)
+        : '0.0';
+    final depositPercent = callCompleted > 0
+        ? (deposits / callCompleted * 100).toStringAsFixed(1)
+        : '0.0';
+    final cashPercent = callCompleted > 0
+        ? (cashCollected / callCompleted * 100).toStringAsFixed(1)
+        : '0.0';
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.teal.withOpacity(0.3), width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with title and filters
+          Row(
+            children: [
+              Text(
+                'Sales',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal[700],
+                ),
+              ),
+              const Spacer(),
+              // Pipeline selector dropdown
+              _buildFilterDropdown(
+                value: _salesPipeline,
+                items: ['altus', 'andries'],
+                displayNames: {'altus': 'Altus (Erich)', 'andries': 'Andries'},
+                color: Colors.teal,
+                onChanged: (value) {
+                  setState(() {
+                    _salesPipeline = value!;
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+              // Sales agent filter dropdown
+              _buildFilterDropdown(
+                value: _salesSalesAgent,
+                items: ['All', ...ghlProvider.pipelineSalesAgents.map((a) => a['agentName'] as String).toList()],
+                displayNames: null,
+                color: Colors.purple,
+                onChanged: (value) {
+                  setState(() {
+                    _salesSalesAgent = value!;
+                  });
+                },
+              ),
+              const SizedBox(width: 8),
+              // Days filter dropdown
+              _buildFilterDropdown(
+                value: _salesTimeframe,
+                items: ['Last 7 Days', 'Last 14 Days', 'Last 30 Days'],
+                displayNames: null,
+                color: Colors.grey,
+                onChanged: (value) {
+                  setState(() {
+                    _salesTimeframe = value!;
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Bookings Section
+          _buildSectionHeader('Bookings', context),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricBox(
+                  'QTY Bookings',
+                  bookedAppointments.toString(),
+                  '(From System)',
+                  Colors.green,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildMetricBox(
+                  '%',
+                  '$bookingsPercent%',
+                  '(of what was shown)',
+                  Colors.green,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // No Show Section
+          _buildSectionHeader('No Show', context),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricBox(
+                  'QTY No Show',
+                  noShow.toString(),
+                  '(From System)',
+                  Colors.orange,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildMetricBox(
+                  '%',
+                  '$noShowPercent%',
+                  '(of no show based on total bookings)',
+                  Colors.orange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Deposit Section
+          _buildSectionHeader('Deposit', context),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricBox(
+                  'QTY Deposit',
+                  deposits.toString(),
+                  '(From System)',
+                  Colors.purple,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildMetricBox(
+                  '%',
+                  '$depositPercent%',
+                  '(based on Total that was Show)',
+                  Colors.purple,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Cash Collected Section
+          _buildSectionHeader('Cash Collected', context),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricBox(
+                  'QTY Cash collected',
+                  cashCollected.toString(),
+                  '(From System)',
+                  Colors.teal,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildMetricBox(
+                  '%',
+                  '$cashPercent%',
+                  '(based on total show)',
+                  Colors.teal,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Get filtered data for Appointments tile
+  Map<String, int> _getFilteredAppointmentsData(GoHighLevelProvider ghlProvider) {
+    // Get base pipeline data
+    Map<String, dynamic> pipelineData;
+    if (_appointmentsPipeline == 'altus') {
+      pipelineData = ghlProvider.altusPipeline;
+    } else {
+      pipelineData = ghlProvider.andriesPipeline;
+    }
+
+    // If specific agent is selected, filter by agent
+    if (_appointmentsSalesAgent != 'All') {
+      final agentStats = ghlProvider.getPipelineStatsForAgent(_appointmentsSalesAgent);
+      if (agentStats != null) {
+        final pipelines = agentStats['pipelines'] as Map<String, dynamic>? ?? {};
+        final pipelineStats = pipelines[_appointmentsPipeline] as Map<String, dynamic>?;
+        
+        if (pipelineStats != null) {
+          return {
+            'booked': pipelineStats['bookedAppointments'] ?? 0,
+            'showed': pipelineStats['callCompleted'] ?? 0,
+            'noShow': pipelineStats['noShowCancelledDisqualified'] ?? 0,
+            'leads': pipelineStats['totalOpportunities'] ?? 0,
+          };
+        }
+      }
+    }
+
+    // Return all data for selected pipeline
+    return {
+      'booked': pipelineData['bookedAppointments'] ?? 0,
+      'showed': pipelineData['callCompleted'] ?? 0,
+      'noShow': pipelineData['noShowCancelledDisqualified'] ?? 0,
+      'leads': pipelineData['totalOpportunities'] ?? 0,
+    };
+  }
+
+  /// Get filtered data for Sales tile
+  Map<String, int> _getFilteredSalesData(GoHighLevelProvider ghlProvider) {
+    // Get base pipeline data
+    Map<String, dynamic> pipelineData;
+    if (_salesPipeline == 'altus') {
+      pipelineData = ghlProvider.altusPipeline;
+    } else {
+      pipelineData = ghlProvider.andriesPipeline;
+    }
+
+    // If specific agent is selected, filter by agent
+    if (_salesSalesAgent != 'All') {
+      final agentStats = ghlProvider.getPipelineStatsForAgent(_salesSalesAgent);
+      if (agentStats != null) {
+        final pipelines = agentStats['pipelines'] as Map<String, dynamic>? ?? {};
+        final pipelineStats = pipelines[_salesPipeline] as Map<String, dynamic>?;
+        
+        if (pipelineStats != null) {
+          return {
+            'booked': pipelineStats['bookedAppointments'] ?? 0,
+            'showed': pipelineStats['callCompleted'] ?? 0,
+            'noShow': pipelineStats['noShowCancelledDisqualified'] ?? 0,
+            'deposits': pipelineStats['deposits'] ?? 0,
+            'cashCollected': pipelineStats['cashCollected'] ?? 0,
+          };
+        }
+      }
+    }
+
+    // Return all data for selected pipeline
+    return {
+      'booked': pipelineData['bookedAppointments'] ?? 0,
+      'showed': pipelineData['callCompleted'] ?? 0,
+      'noShow': pipelineData['noShowCancelledDisqualified'] ?? 0,
+      'deposits': pipelineData['deposits'] ?? 0,
+      'cashCollected': pipelineData['cashCollected'] ?? 0,
+    };
+  }
+
+  /// Build filter dropdown widget
+  Widget _buildFilterDropdown({
+    required String value,
+    required List<String> items,
+    Map<String, String>? displayNames,
+    required Color color,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isDense: true,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+          icon: Icon(Icons.arrow_drop_down, color: color, size: 16),
+          items: items.map((item) {
+            final displayText = displayNames?[item] ?? item;
+            return DropdownMenuItem<String>(
+              value: item,
+              child: Text(
+                displayText,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  /// Build section header for Sales tile
+  Widget _buildSectionHeader(String title, BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: Colors.grey[800],
+      ),
+    );
+  }
+
+  /// Build metric box for tiles
+  Widget _buildMetricBox(String label, String value, String subtitle, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   /// Build GoHighLevel charts section
   Widget _buildGoHighLevelChartsSection(GoHighLevelProvider ghlProvider) {

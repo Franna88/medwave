@@ -139,6 +139,8 @@ class SidebarNavigation extends StatelessWidget {
         return filled ? Icons.medical_services : Icons.medical_services_outlined;
       case 'campaign':
         return filled ? Icons.campaign : Icons.campaign_outlined;
+      case 'trending_up':
+        return filled ? Icons.trending_up : Icons.trending_up_outlined;
       case 'build':
         return filled ? Icons.build : Icons.build_outlined;
       default:

@@ -10,6 +10,7 @@ import 'models/patient.dart';
 import 'providers/patient_provider.dart';
 import 'providers/notification_provider.dart';
 // import 'providers/appointment_provider.dart'; // Disabled until appointment system is complete
+import 'providers/performance_cost_provider.dart';
 import 'screens/main_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/patients/patient_list_screen.dart';
@@ -36,6 +37,7 @@ import 'screens/web/mobile_warning_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_provider_management_screen.dart';
 import 'screens/admin/admin_provider_approvals_screen.dart';
+import 'screens/admin/admin_sales_performance_screen.dart';
 import 'screens/admin/admin_analytics_screen.dart';
 import 'screens/admin/admin_patient_management_screen.dart';
 import 'screens/admin/admin_advert_performance_screen.dart';
@@ -89,6 +91,8 @@ class MedWaveApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AdminProvider()),
         // GoHighLevel CRM provider for advertisement performance monitoring
         ChangeNotifierProvider(create: (_) => GoHighLevelProvider()),
+        // Performance Cost provider for ad budget and profitability tracking
+        ChangeNotifierProvider(create: (_) => PerformanceCostProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
@@ -332,6 +336,11 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           path: '/admin/adverts',
           name: 'admin-adverts',
           builder: (context, state) => const AdminAdvertPerformanceScreen(),
+        ),
+        GoRoute(
+          path: '/admin/sales-performance',
+          name: 'admin-sales-performance',
+          builder: (context, state) => const AdminSalesPerformanceScreen(),
         ),
         GoRoute(
           path: '/admin/users',
