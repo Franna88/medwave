@@ -29,6 +29,16 @@ class GoHighLevelProvider extends ChangeNotifier {
   DateTime? _lastRefresh;
   Timer? _refreshTimer;
   
+  // Sync state
+  bool _isSyncing = false;
+  DateTime? _lastSync;
+  
+  // Timeframe filter
+  String _selectedTimeframe = 'Last 30 Days';
+  
+  // View mode (snapshot vs cumulative)
+  String _viewMode = 'snapshot'; // 'snapshot' or 'cumulative'
+  
   // Configuration
   static const Duration _refreshInterval = Duration(minutes: 5);
   
@@ -45,6 +55,11 @@ class GoHighLevelProvider extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
   String? get error => _error;
   DateTime? get lastRefresh => _lastRefresh;
+  
+  bool get isSyncing => _isSyncing;
+  DateTime? get lastSync => _lastSync;
+  String get selectedTimeframe => _selectedTimeframe;
+  String get viewMode => _viewMode;
   
   // Campaign analytics getters
   List<dynamic> get campaigns => _campaignAnalytics?['campaigns'] ?? [];
@@ -182,14 +197,37 @@ class GoHighLevelProvider extends ChangeNotifier {
       // Load pipeline performance analytics (Altus + Andries pipelines)
       // This now includes campaign analytics in the campaignsList field
       try {
-        _pipelinePerformance = await GoHighLevelService.getPipelinePerformanceAnalytics();
-        if (kDebugMode) {
-          print('✅ GHL PROVIDER: Loaded pipeline performance - ${totalPipelineOpportunities} opportunities');
-          print('   - Booked Appointments: $bookedAppointments');
-          print('   - Call Completed: $callCompleted');
-          print('   - No Show/Cancelled: $noShowCancelledDisqualified');
-          print('   - Deposits: $deposits');
-          print('   - Cash Collected: $cashCollected');
+        // Calculate date range based on selected timeframe
+        final dateRange = _calculateDateRange(_selectedTimeframe);
+        
+        // Load data based on view mode
+        if (_viewMode == 'cumulative') {
+          _pipelinePerformance = await GoHighLevelService.getPipelinePerformanceCumulative(
+            startDate: dateRange['startDate'],
+            endDate: dateRange['endDate'],
+          );
+          if (kDebugMode) {
+            print('✅ GHL PROVIDER: Loaded CUMULATIVE pipeline performance - ${totalPipelineOpportunities} opportunities');
+            print('   - View Mode: CUMULATIVE');
+            print('   - Booked Appointments: $bookedAppointments');
+            print('   - Call Completed: $callCompleted');
+            print('   - Timeframe: $_selectedTimeframe');
+          }
+        } else {
+          _pipelinePerformance = await GoHighLevelService.getPipelinePerformanceAnalytics(
+            startDate: dateRange['startDate'],
+            endDate: dateRange['endDate'],
+          );
+          if (kDebugMode) {
+            print('✅ GHL PROVIDER: Loaded SNAPSHOT pipeline performance - ${totalPipelineOpportunities} opportunities');
+            print('   - View Mode: SNAPSHOT');
+            print('   - Booked Appointments: $bookedAppointments');
+            print('   - Call Completed: $callCompleted');
+            print('   - No Show/Cancelled: $noShowCancelledDisqualified');
+            print('   - Deposits: $deposits');
+            print('   - Cash Collected: $cashCollected');
+            print('   - Timeframe: $_selectedTimeframe');
+          }
         }
       } catch (e) {
         if (kDebugMode) {
@@ -396,6 +434,115 @@ class GoHighLevelProvider extends ChangeNotifier {
     if (_lastRefresh == null) return true;
     final now = DateTime.now();
     return now.difference(_lastRefresh!).inMinutes > _refreshInterval.inMinutes;
+  }
+
+  /// Sync opportunity history from GoHighLevel
+  Future<void> syncOpportunityHistory() async {
+    if (_isSyncing) return;
+    
+    _isSyncing = true;
+    notifyListeners();
+    
+    try {
+      if (kDebugMode) {
+        print('🔄 GHL PROVIDER: Syncing opportunity history...');
+      }
+      
+      await GoHighLevelService.syncOpportunityHistory();
+      _lastSync = DateTime.now();
+      
+      if (kDebugMode) {
+        print('✅ GHL PROVIDER: Opportunity history synced successfully');
+      }
+      
+      // Refresh analytics after sync
+      await refreshData();
+      
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ GHL PROVIDER ERROR: Failed to sync opportunity history: $e');
+      }
+      _error = 'Failed to sync opportunity history: ${e.toString()}';
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
+    }
+  }
+  
+  /// Set timeframe filter and reload data
+  Future<void> setTimeframe(String timeframe) async {
+    if (_selectedTimeframe == timeframe) return;
+    
+    _selectedTimeframe = timeframe;
+    
+    if (kDebugMode) {
+      print('📅 GHL PROVIDER: Timeframe changed to: $timeframe');
+    }
+    
+    notifyListeners();
+    
+    // Reload data with new timeframe
+    await refreshData();
+  }
+  
+  /// Toggle between snapshot and cumulative view modes
+  Future<void> toggleViewMode() async {
+    // Toggle between 'snapshot' and 'cumulative'
+    _viewMode = _viewMode == 'snapshot' ? 'cumulative' : 'snapshot';
+    
+    if (kDebugMode) {
+      print('🔄 GHL PROVIDER: View mode changed to: $_viewMode');
+    }
+    
+    notifyListeners();
+    
+    // Reload data with new view mode
+    await refreshData();
+  }
+  
+  /// Set view mode explicitly
+  Future<void> setViewMode(String mode) async {
+    if (_viewMode == mode) return;
+    if (mode != 'snapshot' && mode != 'cumulative') return;
+    
+    _viewMode = mode;
+    
+    if (kDebugMode) {
+      print('🔄 GHL PROVIDER: View mode set to: $_viewMode');
+    }
+    
+    notifyListeners();
+    
+    // Reload data with new view mode
+    await refreshData();
+  }
+  
+  /// Calculate date range based on timeframe
+  Map<String, DateTime> _calculateDateRange(String timeframe) {
+    final endDate = DateTime.now();
+    DateTime startDate;
+    
+    switch (timeframe) {
+      case 'Last 7 Days':
+        startDate = endDate.subtract(const Duration(days: 7));
+        break;
+      case 'Last 30 Days':
+        startDate = endDate.subtract(const Duration(days: 30));
+        break;
+      case 'Last 3 Months':
+        startDate = DateTime(endDate.year, endDate.month - 3, endDate.day);
+        break;
+      case 'Last Year':
+        startDate = DateTime(endDate.year - 1, endDate.month, endDate.day);
+        break;
+      default:
+        startDate = endDate.subtract(const Duration(days: 30));
+    }
+    
+    return {
+      'startDate': startDate,
+      'endDate': endDate,
+    };
   }
 
   @override

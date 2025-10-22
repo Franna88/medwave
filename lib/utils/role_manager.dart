@@ -64,7 +64,7 @@ class RoleManager {
   static String getDashboardRoute(UserRole role) {
     switch (role) {
       case UserRole.practitioner:
-        return '/';
+        return '/dashboard';
       case UserRole.countryAdmin:
       case UserRole.superAdmin:
         return '/admin/dashboard';
@@ -111,7 +111,7 @@ class RoleManager {
       case UserRole.practitioner:
         // Practitioners see ONLY practitioner navigation items
         return [
-          NavigationItem('Dashboard', '/', 'dashboard'),
+          NavigationItem('Dashboard', '/dashboard', 'dashboard'),
           NavigationItem('Patients', '/patients', 'people'),
           NavigationItem('Calendar', '/calendar', 'calendar_today'),
           NavigationItem('Reports', '/reports', 'assessment'),

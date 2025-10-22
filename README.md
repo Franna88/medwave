@@ -88,24 +88,66 @@ A comprehensive Flutter application for medical practitioners to manage patients
 - Dart SDK
 - Android Studio or VS Code
 - iOS/Android device or emulator
+- Node.js (for proxy server and Firebase Functions)
 
 ### Installation
+
+> ⚠️ **IMPORTANT**: This project uses sensitive API keys and credentials that are NOT included in the repository for security reasons. Follow the complete setup guide below.
 
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd medwave_app
+   cd medwave
    ```
 
-2. **Install dependencies**
+2. **Install Flutter dependencies**
    ```bash
    flutter pub get
    ```
 
-3. **Run the app**
+3. **Configure API Keys and Secrets**
+   
+   The project requires several configuration files. See the complete [SETUP_GUIDE.md](SETUP_GUIDE.md) for detailed instructions.
+   
+   Quick setup checklist:
+   - [ ] Copy and configure `lib/config/api_keys.dart` from template
+   - [ ] Copy and configure `lib/firebase_options.dart` from template
+   - [ ] Set up `ghl-proxy/.env` for the proxy server
+   - [ ] Set up `functions/.env` for Firebase Functions (local dev)
+   - [ ] Configure `android/key.properties` for Android builds (if needed)
+
+4. **Start required services** (for full functionality)
+   
+   **Proxy Server** (for GoHighLevel integration):
+   ```bash
+   cd ghl-proxy
+   npm install
+   npm start
+   ```
+   
+   **Firebase Functions** (optional, for local testing):
+   ```bash
+   cd functions
+   npm install
+   firebase emulators:start --only functions
+   ```
+
+5. **Run the Flutter app**
    ```bash
    flutter run
    ```
+
+### 🔒 Security Notice
+
+This project handles sensitive medical data and API credentials. **Please ensure**:
+- ✅ Never commit API keys or credentials to git
+- ✅ All `.env` files are gitignored and kept local only
+- ✅ Firebase Admin SDK keys are stored securely
+- ✅ Follow the security guidelines in [SETUP_GUIDE.md](SETUP_GUIDE.md)
+
+For detailed security configuration, see:
+- [SETUP_GUIDE.md](SETUP_GUIDE.md) - Complete setup instructions
+- [FIREBASE_ADMIN_SDK_SETUP.md](FIREBASE_ADMIN_SDK_SETUP.md) - Firebase Admin SDK security
 
 ### Project Structure
 

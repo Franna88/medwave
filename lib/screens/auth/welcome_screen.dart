@@ -48,6 +48,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
     super.dispose();
   }
 
+  void _openDownloadPage() {
+    // Navigate to download page within the app
+    context.push('/download-app');
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTablet = ResponsiveUtils.isTablet(context);
@@ -64,9 +69,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
-        child: Row(
+        child: Stack(
           children: [
-            // Left side - Hero section with logo and features
+            Row(
+              children: [
+                // Left side - Hero section with logo and features
             Expanded(
               flex: 3,
               child: Container(
@@ -314,6 +321,29 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
               ),
             ),
           ],
+            ),
+            // Download App Button (positioned at top right)
+            Positioned(
+              top: 16,
+              right: 16,
+              child: TextButton.icon(
+                onPressed: _openDownloadPage,
+                icon: const Icon(
+                  Icons.download,
+                  size: 18,
+                  color: AppTheme.primaryColor,
+                ),
+                label: const Text(
+                  'Download App',
+                  style: TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -328,7 +358,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               children: [
-                const SizedBox(height: 40),
+                // Download App Button - Hidden on Mobile
+                // Users on mobile devices should already have the app installed
+                
+                const SizedBox(height: 20),
                 
                 // Logo and Welcome Section
                 FadeTransition(

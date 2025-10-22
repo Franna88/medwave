@@ -47,14 +47,95 @@ flutter pub get
    ```
 2. Edit `android/key.properties` with your actual keystore information
 
-### 4. Set Up Firebase Admin SDK (if using server-side features)
-1. Go to Firebase Console > Project Settings > Service Accounts
-2. Generate a new private key for the "Firebase Admin SDK"
-3. Save the downloaded JSON file as `scripts/firebase-key.json`
+### 4. Set Up API Keys Configuration
+1. Copy the API keys template:
+   ```bash
+   cp lib/config/api_keys.template.dart lib/config/api_keys.dart
+   ```
+2. Edit `lib/config/api_keys.dart` and replace placeholder values with your actual API keys:
+   - `openaiApiKey` - Get from [OpenAI Platform](https://platform.openai.com/api-keys)
+   - `goHighLevelApiKey` - Get from [GoHighLevel Marketplace](https://marketplace.gohighlevel.com/)
+   - `goHighLevelProxyUrl` - Use production URL or `http://localhost:3001/api/ghl` for local development
+
+### 5. Set Up Node.js Proxy Server (ghl-proxy)
+The proxy server handles GoHighLevel API requests and is required for web deployment.
+
+1. Navigate to the proxy directory:
+   ```bash
+   cd ghl-proxy
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Copy the environment template:
+   ```bash
+   cp .env.template .env
+   ```
+4. Edit `.env` and add your GoHighLevel API key:
+   ```
+   GHL_API_KEY=your_gohighlevel_private_integration_token_here
+   PORT=3001
+   ```
+5. Start the proxy server:
+   ```bash
+   npm start
+   ```
+
+### 6. Set Up Firebase Functions
+Firebase Functions provide backend API endpoints and handle server-side operations.
+
+1. Navigate to the functions directory:
+   ```bash
+   cd functions
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. For **local development**, copy the environment template:
+   ```bash
+   cp .env.template .env
+   ```
+4. Edit `functions/.env` and add your API key:
+   ```
+   GHL_API_KEY=your_gohighlevel_api_key_here
+   ```
+5. For **production deployment**, configure Firebase Functions secrets:
+   ```bash
+   firebase functions:config:set ghl.api_key="your_gohighlevel_api_key_here"
+   ```
+6. Test locally:
+   ```bash
+   firebase emulators:start --only functions
+   ```
+
+### 7. Set Up Firebase Admin SDK (Backend Services)
+The Firebase Admin SDK keys are used for server-side Firebase operations.
+
+1. **Files are already in the repository root** (gitignored, safe locally):
+   - `bhl-obe-firebase-adminsdk-fbsvc-0a91fc9874.json`
+   - `bhl-obe-firebase-adminsdk-fbsvc-68c34b6ad7.json`
+
+2. **For production/CI-CD**, Firebase Functions automatically have Admin SDK access (no additional setup needed)
+
+3. **For enhanced security** (optional), see `FIREBASE_ADMIN_SDK_SETUP.md` for instructions on storing keys outside the repository
+
+4. **To generate new keys** (if needed):
+   - Go to [Firebase Console](https://console.firebase.google.com/)
+   - Select project `bhl-obe`
+   - Go to Project Settings → Service Accounts
+   - Click "Generate New Private Key"
+   - Save securely (do NOT commit to git)
 
 ## 🔒 Security Features
 
 The following files are **automatically excluded** from Git via `.gitignore`:
+
+### API Keys & Secrets
+- `lib/config/api_keys.dart` - OpenAI and GoHighLevel API keys
+- `ghl-proxy/.env` - Proxy server environment variables
+- `functions/.env` - Firebase Functions local environment variables
 
 ### Firebase & Google Services
 - `google-services.json`
@@ -64,17 +145,17 @@ The following files are **automatically excluded** from Git via `.gitignore`:
 - `lib/firebase_options.dart`
 
 ### Firebase Admin SDK Keys
-- `bhl-obe-firebase-adminsdk-*.json`
+- `bhl-obe-firebase-adminsdk-*.json` - Private keys for server-side operations
 - `scripts/firebase-key.json`
 - `*firebase-adminsdk*.json`
 
 ### Local Configuration
-- `android/key.properties`
-- `android/local.properties`
-- `users.json`
+- `android/key.properties` - Android app signing credentials
+- `android/local.properties` - Local Android SDK paths
+- `users.json` - Test user data with password hashes
 
 ### Environment Variables
-- `.env*` files
+- `.env*` files - All environment variable files
 
 ## 🛠️ Development
 

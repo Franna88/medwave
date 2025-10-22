@@ -4,7 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../providers/admin_provider.dart';
 import '../../providers/gohighlevel_provider.dart';
 import '../../theme/app_theme.dart';
-import 'dart:html' as html;
+import 'package:url_launcher/url_launcher.dart';
 
 class AdminAdvertPerformanceScreen extends StatefulWidget {
   const AdminAdvertPerformanceScreen({super.key});
@@ -18,6 +18,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
   String _selectedCountry = 'All';
   String _selectedSalesAgent = 'All';
   String? _expandedCampaignKey; // Track which campaign is expanded
+  String _campaignSortBy = 'recent'; // Sort campaigns by: recent, total, booked, call, noShow, deposits, cash
 
   @override
   void initState() {
@@ -121,6 +122,21 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                         ),
                       ),
                     const SizedBox(width: 8),
+                    // Sync button
+                    if (ghlProvider.isSyncing)
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      IconButton(
+                        onPressed: () => ghlProvider.syncOpportunityHistory(),
+                        icon: const Icon(Icons.sync),
+                        tooltip: 'Sync Opportunity Data',
+                        color: AppTheme.primaryColor,
+                      ),
+                    const SizedBox(width: 4),
                     IconButton(
                       onPressed: ghlProvider.refreshData,
                       icon: const Icon(Icons.refresh),
@@ -140,33 +156,105 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.trending_up,
-                size: 16,
-                color: AppTheme.primaryColor,
+        // View mode toggle
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
               ),
-              const SizedBox(width: 6),
-              Text(
-                'Altus + Andries Pipelines Active',
-                style: TextStyle(
-                  color: AppTheme.primaryColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.trending_up,
+                    size: 16,
+                    color: AppTheme.primaryColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Altus + Andries Pipelines Active',
+                    style: TextStyle(
+                      color: AppTheme.primaryColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 16),
+            // View mode toggle switch
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildViewModeButton(
+                    ghlProvider,
+                    'snapshot',
+                    'Snapshot',
+                    Icons.photo_camera_outlined,
+                  ),
+                  const SizedBox(width: 4),
+                  _buildViewModeButton(
+                    ghlProvider,
+                    'cumulative',
+                    'Cumulative',
+                    Icons.stacked_line_chart,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildViewModeButton(
+    GoHighLevelProvider ghlProvider,
+    String mode,
+    String label,
+    IconData icon,
+  ) {
+    final isActive = ghlProvider.viewMode == mode;
+    
+    return InkWell(
+      onTap: () => ghlProvider.setViewMode(mode),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isActive ? Colors.white : Colors.grey[600],
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.white : Colors.grey[600],
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -411,7 +499,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                             reservedSize: 40,
                             getTitlesWidget: (value, meta) {
                               if (value.toInt() >= 0 && value.toInt() < agents.length) {
-                                final agentMap = agents[value.toInt()] as Map<String, dynamic>;
+                                final agentMap = agents[value.toInt()];
                                 final agentName = agentMap['agentName'] as String? ?? 'Unknown';
                                 return Text(
                                   agentName.length > 8 ? '${agentName.substring(0, 8)}...' : agentName,
@@ -436,7 +524,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                         // Conversion Rate Line
                         LineChartBarData(
                           spots: agents.asMap().entries.map((entry) {
-                            final agentMap = entry.value as Map<String, dynamic>;
+                            final agentMap = entry.value;
                             final totalOpportunities = agentMap['totalOpportunities'] as int? ?? 0;
                             final bookedAppointments = agentMap['bookedAppointments'] as int? ?? 0;
                             final conversionRate = totalOpportunities > 0 
@@ -567,7 +655,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
     final totalOpportunities = agents.fold<int>(
       0,
       (sum, agent) {
-        final agentMap = agent as Map<String, dynamic>;
+        final agentMap = agent;
         return sum + (agentMap['totalOpportunities'] as int? ?? 0);
       },
     );
@@ -603,7 +691,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
     // Create pie chart sections for each agent
     return agents.asMap().entries.map((entry) {
       final index = entry.key;
-      final agentMap = entry.value as Map<String, dynamic>;
+      final agentMap = entry.value;
       final agentName = agentMap['agentName'] as String? ?? 'Unknown';
       final opportunities = agentMap['totalOpportunities'] as int? ?? 0;
       final percentage = (opportunities / totalOpportunities * 100).toStringAsFixed(1);
@@ -1405,7 +1493,12 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
               items: ['Last 7 Days', 'Last 30 Days', 'Last 3 Months', 'Last Year'].map((timeframe) {
                 return DropdownMenuItem(value: timeframe, child: Text(timeframe));
               }).toList(),
-              onChanged: (value) => setState(() => _selectedTimeframe = value!),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _selectedTimeframe = value);
+                  ghlProvider.setTimeframe(value);
+                }
+              },
             ),
           ),
           const SizedBox(width: 16),
@@ -1842,6 +1935,147 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
     );
   }
 
+  /// Build sort filter chips for campaign table
+  Widget _buildSortFilterChips() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Sort by:',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildSortChip(
+                  label: 'Recent',
+                  value: 'recent',
+                  icon: Icons.access_time,
+                  color: Colors.purple,
+                ),
+                _buildSortChip(
+                  label: 'Total',
+                  value: 'total',
+                  icon: Icons.trending_up,
+                  color: Colors.grey,
+                ),
+                _buildSortChip(
+                  label: 'Booked',
+                  value: 'booked',
+                  icon: Icons.calendar_today,
+                  color: Colors.green,
+                ),
+                _buildSortChip(
+                  label: 'Call',
+                  value: 'call',
+                  icon: Icons.phone,
+                  color: Colors.blue,
+                ),
+                _buildSortChip(
+                  label: 'No Show',
+                  value: 'noShow',
+                  icon: Icons.cancel,
+                  color: Colors.orange,
+                ),
+                _buildSortChip(
+                  label: 'Deposits',
+                  value: 'deposits',
+                  icon: Icons.payments,
+                  color: Colors.purple,
+                ),
+                _buildSortChip(
+                  label: 'Cash',
+                  value: 'cash',
+                  icon: Icons.attach_money,
+                  color: Colors.teal,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build individual sort chip
+  Widget _buildSortChip({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    final isSelected = _campaignSortBy == value;
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _campaignSortBy = value;
+        });
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? Colors.white : Colors.grey[600],
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? Colors.white : Colors.grey[700],
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 4),
+              Icon(
+                Icons.arrow_downward,
+                size: 12,
+                color: Colors.white,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   /// Build Campaign Performance by Stage section
   Widget _buildCampaignPerformanceByStage(GoHighLevelProvider ghlProvider) {
     final campaigns = ghlProvider.pipelineCampaigns;
@@ -1869,8 +2103,35 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
       );
     }
 
-    // Show top 10 campaigns
-    final topCampaigns = campaigns.take(10).toList();
+    // Sort campaigns based on selected filter
+    final sortedCampaigns = List<Map<String, dynamic>>.from(campaigns);
+    switch (_campaignSortBy) {
+      case 'total':
+        sortedCampaigns.sort((a, b) => (b['totalOpportunities'] ?? 0).compareTo(a['totalOpportunities'] ?? 0));
+        break;
+      case 'booked':
+        sortedCampaigns.sort((a, b) => (b['bookedAppointments'] ?? 0).compareTo(a['bookedAppointments'] ?? 0));
+        break;
+      case 'call':
+        sortedCampaigns.sort((a, b) => (b['callCompleted'] ?? 0).compareTo(a['callCompleted'] ?? 0));
+        break;
+      case 'noShow':
+        sortedCampaigns.sort((a, b) => (b['noShowCancelledDisqualified'] ?? 0).compareTo(a['noShowCancelledDisqualified'] ?? 0));
+        break;
+      case 'deposits':
+        sortedCampaigns.sort((a, b) => (b['deposits'] ?? 0).compareTo(a['deposits'] ?? 0));
+        break;
+      case 'cash':
+        sortedCampaigns.sort((a, b) => (b['cashCollected'] ?? 0).compareTo(a['cashCollected'] ?? 0));
+        break;
+      case 'recent':
+      default:
+        // Keep original sorting (by mostRecentTimestamp from API)
+        break;
+    }
+    
+    // Show top 20 campaigns
+    final topCampaigns = sortedCampaigns.take(20).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1894,7 +2155,9 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                'Top ${topCampaigns.length} Campaigns',
+                topCampaigns.length >= 20 
+                    ? 'Top 20 Campaigns' 
+                    : 'Top ${topCampaigns.length} Campaigns',
                 style: TextStyle(
                   color: Colors.purple[700],
                   fontSize: 11,
@@ -1903,6 +2166,42 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
               ),
             ),
             const Spacer(),
+            // View mode indicator
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: ghlProvider.viewMode == 'cumulative' 
+                    ? Colors.purple.withOpacity(0.1)
+                    : Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    ghlProvider.viewMode == 'cumulative' 
+                        ? Icons.stacked_line_chart 
+                        : Icons.photo_camera_outlined,
+                    size: 12,
+                    color: ghlProvider.viewMode == 'cumulative' 
+                        ? Colors.purple[700]
+                        : Colors.blue[700],
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    ghlProvider.viewMode == 'cumulative' ? 'Cumulative' : 'Snapshot',
+                    style: TextStyle(
+                      color: ghlProvider.viewMode == 'cumulative' 
+                          ? Colors.purple[700]
+                          : Colors.blue[700],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -1921,6 +2220,9 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
           ],
         ),
         const SizedBox(height: 16),
+        // Sort filter chips
+        _buildSortFilterChips(),
+        const SizedBox(height: 12),
         // Campaign performance table
         Container(
           decoration: BoxDecoration(
@@ -2167,9 +2469,12 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                                             child: Padding(
                                               padding: const EdgeInsets.only(left: 4),
                                               child: InkWell(
-                                                onTap: () {
+                                                onTap: () async {
                                                   final url = ad['adUrl'] as String;
-                                                  html.window.open(url, '_blank');
+                                                  final uri = Uri.parse(url);
+                                                  if (await canLaunchUrl(uri)) {
+                                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                                  }
                                                 },
                                                 child: Icon(
                                                   Icons.open_in_new,

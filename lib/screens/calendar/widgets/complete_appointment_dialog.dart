@@ -113,34 +113,21 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
     _vasScore = patient.currentVasScore ?? patient.baselineVasScore;
   }
 
-  // Enhanced keyboard dismissal for iOS compatibility
+  // Simplified keyboard dismissal - single clean method
   void _dismissKeyboard() {
-    // Method 1: Unfocus current focus
     final currentFocus = FocusScope.of(context);
     if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
-      currentFocus.focusedChild!.unfocus();
+      currentFocus.unfocus();
     }
-    
-    // Method 2: Unfocus the entire scope
-    FocusScope.of(context).unfocus();
-    
-    // Method 3: iOS-specific keyboard dismissal
-    SystemChannels.textInput.invokeMethod('TextInput.hide');
-    
-    // Method 4: Force keyboard dismissal with delay for iOS
-    Future.delayed(const Duration(milliseconds: 100), () {
-      SystemChannels.textInput.invokeMethod('TextInput.hide');
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: _dismissKeyboard,
-      onPanDown: (_) => _dismissKeyboard(), // Additional gesture handling
       behavior: HitTestBehavior.opaque,
       child: Scaffold(
-        resizeToAvoidBottomInset: true, // Ensure proper keyboard handling
+        resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Row(
           children: [

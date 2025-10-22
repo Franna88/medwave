@@ -153,7 +153,7 @@ class MainScreen extends StatelessWidget {
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
       case 0:
-        GoRouter.of(context).go('/');
+        GoRouter.of(context).go('/dashboard');
         break;
       case 1:
         GoRouter.of(context).go('/patients');

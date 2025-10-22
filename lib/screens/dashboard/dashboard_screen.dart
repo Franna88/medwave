@@ -9,7 +9,6 @@ import '../../models/notification.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/responsive_utils.dart';
 import '../../widgets/responsive_dashboard_content.dart';
-import '../../services/firebase/analytics_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});

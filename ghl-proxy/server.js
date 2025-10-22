@@ -31,7 +31,14 @@ app.use(express.json());
 
 // GoHighLevel API configuration - Private Integration Token (API v2.0)
 const GHL_BASE_URL = 'https://services.leadconnectorhq.com';
-const GHL_API_KEY = process.env.GHL_API_KEY || 'pit-009fb0b0-1799-4773-82d2-a58cefcd9c6a';
+const GHL_API_KEY = process.env.GHL_API_KEY;
+
+// Validate that API key is configured
+if (!GHL_API_KEY) {
+  console.error('❌ FATAL ERROR: GHL_API_KEY environment variable is not set!');
+  console.error('   Please copy ghl-proxy/.env.template to ghl-proxy/.env and configure your API key.');
+  process.exit(1);
+}
 
 // Default headers for GoHighLevel API (Private Integration Token)
 const getGHLHeaders = () => ({
@@ -471,9 +478,17 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
           ? opp.attributions.find(attr => attr.isLast) || opp.attributions[opp.attributions.length - 1]
           : null;
         
-        const campaignName = lastAttribution?.utmCampaign || 'Unknown Campaign';
+        const campaignName = lastAttribution?.utmCampaign || '';
         const campaignSource = lastAttribution?.utmSource || '';
         const campaignMedium = lastAttribution?.utmMedium || '';
+        
+        // 🎯 FILTER: Skip opportunities without UTM campaign tracking (non-ad leads)
+        // Only include leads that have proper ad tracking (utmCampaign must exist)
+        if (!campaignName) {
+          console.log(`⏭️  Skipping non-ad lead: ${opp.name} (Source: ${opp.source || 'None'})`);
+          return; // Skip this opportunity - it's not from an ad
+        }
+        
         const campaignKey = `${campaignName}|${campaignSource}|${campaignMedium}`;
         
         // Update overview stats
@@ -767,12 +782,19 @@ app.get('/api/ghl/analytics/campaign-performance', async (req, res) => {
     erichOpportunities.forEach(opp => {
       // Get campaign and ad info from attributions
       const lastAttribution = opp.attributions?.find(attr => attr.isLast) || opp.attributions?.[0];
-      const campaignId = lastAttribution?.utmCampaignId || 'unknown';
-      const campaignName = lastAttribution?.utmCampaign || 'Unknown Campaign';
-      const adSource = lastAttribution?.adSource || lastAttribution?.utmSource || 'unknown';
+      const campaignId = lastAttribution?.utmCampaignId || '';
+      const campaignName = lastAttribution?.utmCampaign || '';
+      const adSource = lastAttribution?.adSource || lastAttribution?.utmSource || '';
       const utmMedium = lastAttribution?.utmMedium || '';
-      const adId = lastAttribution?.utmAdId || lastAttribution?.utmContent || 'unknown-ad';
-      const adName = lastAttribution?.utmContent || 'Unnamed Ad';
+      const adId = lastAttribution?.utmAdId || lastAttribution?.utmContent || '';
+      const adName = lastAttribution?.utmContent || '';
+      
+      // 🎯 FILTER: Skip opportunities without UTM campaign tracking (non-ad leads)
+      // Only include leads that have proper ad tracking (utmCampaign must exist)
+      if (!campaignName) {
+        console.log(`⏭️  Skipping non-ad lead: ${opp.name} (Source: ${opp.source || 'None'})`);
+        return; // Skip this opportunity - it's not from an ad
+      }
       
       // Initialize campaign stats if not exists
       if (!campaignStats[campaignId]) {

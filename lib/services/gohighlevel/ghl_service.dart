@@ -666,6 +666,8 @@ class GoHighLevelService {
   static Future<Map<String, dynamic>> getPipelinePerformanceAnalytics({
     String? altusPipelineId,
     String? andriesPipelineId,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
       if (kDebugMode) {
@@ -679,6 +681,12 @@ class GoHighLevelService {
       }
       if (andriesPipelineId != null) {
         queryParams['andriesPipelineId'] = andriesPipelineId;
+      }
+      if (startDate != null) {
+        queryParams['startDate'] = startDate.toIso8601String();
+      }
+      if (endDate != null) {
+        queryParams['endDate'] = endDate.toIso8601String();
       }
 
       final uri = Uri.parse('$_baseUrl/analytics/pipeline-performance')
@@ -708,6 +716,105 @@ class GoHighLevelService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ GHL SERVICE ERROR: Failed to fetch pipeline performance analytics: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Get CUMULATIVE pipeline performance analytics (parallel tracking system)
+  /// Returns cumulative metrics where stage counts never decrease
+  /// Filters by opportunities created within date range
+  static Future<Map<String, dynamic>> getPipelinePerformanceCumulative({
+    String? altusPipelineId,
+    String? andriesPipelineId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print('🔄 GHL SERVICE: Fetching CUMULATIVE pipeline performance analytics...');
+      }
+
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (altusPipelineId != null) {
+        queryParams['altusPipelineId'] = altusPipelineId;
+      }
+      if (andriesPipelineId != null) {
+        queryParams['andriesPipelineId'] = andriesPipelineId;
+      }
+      if (startDate != null) {
+        queryParams['startDate'] = startDate.toIso8601String();
+      }
+      if (endDate != null) {
+        queryParams['endDate'] = endDate.toIso8601String();
+      }
+
+      final uri = Uri.parse('$_baseUrl/analytics/pipeline-performance-cumulative')
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+      final response = await http.get(uri, headers: _headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        if (kDebugMode) {
+          print('✅ GHL SERVICE: Loaded CUMULATIVE pipeline performance analytics');
+          print('   - View Mode: ${data['viewMode']}');
+          print('   - Total Opportunities: ${data['overview']?['totalOpportunities']}');
+          print('   - Booked Appointments: ${data['overview']?['bookedAppointments']}');
+          print('   - Call Completed: ${data['overview']?['callCompleted']}');
+        }
+
+        return data;
+      } else {
+        throw GHLApiException(
+          'Failed to fetch cumulative pipeline performance analytics',
+          response.statusCode,
+          response.body,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ GHL SERVICE ERROR: Failed to fetch cumulative analytics: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Sync opportunity history from GoHighLevel to Firestore
+  /// This fetches all current opportunities and updates the history collection
+  static Future<Map<String, dynamic>> syncOpportunityHistory() async {
+    try {
+      if (kDebugMode) {
+        print('🔄 GHL SERVICE: Syncing opportunity history...');
+      }
+
+      final uri = Uri.parse('$_baseUrl/sync-opportunity-history');
+      final response = await http.post(uri, headers: _headers);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        if (kDebugMode) {
+          print('✅ GHL SERVICE: Opportunity history synced');
+          print('   - Total: ${data['stats']?['total']}');
+          print('   - Synced: ${data['stats']?['synced']}');
+          print('   - Skipped: ${data['stats']?['skipped']}');
+          print('   - Errors: ${data['stats']?['errors']}');
+        }
+
+        return data;
+      } else {
+        throw GHLApiException(
+          'Failed to sync opportunity history',
+          response.statusCode,
+          response.body,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ GHL SERVICE ERROR: Failed to sync opportunity history: $e');
       }
       rethrow;
     }

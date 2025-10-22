@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 /// Enhanced Firebase Storage service with comprehensive HTTP 412 error handling
 class EnhancedStorageService {

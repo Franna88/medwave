@@ -128,24 +128,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
     _animationController.forward();
   }
 
-  // Enhanced keyboard dismissal for iOS compatibility
+  // Simplified keyboard dismissal - single clean method
   void _dismissKeyboard() {
-    // Method 1: Unfocus current focus
     final currentFocus = FocusScope.of(context);
     if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
-      currentFocus.focusedChild!.unfocus();
+      currentFocus.unfocus();
     }
-    
-    // Method 2: Unfocus the entire scope
-    FocusScope.of(context).unfocus();
-    
-    // Method 3: iOS-specific keyboard dismissal
-    SystemChannels.textInput.invokeMethod('TextInput.hide');
-    
-    // Method 4: Force keyboard dismissal with delay for iOS
-    Future.delayed(const Duration(milliseconds: 100), () {
-      SystemChannels.textInput.invokeMethod('TextInput.hide');
-    });
   }
 
   @override

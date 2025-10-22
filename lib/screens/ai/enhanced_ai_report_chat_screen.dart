@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import '../../models/patient.dart';
 import '../../models/conversation_data.dart';
 import '../../services/ai/openai_service.dart';
 import '../../services/ai/multi_wound_ai_service.dart';
 import '../../services/pdf_generation_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import '../../services/firebase/practitioner_service.dart';
 import '../../services/wound_management_service.dart';
 import '../../theme/app_theme.dart';
 

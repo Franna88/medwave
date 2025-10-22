@@ -28,6 +28,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'screens/auth/pending_approval_screen.dart';
+import 'screens/download/download_app_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/notifications/notification_preferences_screen.dart';
@@ -142,7 +143,8 @@ class MedWaveApp extends StatelessWidget {
 }
 
 GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
-  initialLocation: '/welcome',
+  // Don't set initialLocation - let the URL determine where to go
+  // initialLocation: '/welcome',
   redirect: (context, state) {
     final currentPath = state.uri.path;
     
@@ -166,20 +168,28 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       // Note: Allow session viewing routes like '/sessions/:sessionId' to pass through
     }
     
-    // Wait for auth to initialize
+    // Allow access to public routes immediately, even while loading
+    final isPublicRoute = currentPath.startsWith('/welcome') || 
+        currentPath.startsWith('/login') || 
+        currentPath.startsWith('/signup') ||
+        currentPath.startsWith('/download-app') ||
+        currentPath.startsWith('/mobile-warning');
+    
+    // Wait for auth to initialize (but allow public routes through)
     if (authProvider.isLoading) {
+      if (isPublicRoute) {
+        return null; // Allow public routes while loading
+      }
       return null; // Stay on current route while loading
     }
     
     // If user is not authenticated, allow access to public routes only
     if (!authProvider.isAuthenticated) {
-      if (currentPath.startsWith('/welcome') || 
-          currentPath.startsWith('/login') || 
-          currentPath.startsWith('/signup') ||
-          currentPath.startsWith('/mobile-warning')) {
+      if (isPublicRoute) {
         return null; // Allow access
       }
-      return '/welcome'; // Redirect to welcome for protected routes
+      // Redirect root or any protected route to welcome
+      return '/welcome';
     }
     
     // If user is authenticated but not approved, redirect to pending approval
@@ -192,7 +202,8 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
     
     // If user is authenticated and approved, redirect away from auth screens
     if (authProvider.isAuthenticated && authProvider.canAccessApp) {
-      if (currentPath == '/welcome' || 
+      if (currentPath == '/' ||
+          currentPath == '/welcome' || 
           currentPath == '/login' || 
           currentPath == '/signup' || 
           currentPath == '/pending-approval') {
@@ -204,6 +215,11 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
     return null; // No redirect needed
   },
   routes: [
+    // Root route - global redirect will handle where to go
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const WelcomeScreen(),
+    ),
     // Mobile warning screen (web only)
     GoRoute(
       path: '/mobile-warning',
@@ -215,6 +231,12 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       path: '/welcome',
       name: 'welcome',
       builder: (context, state) => const WelcomeScreen(),
+    ),
+    // Download app screen (public)
+    GoRoute(
+      path: '/download-app',
+      name: 'download-app',
+      builder: (context, state) => const DownloadAppScreen(),
     ),
     // Authentication routes
     GoRoute(
@@ -237,21 +259,10 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
     ShellRoute(
       builder: (context, state, child) => MainScreen(child: child),
       routes: [
+        // Practitioner Dashboard
         GoRoute(
-          path: '/',
+          path: '/dashboard',
           name: 'dashboard',
-          redirect: (context, state) {
-            final authProvider = Provider.of<AuthProvider>(context, listen: false);
-            if (authProvider.isAuthenticated && authProvider.canAccessApp) {
-              // Redirect admin users to admin dashboard
-              if (authProvider.isAdmin) {
-                return '/admin/dashboard';
-              }
-              // Regular users stay on practitioner dashboard
-              return null;
-            }
-            return null;
-          },
           builder: (context, state) => const DashboardScreen(),
         ),
         GoRoute(

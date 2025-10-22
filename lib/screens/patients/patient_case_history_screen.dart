@@ -73,24 +73,12 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
     _loadPatientData();
   }
 
-  // Enhanced keyboard dismissal for iOS compatibility
+  // Simplified keyboard dismissal - single clean method
   void _dismissKeyboard() {
-    // Method 1: Unfocus current focus
     final currentFocus = FocusScope.of(context);
     if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
-      currentFocus.focusedChild!.unfocus();
+      currentFocus.unfocus();
     }
-    
-    // Method 2: Unfocus the entire scope
-    FocusScope.of(context).unfocus();
-    
-    // Method 3: iOS-specific keyboard dismissal
-    SystemChannels.textInput.invokeMethod('TextInput.hide');
-    
-    // Method 4: Force keyboard dismissal with delay for iOS
-    Future.delayed(const Duration(milliseconds: 100), () {
-      SystemChannels.textInput.invokeMethod('TextInput.hide');
-    });
   }
 
   void _loadPatientData() async {
@@ -143,7 +131,6 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
 
     return GestureDetector(
       onTap: _dismissKeyboard,
-      onPanDown: (_) => _dismissKeyboard(),
       behavior: HitTestBehavior.opaque,
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
@@ -153,19 +140,29 @@ class _PatientCaseHistoryScreenState extends State<PatientCaseHistoryScreen> {
           _buildModernHeader(),
           _buildProgressIndicator(),
           Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (page) {
-                setState(() {
-                  _currentPage = page;
-                });
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                // Only dismiss keyboard on user-initiated scroll with actual movement
+                // UserScrollNotification fires when user touches and drags, not on programmatic scroll
+                if (notification is UserScrollNotification) {
+                  _dismissKeyboard();
+                }
+                return false;
               },
-              children: [
-                _buildBaselineMeasurementsPage(),
-                _buildWoundAssessmentPage(),
-                _buildWoundHistoryPage(),
-                _buildConfirmationPage(),
-              ],
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (page) {
+                  setState(() {
+                    _currentPage = page;
+                  });
+                },
+                children: [
+                  _buildBaselineMeasurementsPage(),
+                  _buildWoundAssessmentPage(),
+                  _buildWoundHistoryPage(),
+                  _buildConfirmationPage(),
+                ],
+              ),
             ),
           ),
           _buildNavigationButtons(),

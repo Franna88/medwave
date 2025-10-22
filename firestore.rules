@@ -2,6 +2,20 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // TestFlight requests - Allow public write for download app page
+    match /testflight_requests/{requestId} {
+      allow create: if true; // Anyone can submit a TestFlight request
+      allow read, update, delete: if request.auth != null; // Only authenticated users (admins) can read/update
+    }
+    
+    // Opportunity Stage History - Read-only for admins, write only by backend
+    match /opportunityStageHistory/{historyId} {
+      allow read: if request.auth != null && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow write: if false; // Only backend/Cloud Functions can write
+    }
+    
     // SUPER PERMISSIVE RULES - Allow all authenticated users to do everything
     match /{document=**} {
       allow read, write: if request.auth != null;

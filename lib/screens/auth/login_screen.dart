@@ -57,24 +57,12 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _animationController.forward();
   }
 
-  // Enhanced keyboard dismissal for iOS compatibility
+  // Simplified keyboard dismissal - single clean method
   void _dismissKeyboard() {
-    // Method 1: Unfocus current focus
     final currentFocus = FocusScope.of(context);
     if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
-      currentFocus.focusedChild!.unfocus();
+      currentFocus.unfocus();
     }
-    
-    // Method 2: Unfocus the entire scope
-    FocusScope.of(context).unfocus();
-    
-    // Method 3: iOS-specific keyboard dismissal
-    SystemChannels.textInput.invokeMethod('TextInput.hide');
-    
-    // Method 4: Force keyboard dismissal with delay for iOS
-    Future.delayed(const Duration(milliseconds: 100), () {
-      SystemChannels.textInput.invokeMethod('TextInput.hide');
-    });
   }
 
   @override
@@ -122,11 +110,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     }
   }
 
-  void _fillTestCredentials(String email, String password) {
-    setState(() {
-      _emailController.text = email;
-      _passwordController.text = password;
-    });
+  void _openDownloadPage() {
+    // Navigate to download page within the app
+    context.push('/download-app');
   }
 
   @override
@@ -148,18 +134,20 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         onTap: _dismissKeyboard,
         behavior: HitTestBehavior.opaque,
         child: SafeArea(
-          child: Row(
+          child: Stack(
             children: [
-              // Left side - Hero section
-              Expanded(
-                flex: 3,
-                child: Container(
-                padding: const EdgeInsets.all(48),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Logo and Welcome Section
+              Row(
+                children: [
+                  // Left side - Hero section
+                  Expanded(
+                    flex: 3,
+                    child: Container(
+                    padding: const EdgeInsets.all(48),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Logo and Welcome Section
                       FadeTransition(
                         opacity: _fadeAnimation,
                         child: Column(
@@ -482,38 +470,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 ),
                               ),
                               
-                              const SizedBox(height: 24),
-                              
-                              // Quick Login Buttons (Development Only)
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Quick Login (Development)',
-                                    style: TextStyle(
-                                      color: AppTheme.secondaryColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton(
-                                      onPressed: () => _fillTestCredentials('doctor@medwave.com', 'doctor123'),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
-                                        side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3)),
-                                      ),
-                                      child: const Text(
-                                        'Doctor',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              
                               const SizedBox(height: 32),
                               
                               // Sign Up Link
@@ -551,10 +507,34 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 ),
               ),
             ),
-          ],
+              // Right side - Login form (second Expanded in Row)
+              ],
+            ),
+            // Download App Button (positioned at top right)
+            Positioned(
+                top: 16,
+                right: 16,
+                child: TextButton.icon(
+                  onPressed: _openDownloadPage,
+                  icon: const Icon(
+                    Icons.download,
+                    size: 18,
+                    color: AppTheme.primaryColor,
+                  ),
+                  label: const Text(
+                    'Download App',
+                    style: TextStyle(
+                      color: AppTheme.primaryColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    )
     );
   }
 
@@ -571,7 +551,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                const SizedBox(height: 40),
+                // Download App Button - Hidden on Mobile
+                // Users on mobile devices should already have the app installed
+                
+                const SizedBox(height: 20),
                 
                 // Logo and Welcome Section
                 FadeTransition(
@@ -838,39 +821,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             ],
                           ),
                           
-                          const SizedBox(height: 24),
-                          
-                          // Quick Login Buttons (Development Only)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Quick Login (Development)',
-                                style: TextStyle(
-                                  color: AppTheme.secondaryColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton(
-                                  onPressed: () => _fillTestCredentials('doctor@medwave.com', 'doctor123'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.3)),
-                                  ),
-                                  child: const Text(
-                                    'Doctor',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 32),
                           
                           // Sign Up Link
                           Row(

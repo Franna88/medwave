@@ -4,7 +4,6 @@ import '../../models/conversation_data.dart';
 import '../../models/icd10_code.dart';
 import '../../models/patient.dart';
 import '../../config/api_keys.dart';
-import '../wound_management_service.dart';
 import 'icd10_service.dart';
 import 'openai_service.dart';
 
