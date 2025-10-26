@@ -157,226 +157,273 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
     // Sort by leads descending
     allAds.sort((a, b) => (b['leads'] as int).compareTo(a['leads'] as int));
 
+    // Calculate total budget for percentage calculations
+    final totalBudget = mergedData.fold<double>(
+      0,
+      (sum, metrics) => sum + metrics.budget,
+    );
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return DataTable(
-            headingRowColor: MaterialStateProperty.all(
-              Colors.grey[100],
-            ),
-            columnSpacing: 16,
-            horizontalMargin: 0,
-            dataRowMinHeight: 48,
-            dataRowMaxHeight: 56,
-            columns: const [
-            DataColumn(
-              label: Text('Campaign / Ad', 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-            ),
-            DataColumn(
-              label: Text('Leads', 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              numeric: true,
-            ),
-            DataColumn(
-              label: Text('Book', 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              numeric: true,
-              tooltip: 'Bookings',
-            ),
-            DataColumn(
-              label: Text('Dep', 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              numeric: true,
-              tooltip: 'Deposits',
-            ),
-            DataColumn(
-              label: Text('Budget', 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              numeric: true,
-            ),
-            DataColumn(
-              label: Text('CPL', 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              numeric: true,
-              tooltip: 'Cost Per Lead',
-            ),
-            DataColumn(
-              label: Text('CPB', 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              numeric: true,
-              tooltip: 'Cost Per Booking',
-            ),
-            DataColumn(
-              label: Text('CPA', 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              numeric: true,
-              tooltip: 'Cost Per Acquisition',
-            ),
-            DataColumn(
-              label: Text('Profit', 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              numeric: true,
-            ),
-            DataColumn(
-              label: Text('Actions', 
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-            ),
-          ],
-          rows: allAds.map((ad) {
-            final hasBudget = ad['hasBudget'] as bool;
-            final budgetEntry = ad['budgetEntry'] as AdPerformanceCost?;
-            
-            // Find merged data if budget exists
-            AdPerformanceCostWithMetrics? mergedMetrics;
-            if (hasBudget && budgetEntry != null) {
-              try {
-                mergedMetrics = mergedData.firstWhere(
-                  (m) => m.cost.id == budgetEntry.id,
-                );
-              } catch (e) {
-                // Not found in merged data
-              }
+      child: Column(
+        children: allAds.map((ad) {
+          final hasBudget = ad['hasBudget'] as bool;
+          final budgetEntry = ad['budgetEntry'] as AdPerformanceCost?;
+          
+          // Find merged data if budget exists
+          AdPerformanceCostWithMetrics? mergedMetrics;
+          if (hasBudget && budgetEntry != null) {
+            try {
+              mergedMetrics = mergedData.firstWhere(
+                (m) => m.cost.id == budgetEntry.id,
+              );
+            } catch (e) {
+              // Not found in merged data
             }
+          }
 
-            final leads = ad['leads'] as int;
-            final bookings = ad['bookings'] as int;
-            final deposits = ad['deposits'] as int;
-            
-            return DataRow(
-              color: MaterialStateProperty.all(
-                hasBudget 
-                  ? Colors.green.withOpacity(0.05) 
-                  : null
+          return _buildAdCard(
+            context,
+            ad,
+            mergedMetrics,
+            totalBudget,
+            perfProvider,
+            ghlProvider,
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// Build individual ad card with metrics and percentages
+  Widget _buildAdCard(
+    BuildContext context,
+    Map<String, dynamic> ad,
+    AdPerformanceCostWithMetrics? mergedMetrics,
+    double totalBudget,
+    PerformanceCostProvider perfProvider,
+    GoHighLevelProvider ghlProvider,
+  ) {
+    final hasBudget = ad['hasBudget'] as bool;
+    final budgetEntry = ad['budgetEntry'] as AdPerformanceCost?;
+    final leads = ad['leads'] as int;
+    final bookings = ad['bookings'] as int;
+    final deposits = ad['deposits'] as int;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: hasBudget ? Colors.green.withOpacity(0.02) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasBudget 
+            ? Colors.green.withOpacity(0.3) 
+            : Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with ad name and actions
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: hasBudget 
+                ? Colors.green.withOpacity(0.05) 
+                : Colors.grey.withOpacity(0.02),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
               ),
-              cells: [
-                DataCell(
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         ad['adName'] as String,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
                       ),
+                      const SizedBox(height: 4),
                       Text(
                         ad['campaignName'] as String,
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           color: Colors.grey[600],
                         ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
                       ),
                     ],
                   ),
                 ),
-                DataCell(Text('$leads', style: const TextStyle(fontSize: 13))),
-                DataCell(Text('$bookings', style: const TextStyle(fontSize: 13))),
-                DataCell(Text('$deposits', style: const TextStyle(fontSize: 13))),
-                DataCell(
-                  hasBudget && mergedMetrics != null
-                    ? Text('R${mergedMetrics.budget.toStringAsFixed(0)}', 
-                        style: const TextStyle(fontSize: 13))
-                    : const Text('-', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                if (hasBudget && budgetEntry != null) ...[
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 20),
+                    onPressed: () => _showEditBudgetDialog(
+                      context,
+                      perfProvider,
+                      ghlProvider,
+                      budgetEntry,
+                    ),
+                    tooltip: 'Edit Budget',
+                    color: Colors.blue,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, size: 20),
+                    onPressed: () => _confirmDelete(
+                      context,
+                      perfProvider,
+                      budgetEntry,
+                    ),
+                    tooltip: 'Delete Budget',
+                    color: Colors.red,
+                  ),
+                ] else
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddBudgetDialog(
+                      context,
+                      perfProvider,
+                      ghlProvider,
+                      ad,
+                    ),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add Budget'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          
+          // Metrics section - All in one row
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                _buildMetricColumn('Leads', leads.toString(), '-'),
+                _buildMetricColumn(
+                  'Bookings',
+                  bookings.toString(),
+                  mergedMetrics != null 
+                    ? '${mergedMetrics.bookingRate.toStringAsFixed(1)}%'
+                    : '-',
                 ),
-                DataCell(
-                  hasBudget && mergedMetrics != null
-                    ? Text('R${mergedMetrics.cpl.toStringAsFixed(0)}',
-                        style: const TextStyle(fontSize: 13))
-                    : const Text('-', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                _buildMetricColumn(
+                  'Deposits',
+                  deposits.toString(),
+                  mergedMetrics != null 
+                    ? '${mergedMetrics.overallConversionRate.toStringAsFixed(1)}%'
+                    : '-',
                 ),
-                DataCell(
-                  hasBudget && mergedMetrics != null
-                    ? Text('R${mergedMetrics.cpb.toStringAsFixed(0)}',
-                        style: const TextStyle(fontSize: 13))
-                    : const Text('-', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                _buildMetricColumn(
+                  'Budget',
+                  mergedMetrics != null 
+                    ? 'R${mergedMetrics.budget.toStringAsFixed(0)}'
+                    : '-',
+                  mergedMetrics != null 
+                    ? '${mergedMetrics.budgetPercentage(totalBudget).toStringAsFixed(1)}%'
+                    : '-',
                 ),
-                DataCell(
-                  hasBudget && mergedMetrics != null
-                    ? Text('R${mergedMetrics.cpa.toStringAsFixed(0)}',
-                        style: const TextStyle(fontSize: 13))
-                    : const Text('-', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                _buildMetricColumn(
+                  'CPL',
+                  mergedMetrics != null 
+                    ? 'R${mergedMetrics.cpl.toStringAsFixed(0)}'
+                    : '-',
+                  mergedMetrics != null 
+                    ? '${mergedMetrics.cplPercentage.toStringAsFixed(1)}%'
+                    : '-',
                 ),
-                DataCell(
-                  hasBudget && mergedMetrics != null
-                    ? Text(
-                        'R${mergedMetrics.actualProfit.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          color: mergedMetrics.actualProfit >= 0 
-                            ? Colors.green 
-                            : Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      )
-                    : const Text('-', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                _buildMetricColumn(
+                  'CPB',
+                  mergedMetrics != null 
+                    ? 'R${mergedMetrics.cpb.toStringAsFixed(0)}'
+                    : '-',
+                  mergedMetrics != null 
+                    ? '${mergedMetrics.cpbPercentage.toStringAsFixed(1)}%'
+                    : '-',
                 ),
-                DataCell(
-                  hasBudget && budgetEntry != null
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, size: 16),
-                            onPressed: () => _showEditBudgetDialog(
-                              context,
-                              perfProvider,
-                              ghlProvider,
-                              budgetEntry,
-                            ),
-                            tooltip: 'Edit',
-                            color: Colors.blue,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                          const SizedBox(width: 4),
-                          IconButton(
-                            icon: const Icon(Icons.delete, size: 16),
-                            onPressed: () => _confirmDelete(
-                              context,
-                              perfProvider,
-                              budgetEntry,
-                            ),
-                            tooltip: 'Delete',
-                            color: Colors.red,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ],
-                      )
-                    : ElevatedButton(
-                        onPressed: () => _showAddBudgetDialog(
-                          context,
-                          perfProvider,
-                          ghlProvider,
-                          ad,
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
-                          ),
-                          minimumSize: const Size(60, 28),
-                          textStyle: const TextStyle(fontSize: 12),
-                        ),
-                        child: const Text('+ Budget'),
-                      ),
+                _buildMetricColumn(
+                  'CPA',
+                  mergedMetrics != null 
+                    ? 'R${mergedMetrics.cpa.toStringAsFixed(0)}'
+                    : '-',
+                  mergedMetrics != null 
+                    ? '${mergedMetrics.cpaPercentage.toStringAsFixed(1)}%'
+                    : '-',
+                ),
+                _buildMetricColumn(
+                  'Profit',
+                  mergedMetrics != null 
+                    ? 'R${mergedMetrics.actualProfit.toStringAsFixed(0)}'
+                    : '-',
+                  mergedMetrics != null 
+                    ? '${mergedMetrics.profitMargin.toStringAsFixed(1)}%'
+                    : '-',
+                  valueColor: mergedMetrics != null
+                    ? (mergedMetrics.actualProfit >= 0 ? Colors.green : Colors.red)
+                    : null,
                 ),
               ],
-            );
-          }).toList(),
-        );
-        },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build a single metric column with value and percentage
+  Widget _buildMetricColumn(
+    String label,
+    String value,
+    String percentage, {
+    Color? valueColor,
+  }) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: valueColor ?? Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            percentage,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
       ),
     );
   }

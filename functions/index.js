@@ -610,6 +610,7 @@ app.post('/api/ghl/sync-opportunity-history', async (req, res) => {
     const locationId = 'QdLXaFEqrdF0JbVbpKLw';
     const altusPipelineId = req.query.altusPipelineId || 'AUduOJBB2lxlsEaNmlJz';
     const andriesPipelineId = req.query.andriesPipelineId || 'XeAGJWRnUGJ5tuhXam2g';
+    const davidePipelineId = req.query.davidePipelineId || 'pTbNvnrXqJc9u1oxir3q';
     
     // Fetch pipelines to get stage mappings
     console.log('📋 Fetching pipeline information...');
@@ -641,8 +642,8 @@ app.post('/api/ghl/sync-opportunity-history', async (req, res) => {
     
     console.log(`✅ Loaded ${usersData.length} users`);
     
-    // Fetch opportunities from both pipelines
-    console.log('🔍 Fetching opportunities from both pipelines...');
+    // Fetch opportunities from all three pipelines
+    console.log('🔍 Fetching opportunities from all pipelines...');
     
     const fetchOpportunities = async (pipelineId) => {
       // Fetch all opportunities for this pipeline
@@ -660,14 +661,15 @@ app.post('/api/ghl/sync-opportunity-history', async (req, res) => {
       return response.data.opportunities || [];
     };
     
-    const [altusOpportunities, andriesOpportunities] = await Promise.all([
+    const [altusOpportunities, andriesOpportunities, davideOpportunities] = await Promise.all([
       fetchOpportunities(altusPipelineId),
-      fetchOpportunities(andriesPipelineId)
+      fetchOpportunities(andriesPipelineId),
+      fetchOpportunities(davidePipelineId)
     ]);
     
-    const allOpportunities = [...altusOpportunities, ...andriesOpportunities];
+    const allOpportunities = [...altusOpportunities, ...andriesOpportunities, ...davideOpportunities];
     
-    console.log(`✅ Found ${allOpportunities.length} total opportunities (Altus: ${altusOpportunities.length}, Andries: ${andriesOpportunities.length})`);
+    console.log(`✅ Found ${allOpportunities.length} total opportunities (Altus: ${altusOpportunities.length}, Andries: ${andriesOpportunities.length}, Davide: ${davideOpportunities.length})`);
     
     // Sync opportunities to Firestore
     const syncStats = await syncOpportunitiesFromAPI(allOpportunities, pipelineStages, users);
@@ -716,6 +718,7 @@ app.get('/api/ghl/analytics/pipeline-performance-cumulative', async (req, res) =
     
     const altusPipelineId = req.query.altusPipelineId || 'AUduOJBB2lxlsEaNmlJz';
     const andriesPipelineId = req.query.andriesPipelineId || 'XeAGJWRnUGJ5tuhXam2g';
+    const davidePipelineId = req.query.davidePipelineId || 'pTbNvnrXqJc9u1oxir3q';
     
     // Date range parameters (default to last 30 days)
     const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
@@ -725,8 +728,8 @@ app.get('/api/ghl/analytics/pipeline-performance-cumulative', async (req, res) =
     
     console.log(`📅 Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
     
-    // Fetch cumulative metrics from Firestore
-    const pipelineIds = [altusPipelineId, andriesPipelineId];
+    // Fetch cumulative metrics from Firestore for all three pipelines
+    const pipelineIds = [altusPipelineId, andriesPipelineId, davidePipelineId];
     const cumulativeData = await getCumulativeStageMetrics(pipelineIds, startDate, endDate);
     
     console.log('✅ Cumulative analytics calculated successfully');
@@ -953,8 +956,116 @@ app.all('/api/ghl/*', async (req, res) => {
 // ============================================================================
 // SCHEDULED FUNCTIONS - Automatic Background Sync
 // ============================================================================
-// Note: Scheduled function moved to Google Cloud Console for direct scheduling
-// The sync logic is available via the existing /api/ghl/sync-opportunity-history endpoint
+
+/**
+ * Scheduled function to auto-sync GoHighLevel data to Firebase
+ * Runs every 2 minutes to keep cumulative data up-to-date
+ * This runs independently of user logins and ensures Firebase always has fresh data
+ */
+exports.scheduledSync = functions
+  .pubsub
+  .schedule('every 2 minutes')
+  .timeZone('Africa/Johannesburg')
+  .onRun(async (context) => {
+    try {
+      console.log('⏰ Scheduled sync triggered at:', new Date().toISOString());
+      
+      const locationId = 'QdLXaFEqrdF0JbVbpKLw';
+      const altusPipelineId = 'AUduOJBB2lxlsEaNmlJz';
+      const andriesPipelineId = 'XeAGJWRnUGJ5tuhXam2g';
+      const davidePipelineId = 'pTbNvnrXqJc9u1oxir3q';
+      
+      // Fetch pipelines to get stage mappings
+      console.log('📋 Fetching pipeline information...');
+      const pipelinesResponse = await axios.get(`${GHL_BASE_URL}/opportunities/pipelines`, {
+        headers: getGHLHeaders(),
+        params: { locationId }
+      });
+      
+      const pipelines = pipelinesResponse.data.pipelines || [];
+      const pipelineStages = {};
+      pipelines.forEach(pipeline => {
+        pipelineStages[pipeline.id] = pipeline;
+      });
+      
+      console.log(`✅ Loaded ${pipelines.length} pipelines`);
+      
+      // Fetch users to get agent names
+      console.log('👥 Fetching users...');
+      const usersResponse = await axios.get(`${GHL_BASE_URL}/users/`, {
+        headers: getGHLHeaders(),
+        params: { locationId }
+      });
+      
+      const usersData = usersResponse.data.users || [];
+      const users = {};
+      usersData.forEach(user => {
+        users[user.id] = user;
+      });
+      
+      console.log(`✅ Loaded ${usersData.length} users`);
+      
+      // Fetch and sync opportunities from both pipelines with pagination
+      const fetchOpportunities = async (pipelineId) => {
+        const allOpportunities = [];
+        let hasMore = true;
+        let nextCursor = undefined;
+        
+        while (hasMore) {
+          const params = {
+            location_id: locationId,
+            pipelineId: pipelineId,
+            limit: 100
+          };
+          
+          if (nextCursor) {
+            params.startAfterId = nextCursor;
+            params.startAfter = nextCursor;
+          }
+          
+          const response = await axios.get(`${GHL_BASE_URL}/opportunities/search`, {
+            headers: getGHLHeaders(),
+            params
+          });
+          
+          const opportunities = response.data.opportunities || [];
+          allOpportunities.push(...opportunities);
+          
+          nextCursor = response.data.meta?.nextStartAfterId || 
+                       response.data.meta?.nextStartAfter;
+          hasMore = !!nextCursor && opportunities.length > 0;
+        }
+        
+        return allOpportunities;
+      };
+      
+      console.log('🔍 Fetching opportunities from all three pipelines...');
+      const [altusOpportunities, andriesOpportunities, davideOpportunities] = await Promise.all([
+        fetchOpportunities(altusPipelineId),
+        fetchOpportunities(andriesPipelineId),
+        fetchOpportunities(davidePipelineId)
+      ]);
+      
+      const allOpportunities = [...altusOpportunities, ...andriesOpportunities, ...davideOpportunities];
+      
+      console.log(`✅ Found ${allOpportunities.length} total opportunities (Altus: ${altusOpportunities.length}, Andries: ${andriesOpportunities.length}, Davide: ${davideOpportunities.length})`);
+      
+      // Sync to Firebase
+      const syncStats = await syncOpportunitiesFromAPI(allOpportunities, pipelineStages, users);
+      
+      console.log('✅ Scheduled sync completed:', {
+        total: allOpportunities.length,
+        synced: syncStats.synced,
+        skipped: syncStats.skipped,
+        errors: syncStats.errors
+      });
+      
+      return { success: true, stats: syncStats };
+    } catch (error) {
+      console.error('❌ Scheduled sync failed:', error);
+      throw error;
+    }
+  });
 
 // Export the Express app as a Firebase Cloud Function (1st gen)
 exports.api = functions

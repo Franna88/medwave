@@ -12,13 +12,11 @@ class AdminSalesPerformanceScreen extends StatefulWidget {
 
 class _AdminSalesPerformanceScreenState extends State<AdminSalesPerformanceScreen> {
   // Appointments tile filters
-  String _appointmentsPipeline = 'altus'; // 'altus' or 'andries'
-  String _appointmentsSalesAgent = 'All';
+  String _appointmentsPipeline = 'andries'; // 'andries' or 'davide'
   String _appointmentsTimeframe = 'Last 7 Days';
   
   // Sales tile filters
-  String _salesPipeline = 'andries'; // 'altus' or 'andries'
-  String _salesSalesAgent = 'All';
+  String _salesPipeline = 'andries'; // 'andries' or 'davide'
   String _salesTimeframe = 'Last 7 Days';
 
   @override
@@ -215,25 +213,12 @@ class _AdminSalesPerformanceScreenState extends State<AdminSalesPerformanceScree
               // Pipeline selector dropdown
               _buildFilterDropdown(
                 value: _appointmentsPipeline,
-                items: ['altus', 'andries'],
-                displayNames: {'altus': 'Altus (Erich)', 'andries': 'Andries'},
+                items: ['andries', 'davide'],
+                displayNames: {'andries': 'Andries', 'davide': 'Davide'},
                 color: Colors.blue,
                 onChanged: (value) {
                   setState(() {
                     _appointmentsPipeline = value!;
-                  });
-                },
-              ),
-              const SizedBox(width: 8),
-              // Sales agent filter dropdown
-              _buildFilterDropdown(
-                value: _appointmentsSalesAgent,
-                items: ['All', ...ghlProvider.pipelineSalesAgents.map((a) => a['agentName'] as String).toList()],
-                displayNames: null,
-                color: Colors.purple,
-                onChanged: (value) {
-                  setState(() {
-                    _appointmentsSalesAgent = value!;
                   });
                 },
               ),
@@ -357,25 +342,12 @@ class _AdminSalesPerformanceScreenState extends State<AdminSalesPerformanceScree
               // Pipeline selector dropdown
               _buildFilterDropdown(
                 value: _salesPipeline,
-                items: ['altus', 'andries'],
-                displayNames: {'altus': 'Altus (Erich)', 'andries': 'Andries'},
+                items: ['andries', 'davide'],
+                displayNames: {'andries': 'Andries', 'davide': 'Davide'},
                 color: Colors.teal,
                 onChanged: (value) {
                   setState(() {
                     _salesPipeline = value!;
-                  });
-                },
-              ),
-              const SizedBox(width: 8),
-              // Sales agent filter dropdown
-              _buildFilterDropdown(
-                value: _salesSalesAgent,
-                items: ['All', ...ghlProvider.pipelineSalesAgents.map((a) => a['agentName'] as String).toList()],
-                displayNames: null,
-                color: Colors.purple,
-                onChanged: (value) {
-                  setState(() {
-                    _salesSalesAgent = value!;
                   });
                 },
               ),
@@ -512,60 +484,10 @@ class _AdminSalesPerformanceScreenState extends State<AdminSalesPerformanceScree
       };
     }
 
-    print('📊 APPOINTMENTS: Pipeline = $_appointmentsPipeline, Agent = $_appointmentsSalesAgent, Mode = ${ghlProvider.viewMode}');
+    print('📊 APPOINTMENTS: Pipeline = $_appointmentsPipeline, Mode = ${ghlProvider.viewMode}');
 
-    // If specific agent is selected, filter by agent
-    if (_appointmentsSalesAgent != 'All') {
-      print('👤 APPOINTMENTS: Filtering by agent: $_appointmentsSalesAgent');
-      final agentStats = ghlProvider.getPipelineStatsForAgent(_appointmentsSalesAgent);
-      if (agentStats != null) {
-        final pipelines = agentStats['pipelines'] as Map<String, dynamic>? ?? {};
-        final pipelineStats = pipelines[_appointmentsPipeline] as Map<String, dynamic>?;
-        
-        if (pipelineStats != null) {
-          print('✅ APPOINTMENTS: Found agent data for $_appointmentsSalesAgent');
-          return {
-            'booked': pipelineStats['bookedAppointments'] ?? 0,
-            'showed': pipelineStats['callCompleted'] ?? 0,
-            'noShow': pipelineStats['noShowCancelledDisqualified'] ?? 0,
-            'leads': pipelineStats['totalOpportunities'] ?? 0,
-          };
-        }
-      }
-      print('❌ APPOINTMENTS: No agent data found for $_appointmentsSalesAgent');
-      // If no agent stats found, return zeros
-      return {
-        'booked': 0,
-        'showed': 0,
-        'noShow': 0,
-        'leads': 0,
-      };
-    }
-
-    // Return all data for selected pipeline (no agent filter)
-    // In cumulative mode, use total overview data since pipelines are aggregated
-    if (ghlProvider.viewMode == 'cumulative') {
-      print('📊 APPOINTMENTS: Cumulative mode - Total Booked: ${ghlProvider.bookedAppointments}, Showed: ${ghlProvider.callCompleted}, Opportunities: ${ghlProvider.totalPipelineOpportunities}');
-      
-      return {
-        'booked': ghlProvider.bookedAppointments,
-        'showed': ghlProvider.callCompleted,
-        'noShow': ghlProvider.noShowCancelledDisqualified,
-        'leads': ghlProvider.totalPipelineOpportunities,
-      };
-    }
-    
-    // In snapshot mode, use pipeline-specific data
-    if (_appointmentsPipeline == 'altus') {
-      print('📊 APPOINTMENTS: Altus - Booked: ${ghlProvider.altusBookedAppointments}, Showed: ${ghlProvider.altusCallCompleted}, Opportunities: ${ghlProvider.altusOpportunities}');
-      
-      return {
-        'booked': ghlProvider.altusBookedAppointments,
-        'showed': ghlProvider.altusCallCompleted,
-        'noShow': ghlProvider.altusNoShowCancelledDisqualified,
-        'leads': ghlProvider.altusOpportunities,
-      };
-    } else {
+    // Use pipeline-specific data based on selection (works in both cumulative and snapshot mode)
+    if (_appointmentsPipeline == 'andries') {
       print('📊 APPOINTMENTS: Andries - Booked: ${ghlProvider.andriesBookedAppointments}, Showed: ${ghlProvider.andriesCallCompleted}, Opportunities: ${ghlProvider.andriesOpportunities}');
       
       return {
@@ -574,7 +496,24 @@ class _AdminSalesPerformanceScreenState extends State<AdminSalesPerformanceScree
         'noShow': ghlProvider.andriesNoShowCancelledDisqualified,
         'leads': ghlProvider.andriesOpportunities,
       };
+    } else if (_appointmentsPipeline == 'davide') {
+      print('📊 APPOINTMENTS: Davide - Booked: ${ghlProvider.davideBookedAppointments}, Showed: ${ghlProvider.davideCallCompleted}, Opportunities: ${ghlProvider.davideOpportunities}');
+      
+      return {
+        'booked': ghlProvider.davideBookedAppointments,
+        'showed': ghlProvider.davideCallCompleted,
+        'noShow': ghlProvider.davideNoShowCancelledDisqualified,
+        'leads': ghlProvider.davideOpportunities,
+      };
     }
+    
+    // Default fallback
+    return {
+      'booked': 0,
+      'showed': 0,
+      'noShow': 0,
+      'leads': 0,
+    };
   }
 
   /// Get filtered data for Sales tile
@@ -591,64 +530,10 @@ class _AdminSalesPerformanceScreenState extends State<AdminSalesPerformanceScree
       };
     }
 
-    print('📊 SALES: Pipeline = $_salesPipeline, Agent = $_salesSalesAgent, Mode = ${ghlProvider.viewMode}');
+    print('📊 SALES: Pipeline = $_salesPipeline, Mode = ${ghlProvider.viewMode}');
 
-    // If specific agent is selected, filter by agent
-    if (_salesSalesAgent != 'All') {
-      print('👤 SALES: Filtering by agent: $_salesSalesAgent');
-      final agentStats = ghlProvider.getPipelineStatsForAgent(_salesSalesAgent);
-      if (agentStats != null) {
-        final pipelines = agentStats['pipelines'] as Map<String, dynamic>? ?? {};
-        final pipelineStats = pipelines[_salesPipeline] as Map<String, dynamic>?;
-        
-        if (pipelineStats != null) {
-          print('✅ SALES: Found agent data for $_salesSalesAgent');
-          return {
-            'booked': pipelineStats['bookedAppointments'] ?? 0,
-            'showed': pipelineStats['callCompleted'] ?? 0,
-            'noShow': pipelineStats['noShowCancelledDisqualified'] ?? 0,
-            'deposits': pipelineStats['deposits'] ?? 0,
-            'cashCollected': pipelineStats['cashCollected'] ?? 0,
-          };
-        }
-      }
-      print('❌ SALES: No agent data found for $_salesSalesAgent');
-      // If no agent stats found, return zeros
-      return {
-        'booked': 0,
-        'showed': 0,
-        'noShow': 0,
-        'deposits': 0,
-        'cashCollected': 0,
-      };
-    }
-
-    // Return all data for selected pipeline (no agent filter)
-    // In cumulative mode, use total overview data since pipelines are aggregated
-    if (ghlProvider.viewMode == 'cumulative') {
-      print('📊 SALES: Cumulative mode - Total Booked: ${ghlProvider.bookedAppointments}, Showed: ${ghlProvider.callCompleted}, Deposits: ${ghlProvider.deposits}, Cash: ${ghlProvider.cashCollected}');
-      
-      return {
-        'booked': ghlProvider.bookedAppointments,
-        'showed': ghlProvider.callCompleted,
-        'noShow': ghlProvider.noShowCancelledDisqualified,
-        'deposits': ghlProvider.deposits,
-        'cashCollected': ghlProvider.cashCollected,
-      };
-    }
-    
-    // In snapshot mode, use pipeline-specific data
-    if (_salesPipeline == 'altus') {
-      print('📊 SALES: Altus - Booked: ${ghlProvider.altusBookedAppointments}, Showed: ${ghlProvider.altusCallCompleted}, Deposits: ${ghlProvider.altusDeposits}, Cash: ${ghlProvider.altusCashCollected}');
-      
-      return {
-        'booked': ghlProvider.altusBookedAppointments,
-        'showed': ghlProvider.altusCallCompleted,
-        'noShow': ghlProvider.altusNoShowCancelledDisqualified,
-        'deposits': ghlProvider.altusDeposits,
-        'cashCollected': ghlProvider.altusCashCollected,
-      };
-    } else {
+    // Use pipeline-specific data based on selection (works in both cumulative and snapshot mode)
+    if (_salesPipeline == 'andries') {
       print('📊 SALES: Andries - Booked: ${ghlProvider.andriesBookedAppointments}, Showed: ${ghlProvider.andriesCallCompleted}, Deposits: ${ghlProvider.andriesDeposits}, Cash: ${ghlProvider.andriesCashCollected}');
       
       return {
@@ -658,7 +543,26 @@ class _AdminSalesPerformanceScreenState extends State<AdminSalesPerformanceScree
         'deposits': ghlProvider.andriesDeposits,
         'cashCollected': ghlProvider.andriesCashCollected,
       };
+    } else if (_salesPipeline == 'davide') {
+      print('📊 SALES: Davide - Booked: ${ghlProvider.davideBookedAppointments}, Showed: ${ghlProvider.davideCallCompleted}, Deposits: ${ghlProvider.davideDeposits}, Cash: ${ghlProvider.davideCashCollected}');
+      
+      return {
+        'booked': ghlProvider.davideBookedAppointments,
+        'showed': ghlProvider.davideCallCompleted,
+        'noShow': ghlProvider.davideNoShowCancelledDisqualified,
+        'deposits': ghlProvider.davideDeposits,
+        'cashCollected': ghlProvider.davideCashCollected,
+      };
     }
+    
+    // Default fallback
+    return {
+      'booked': 0,
+      'showed': 0,
+      'noShow': 0,
+      'deposits': 0,
+      'cashCollected': 0,
+    };
   }
 
   /// Build filter dropdown widget

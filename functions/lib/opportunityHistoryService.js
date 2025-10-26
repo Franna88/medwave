@@ -114,6 +114,13 @@ async function getCumulativeStageMetrics(pipelineIds, startDate, endDate) {
     console.log(`🔍 Querying cumulative metrics for pipelines: ${pipelineIds.join(', ')}`);
     console.log(`📅 Date range: ${startDate} to ${endDate}`);
     
+    // Pipeline ID to friendly name mapping
+    const pipelineIdToFriendlyName = {
+      'AUduOJBB2lxlsEaNmlJz': 'altus',
+      'XeAGJWRnUGJ5tuhXam2g': 'andries',
+      'pTbNvnrXqJc9u1oxir3q': 'davide'  // Davide's Pipeline - DDM (was Erich Pipeline)
+    };
+    
     const startTimestamp = admin.firestore.Timestamp.fromDate(new Date(startDate));
     const endTimestamp = admin.firestore.Timestamp.fromDate(new Date(endDate));
     
@@ -332,10 +339,14 @@ async function getCumulativeStageMetrics(pipelineIds, startDate, endDate) {
       cashCollected: opportunitiesByStage.cashCollected.size
     };
     
-    // Convert pipeline data
+    // Convert pipeline data (use friendly names as keys)
     const pipelinesData = {};
     for (const pipelineId in byPipeline) {
-      pipelinesData[pipelineId] = {
+      // Convert pipeline ID to friendly name (e.g., 'XeAGJWRnUGJ5tuhXam2g' -> 'andries')
+      const friendlyName = pipelineIdToFriendlyName[pipelineId] || pipelineId;
+      
+      pipelinesData[friendlyName] = {
+        pipelineId: pipelineId,  // Include original ID for reference
         totalOpportunities: byPipeline[pipelineId].total.size,
         bookedAppointments: byPipeline[pipelineId].bookedAppointments.size,
         callCompleted: byPipeline[pipelineId].callCompleted.size,
@@ -344,21 +355,59 @@ async function getCumulativeStageMetrics(pipelineIds, startDate, endDate) {
         cashCollected: byPipeline[pipelineId].cashCollected.size,
         totalMonetaryValue: byPipeline[pipelineId].totalMonetaryValue
       };
+      
+      console.log(`📊 Pipeline ${friendlyName}: ${byPipeline[pipelineId].total.size} opportunities, ${byPipeline[pipelineId].bookedAppointments.size} booked`);
     }
     
     // Convert agent data
-    const salesAgentsList = Object.values(bySalesAgent).map(agent => ({
-      agentId: agent.agentId,
-      agentName: agent.agentName,
-      totalOpportunities: agent.total.size,
-      bookedAppointments: agent.bookedAppointments.size,
-      callCompleted: agent.callCompleted.size,
-      noShowCancelledDisqualified: agent.noShowCancelledDisqualified.size,
-      deposits: agent.deposits.size,
-      cashCollected: agent.cashCollected.size,
-      totalMonetaryValue: agent.totalMonetaryValue,
-      byPipeline: convertSetsToCount(agent.byPipeline)
-    }));
+    const salesAgentsList = Object.values(bySalesAgent).map(agent => {
+      const byPipelineConverted = convertSetsToCount(agent.byPipeline);
+      
+      // Create pipelines object with friendly names for frontend consumption
+      const pipelines = {};
+      for (const pipelineId in byPipelineConverted) {
+        const friendlyName = pipelineIdToFriendlyName[pipelineId];
+        if (friendlyName) {
+          // Map the field names to match what the frontend expects
+          const pipelineData = byPipelineConverted[pipelineId];
+          pipelines[friendlyName] = {
+            totalOpportunities: pipelineData.total, // Rename 'total' to 'totalOpportunities'
+            bookedAppointments: pipelineData.bookedAppointments,
+            callCompleted: pipelineData.callCompleted,
+            noShowCancelledDisqualified: pipelineData.noShowCancelledDisqualified,
+            deposits: pipelineData.deposits,
+            cashCollected: pipelineData.cashCollected,
+            totalMonetaryValue: pipelineData.totalMonetaryValue || 0
+          };
+        }
+      }
+      
+      const agentData = {
+        agentId: agent.agentId,
+        agentName: agent.agentName,
+        totalOpportunities: agent.total.size,
+        bookedAppointments: agent.bookedAppointments.size,
+        callCompleted: agent.callCompleted.size,
+        noShowCancelledDisqualified: agent.noShowCancelledDisqualified.size,
+        deposits: agent.deposits.size,
+        cashCollected: agent.cashCollected.size,
+        totalMonetaryValue: agent.totalMonetaryValue,
+        byPipeline: byPipelineConverted, // Keep for backward compatibility
+        pipelines: pipelines // Add friendly name mapping for frontend
+      };
+      
+      // Log detailed agent data for debugging
+      console.log(`👤 Agent: ${agent.agentName}`);
+      console.log(`   Total Opportunities: ${agent.total.size}`);
+      console.log(`   Booked Appointments: ${agent.bookedAppointments.size}`);
+      console.log(`   Call Completed: ${agent.callCompleted.size}`);
+      console.log(`   No Show/Cancelled/Disqualified: ${agent.noShowCancelledDisqualified.size}`);
+      console.log(`   Deposits: ${agent.deposits.size}`);
+      console.log(`   Cash Collected: ${agent.cashCollected.size}`);
+      console.log(`   Pipelines:`, JSON.stringify(pipelines, null, 2));
+      
+      return agentData;
+    });
     
     // Convert campaign data
     const campaignsList = Object.values(byCampaign).map(campaign => {
@@ -455,16 +504,15 @@ async function syncOpportunitiesFromAPI(opportunities, pipelineStages, users) {
       const pipelineId = opportunity.pipelineId || '';
       const currentStageId = opportunity.pipelineStageId || opportunity.stageId || '';
 
-      // Skip if no campaign attribution
+      // Extract campaign attribution (optional - for advert performance tracking)
       const lastAttribution = opportunity.attributions?.find(attr => attr.isLast) ||
                             (opportunity.attributions && opportunity.attributions[opportunity.attributions.length - 1]);
       
       const campaignName = lastAttribution?.utmCampaign || '';
       
-      if (!campaignName) {
-        stats.skipped++;
-        continue; // Skip opportunities without campaign data
-      }
+      // NOTE: We no longer skip opportunities without campaign data
+      // Sales Performance tracking needs ALL opportunities (with or without UTM tracking)
+      // Advert Performance filtering happens at the analytics query level
 
       // Get stage details
       const pipeline = pipelineStages[pipelineId];

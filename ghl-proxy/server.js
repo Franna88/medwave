@@ -279,9 +279,10 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
     
     const locationId = 'QdLXaFEqrdF0JbVbpKLw';
     
-    // Pipeline IDs for Altus and Andries
+    // Pipeline IDs for Altus, Andries, and Davide
     const altusPipelineId = req.query.altusPipelineId || 'AUduOJBB2lxlsEaNmlJz'; // Altus Pipeline - DDM
     const andriesPipelineId = req.query.andriesPipelineId || 'XeAGJWRnUGJ5tuhXam2g'; // Andries Pipeline - DDM
+    const davidePipelineId = req.query.davidePipelineId || 'pTbNvnrXqJc9u1oxir3q'; // Davide's Pipeline - DDM
     
     // First, fetch pipelines to get stage ID to name mapping
     const pipelinesResponse = await axios.get(`${GHL_BASE_URL}/opportunities/pipelines`, {
@@ -292,6 +293,7 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
     const pipelines = pipelinesResponse.data.pipelines || [];
     const altusPipeline = pipelines.find(p => p.id === altusPipelineId);
     const andriesPipeline = pipelines.find(p => p.id === andriesPipelineId);
+    const davidePipeline = pipelines.find(p => p.id === davidePipelineId);
     
     // Create stage ID to name mapping
     const stageIdToName = {};
@@ -302,6 +304,11 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
     }
     if (andriesPipeline && andriesPipeline.stages) {
       andriesPipeline.stages.forEach(stage => {
+        stageIdToName[stage.id] = stage.name;
+      });
+    }
+    if (davidePipeline && davidePipeline.stages) {
+      davidePipeline.stages.forEach(stage => {
         stageIdToName[stage.id] = stage.name;
       });
     }
@@ -329,7 +336,7 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
     // Fetch opportunities from both pipelines
     console.log(`🔍 Fetching opportunities for Altus (${altusPipelineId}) and Andries (${andriesPipelineId})...`);
     
-    const [altusResponse, andriesResponse] = await Promise.all([
+    const [altusResponse, andriesResponse, davideResponse] = await Promise.all([
       axios.get(`${GHL_BASE_URL}/opportunities/search`, {
         headers: getGHLHeaders(),
         params: {
@@ -361,13 +368,30 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
         console.error('   Response status:', err.response?.status);
         console.error('   Response data:', JSON.stringify(err.response?.data));
         return { data: { opportunities: [] } };
+      }),
+      axios.get(`${GHL_BASE_URL}/opportunities/search`, {
+        headers: getGHLHeaders(),
+        params: {
+          location_id: locationId,
+          limit: 100,
+          pipeline_id: davidePipelineId
+        }
+      }).then(response => {
+        console.log(`✅ Davide response: ${response.data.opportunities?.length || 0} opportunities`);
+        return response;
+      }).catch(err => {
+        console.error('❌ Failed to fetch Davide pipeline opportunities:', err.message);
+        console.error('   Response status:', err.response?.status);
+        console.error('   Response data:', JSON.stringify(err.response?.data));
+        return { data: { opportunities: [] } };
       })
     ]);
     
     const altusOpportunities = altusResponse.data.opportunities || [];
     const andriesOpportunities = andriesResponse.data.opportunities || [];
+    const davideOpportunities = davideResponse.data.opportunities || [];
     
-    console.log(`📦 Raw opportunities - Altus: ${altusOpportunities.length}, Andries: ${andriesOpportunities.length}`);
+    console.log(`📦 Raw opportunities - Altus: ${altusOpportunities.length}, Andries: ${andriesOpportunities.length}, Davide: ${davideOpportunities.length}`);
     
     // Enrich opportunities with stage names
     altusOpportunities.forEach(opp => {
@@ -376,15 +400,18 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
     andriesOpportunities.forEach(opp => {
       opp.pipelineStageName = stageIdToName[opp.pipelineStageId] || 'Unknown';
     });
+    davideOpportunities.forEach(opp => {
+      opp.pipelineStageName = stageIdToName[opp.pipelineStageId] || 'Unknown';
+    });
     
-    const allOpportunities = [...altusOpportunities, ...andriesOpportunities];
+    const allOpportunities = [...altusOpportunities, ...andriesOpportunities, ...davideOpportunities];
     
     // Log sample stage names for debugging
     if (andriesOpportunities.length > 0) {
       console.log(`📋 Sample Andries stages: ${andriesOpportunities.slice(0, 3).map(o => o.pipelineStageName).join(', ')}`);
     }
     
-    console.log(`✅ Fetched ${altusOpportunities.length} Altus + ${andriesOpportunities.length} Andries opportunities`);
+    console.log(`✅ Fetched ${altusOpportunities.length} Altus + ${andriesOpportunities.length} Andries + ${davideOpportunities.length} Davide opportunities`);
     
     // Define the 5 key stages to track (these are stage NAMES, not IDs)
     // We'll need to map these dynamically based on stage names from the opportunities
@@ -425,6 +452,7 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
         totalOpportunities: allOpportunities.length,
         altusCount: altusOpportunities.length,
         andriesCount: andriesOpportunities.length,
+        davideCount: davideOpportunities.length,
         bookedAppointments: 0,
         callCompleted: 0,
         noShowCancelledDisqualified: 0,
@@ -449,6 +477,18 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
           pipelineId: andriesPipelineId,
           pipelineName: 'Andries Pipeline - DDM',
           totalOpportunities: andriesOpportunities.length,
+          bookedAppointments: 0,
+          callCompleted: 0,
+          noShowCancelledDisqualified: 0,
+          deposits: 0,
+          cashCollected: 0,
+          totalMonetaryValue: 0,
+          salesAgents: {}
+        },
+        davide: {
+          pipelineId: davidePipelineId,
+          pipelineName: "Davide's Pipeline - DDM",
+          totalOpportunities: davideOpportunities.length,
           bookedAppointments: 0,
           callCompleted: 0,
           noShowCancelledDisqualified: 0,
@@ -481,17 +521,9 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
         const campaignName = lastAttribution?.utmCampaign || '';
         const campaignSource = lastAttribution?.utmSource || '';
         const campaignMedium = lastAttribution?.utmMedium || '';
-        
-        // 🎯 FILTER: Skip opportunities without UTM campaign tracking (non-ad leads)
-        // Only include leads that have proper ad tracking (utmCampaign must exist)
-        if (!campaignName) {
-          console.log(`⏭️  Skipping non-ad lead: ${opp.name} (Source: ${opp.source || 'None'})`);
-          return; // Skip this opportunity - it's not from an ad
-        }
-        
         const campaignKey = `${campaignName}|${campaignSource}|${campaignMedium}`;
         
-        // Update overview stats
+        // Update overview stats (ALWAYS, for all opportunities)
         if (stageCategory === 'bookedAppointments') stats.overview.bookedAppointments++;
         if (stageCategory === 'callCompleted') stats.overview.callCompleted++;
         if (stageCategory === 'noShowCancelledDisqualified') stats.overview.noShowCancelledDisqualified++;
@@ -501,80 +533,86 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
           stats.overview.totalMonetaryValue += monetaryValue;
         }
         
-        // Extract ad information with better naming and URL support
-        const adId = lastAttribution?.utmAdId || lastAttribution?.utmContent || lastAttribution?.utmTerm || 'Unknown Ad';
-        const adName = lastAttribution?.utmContent || lastAttribution?.utmTerm || adId;
-        const adSource = lastAttribution?.adSource || lastAttribution?.utmSource || '';
-        const fbclid = lastAttribution?.fbclid || '';
-        const gclid = lastAttribution?.gclid || '';
-        
-        // Try to construct ad URL if we have Facebook ad ID
-        let adUrl = '';
-        if (adId && adId !== 'Unknown Ad' && campaignSource.toLowerCase().includes('facebook')) {
-          adUrl = `https://www.facebook.com/ads/library/?id=${adId}`;
-        }
-        
-        const adKey = `${campaignKey}|${adId}`;
-        
-        // Initialize campaign if not exists
-        if (!stats.byCampaign[campaignKey]) {
-          stats.byCampaign[campaignKey] = {
-            campaignName,
-            campaignSource,
-            campaignMedium,
-            campaignKey,
-            totalOpportunities: 0,
-            bookedAppointments: 0,
-            callCompleted: 0,
-            noShowCancelledDisqualified: 0,
-            deposits: 0,
-            cashCollected: 0,
-            totalMonetaryValue: 0,
-            ads: {}
-          };
-        }
-        
-        // Update campaign stats
-        const campaignStats = stats.byCampaign[campaignKey];
-        campaignStats.totalOpportunities++;
-        if (stageCategory === 'bookedAppointments') campaignStats.bookedAppointments++;
-        if (stageCategory === 'callCompleted') campaignStats.callCompleted++;
-        if (stageCategory === 'noShowCancelledDisqualified') campaignStats.noShowCancelledDisqualified++;
-        if (stageCategory === 'deposits') campaignStats.deposits++;
-        if (stageCategory === 'cashCollected') {
-          campaignStats.cashCollected++;
-          campaignStats.totalMonetaryValue += monetaryValue;
-        }
-        
-        // Initialize ad if not exists
-        if (!campaignStats.ads[adKey]) {
-          campaignStats.ads[adKey] = {
-            adId,
-            adName,
-            adSource,
-            adUrl,
-            fbclid,
-            gclid,
-            totalOpportunities: 0,
-            bookedAppointments: 0,
-            callCompleted: 0,
-            noShowCancelledDisqualified: 0,
-            deposits: 0,
-            cashCollected: 0,
-            totalMonetaryValue: 0
-          };
-        }
-        
-        // Update ad stats
-        const adStats = campaignStats.ads[adKey];
-        adStats.totalOpportunities++;
-        if (stageCategory === 'bookedAppointments') adStats.bookedAppointments++;
-        if (stageCategory === 'callCompleted') adStats.callCompleted++;
-        if (stageCategory === 'noShowCancelledDisqualified') adStats.noShowCancelledDisqualified++;
-        if (stageCategory === 'deposits') adStats.deposits++;
-        if (stageCategory === 'cashCollected') {
-          adStats.cashCollected++;
-          adStats.totalMonetaryValue += monetaryValue;
+        // 🎯 CAMPAIGN/AD ANALYTICS: Only process if UTM tracking exists
+        // For pipeline stats, we want ALL opportunities regardless of tracking
+        if (campaignName) {
+          // Extract ad information with better naming and URL support
+          const adId = lastAttribution?.utmAdId || lastAttribution?.utmContent || lastAttribution?.utmTerm || 'Unknown Ad';
+          const adName = lastAttribution?.utmContent || lastAttribution?.utmTerm || adId;
+          const adSource = lastAttribution?.adSource || lastAttribution?.utmSource || '';
+          const fbclid = lastAttribution?.fbclid || '';
+          const gclid = lastAttribution?.gclid || '';
+          
+          // Try to construct ad URL if we have Facebook ad ID
+          let adUrl = '';
+          if (adId && adId !== 'Unknown Ad' && campaignSource.toLowerCase().includes('facebook')) {
+            adUrl = `https://www.facebook.com/ads/library/?id=${adId}`;
+          }
+          
+          const adKey = `${campaignKey}|${adId}`;
+          
+          // Initialize campaign if not exists
+          if (!stats.byCampaign[campaignKey]) {
+            stats.byCampaign[campaignKey] = {
+              campaignName,
+              campaignSource,
+              campaignMedium,
+              campaignKey,
+              totalOpportunities: 0,
+              bookedAppointments: 0,
+              callCompleted: 0,
+              noShowCancelledDisqualified: 0,
+              deposits: 0,
+              cashCollected: 0,
+              totalMonetaryValue: 0,
+              ads: {}
+            };
+          }
+          
+          // Update campaign stats
+          const campaignStats = stats.byCampaign[campaignKey];
+          campaignStats.totalOpportunities++;
+          if (stageCategory === 'bookedAppointments') campaignStats.bookedAppointments++;
+          if (stageCategory === 'callCompleted') campaignStats.callCompleted++;
+          if (stageCategory === 'noShowCancelledDisqualified') campaignStats.noShowCancelledDisqualified++;
+          if (stageCategory === 'deposits') campaignStats.deposits++;
+          if (stageCategory === 'cashCollected') {
+            campaignStats.cashCollected++;
+            campaignStats.totalMonetaryValue += monetaryValue;
+          }
+          
+          // Initialize ad if not exists
+          if (!campaignStats.ads[adKey]) {
+            campaignStats.ads[adKey] = {
+              adId,
+              adName,
+              adSource,
+              adUrl,
+              fbclid,
+              gclid,
+              totalOpportunities: 0,
+              bookedAppointments: 0,
+              callCompleted: 0,
+              noShowCancelledDisqualified: 0,
+              deposits: 0,
+              cashCollected: 0,
+              totalMonetaryValue: 0
+            };
+          }
+          
+          // Update ad stats
+          const adStats = campaignStats.ads[adKey];
+          adStats.totalOpportunities++;
+          if (stageCategory === 'bookedAppointments') adStats.bookedAppointments++;
+          if (stageCategory === 'callCompleted') adStats.callCompleted++;
+          if (stageCategory === 'noShowCancelledDisqualified') adStats.noShowCancelledDisqualified++;
+          if (stageCategory === 'deposits') adStats.deposits++;
+          if (stageCategory === 'cashCollected') {
+            adStats.cashCollected++;
+            adStats.totalMonetaryValue += monetaryValue;
+          }
+        } else {
+          console.log(`⏭️  Skipping campaign tracking for non-ad lead: ${opp.name} (Source: ${opp.source || 'None'})`);
         }
         
         // Update pipeline-specific stats
@@ -671,13 +709,15 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
       });
     };
     
-    // Process both pipelines
+    // Process all three pipelines
     processOpportunities(altusOpportunities, 'altus');
     processOpportunities(andriesOpportunities, 'andries');
+    processOpportunities(davideOpportunities, 'davide');
     
     // Convert sales agents objects to arrays
     stats.byPipeline.altus.salesAgentsList = Object.values(stats.byPipeline.altus.salesAgents);
     stats.byPipeline.andries.salesAgentsList = Object.values(stats.byPipeline.andries.salesAgents);
+    stats.byPipeline.davide.salesAgentsList = Object.values(stats.byPipeline.davide.salesAgents);
     stats.salesAgentsList = Object.values(stats.bySalesAgent);
     
     // Convert campaigns to array and sort by total opportunities (descending)
@@ -707,7 +747,8 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
       locationUsed: { id: locationId, name: 'MedWave™ (SA)' },
       pipelinesUsed: [
         { id: altusPipelineId, name: 'Altus Pipeline - DDM' },
-        { id: andriesPipelineId, name: 'Andries Pipeline - DDM' }
+        { id: andriesPipelineId, name: 'Andries Pipeline - DDM' },
+        { id: davidePipelineId, name: "Davide's Pipeline - DDM" }
       ]
     });
     

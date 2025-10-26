@@ -57,8 +57,6 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                 // Performance Cost Manager - AT THE TOP
                 const PerformanceCostManager(),
                 const SizedBox(height: 24),
-                _buildPipelinePerformanceMetrics(ghlProvider),
-                const SizedBox(height: 24),
                 _buildCampaignPerformanceByStage(ghlProvider),
                 const SizedBox(height: 24),
                 _buildPerformanceMetrics(),
@@ -1121,6 +1119,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                   '${totalOpportunities}',
                   Icons.people,
                   Colors.blue,
+                  percentage: totalOpportunities > 0 ? '100%' : '-',
                 ),
               ),
               Expanded(
@@ -1129,6 +1128,9 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                   '${bookedAppointments}',
                   Icons.calendar_today,
                   Colors.green,
+                  percentage: totalOpportunities > 0 
+                    ? '${((bookedAppointments / totalOpportunities) * 100).toStringAsFixed(1)}%'
+                    : '-',
                 ),
               ),
               Expanded(
@@ -1137,6 +1139,9 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                   '${ad['callCompleted'] ?? 0}',
                   Icons.phone,
                   Colors.orange,
+                  percentage: totalOpportunities > 0 
+                    ? '${(((ad['callCompleted'] ?? 0) / totalOpportunities) * 100).toStringAsFixed(1)}%'
+                    : '-',
                 ),
               ),
             ],
@@ -1150,6 +1155,9 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                   '${ad['noShowCancelledDisqualified'] ?? 0}',
                   Icons.event_busy,
                   Colors.red,
+                  percentage: totalOpportunities > 0 
+                    ? '${(((ad['noShowCancelledDisqualified'] ?? 0) / totalOpportunities) * 100).toStringAsFixed(1)}%'
+                    : '-',
                 ),
               ),
               Expanded(
@@ -1158,6 +1166,9 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                   '${ad['deposits'] ?? 0}',
                   Icons.account_balance_wallet,
                   Colors.purple,
+                  percentage: totalOpportunities > 0 
+                    ? '${(((ad['deposits'] ?? 0) / totalOpportunities) * 100).toStringAsFixed(1)}%'
+                    : '-',
                 ),
               ),
               Expanded(
@@ -1166,6 +1177,9 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                   '${ad['cashCollected'] ?? 0}',
                   Icons.attach_money,
                   Colors.green,
+                  percentage: totalOpportunities > 0 
+                    ? '${(((ad['cashCollected'] ?? 0) / totalOpportunities) * 100).toStringAsFixed(1)}%'
+                    : '-',
                 ),
                     ),
                   ],
@@ -1195,7 +1209,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
     );
   }
 
-  Widget _buildAdMetric(String label, String value, IconData icon, Color color) {
+  Widget _buildAdMetric(String label, String value, IconData icon, Color color, {String? percentage}) {
     return Column(
       children: [
         Icon(icon, size: 20, color: color),
@@ -1208,6 +1222,15 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
             color: color,
           ),
         ),
+        if (percentage != null)
+          Text(
+            percentage,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color.withOpacity(0.7),
+            ),
+          ),
         Text(
           label,
           style: const TextStyle(fontSize: 11, color: Colors.grey),

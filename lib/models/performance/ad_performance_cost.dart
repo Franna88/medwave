@@ -154,7 +154,41 @@ class AdPerformanceCostWithMetrics {
   double get productExpenseCost => linkedProduct?.expenseCost ?? 0;
   double get productDepositAmount => linkedProduct?.depositAmount ?? 0;
   
-  double get actualProfit => cashDepositAmount - (cost.budget + productExpenseCost);
+  double get actualProfit {
+    final depositRevenue = deposits * productDepositAmount;
+    return (cashDepositAmount + depositRevenue) - (cost.budget + productExpenseCost);
+  }
+
+  // Percentage calculations
+  
+  /// Calculate budget percentage relative to total budget
+  double budgetPercentage(double totalBudget) {
+    return totalBudget > 0 ? (cost.budget / totalBudget) * 100 : 0;
+  }
+  
+  /// Booking rate: bookings as percentage of leads
+  double get bookingRate => leads > 0 ? (bookings / leads) * 100 : 0;
+  
+  /// Deposit rate: deposits as percentage of bookings
+  double get depositRate => bookings > 0 ? (deposits / bookings) * 100 : 0;
+  
+  /// Overall conversion rate: deposits as percentage of leads
+  double get overallConversionRate => leads > 0 ? (deposits / leads) * 100 : 0;
+  
+  /// Profit margin percentage: profit as percentage of total investment
+  double get profitMargin {
+    final totalInvestment = cost.budget + productExpenseCost;
+    return totalInvestment > 0 ? (actualProfit / totalInvestment) * 100 : 0;
+  }
+  
+  /// CPL as percentage of budget
+  double get cplPercentage => cost.budget > 0 ? (cpl / cost.budget) * 100 : 0;
+  
+  /// CPB as percentage of budget
+  double get cpbPercentage => cost.budget > 0 ? (cpb / cost.budget) * 100 : 0;
+  
+  /// CPA as percentage of budget
+  double get cpaPercentage => cost.budget > 0 ? (cpa / cost.budget) * 100 : 0;
 
   /// Get ad name for display
   String get adName => cost.adName.isNotEmpty ? cost.adName : cost.adId;

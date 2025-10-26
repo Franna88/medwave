@@ -106,6 +106,15 @@ class GoHighLevelProvider extends ChangeNotifier {
   int get andriesDeposits => andriesPipeline['deposits'] ?? 0;
   int get andriesCashCollected => andriesPipeline['cashCollected'] ?? 0;
   
+  // Davide pipeline stats
+  Map<String, dynamic> get davidePipeline => pipelineByPipeline['davide'] ?? {};
+  int get davideOpportunities => davidePipeline['totalOpportunities'] ?? 0;
+  int get davideBookedAppointments => davidePipeline['bookedAppointments'] ?? 0;
+  int get davideCallCompleted => davidePipeline['callCompleted'] ?? 0;
+  int get davideNoShowCancelledDisqualified => davidePipeline['noShowCancelledDisqualified'] ?? 0;
+  int get davideDeposits => davidePipeline['deposits'] ?? 0;
+  int get davideCashCollected => davidePipeline['cashCollected'] ?? 0;
+  
   // Erich Pipeline specific getters
   GHLPipeline? get erichPipeline => 
       _pipelines.where((p) => p.isErichPipeline).firstOrNull;
