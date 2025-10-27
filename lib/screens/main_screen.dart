@@ -124,12 +124,11 @@ class MainScreen extends StatelessWidget {
             activeIcon: Icon(Icons.assessment),
             label: 'Reports',
           ),
-          // TODO: Re-enable when appointment system is complete
-          // BottomNavigationBarItem(
-          //   icon: Icon(Icons.calendar_today_outlined),
-          //   activeIcon: Icon(Icons.calendar_today),
-          //   label: 'Calendar',
-          // ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            activeIcon: Icon(Icons.calendar_today),
+            label: 'Calendar',
+          ),
         ],
       ),
     );
@@ -143,10 +142,9 @@ class MainScreen extends StatelessWidget {
     if (location.startsWith('/reports')) {
       return 2;
     }
-    // Calendar disabled temporarily
-    // if (location.startsWith('/calendar')) {
-    //   return 3;
-    // }
+    if (location.startsWith('/calendar')) {
+      return 3;
+    }
     return 0;
   }
 
@@ -161,10 +159,9 @@ class MainScreen extends StatelessWidget {
       case 2:
         GoRouter.of(context).go('/reports');
         break;
-      // Calendar disabled temporarily
-      // case 3:
-      //   GoRouter.of(context).go('/calendar');
-      //   break;
+      case 3:
+        GoRouter.of(context).go('/calendar');
+        break;
     }
   }
 

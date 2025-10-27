@@ -40,38 +40,177 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              InkWell(
-                onTap: () => setState(() => _isExpanded = !_isExpanded),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    children: [
-                      Icon(Icons.analytics, color: AppTheme.primaryColor),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Add Performance Cost (Detailed View)',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    InkWell(
+                      onTap: () => setState(() => _isExpanded = !_isExpanded),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.analytics, color: AppTheme.primaryColor),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Add Performance Cost (Detailed View)',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            _isExpanded ? Icons.expand_less : Icons.expand_more,
+                            color: Colors.grey[600],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    // Facebook sync status
+                    if (perfProvider.hasFacebookData) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.cloud_done, size: 16, color: Colors.blue[700]),
+                            const SizedBox(width: 6),
+                            Text(
+                              perfProvider.lastFacebookSync != null
+                                  ? 'FB synced ${_getTimeAgo(perfProvider.lastFacebookSync!)}'
+                                  : 'FB connected',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const Spacer(),
-                      Chip(
-                        label: Text('${ghlProvider.pipelineCampaigns.fold<int>(0, (sum, c) => sum + ((c['adsList'] as List?)?.length ?? 0))} Ads Available'),
-                        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                      ),
                       const SizedBox(width: 8),
-                      Icon(
-                        _isExpanded ? Icons.expand_less : Icons.expand_more,
-                        color: Colors.grey[600],
-                      ),
                     ],
-                  ),
+                    if (perfProvider.isFacebookDataLoading)
+                      Container(
+                        width: 20,
+                        height: 20,
+                        margin: const EdgeInsets.only(right: 8),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                        ),
+                      ),
+                    // Manual refresh button
+                    IconButton(
+                      onPressed: perfProvider.isFacebookDataLoading 
+                          ? null 
+                          : () async {
+                              await perfProvider.refreshFacebookData();
+                              await perfProvider.mergeWithCumulativeData(ghlProvider);
+                            },
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh Facebook data',
+                      color: AppTheme.primaryColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Chip(
+                      label: Text('${ghlProvider.pipelineCampaigns.fold<int>(0, (sum, c) => sum + ((c['adsList'] as List?)?.length ?? 0))} Ads Available'),
+                      backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                    ),
+                  ],
                 ),
               ),
               
               // Content
               if (_isExpanded) ...[
                 const Divider(height: 1),
+                // Show Facebook campaigns available for matching
+                if (perfProvider.facebookCampaigns.isNotEmpty) ...[
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.facebook, size: 16, color: Colors.blue[700]),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Facebook Campaigns Available (${perfProvider.facebookCampaigns.length})',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'To link ads, use the Campaign ID as the "campaignKey" in Firebase:',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                        ),
+                        const SizedBox(height: 8),
+                        ...perfProvider.facebookCampaigns.take(5).map((campaign) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text(
+                              '• ${campaign.name} (ID: ${campaign.id}) - \$${campaign.spend.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        if (perfProvider.facebookCampaigns.length > 5)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              '... and ${perfProvider.facebookCampaigns.length - 5} more',
+                              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+                // Show filter status banner
+                if (perfProvider.facebookCampaigns.isNotEmpty && ghlProvider.pipelineCampaigns.isNotEmpty) ...[
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.filter_list, size: 16, color: Colors.green[700]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Showing only GHL campaigns that match Facebook campaigns (non-matching campaigns are hidden)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.green[900],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 // Always show available campaigns/ads
                 if (ghlProvider.pipelineCampaigns.isEmpty)
                   Padding(
@@ -104,6 +243,47 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
                       ),
                     ),
                   )
+                else if (mergedData.isEmpty && perfProvider.hasFacebookData)
+                  Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.link_off, 
+                            size: 48, 
+                            color: Colors.orange[400]
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No ads matched with Facebook campaigns',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Update the "campaignKey" field in Firebase to match a Facebook Campaign ID',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'See the blue box above for available Facebook Campaign IDs',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.blue[700],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
                 else
                   _buildCampaignAdsList(context, perfProvider, ghlProvider, mergedData),
               ],
@@ -128,10 +308,40 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
     };
 
     // Build list of all ads from cumulative data
+    // ONLY include ads that can potentially match with Facebook campaigns
     final List<Map<String, dynamic>> allAds = [];
+    
+    // Create a helper function to check if a campaign can match Facebook
+    bool canMatchFacebook(String campaignName) {
+      if (perfProvider.facebookCampaigns.isEmpty) return false;
+      
+      // Extract campaign prefix for matching
+      final parts = campaignName.split(' - ');
+      String prefix = campaignName;
+      if (parts.length >= 3) {
+        final thirdPart = parts[2].split(' ')[0].replaceAll(RegExp(r'\(.*?\)'), '').trim();
+        prefix = '${parts[0]} - ${parts[1]} - $thirdPart';
+      }
+      
+      // Check if any Facebook campaign matches this prefix
+      for (final fbCampaign in perfProvider.facebookCampaigns) {
+        if (fbCampaign.name.contains(prefix) || prefix.contains(fbCampaign.name)) {
+          return true;
+        }
+      }
+      
+      return false;
+    }
+    
     for (final campaign in ghlProvider.pipelineCampaigns) {
       final campaignName = campaign['campaignName'] ?? '';
       final campaignKey = campaign['campaignKey'] ?? '';
+      
+      // Skip campaigns that cannot match with Facebook
+      if (!canMatchFacebook(campaignName)) {
+        continue;
+      }
+      
       final adsList = campaign['adsList'] as List<dynamic>? ?? [];
       
       for (final ad in adsList) {
@@ -162,6 +372,58 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
       0,
       (sum, metrics) => sum + metrics.budget,
     );
+
+    // Show message if no ads match Facebook campaigns
+    if (allAds.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(40),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.filter_alt_off,
+                size: 64,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                perfProvider.facebookCampaigns.isEmpty
+                    ? 'No Facebook Campaigns Available'
+                    : 'No GHL Campaigns Match Facebook',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                perfProvider.facebookCampaigns.isEmpty
+                    ? 'Waiting for Facebook Ads data to load...'
+                    : 'Only campaigns with matching Facebook ads are shown.\nYour GHL campaigns don\'t match any Facebook campaign names.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              if (perfProvider.facebookCampaigns.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Available Facebook campaigns: ${perfProvider.facebookCampaigns.length}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
 
     return Container(
       width: double.infinity,
@@ -209,7 +471,6 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
     final budgetEntry = ad['budgetEntry'] as AdPerformanceCost?;
     final leads = ad['leads'] as int;
     final bookings = ad['bookings'] as int;
-    final deposits = ad['deposits'] as int;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -266,6 +527,50 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
                           color: Colors.grey[600],
                         ),
                       ),
+                      // Show Campaign Key (Facebook Campaign ID) for matching
+                      if ((ad['campaignKey'] as String).isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.key, size: 12, color: Colors.grey[500]),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Campaign Key: ${ad['campaignKey']}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[500],
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      // Show Facebook sync status
+                      if (mergedMetrics?.cost.facebookSpend != null) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.facebook, size: 12, color: Colors.blue[700]),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Live FB Data',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.blue[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -310,74 +615,131 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
             ),
           ),
           
-          // Metrics section - All in one row
+          // Metrics section - All in one row with Facebook data
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
               children: [
-                _buildMetricColumn('Leads', leads.toString(), '-'),
-                _buildMetricColumn(
-                  'Bookings',
-                  bookings.toString(),
-                  mergedMetrics != null 
-                    ? '${mergedMetrics.bookingRate.toStringAsFixed(1)}%'
-                    : '-',
+                // First row: GHL Movement data + FB Spend
+                Row(
+                  children: [
+                    _buildMetricColumn('Leads', leads.toString(), '-'),
+                    _buildMetricColumn(
+                      'Bookings',
+                      bookings.toString(),
+                      mergedMetrics != null 
+                        ? '${mergedMetrics.bookingRate.toStringAsFixed(1)}%'
+                        : '-',
+                    ),
+                    // FB Spend replaces Deposits
+                    _buildMetricColumn(
+                      'FB Spend',
+                      mergedMetrics?.cost.facebookSpend != null 
+                        ? 'R${mergedMetrics!.cost.facebookSpend!.toStringAsFixed(0)}'
+                        : (mergedMetrics != null ? 'R${mergedMetrics.budget.toStringAsFixed(0)}' : '-'),
+                      mergedMetrics?.cost.facebookSpend != null 
+                        ? '${mergedMetrics!.budgetPercentage(totalBudget).toStringAsFixed(1)}%'
+                        : '-',
+                      valueColor: mergedMetrics?.cost.facebookSpend != null ? Colors.blue[700] : Colors.grey[600],
+                    ),
+                    _buildMetricColumn(
+                      'CPL',
+                      mergedMetrics != null 
+                        ? 'R${mergedMetrics.cpl.toStringAsFixed(0)}'
+                        : '-',
+                      mergedMetrics != null 
+                        ? '${mergedMetrics.cplPercentage.toStringAsFixed(1)}%'
+                        : '-',
+                    ),
+                    _buildMetricColumn(
+                      'CPB',
+                      mergedMetrics != null 
+                        ? 'R${mergedMetrics.cpb.toStringAsFixed(0)}'
+                        : '-',
+                      mergedMetrics != null 
+                        ? '${mergedMetrics.cpbPercentage.toStringAsFixed(1)}%'
+                        : '-',
+                    ),
+                    _buildMetricColumn(
+                      'CPA',
+                      mergedMetrics != null 
+                        ? 'R${mergedMetrics.cpa.toStringAsFixed(0)}'
+                        : '-',
+                      mergedMetrics != null 
+                        ? '${mergedMetrics.cpaPercentage.toStringAsFixed(1)}%'
+                        : '-',
+                    ),
+                    _buildMetricColumn(
+                      'Profit',
+                      mergedMetrics != null 
+                        ? 'R${mergedMetrics.actualProfit.toStringAsFixed(0)}'
+                        : '-',
+                      mergedMetrics != null 
+                        ? '${mergedMetrics.profitMargin.toStringAsFixed(1)}%'
+                        : '-',
+                      valueColor: mergedMetrics != null
+                        ? (mergedMetrics.actualProfit >= 0 ? Colors.green : Colors.red)
+                        : null,
+                    ),
+                  ],
                 ),
-                _buildMetricColumn(
-                  'Deposits',
-                  deposits.toString(),
-                  mergedMetrics != null 
-                    ? '${mergedMetrics.overallConversionRate.toStringAsFixed(1)}%'
-                    : '-',
-                ),
-                _buildMetricColumn(
-                  'Budget',
-                  mergedMetrics != null 
-                    ? 'R${mergedMetrics.budget.toStringAsFixed(0)}'
-                    : '-',
-                  mergedMetrics != null 
-                    ? '${mergedMetrics.budgetPercentage(totalBudget).toStringAsFixed(1)}%'
-                    : '-',
-                ),
-                _buildMetricColumn(
-                  'CPL',
-                  mergedMetrics != null 
-                    ? 'R${mergedMetrics.cpl.toStringAsFixed(0)}'
-                    : '-',
-                  mergedMetrics != null 
-                    ? '${mergedMetrics.cplPercentage.toStringAsFixed(1)}%'
-                    : '-',
-                ),
-                _buildMetricColumn(
-                  'CPB',
-                  mergedMetrics != null 
-                    ? 'R${mergedMetrics.cpb.toStringAsFixed(0)}'
-                    : '-',
-                  mergedMetrics != null 
-                    ? '${mergedMetrics.cpbPercentage.toStringAsFixed(1)}%'
-                    : '-',
-                ),
-                _buildMetricColumn(
-                  'CPA',
-                  mergedMetrics != null 
-                    ? 'R${mergedMetrics.cpa.toStringAsFixed(0)}'
-                    : '-',
-                  mergedMetrics != null 
-                    ? '${mergedMetrics.cpaPercentage.toStringAsFixed(1)}%'
-                    : '-',
-                ),
-                _buildMetricColumn(
-                  'Profit',
-                  mergedMetrics != null 
-                    ? 'R${mergedMetrics.actualProfit.toStringAsFixed(0)}'
-                    : '-',
-                  mergedMetrics != null 
-                    ? '${mergedMetrics.profitMargin.toStringAsFixed(1)}%'
-                    : '-',
-                  valueColor: mergedMetrics != null
-                    ? (mergedMetrics.actualProfit >= 0 ? Colors.green : Colors.red)
-                    : null,
-                ),
+                // Second row: Facebook Ad Metrics (if available)
+                if (mergedMetrics?.cost.facebookSpend != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.facebook, size: 16, color: Colors.blue[700]),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Facebook Metrics:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue[900],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        _buildSmallMetric(
+                          'Impressions',
+                          mergedMetrics!.cost.impressions?.toString() ?? '-',
+                        ),
+                        _buildSmallMetric(
+                          'Reach',
+                          mergedMetrics.cost.reach?.toString() ?? '-',
+                        ),
+                        _buildSmallMetric(
+                          'Clicks',
+                          mergedMetrics.cost.clicks?.toString() ?? '-',
+                        ),
+                        _buildSmallMetric(
+                          'CPM',
+                          mergedMetrics.cost.cpm != null 
+                              ? '\$${mergedMetrics.cost.cpm!.toStringAsFixed(2)}'
+                              : '-',
+                        ),
+                        _buildSmallMetric(
+                          'CPC',
+                          mergedMetrics.cost.cpc != null 
+                              ? '\$${mergedMetrics.cost.cpc!.toStringAsFixed(2)}'
+                              : '-',
+                        ),
+                        _buildSmallMetric(
+                          'CTR',
+                          mergedMetrics.cost.ctr != null 
+                              ? '${mergedMetrics.cost.ctr!.toStringAsFixed(2)}%'
+                              : '-',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -438,6 +800,7 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
   ) {
     String? selectedProductId;
     final budgetController = TextEditingController();
+    final facebookCampaignIdController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -493,7 +856,9 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
                             children: [
                               Text('Leads: ${ad['leads']}'),
                               Text('Bookings: ${ad['bookings']}'),
-                              Text('Deposits: ${ad['deposits']}'),
+                              Text('Campaign Key: ${ad['campaignKey']}', 
+                                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                              ),
                             ],
                           ),
                         ],
@@ -553,6 +918,58 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
                         });
                       },
                     ),
+                    const SizedBox(height: 16),
+                    
+                    // Facebook Campaign ID input
+                    TextFormField(
+                      controller: facebookCampaignIdController,
+                      decoration: InputDecoration(
+                        labelText: 'Facebook Campaign ID (Optional)',
+                        hintText: 'e.g., 120234497185340335',
+                        border: const OutlineInputBorder(),
+                        helperText: 'For exact matching with Facebook data',
+                        helperMaxLines: 2,
+                        suffixIcon: perfProvider.facebookCampaigns.isNotEmpty
+                            ? PopupMenuButton<String>(
+                                icon: const Icon(Icons.list, size: 20),
+                                tooltip: 'Select from available campaigns',
+                                itemBuilder: (context) {
+                                  return perfProvider.facebookCampaigns.map((campaign) {
+                                    return PopupMenuItem<String>(
+                                      value: campaign.id,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            campaign.name,
+                                            style: const TextStyle(fontSize: 12),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          Text(
+                                            'ID: ${campaign.id}',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey[600],
+                                              fontFamily: 'monospace',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList();
+                                },
+                                onSelected: (value) {
+                                  setDialogState(() {
+                                    facebookCampaignIdController.text = value;
+                                  });
+                                },
+                              )
+                            : null,
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
                   ],
                 ),
               ),
@@ -573,6 +990,9 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
                         adName: ad['adName'] as String,
                         budget: double.parse(budgetController.text),
                         linkedProductId: selectedProductId,
+                        facebookCampaignId: facebookCampaignIdController.text.trim().isNotEmpty
+                            ? facebookCampaignIdController.text.trim()
+                            : null,
                       );
                       
                       // Refresh merged data
@@ -813,6 +1233,50 @@ class _AddPerformanceCostTableState extends State<AddPerformanceCostTable> {
         ],
       ),
     );
+  }
+
+  /// Build a small metric display for Facebook data
+  Widget _buildSmallMetric(String label, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Colors.blue[800],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue[900],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Helper to get time ago string
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inMinutes < 1) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
   }
 }
 

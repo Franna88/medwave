@@ -24,7 +24,7 @@ import 'screens/patients/session_detail_screen.dart';
 import 'screens/sessions/session_logging_screen.dart';
 import 'screens/sessions/multi_wound_session_logging_screen.dart';
 import 'screens/reports/reports_screen.dart';
-// import 'screens/calendar/calendar_screen.dart'; // Disabled until appointment system is complete
+import 'screens/calendar/calendar_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/auth/welcome_screen.dart';
@@ -282,12 +282,11 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           name: 'reports',
           builder: (context, state) => const ReportsScreen(),
         ),
-        // TODO: Re-enable when appointment system is complete
-        // GoRoute(
-        //   path: '/calendar',
-        //   name: 'calendar',
-        //   builder: (context, state) => const CalendarScreen(),
-        // ),
+        GoRoute(
+          path: '/calendar',
+          name: 'calendar',
+          builder: (context, state) => const CalendarScreen(),
+        ),
         GoRoute(
           path: '/profile',
           name: 'profile',

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../models/performance/product.dart';
 import '../models/performance/ad_performance_cost.dart';
+import '../models/facebook/facebook_ad_data.dart';
 import '../services/performance_cost_service.dart';
+import '../services/facebook/facebook_ads_service.dart';
 import 'gohighlevel_provider.dart';
 
 /// Provider for managing performance cost data and state
@@ -11,6 +13,13 @@ class PerformanceCostProvider extends ChangeNotifier {
   List<Product> _products = [];
   List<AdPerformanceCost> _adCosts = [];
   List<AdPerformanceCostWithMetrics> _mergedData = [];
+  
+  // Facebook data
+  List<FacebookCampaignData> _facebookCampaigns = [];
+  Map<String, List<FacebookAdData>> _facebookAdsByCampaign = {};
+  bool _isFacebookDataLoading = false;
+  DateTime? _lastFacebookSync;
+  String? _facebookError;
   
   // State
   bool _isLoading = false;
@@ -24,6 +33,14 @@ class PerformanceCostProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
   String? get error => _error;
+  
+  // Facebook getters
+  List<FacebookCampaignData> get facebookCampaigns => _facebookCampaigns;
+  Map<String, List<FacebookAdData>> get facebookAdsByCampaign => _facebookAdsByCampaign;
+  bool get isFacebookDataLoading => _isFacebookDataLoading;
+  DateTime? get lastFacebookSync => _lastFacebookSync;
+  String? get facebookError => _facebookError;
+  bool get hasFacebookData => _facebookCampaigns.isNotEmpty;
 
   /// Initialize the provider
   Future<void> initialize() async {
@@ -136,15 +153,81 @@ class PerformanceCostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Merge ad costs with cumulative campaign data
+  // ========== FACEBOOK ADS DATA ==========
+
+  /// Fetch Facebook Ads data
+  Future<void> fetchFacebookData({bool forceRefresh = false}) async {
+    _isFacebookDataLoading = true;
+    _facebookError = null;
+    notifyListeners();
+    
+    try {
+      if (kDebugMode) {
+        print('🌐 Fetching Facebook Ads data...');
+      }
+      
+      // Fetch campaigns
+      _facebookCampaigns = await FacebookAdsService.fetchCampaigns(
+        forceRefresh: forceRefresh,
+      );
+      
+      // Fetch ads for all campaigns
+      _facebookAdsByCampaign = await FacebookAdsService.fetchAllAds(
+        forceRefresh: forceRefresh,
+      );
+      
+      _lastFacebookSync = DateTime.now();
+      _isFacebookDataLoading = false;
+      
+      if (kDebugMode) {
+        print('✅ Facebook Ads data fetched successfully');
+        print('   - Campaigns: ${_facebookCampaigns.length}');
+        print('   - Total ads: ${_facebookAdsByCampaign.values.fold(0, (sum, ads) => sum + ads.length)}');
+      }
+    } catch (e) {
+      _facebookError = e.toString();
+      _isFacebookDataLoading = false;
+      
+      if (kDebugMode) {
+        print('❌ Error fetching Facebook data: $e');
+      }
+    }
+    
+    notifyListeners();
+  }
+
+  /// Refresh Facebook data (force fetch)
+  Future<void> refreshFacebookData() async {
+    return fetchFacebookData(forceRefresh: true);
+  }
+
+  /// Clear Facebook cache
+  void clearFacebookCache() {
+    FacebookAdsService.clearCache();
+    _lastFacebookSync = null;
+    if (kDebugMode) {
+      print('🗑️ Facebook cache cleared');
+    }
+    notifyListeners();
+  }
+
+  /// Merge ad costs with cumulative campaign data and Facebook data
   Future<void> mergeWithCumulativeData(GoHighLevelProvider ghlProvider) async {
     try {
       if (kDebugMode) {
-        print('🔄 Merging ad costs with cumulative data...');
+        print('🔄 Merging ad costs with cumulative data and Facebook data...');
       }
 
+      // Fetch Facebook data first (using cache if available)
+      if (_facebookCampaigns.isEmpty) {
+        await fetchFacebookData();
+      }
+
+      // Sync Facebook data with adCosts (update spend, impressions, etc.)
+      final updatedAdCosts = _syncFacebookDataWithAdCosts(_adCosts);
+
       _mergedData = await PerformanceCostService.getMergedPerformanceData(
-        adCosts: _adCosts,
+        adCosts: updatedAdCosts,
         cumulativeCampaigns: ghlProvider.pipelineCampaigns,
         products: _products,
       );
@@ -162,6 +245,122 @@ class PerformanceCostProvider extends ChangeNotifier {
       notifyListeners();
       rethrow;
     }
+  }
+
+  /// Sync Facebook data with AdPerformanceCost records
+  /// Uses multiple matching strategies: exact ID match, fuzzy name match
+  List<AdPerformanceCost> _syncFacebookDataWithAdCosts(List<AdPerformanceCost> adCosts) {
+    if (_facebookCampaigns.isEmpty) {
+      // If no Facebook data, return empty list (hide all ads)
+      if (kDebugMode) {
+        print('⚠️ No Facebook campaigns loaded - hiding all ads until Facebook data is available');
+      }
+      return [];
+    }
+
+    // Create a map of Facebook campaigns by ID for quick lookup
+    final fbCampaignMap = {for (var c in _facebookCampaigns) c.id: c};
+
+    // Filter to ONLY ads that have matching Facebook campaigns
+    final matchedAds = <AdPerformanceCost>[];
+    
+    for (final adCost in adCosts) {
+      FacebookCampaignData? fbCampaign;
+      String matchStrategy = 'none';
+      
+      // Strategy 1: Exact Facebook Campaign ID match
+      if (adCost.facebookCampaignId != null && adCost.facebookCampaignId!.isNotEmpty) {
+        fbCampaign = fbCampaignMap[adCost.facebookCampaignId];
+        if (fbCampaign != null) {
+          matchStrategy = 'exact_id';
+        }
+      }
+      
+      // Strategy 2: Fuzzy name matching (extract campaign prefix from campaignName)
+      if (fbCampaign == null) {
+        fbCampaign = _fuzzyMatchCampaign(adCost.campaignName, _facebookCampaigns);
+        if (fbCampaign != null) {
+          matchStrategy = 'fuzzy_name';
+        }
+      }
+      
+      if (fbCampaign != null) {
+        // Update with Facebook data and add to matched list
+        matchedAds.add(adCost.copyWith(
+          facebookCampaignId: fbCampaign.id, // Store the matched ID for future exact matches
+          facebookSpend: fbCampaign.spend,
+          impressions: fbCampaign.impressions,
+          reach: fbCampaign.reach,
+          clicks: fbCampaign.clicks,
+          cpm: fbCampaign.cpm,
+          cpc: fbCampaign.cpc,
+          ctr: fbCampaign.ctr,
+          lastFacebookSync: DateTime.now(),
+        ));
+        
+        if (kDebugMode) {
+          print('✅ Matched ($matchStrategy): ${adCost.adName} → FB Campaign: ${fbCampaign.name} (${fbCampaign.id})');
+        }
+      } else {
+        if (kDebugMode) {
+          print('❌ No FB match for: ${adCost.adName} (campaignKey: ${adCost.campaignKey})');
+        }
+      }
+    }
+
+    if (kDebugMode) {
+      print('📊 Filtered ${adCosts.length} ads → ${matchedAds.length} ads with Facebook matches');
+    }
+
+    return matchedAds;
+  }
+
+  /// Helper: Fuzzy match by campaign name
+  FacebookCampaignData? _fuzzyMatchCampaign(String ghlCampaignName, List<FacebookCampaignData> fbCampaigns) {
+    // Extract prefix (e.g., "Matthys - 17102025 - ABOLEADFORMZA")
+    final ghlPrefix = _extractCampaignPrefix(ghlCampaignName);
+    
+    if (kDebugMode) {
+      print('🔍 Fuzzy matching: "$ghlPrefix" against ${fbCampaigns.length} Facebook campaigns');
+    }
+    
+    for (final fbCampaign in fbCampaigns) {
+      // Try to match the extracted prefix with Facebook campaign name
+      if (fbCampaign.name.contains(ghlPrefix)) {
+        if (kDebugMode) {
+          print('   ✓ Found match: "${fbCampaign.name}"');
+        }
+        return fbCampaign;
+      }
+      
+      // Also try reverse: does the GHL prefix contain the FB campaign name?
+      final fbPrefix = _extractCampaignPrefix(fbCampaign.name);
+      if (ghlPrefix.contains(fbPrefix) && fbPrefix.length > 10) { // Minimum length to avoid false positives
+        if (kDebugMode) {
+          print('   ✓ Found reverse match: "${fbCampaign.name}"');
+        }
+        return fbCampaign;
+      }
+    }
+    
+    if (kDebugMode) {
+      print('   ✗ No fuzzy match found');
+    }
+    
+    return null;
+  }
+
+  /// Extract campaign prefix for matching
+  /// "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Afrikaans" -> "Matthys - 17102025 - ABOLEADFORMZA"
+  String _extractCampaignPrefix(String campaignName) {
+    // Remove common suffixes and extract core campaign identifier
+    final parts = campaignName.split(' - ');
+    if (parts.length >= 3) {
+      // Take first 3 parts and remove anything in parentheses from the 3rd part
+      final thirdPart = parts[2].split(' ')[0].replaceAll(RegExp(r'\(.*?\)'), '').trim();
+      return '${parts[0]} - ${parts[1]} - $thirdPart';
+    }
+    return campaignName;
   }
 
   /// Get merged data (synchronous, returns cached data)
@@ -283,6 +482,7 @@ class PerformanceCostProvider extends ChangeNotifier {
     required String adName,
     required double budget,
     String? linkedProductId,
+    String? facebookCampaignId,
     String? createdBy,
   }) async {
     try {
@@ -298,6 +498,7 @@ class PerformanceCostProvider extends ChangeNotifier {
         adName: adName,
         budget: budget,
         linkedProductId: linkedProductId,
+        facebookCampaignId: facebookCampaignId,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         createdBy: createdBy,

@@ -62,6 +62,11 @@ class Appointment {
   final DateTime? lastUpdated;
   final String? reminderSent;
   final Map<String, dynamic>? metadata;
+  
+  // Google Calendar Sync
+  final String? googleEventId;
+  final String syncStatus; // 'synced', 'pending', 'error', 'conflict'
+  final DateTime? lastSyncedAt;
 
   const Appointment({
     required this.id,
@@ -81,6 +86,9 @@ class Appointment {
     this.lastUpdated,
     this.reminderSent,
     this.metadata,
+    this.googleEventId,
+    this.syncStatus = 'pending',
+    this.lastSyncedAt,
   });
 
   Duration get duration => endTime.difference(startTime);
@@ -135,6 +143,9 @@ class Appointment {
     DateTime? lastUpdated,
     String? reminderSent,
     Map<String, dynamic>? metadata,
+    String? googleEventId,
+    String? syncStatus,
+    DateTime? lastSyncedAt,
   }) {
     return Appointment(
       id: id ?? this.id,
@@ -154,6 +165,9 @@ class Appointment {
       lastUpdated: lastUpdated ?? this.lastUpdated,
       reminderSent: reminderSent ?? this.reminderSent,
       metadata: metadata ?? this.metadata,
+      googleEventId: googleEventId ?? this.googleEventId,
+      syncStatus: syncStatus ?? this.syncStatus,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
     );
   }
 
@@ -176,6 +190,9 @@ class Appointment {
       'lastUpdated': lastUpdated?.toIso8601String(),
       'reminderSent': reminderSent,
       'metadata': metadata,
+      'googleEventId': googleEventId,
+      'syncStatus': syncStatus,
+      'lastSyncedAt': lastSyncedAt?.toIso8601String(),
     };
   }
 
@@ -198,6 +215,9 @@ class Appointment {
       lastUpdated: json['lastUpdated'] != null ? DateTime.parse(json['lastUpdated']) : null,
       reminderSent: json['reminderSent'],
       metadata: json['metadata'] != null ? Map<String, dynamic>.from(json['metadata']) : null,
+      googleEventId: json['googleEventId'],
+      syncStatus: json['syncStatus'] ?? 'pending',
+      lastSyncedAt: json['lastSyncedAt'] != null ? DateTime.parse(json['lastSyncedAt']) : null,
     );
   }
 
@@ -235,6 +255,9 @@ class Appointment {
       'lastUpdated': lastUpdated != null ? Timestamp.fromDate(lastUpdated!) : null,
       'reminderSent': reminderSent,
       'metadata': metadata,
+      'googleEventId': googleEventId,
+      'syncStatus': syncStatus,
+      'lastSyncedAt': lastSyncedAt != null ? Timestamp.fromDate(lastSyncedAt!) : null,
       // Additional fields for Firebase
       'dateKey': '${startTime.year}-${startTime.month.toString().padLeft(2, '0')}-${startTime.day.toString().padLeft(2, '0')}',
       'timeSlot': '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
@@ -269,6 +292,9 @@ class Appointment {
       lastUpdated: data['lastUpdated']?.toDate(),
       reminderSent: data['reminderSent'],
       metadata: data['metadata'] != null ? Map<String, dynamic>.from(data['metadata']) : null,
+      googleEventId: data['googleEventId'],
+      syncStatus: data['syncStatus'] ?? 'pending',
+      lastSyncedAt: data['lastSyncedAt']?.toDate(),
     );
   }
 }

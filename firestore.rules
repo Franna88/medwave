@@ -32,6 +32,31 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
+    // Google Calendar Tokens - Only practitioner can access their own tokens
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      
+      // Ensure Google Calendar tokens are only accessible to the token owner
+      allow read: if request.auth != null && request.auth.uid == userId &&
+        !('googleRefreshToken' in resource.data) || request.auth.uid == userId;
+      
+      // Prevent reading other users' Google tokens
+      allow update: if request.auth != null && request.auth.uid == userId &&
+        (!('googleRefreshToken' in request.resource.data) || 
+         request.auth.uid == userId);
+    }
+    
+    // Appointments - Can include sync status and Google event ID
+    match /appointments/{appointmentId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && 
+        (resource.data.practitionerId == request.auth.uid || isAdmin());
+      allow delete: if request.auth != null && 
+        (resource.data.practitionerId == request.auth.uid || isAdmin());
+    }
+    
     // SUPER PERMISSIVE RULES - Allow all authenticated users to do everything
     match /{document=**} {
       allow read, write: if request.auth != null;

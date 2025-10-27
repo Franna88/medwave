@@ -44,6 +44,14 @@ class UserProfile {
   final int totalPatients;
   final int totalSessions;
   final DateTime? lastActivityDate;
+  
+  // Google Calendar Integration
+  final bool googleCalendarConnected;
+  final String? googleCalendarId;
+  final DateTime? lastSyncTime;
+  final bool syncEnabled;
+  final String? googleRefreshToken;
+  final DateTime? tokenExpiresAt;
 
   UserProfile({
     required this.id,
@@ -77,6 +85,12 @@ class UserProfile {
     required this.totalPatients,
     required this.totalSessions,
     this.lastActivityDate,
+    this.googleCalendarConnected = false,
+    this.googleCalendarId,
+    this.lastSyncTime,
+    this.syncEnabled = false,
+    this.googleRefreshToken,
+    this.tokenExpiresAt,
   });
 
   String get fullName => '$firstName $lastName';
@@ -127,6 +141,12 @@ class UserProfile {
       totalPatients: data['totalPatients'] ?? 0,
       totalSessions: data['totalSessions'] ?? 0,
       lastActivityDate: data['lastActivityDate']?.toDate(),
+      googleCalendarConnected: data['googleCalendarConnected'] ?? false,
+      googleCalendarId: data['googleCalendarId'],
+      lastSyncTime: data['lastSyncTime']?.toDate(),
+      syncEnabled: data['syncEnabled'] ?? false,
+      googleRefreshToken: data['googleRefreshToken'],
+      tokenExpiresAt: data['tokenExpiresAt']?.toDate(),
     );
   }
 
@@ -162,6 +182,12 @@ class UserProfile {
       'totalPatients': totalPatients,
       'totalSessions': totalSessions,
       'lastActivityDate': lastActivityDate != null ? Timestamp.fromDate(lastActivityDate!) : null,
+      'googleCalendarConnected': googleCalendarConnected,
+      'googleCalendarId': googleCalendarId,
+      'lastSyncTime': lastSyncTime != null ? Timestamp.fromDate(lastSyncTime!) : null,
+      'syncEnabled': syncEnabled,
+      'googleRefreshToken': googleRefreshToken,
+      'tokenExpiresAt': tokenExpiresAt != null ? Timestamp.fromDate(tokenExpiresAt!) : null,
     };
   }
 
@@ -195,6 +221,12 @@ class UserProfile {
     int? totalPatients,
     int? totalSessions,
     DateTime? lastActivityDate,
+    bool? googleCalendarConnected,
+    String? googleCalendarId,
+    DateTime? lastSyncTime,
+    bool? syncEnabled,
+    String? googleRefreshToken,
+    DateTime? tokenExpiresAt,
   }) {
     return UserProfile(
       id: id,
@@ -228,6 +260,12 @@ class UserProfile {
       totalPatients: totalPatients ?? this.totalPatients,
       totalSessions: totalSessions ?? this.totalSessions,
       lastActivityDate: lastActivityDate ?? this.lastActivityDate,
+      googleCalendarConnected: googleCalendarConnected ?? this.googleCalendarConnected,
+      googleCalendarId: googleCalendarId ?? this.googleCalendarId,
+      lastSyncTime: lastSyncTime ?? this.lastSyncTime,
+      syncEnabled: syncEnabled ?? this.syncEnabled,
+      googleRefreshToken: googleRefreshToken ?? this.googleRefreshToken,
+      tokenExpiresAt: tokenExpiresAt ?? this.tokenExpiresAt,
     );
   }
 }

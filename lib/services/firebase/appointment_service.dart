@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../../models/appointment.dart';
+import '../google_calendar_service.dart';
 
 class AppointmentService {
+  static final GoogleCalendarService _googleCalendarService = GoogleCalendarService();
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -106,6 +109,9 @@ class AppointmentService {
       // Update the document with its own ID
       await docRef.update({'id': docRef.id});
       
+      // Sync to Google Calendar in background (don't wait for it)
+      _syncToGoogleCalendar(appointmentData.copyWith(id: docRef.id));
+      
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to create appointment: $e');
@@ -149,6 +155,9 @@ class AppointmentService {
       );
 
       await _appointmentsCollection.doc(appointmentId).update(updatedAppointment.toFirestore());
+      
+      // Sync to Google Calendar in background (don't wait for it)
+      _syncToGoogleCalendar(updatedAppointment);
     } catch (e) {
       throw Exception('Failed to update appointment: $e');
     }
@@ -178,9 +187,47 @@ class AppointmentService {
       }
 
       await _appointmentsCollection.doc(appointmentId).delete();
+      
+      // Delete from Google Calendar if it has a Google Event ID
+      if (appointment.googleEventId != null) {
+        _deleteFromGoogleCalendar(appointment.googleEventId!);
+      }
     } catch (e) {
       throw Exception('Failed to delete appointment: $e');
     }
+  }
+  
+  /// Sync appointment to Google Calendar in background
+  static void _syncToGoogleCalendar(Appointment appointment) {
+    // Run in background, don't block the UI
+    Future.microtask(() async {
+      try {
+        // Check if user has Google Calendar connected
+        final connection = await _googleCalendarService.getConnectionStatus();
+        
+        if (connection.isActive) {
+          await _googleCalendarService.syncAppointmentToGoogle(appointment);
+          debugPrint('Appointment synced to Google Calendar: ${appointment.id}');
+        }
+      } catch (e) {
+        // Log error but don't throw - sync failure shouldn't block appointment creation
+        debugPrint('Failed to sync appointment to Google Calendar: $e');
+      }
+    });
+  }
+  
+  /// Delete appointment from Google Calendar in background
+  static void _deleteFromGoogleCalendar(String googleEventId) {
+    // Run in background, don't block the UI
+    Future.microtask(() async {
+      try {
+        await _googleCalendarService.deleteAppointmentFromGoogle(googleEventId);
+        debugPrint('Appointment deleted from Google Calendar: $googleEventId');
+      } catch (e) {
+        // Log error but don't throw - sync failure shouldn't block appointment deletion
+        debugPrint('Failed to delete appointment from Google Calendar: $e');
+      }
+    });
   }
 
   /// Check for appointment conflicts

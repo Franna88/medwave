@@ -5,14 +5,25 @@ import 'product.dart';
 class AdPerformanceCost {
   final String id;
   final String campaignName;
-  final String campaignKey;
+  final String campaignKey; // Also stores Facebook Campaign ID for matching
   final String adId;
   final String adName;
-  final double budget;
+  final double budget; // Legacy field - kept for backward compatibility
   final String? linkedProductId;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? createdBy;
+  
+  // Facebook Ads API fields
+  final String? facebookCampaignId; // Facebook Campaign ID for direct matching
+  final double? facebookSpend;
+  final int? impressions;
+  final int? reach;
+  final int? clicks;
+  final double? cpm;
+  final double? cpc;
+  final double? ctr;
+  final DateTime? lastFacebookSync;
 
   AdPerformanceCost({
     required this.id,
@@ -25,6 +36,15 @@ class AdPerformanceCost {
     required this.createdAt,
     required this.updatedAt,
     this.createdBy,
+    this.facebookCampaignId,
+    this.facebookSpend,
+    this.impressions,
+    this.reach,
+    this.clicks,
+    this.cpm,
+    this.cpc,
+    this.ctr,
+    this.lastFacebookSync,
   });
 
   /// Create from Firestore document
@@ -41,6 +61,17 @@ class AdPerformanceCost {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdBy: data['createdBy'],
+      facebookCampaignId: data['facebookCampaignId'],
+      facebookSpend: data['facebookSpend'] != null ? (data['facebookSpend'] as num).toDouble() : null,
+      impressions: data['impressions'] != null ? (data['impressions'] as num).toInt() : null,
+      reach: data['reach'] != null ? (data['reach'] as num).toInt() : null,
+      clicks: data['clicks'] != null ? (data['clicks'] as num).toInt() : null,
+      cpm: data['cpm'] != null ? (data['cpm'] as num).toDouble() : null,
+      cpc: data['cpc'] != null ? (data['cpc'] as num).toDouble() : null,
+      ctr: data['ctr'] != null ? (data['ctr'] as num).toDouble() : null,
+      lastFacebookSync: data['lastFacebookSync'] != null 
+          ? (data['lastFacebookSync'] as Timestamp).toDate() 
+          : null,
     );
   }
 
@@ -61,6 +92,19 @@ class AdPerformanceCost {
           ? (json['updatedAt'] as Timestamp).toDate()
           : DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
       createdBy: json['createdBy'],
+      facebookCampaignId: json['facebookCampaignId'],
+      facebookSpend: json['facebookSpend'] != null ? (json['facebookSpend'] as num).toDouble() : null,
+      impressions: json['impressions'] != null ? (json['impressions'] as num).toInt() : null,
+      reach: json['reach'] != null ? (json['reach'] as num).toInt() : null,
+      clicks: json['clicks'] != null ? (json['clicks'] as num).toInt() : null,
+      cpm: json['cpm'] != null ? (json['cpm'] as num).toDouble() : null,
+      cpc: json['cpc'] != null ? (json['cpc'] as num).toDouble() : null,
+      ctr: json['ctr'] != null ? (json['ctr'] as num).toDouble() : null,
+      lastFacebookSync: json['lastFacebookSync'] != null
+          ? (json['lastFacebookSync'] is Timestamp
+              ? (json['lastFacebookSync'] as Timestamp).toDate()
+              : DateTime.parse(json['lastFacebookSync']))
+          : null,
     );
   }
 
@@ -76,6 +120,15 @@ class AdPerformanceCost {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       if (createdBy != null) 'createdBy': createdBy,
+      if (facebookCampaignId != null) 'facebookCampaignId': facebookCampaignId,
+      if (facebookSpend != null) 'facebookSpend': facebookSpend,
+      if (impressions != null) 'impressions': impressions,
+      if (reach != null) 'reach': reach,
+      if (clicks != null) 'clicks': clicks,
+      if (cpm != null) 'cpm': cpm,
+      if (cpc != null) 'cpc': cpc,
+      if (ctr != null) 'ctr': ctr,
+      if (lastFacebookSync != null) 'lastFacebookSync': Timestamp.fromDate(lastFacebookSync!),
     };
   }
 
@@ -92,6 +145,15 @@ class AdPerformanceCost {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       if (createdBy != null) 'createdBy': createdBy,
+      if (facebookCampaignId != null) 'facebookCampaignId': facebookCampaignId,
+      if (facebookSpend != null) 'facebookSpend': facebookSpend,
+      if (impressions != null) 'impressions': impressions,
+      if (reach != null) 'reach': reach,
+      if (clicks != null) 'clicks': clicks,
+      if (cpm != null) 'cpm': cpm,
+      if (cpc != null) 'cpc': cpc,
+      if (ctr != null) 'ctr': ctr,
+      if (lastFacebookSync != null) 'lastFacebookSync': lastFacebookSync!.toIso8601String(),
     };
   }
 
@@ -107,6 +169,15 @@ class AdPerformanceCost {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? createdBy,
+    String? facebookCampaignId,
+    double? facebookSpend,
+    int? impressions,
+    int? reach,
+    int? clicks,
+    double? cpm,
+    double? cpc,
+    double? ctr,
+    DateTime? lastFacebookSync,
   }) {
     return AdPerformanceCost(
       id: id ?? this.id,
@@ -119,6 +190,15 @@ class AdPerformanceCost {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
+      facebookCampaignId: facebookCampaignId ?? this.facebookCampaignId,
+      facebookSpend: facebookSpend ?? this.facebookSpend,
+      impressions: impressions ?? this.impressions,
+      reach: reach ?? this.reach,
+      clicks: clicks ?? this.clicks,
+      cpm: cpm ?? this.cpm,
+      cpc: cpc ?? this.cpc,
+      ctr: ctr ?? this.ctr,
+      lastFacebookSync: lastFacebookSync ?? this.lastFacebookSync,
     );
   }
 
@@ -146,24 +226,25 @@ class AdPerformanceCostWithMetrics {
     this.linkedProduct,
   });
 
-  // Computed metrics
-  double get cpl => leads > 0 ? cost.budget / leads : 0;
-  double get cpb => bookings > 0 ? cost.budget / bookings : 0;
-  double get cpa => deposits > 0 ? cost.budget / deposits : 0;
+  // Computed metrics - use Facebook spend if available, fallback to budget
+  double get effectiveSpend => cost.facebookSpend ?? cost.budget;
+  double get cpl => leads > 0 ? effectiveSpend / leads : 0;
+  double get cpb => bookings > 0 ? effectiveSpend / bookings : 0;
+  double get cpa => deposits > 0 ? effectiveSpend / deposits : 0;
   
   double get productExpenseCost => linkedProduct?.expenseCost ?? 0;
   double get productDepositAmount => linkedProduct?.depositAmount ?? 0;
   
   double get actualProfit {
     final depositRevenue = deposits * productDepositAmount;
-    return (cashDepositAmount + depositRevenue) - (cost.budget + productExpenseCost);
+    return (cashDepositAmount + depositRevenue) - (effectiveSpend + productExpenseCost);
   }
 
   // Percentage calculations
   
-  /// Calculate budget percentage relative to total budget
+  /// Calculate spend percentage relative to total spend
   double budgetPercentage(double totalBudget) {
-    return totalBudget > 0 ? (cost.budget / totalBudget) * 100 : 0;
+    return totalBudget > 0 ? (effectiveSpend / totalBudget) * 100 : 0;
   }
   
   /// Booking rate: bookings as percentage of leads
@@ -177,18 +258,18 @@ class AdPerformanceCostWithMetrics {
   
   /// Profit margin percentage: profit as percentage of total investment
   double get profitMargin {
-    final totalInvestment = cost.budget + productExpenseCost;
+    final totalInvestment = effectiveSpend + productExpenseCost;
     return totalInvestment > 0 ? (actualProfit / totalInvestment) * 100 : 0;
   }
   
-  /// CPL as percentage of budget
-  double get cplPercentage => cost.budget > 0 ? (cpl / cost.budget) * 100 : 0;
+  /// CPL as percentage of spend
+  double get cplPercentage => effectiveSpend > 0 ? (cpl / effectiveSpend) * 100 : 0;
   
-  /// CPB as percentage of budget
-  double get cpbPercentage => cost.budget > 0 ? (cpb / cost.budget) * 100 : 0;
+  /// CPB as percentage of spend
+  double get cpbPercentage => effectiveSpend > 0 ? (cpb / effectiveSpend) * 100 : 0;
   
-  /// CPA as percentage of budget
-  double get cpaPercentage => cost.budget > 0 ? (cpa / cost.budget) * 100 : 0;
+  /// CPA as percentage of spend
+  double get cpaPercentage => effectiveSpend > 0 ? (cpa / effectiveSpend) * 100 : 0;
 
   /// Get ad name for display
   String get adName => cost.adName.isNotEmpty ? cost.adName : cost.adId;
@@ -196,8 +277,8 @@ class AdPerformanceCostWithMetrics {
   /// Get campaign name for display
   String get campaignName => cost.campaignName;
 
-  /// Get budget
-  double get budget => cost.budget;
+  /// Get budget (or effective spend)
+  double get budget => effectiveSpend;
 
   @override
   String toString() {
