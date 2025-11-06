@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -758,33 +759,160 @@ class _AdminProviderManagementScreenState extends State<AdminProviderManagementS
   }
 
   /// View real practitioner details from users collection
-  void _viewRealPractitioner(Map<String, dynamic> practitioner) {
+  void _viewRealPractitioner(Map<String, dynamic> practitioner) async {
+    // Get user ID from practitioner data
+    final userId = practitioner['uid'] as String? ?? practitioner['id'] as String?;
+    
+    if (userId == null) {
+      _showSnackBar('User ID not found', Colors.red);
+      return;
+    }
+    
+    // Show loading dialog
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(practitioner['name'] as String? ?? 'Practitioner Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('Name', practitioner['name'] as String? ?? 'N/A'),
-              _buildDetailRow('Email', practitioner['email'] as String? ?? 'N/A'),
-              _buildDetailRow('Specialization', practitioner['specialization'] as String? ?? 'N/A'),
-              _buildDetailRow('Country', practitioner['country'] as String? ?? 'N/A'),
-              _buildDetailRow('Status', (practitioner['isApproved'] == true) ? 'Approved' : 'Pending'),
-              _buildDetailRow('Patient Count', (practitioner['patientCount'] as int? ?? 0).toString()),
-              _buildDetailRow('User ID', practitioner['uid'] as String? ?? practitioner['id'] as String? ?? 'N/A'),
-              _buildDetailRow('Registered', _formatTimestamp(practitioner['createdAt'])),
-            ],
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+    
+    try {
+      // Fetch full user document to get bank details
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+      
+      if (!userDoc.exists) {
+        _showSnackBar('User document not found', Colors.red);
+        return;
+      }
+      
+      final userData = userDoc.data()!;
+      final hasBankAccount = userData['bankAccountNumber'] != null && 
+                            userData['bankAccountNumber'].toString().isNotEmpty;
+      
+      if (!mounted) return;
+      
+      // Show practitioner details dialog with bank information
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(practitioner['name'] as String? ?? 'Practitioner Details'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Personal Details
+                _buildDetailRow('Name', practitioner['name'] as String? ?? 'N/A'),
+                _buildDetailRow('Email', practitioner['email'] as String? ?? 'N/A'),
+                _buildDetailRow('Specialization', practitioner['specialization'] as String? ?? 'N/A'),
+                _buildDetailRow('Country', practitioner['country'] as String? ?? 'N/A'),
+                _buildDetailRow('Status', (practitioner['isApproved'] == true) ? 'Approved' : 'Pending'),
+                _buildDetailRow('Patient Count', (practitioner['patientCount'] as int? ?? 0).toString()),
+                _buildDetailRow('User ID', userId),
+                _buildDetailRow('Registered', _formatTimestamp(practitioner['createdAt'])),
+                
+                // Bank Account Details Section
+                const SizedBox(height: 16),
+                const Divider(thickness: 2),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      hasBankAccount ? Icons.account_balance : Icons.warning_amber,
+                      color: hasBankAccount ? Colors.green : Colors.orange,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Bank Account Details',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: hasBankAccount ? Colors.green : Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                if (hasBankAccount) ...[
+                  _buildDetailRow('Bank Name', userData['bankName'] as String? ?? 'N/A'),
+                  _buildDetailRow('Account Holder', userData['bankAccountName'] as String? ?? 'N/A'),
+                  _buildDetailRow('Account Number', userData['bankAccountNumber'] as String? ?? 'N/A'),
+                  _buildDetailRow('Branch Code', userData['bankCode'] as String? ?? 'N/A'),
+                  _buildDetailRow('Added On', 
+                    userData['subaccountCreatedAt'] != null 
+                      ? _formatTimestamp(userData['subaccountCreatedAt']) 
+                      : 'N/A'),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.warning_amber, color: Colors.orange, size: 16),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Practitioner has not added bank account details yet',
+                            style: TextStyle(color: Colors.orange, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
+          actions: [
+            if (hasBankAccount)
+              TextButton.icon(
+                icon: const Icon(Icons.copy, size: 18),
+                label: const Text('Copy Bank Details'),
+                onPressed: () {
+                  // Copy bank details to clipboard for payout processing
+                  final bankDetails = '''
+Bank: ${userData['bankName'] ?? 'N/A'}
+Account Holder: ${userData['bankAccountName'] ?? 'N/A'}
+Account Number: ${userData['bankAccountNumber'] ?? 'N/A'}
+Branch Code: ${userData['bankCode'] ?? 'N/A'}
+                  '''.trim();
+                  Clipboard.setData(ClipboardData(text: bankDetails));
+                  _showSnackBar('Bank details copied to clipboard', Colors.green);
+                },
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
+      );
+    } catch (e) {
+      // Close loading dialog if still open
+      if (mounted) Navigator.pop(context);
+      _showSnackBar('Error loading practitioner details: $e', Colors.red);
+    }
+  }
+
+  /// Show snackbar message
+  void _showSnackBar(String message, Color backgroundColor) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor,
+        duration: const Duration(seconds: 3),
       ),
     );
   }

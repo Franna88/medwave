@@ -226,6 +226,7 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
             onPressed: () {
               HapticFeedback.lightImpact();
               // Navigate to edit patient screen
+              context.push('/patients/${widget.patientId}/edit');
             },
           ),
         ),
@@ -564,9 +565,16 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
           onPressed: () {
             HapticFeedback.lightImpact();
             if (hasNoSessions) {
-              context.push('/patients/${patient.id}/wound-selection?name=${Uri.encodeComponent(patient.fullNames + ' ' + patient.surname)}');
+              // Route based on treatment type
+              if (patient.treatmentType == TreatmentType.wound) {
+                context.push('/patients/${patient.id}/wound-selection?name=${Uri.encodeComponent(patient.fullNames + ' ' + patient.surname)}');
+              } else if (patient.treatmentType == TreatmentType.weight) {
+                context.push('/patients/${patient.id}/weight-case-history');
+              } else if (patient.treatmentType == TreatmentType.pain) {
+                context.push('/patients/${patient.id}/pain-case-history');
+              }
             } else {
-              // Smart routing based on wound count
+              // Smart routing based on treatment type and wound count
               final sessionRoute = WoundManagementService.getSessionLoggingRoute(patient.id, patient);
               context.push(sessionRoute);
             }
@@ -2013,12 +2021,33 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
             children: [
               _buildProgressSummaryCard(patient, progress),
               const SizedBox(height: 24),
-              _buildModernPainChart(progress.painHistory),
-              const SizedBox(height: 24),
-              _buildModernWeightChart(progress.weightHistory),
-              const SizedBox(height: 24),
-              if (progress.woundSizeHistory.isNotEmpty)
-                _buildModernWoundSizeChart(progress.woundSizeHistory),
+              
+              // Wound patient charts
+              if (patient.treatmentType == TreatmentType.wound) ...[
+                _buildModernPainChart(progress.painHistory),
+                const SizedBox(height: 24),
+                _buildModernWeightChart(progress.weightHistory),
+                const SizedBox(height: 24),
+                if (progress.woundSizeHistory.isNotEmpty)
+                  _buildModernWoundSizeChart(progress.woundSizeHistory),
+              ],
+              
+              // Weight patient charts
+              if (patient.treatmentType == TreatmentType.weight) ...[
+                _buildModernWeightChart(progress.weightHistory),
+                const SizedBox(height: 24),
+                _buildModernBodyMeasurementsChart(patient, progress),
+              ],
+              
+              // Pain patient charts
+              if (patient.treatmentType == TreatmentType.pain) ...[
+                _buildModernPainChart(progress.painHistory),
+                const SizedBox(height: 24),
+                _buildModernFunctionalAssessmentChart(patient, progress),
+                const SizedBox(height: 24),
+                _buildModernPainLocationsHistoryCard(patient),
+              ],
+              
               const SizedBox(height: 24),
               // Treatment timeline and goals features coming soon
               // _buildTreatmentTimelineCard(patient, progress),
@@ -2659,6 +2688,790 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
     );
   }
 
+  Widget _buildModernBodyMeasurementsChart(Patient patient, ProgressMetrics progress) {
+    return FutureBuilder<List<Session>>(
+      future: context.read<PatientProvider>().getPatientSessions(patient.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Get all sessions with body measurements
+        final allSessions = snapshot.data ?? [];
+        final sessions = allSessions.where((s) => 
+          s.waistMeasurement != null || s.hipMeasurement != null
+        ).toList();
+        
+        if (sessions.isEmpty) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              offset: const Offset(0, 2),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(
+            child: Column(
+              children: [
+                Icon(
+                  Icons.straighten,
+                  size: 48,
+                  color: AppTheme.secondaryColor,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'No body measurements available',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Prepare data points for waist and hip
+    final waistData = sessions.where((s) => s.waistMeasurement != null).map((s) {
+      return FlSpot(
+        sessions.indexOf(s).toDouble() + 1,
+        s.waistMeasurement!,
+      );
+    }).toList();
+    
+    final hipData = sessions.where((s) => s.hipMeasurement != null).map((s) {
+      return FlSpot(
+        sessions.indexOf(s).toDouble() + 1,
+        s.hipMeasurement!,
+      );
+    }).toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.straighten,
+                    color: AppTheme.primaryColor,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Body Measurements Progress',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              height: 300,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: AppTheme.borderColor.withOpacity(0.3),
+                        strokeWidth: 1,
+                      );
+                    },
+                  ),
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      axisNameWidget: const Padding(
+                        padding: EdgeInsets.only(bottom: 16, right: 12),
+                        child: Text(
+                          'cm',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.secondaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 60,
+                        getTitlesWidget: (value, meta) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Text(
+                              value.toInt().toString(),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.secondaryColor,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      axisNameWidget: const Padding(
+                        padding: EdgeInsets.only(top: 16),
+                        child: Text(
+                          'Session',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.secondaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                        getTitlesWidget: (value, meta) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              'S${value.toInt()}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.secondaryColor,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [
+                    if (waistData.isNotEmpty)
+                      LineChartBarData(
+                        spots: waistData,
+                        isCurved: true,
+                        color: AppTheme.primaryColor,
+                        barWidth: 3,
+                        dotData: const FlDotData(show: true),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: AppTheme.primaryColor.withOpacity(0.1),
+                        ),
+                      ),
+                    if (hipData.isNotEmpty)
+                      LineChartBarData(
+                        spots: hipData,
+                        isCurved: true,
+                        color: AppTheme.successColor,
+                        barWidth: 3,
+                        dotData: const FlDotData(show: true),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: AppTheme.successColor.withOpacity(0.1),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (waistData.isNotEmpty) ...[
+                  Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Waist', style: TextStyle(fontSize: 12)),
+                  const SizedBox(width: 24),
+                ],
+                if (hipData.isNotEmpty) ...[
+                  Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: AppTheme.successColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Hip', style: TextStyle(fontSize: 12)),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+      },
+    );
+  }
+
+  Widget _buildModernFunctionalAssessmentChart(Patient patient, ProgressMetrics progress) {
+    return FutureBuilder<List<Session>>(
+      future: context.read<PatientProvider>().getPatientSessions(patient.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Get all sessions with functional assessment scores
+        final allSessions = snapshot.data ?? [];
+        final sessions = allSessions.where((s) => 
+          s.functionalAssessmentScore != null
+        ).toList();
+        
+        if (sessions.isEmpty) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              offset: const Offset(0, 2),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(
+            child: Column(
+              children: [
+                Icon(
+                  Icons.accessibility_new,
+                  size: 48,
+                  color: AppTheme.secondaryColor,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'No functional assessment data available',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Prepare data points
+    final functionalData = sessions.map((s) {
+      return FlSpot(
+        sessions.indexOf(s).toDouble() + 1,
+        s.functionalAssessmentScore!.toDouble(),
+      );
+    }).toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.accessibility_new,
+                    color: AppTheme.successColor,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Functional Assessment Progress',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Higher scores indicate better functional ability',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.secondaryColor,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              height: 300,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: 2,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: AppTheme.borderColor.withOpacity(0.3),
+                        strokeWidth: 1,
+                      );
+                    },
+                  ),
+                  titlesData: FlTitlesData(
+                    leftTitles: AxisTitles(
+                      axisNameWidget: const Padding(
+                        padding: EdgeInsets.only(bottom: 16, right: 12),
+                        child: Text(
+                          'Score (0-10)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.secondaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 60,
+                        interval: 2,
+                        getTitlesWidget: (value, meta) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Text(
+                              value.toInt().toString(),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.secondaryColor,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      axisNameWidget: const Padding(
+                        padding: EdgeInsets.only(top: 16),
+                        child: Text(
+                          'Session',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.secondaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                        getTitlesWidget: (value, meta) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              'S${value.toInt()}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.secondaryColor,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  minY: 0,
+                  maxY: 10,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: functionalData,
+                      isCurved: true,
+                      color: AppTheme.successColor,
+                      barWidth: 3,
+                      dotData: const FlDotData(show: true),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: AppTheme.successColor.withOpacity(0.2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+      },
+    );
+  }
+
+  Widget _buildModernPainLocationsHistoryCard(Patient patient) {
+    return FutureBuilder<List<Session>>(
+      future: context.read<PatientProvider>().getPatientSessions(patient.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final allSessions = snapshot.data ?? [];
+        final sessionsWithPainLocations = allSessions.where((s) => 
+          s.painLocations != null && s.painLocations!.isNotEmpty
+        ).toList();
+        
+        if (sessionsWithPainLocations.isEmpty) {
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 48,
+                      color: AppTheme.secondaryColor,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'No pain location data available',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppTheme.secondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        // Collect all unique pain locations across all sessions
+        final Set<String> allPainLocations = {};
+        for (var session in sessionsWithPainLocations) {
+          allPainLocations.addAll(session.painLocations!);
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                offset: const Offset(0, 2),
+                blurRadius: 8,
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.location_on,
+                        color: AppTheme.errorColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Pain Location History',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tracking pain locations across ${sessionsWithPainLocations.length} sessions',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Display sessions in a scrollable list
+                ...sessionsWithPainLocations.map((session) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.backgroundColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.borderColor.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Session ${session.sessionNumber}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textColor,
+                              ),
+                            ),
+                            Text(
+                              DateFormat('MMM d, yyyy').format(session.date),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.secondaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: session.painLocations!.map((location) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.errorColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: AppTheme.errorColor.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                location,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.errorColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        if (session.painDescription != null && session.painDescription!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.notes,
+                                  size: 16,
+                                  color: AppTheme.secondaryColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    session.painDescription!,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.secondaryColor,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }).toList(),
+                
+                // Summary of most common pain locations
+                if (allPainLocations.length > 1) ...[
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'All Affected Areas',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: allPainLocations.map((location) {
+                      // Count how many sessions have this location
+                      final count = sessionsWithPainLocations.where(
+                        (s) => s.painLocations!.contains(location)
+                      ).length;
+                      
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppTheme.primaryColor.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              location,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '$count',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildProgressSummaryCard(Patient patient, ProgressMetrics progress) {
     final treatmentDays = DateTime.now().difference(patient.createdAt).inDays;
     final averageSessionsPerWeek = patient.sessions.isNotEmpty 
@@ -2753,15 +3566,41 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                   ),
                 ),
                 const SizedBox(width: 16),
-                Expanded(
-                  child: _buildProgressMetric(
-                    'Pain Reduction',
-                    '${progress.painReductionPercentage.toStringAsFixed(0)}%',
-                    'improvement',
-                    Icons.healing,
-                    AppTheme.errorColor,
+                // Treatment-specific metrics
+                if (patient.treatmentType == TreatmentType.wound)
+                  Expanded(
+                    child: _buildProgressMetric(
+                      'Pain Reduction',
+                      '${progress.painReductionPercentage.toStringAsFixed(0)}%',
+                      'improvement',
+                      Icons.healing,
+                      AppTheme.errorColor,
+                    ),
+                  )
+                else if (patient.treatmentType == TreatmentType.weight)
+                  Expanded(
+                    child: _buildProgressMetric(
+                      'Weight Change',
+                      patient.weightChange != null 
+                          ? '${patient.weightChange!.toStringAsFixed(1)} kg'
+                          : '0.0 kg',
+                      patient.weightChange != null && patient.weightChange! < 0 ? 'lost' : 'change',
+                      Icons.monitor_weight,
+                      patient.weightChange != null && patient.weightChange! < 0 
+                          ? AppTheme.successColor 
+                          : AppTheme.warningColor,
+                    ),
+                  )
+                else if (patient.treatmentType == TreatmentType.pain)
+                  Expanded(
+                    child: _buildProgressMetric(
+                      'Pain Reduction',
+                      '${progress.painReductionPercentage.toStringAsFixed(0)}%',
+                      'improvement',
+                      Icons.healing,
+                      AppTheme.errorColor,
+                    ),
                   ),
-                ),
               ],
             ),
             if (progress.improvementSummary.isNotEmpty) ...[
@@ -3334,7 +4173,14 @@ class _PatientProfileScreenState extends State<PatientProfileScreen>
                   const SizedBox(height: 32),
                   ElevatedButton.icon(
                     onPressed: () {
-                      context.push('/patients/${patient.id}/wound-selection?name=${Uri.encodeComponent(patient.fullNames + ' ' + patient.surname)}');
+                      // Route based on treatment type
+                      if (patient.treatmentType == TreatmentType.wound) {
+                        context.push('/patients/${patient.id}/wound-selection?name=${Uri.encodeComponent(patient.fullNames + ' ' + patient.surname)}');
+                      } else if (patient.treatmentType == TreatmentType.weight) {
+                        context.push('/patients/${patient.id}/weight-case-history');
+                      } else if (patient.treatmentType == TreatmentType.pain) {
+                        context.push('/patients/${patient.id}/pain-case-history');
+                      }
                     },
                     icon: const Icon(Icons.assignment_turned_in),
                     label: const Text('Complete Case History'),

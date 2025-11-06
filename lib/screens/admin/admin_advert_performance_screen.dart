@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../../providers/admin_provider.dart';
-import '../../providers/gohighlevel_provider.dart';
-import '../../theme/app_theme.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../widgets/admin/performance_cost_manager.dart';
 
+/// Legacy screen - redirects to new Overview page
+/// Kept for backward compatibility with existing routes
 class AdminAdvertPerformanceScreen extends StatefulWidget {
   const AdminAdvertPerformanceScreen({super.key});
 
@@ -15,6 +10,32 @@ class AdminAdvertPerformanceScreen extends StatefulWidget {
 }
 
 class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Redirect to new Overview page
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/admin/adverts/overview');
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Show loading indicator while redirecting
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      body: const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+}
+
+// Keep all the old code below for reference but commented out
+/*
+class _AdminAdvertPerformanceScreenStateOLD extends State<AdminAdvertPerformanceScreen> {
   String _selectedTimeframe = 'Last 30 Days';
   String _selectedCountry = 'All';
   String _selectedSalesAgent = 'All';
@@ -34,8 +55,8 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: Consumer2<AdminProvider, GoHighLevelProvider>(
-        builder: (context, adminProvider, ghlProvider, child) {
+      body: Consumer3<AdminProvider, GoHighLevelProvider, PerformanceCostProvider>(
+        builder: (context, adminProvider, ghlProvider, perfProvider, child) {
           if (adminProvider.isLoading || ghlProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -50,22 +71,35 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(ghlProvider),
-                const SizedBox(height: 24),
-                _buildFiltersSection(ghlProvider),
-                const SizedBox(height: 24),
-                // Performance Cost Manager - AT THE TOP
+                _buildHeader(ghlProvider, perfProvider),
+                const SizedBox(height: 32),
+                
+                // STANDALONE SUMMARY SECTION AT THE TOP
+                _buildStandaloneSummary(perfProvider, ghlProvider),
+                const SizedBox(height: 32),
+                
+                // Performance Cost Manager (Hierarchy View + Product Setup)
                 const PerformanceCostManager(),
                 const SizedBox(height: 24),
-                _buildCampaignPerformanceByStage(ghlProvider),
-                const SizedBox(height: 24),
+                
+                // COMMENTED OUT - Campaign Performance by Stage
+                // _buildCampaignPerformanceByStage(ghlProvider),
+                // const SizedBox(height: 24),
+                
+                // Performance Metrics (keeping the stats cards)
                 _buildPerformanceMetrics(),
-                const SizedBox(height: 24),
-                _buildSalesAgentChartsSection(ghlProvider),
-                const SizedBox(height: 24),
-                _buildSalesAgentMetrics(ghlProvider),
-                const SizedBox(height: 24),
-                _buildCampaignsList(),
+                
+                // REMOVED - Sales Agent Charts Section
+                // const SizedBox(height: 24),
+                // _buildSalesAgentChartsSection(ghlProvider),
+                
+                // REMOVED - Sales Agent Metrics Table
+                // const SizedBox(height: 24),
+                // _buildSalesAgentMetrics(ghlProvider),
+                
+                // REMOVED - Campaigns List (replaced by hierarchy)
+                // const SizedBox(height: 24),
+                // _buildCampaignsList(),
               ],
             ),
           );
@@ -74,7 +108,7 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
     );
   }
 
-  Widget _buildHeader(GoHighLevelProvider ghlProvider) {
+  Widget _buildHeader(GoHighLevelProvider ghlProvider, PerformanceCostProvider perfProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -124,12 +158,21 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                         ),
                       ),
                     const SizedBox(width: 8),
-                    // Manual sync button
+                    // Manual sync button - syncs BOTH Facebook and GHL
                     ElevatedButton.icon(
-                      onPressed: ghlProvider.isSyncing 
+                      onPressed: (ghlProvider.isSyncing || perfProvider.isFacebookDataLoading)
                           ? null 
-                          : () => ghlProvider.syncOpportunityHistory(),
-                      icon: ghlProvider.isSyncing
+                          : () async {
+                              // Sync Facebook data first
+                              await perfProvider.refreshFacebookData();
+                              // Then sync GHL data (which also triggers matching)
+                              await ghlProvider.syncOpportunityHistory();
+                              // Finally refresh the merged view
+                              if (context.mounted) {
+                                await perfProvider.mergeWithCumulativeData(ghlProvider);
+                              }
+                            },
+                      icon: (ghlProvider.isSyncing || perfProvider.isFacebookDataLoading)
                           ? const SizedBox(
                               width: 16,
                               height: 16,
@@ -139,7 +182,9 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
                               ),
                             )
                           : const Icon(Icons.sync, size: 18),
-                      label: Text(ghlProvider.isSyncing ? 'Syncing...' : 'Manual Sync'),
+                      label: Text((ghlProvider.isSyncing || perfProvider.isFacebookDataLoading) 
+                          ? 'Syncing...' 
+                          : 'Manual Sync'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.secondaryColor,
                         foregroundColor: Colors.white,
@@ -267,6 +312,40 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Build standalone summary section at the top
+  Widget _buildStandaloneSummary(
+    PerformanceCostProvider perfProvider,
+    GoHighLevelProvider ghlProvider,
+  ) {
+    // Get merged data
+    final allAds = perfProvider.getMergedData(ghlProvider);
+    
+    if (allAds.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: SummaryView(
+          ads: allAds,
+          provider: perfProvider,
         ),
       ),
     );
@@ -3006,3 +3085,4 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
   }
 
 }
+*/

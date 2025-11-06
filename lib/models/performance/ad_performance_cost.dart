@@ -232,12 +232,10 @@ class AdPerformanceCostWithMetrics {
   double get cpb => bookings > 0 ? effectiveSpend / bookings : 0;
   double get cpa => deposits > 0 ? effectiveSpend / deposits : 0;
   
-  double get productExpenseCost => linkedProduct?.expenseCost ?? 0;
-  double get productDepositAmount => linkedProduct?.depositAmount ?? 0;
-  
   double get actualProfit {
-    final depositRevenue = deposits * productDepositAmount;
-    return (cashDepositAmount + depositRevenue) - (effectiveSpend + productExpenseCost);
+    // Use real monetary values from GHL opportunities (cashDepositAmount = ghlStats.cashAmount)
+    // No product multipliers - cashAmount already contains actual opportunity values
+    return cashDepositAmount - effectiveSpend;
   }
 
   // Percentage calculations
@@ -258,7 +256,7 @@ class AdPerformanceCostWithMetrics {
   
   /// Profit margin percentage: profit as percentage of total investment
   double get profitMargin {
-    final totalInvestment = effectiveSpend + productExpenseCost;
+    final totalInvestment = effectiveSpend;
     return totalInvestment > 0 ? (actualProfit / totalInvestment) * 100 : 0;
   }
   

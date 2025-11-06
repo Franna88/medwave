@@ -1,0 +1,2172 @@
+{
+  "total_opportunities": 100,
+  "with_attribution": 79,
+  "with_facebook_match": 64,
+  "without_facebook_match": 15,
+  "matched_opportunities": [
+    {
+      "id": "lEGvlCN6ryTGtwjs1MDu",
+      "name": "Hanlie De Wet",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Hanlie de Wet",
+      "email": "hanliedewet23@gmail.com",
+      "phone": "+27662661244",
+      "created": "2025-11-01T09:59:00.139Z",
+      "attribution": {
+        "campaignName": "Obesity - Andries - DDM",
+        "campaignSource": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "campaignMedium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+        "adId": "120234435129760335",
+        "adName": "120234435129760335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234435129760335",
+        "ad_name": "Explainer (Afrikaans) - DDM",
+        "campaign_name": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "ad_set_name": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+        "spend": 1642.3,
+        "impressions": 246704,
+        "clicks": 11977
+      }
+    },
+    {
+      "id": "uafcgdkagKiigE1CwND8",
+      "name": "Anella Breytenbach",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Anella Breytenbach",
+      "email": "anellamb@gmail.com",
+      "phone": "+27623365402",
+      "created": "2025-11-01T07:48:53.248Z",
+      "attribution": {
+        "campaignName": "Obesity - Andries - DDM",
+        "campaignSource": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "campaignMedium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+        "adId": "120234435129760335",
+        "adName": "120234435129760335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234435129760335",
+        "ad_name": "Explainer (Afrikaans) - DDM",
+        "campaign_name": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "ad_set_name": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+        "spend": 1642.3,
+        "impressions": 246704,
+        "clicks": 11977
+      }
+    },
+    {
+      "id": "fh7BOwZSZhNkNr5zn9Jl",
+      "name": "Andre Botha",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Andre Botha",
+      "email": "dr.apbotha@gmail.com",
+      "phone": "+27795250826",
+      "created": "2025-10-27T10:57:54.928Z",
+      "attribution": {
+        "campaignName": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "campaignSource": "facebook",
+        "campaignMedium": "Interests - Healthcare and medical services (DDM)",
+        "adId": "120234497185550335",
+        "adName": "AI Proof - DDM",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234497185550335",
+        "ad_name": "AI Proof - DDM",
+        "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "ad_set_name": "Interests - Healthcare and medical services (DDM)",
+        "spend": 74.64,
+        "impressions": 6904,
+        "clicks": 203
+      }
+    },
+    {
+      "id": "8ELixdmGMncQXd3Tc8CA",
+      "name": "Anita Griesel",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Anita Griesel",
+      "email": "anitagriesel95@gmail.com",
+      "phone": "+27842529154",
+      "created": "2025-10-25T16:18:31.932Z",
+      "attribution": {
+        "campaignName": "Obesity - Andries - DDM",
+        "campaignSource": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "campaignMedium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+        "adId": "120234435129760335",
+        "adName": "120234435129760335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234435129760335",
+        "ad_name": "Explainer (Afrikaans) - DDM",
+        "campaign_name": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "ad_set_name": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+        "spend": 1642.3,
+        "impressions": 246704,
+        "clicks": 11977
+      }
+    },
+    {
+      "id": "C9B9qtWnVb5PVzhyUwBC",
+      "name": "Sophia Huyser",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Sophia Huyser",
+      "email": "huysersophia@gmail.com",
+      "phone": "+27790208003",
+      "created": "2025-10-24T06:31:26.409Z",
+      "attribution": {
+        "campaignName": "Obesity - Andries - DDM",
+        "campaignSource": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "campaignMedium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+        "adId": "120234435129760335",
+        "adName": "120234435129760335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234435129760335",
+        "ad_name": "Explainer (Afrikaans) - DDM",
+        "campaign_name": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "ad_set_name": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+        "spend": 1642.3,
+        "impressions": 246704,
+        "clicks": 11977
+      }
+    },
+    {
+      "id": "8nw1I6CZdaPYQBE5b0j1",
+      "name": "Nthabiseng Thulo",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Nthabiseng Thulo",
+      "email": "nthabi720509@gmail.com",
+      "phone": "+27716753999",
+      "created": "2025-10-21T21:48:07.385Z",
+      "attribution": {
+        "campaignName": "Obesity - Andries - DDM",
+        "campaignSource": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "campaignMedium": "Interests - Everything Doctor (DDM)",
+        "adId": "120234497314770335",
+        "adName": "120234497314770335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234497314770335",
+        "ad_name": "Obesity - Andries - DDM",
+        "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "ad_set_name": "Interests - Everything Doctor (DDM)",
+        "spend": 430.22,
+        "impressions": 62387,
+        "clicks": 2485
+      }
+    },
+    {
+      "id": "49yUFCvvWk0lPbVyucIh",
+      "name": "David Wesso",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "David Wesso",
+      "email": "david@kmfs.co.za",
+      "phone": "+27825577996",
+      "created": "2025-10-21T08:47:07.895Z",
+      "attribution": {
+        "campaignName": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Doctor",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | Doctor (DDM)",
+        "adId": "120234319405400335",
+        "adName": "Metabolic Weight Loss (2) | DDM",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234319405340335",
+        "ad_name": "Metabolic Weight Loss (2) | DDM",
+        "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Doctor",
+        "ad_set_name": "LLA 1% (ZA) | Doctor (DDM)",
+        "spend": 31.69,
+        "impressions": 4365,
+        "clicks": 113
+      }
+    },
+    {
+      "id": "vzeqwJS4PRbWoyYcJkF4",
+      "name": "Najma Khan",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Najma Khan",
+      "email": "najmakhan423@gmail.com",
+      "phone": "+27847675738",
+      "created": "2025-10-20T10:52:27.522Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | All Chiropractic (DDM)",
+        "adId": "GP - Swiss Army",
+        "adName": "GP - Swiss Army",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364929960335",
+        "ad_name": "GP - Swiss Army",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "ad_set_name": "LLA 4-6% (ZA) | All Chiropractic (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "jK83qjLkvwkiIueh5t74",
+      "name": "Janine Elaine Webb",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Janine Elaine Webb",
+      "email": "janinewebb1965@gmail.com",
+      "phone": "+27833470777",
+      "created": "2025-10-18T18:41:53.966Z",
+      "attribution": {
+        "campaignName": "COLIN LAGRANGE (DDM)",
+        "campaignSource": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "campaignMedium": "Interests - Healthcare and medical services (DDM)",
+        "adId": "120234497185560335",
+        "adName": "120234497185560335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234497185560335",
+        "ad_name": "COLIN LAGRANGE (DDM)",
+        "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "ad_set_name": "Interests - Healthcare and medical services (DDM)",
+        "spend": 146.56,
+        "impressions": 13529,
+        "clicks": 362
+      }
+    },
+    {
+      "id": "NA4NkrUkydgX29UdHhKR",
+      "name": "Mabore Germina Maponya",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Mabore Germina Maponya",
+      "email": "liveatyourpace@gmail.com",
+      "phone": "+27659878351",
+      "created": "2025-10-17T16:57:53.453Z",
+      "attribution": {
+        "campaignName": "Obesity - Andries - DDM",
+        "campaignSource": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "campaignMedium": "Interests - Everything Doctor (DDM)",
+        "adId": "120234497314770335",
+        "adName": "120234497314770335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234497314770335",
+        "ad_name": "Obesity - Andries - DDM",
+        "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "ad_set_name": "Interests - Everything Doctor (DDM)",
+        "spend": 430.22,
+        "impressions": 62387,
+        "clicks": 2485
+      }
+    },
+    {
+      "id": "N0O0bQE4oQtulFGcD1aC",
+      "name": "Carla Cronje",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Carla Cronje",
+      "email": "carla@thermalhealthcentrewc.com",
+      "phone": "+27794989023",
+      "created": "2025-10-17T13:56:30.586Z",
+      "attribution": {
+        "campaignName": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+        "adId": "120234435129760335",
+        "adName": "Obesity - Andries - DDM",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234435129760335",
+        "ad_name": "Explainer (Afrikaans) - DDM",
+        "campaign_name": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "ad_set_name": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+        "spend": 1642.3,
+        "impressions": 246704,
+        "clicks": 11977
+      }
+    },
+    {
+      "id": "qZ0Ct2WBBS9qYWHJFGTL",
+      "name": "Ingrid Bench",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Ingrid Bench",
+      "email": "ingbee.buzz@gmail.com",
+      "phone": "+27824665988",
+      "created": "2025-10-14T08:47:08.817Z",
+      "attribution": {
+        "campaignName": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - All Doctors",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 2-4% (ZA) | All Doctors (DDM)",
+        "adId": "120234319560010335",
+        "adName": "Metabolic Weight Loss (2) | DDM",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234319560010335",
+        "ad_name": "Metabolic Weight Loss (2) | DDM",
+        "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - All Doctors",
+        "ad_set_name": "LLA 2-4% (ZA) | All Doctors (DDM)",
+        "spend": 40.57,
+        "impressions": 5408,
+        "clicks": 162
+      }
+    },
+    {
+      "id": "kZEQoxDRjk7lFIppZBQM",
+      "name": "Karien Venter",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Karien Venter",
+      "email": "venterkarien@gmail.com",
+      "phone": "+27823365058",
+      "created": "2025-10-13T13:39:40.567Z",
+      "attribution": {
+        "campaignName": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > DB",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 2-4% (ZA) | HCP > DB (DDM)",
+        "adId": "120234167419910335",
+        "adName": "Patient Results (ZA)",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120234167419910335",
+        "ad_name": "Patient Results (ZA)",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > DB",
+        "ad_set_name": "LLA 2-4% (ZA) | HCP > DB (DDM)",
+        "spend": 35,
+        "impressions": 2541,
+        "clicks": 82
+      }
+    },
+    {
+      "id": "8dAWSIgs5yvB9PiNPn1P",
+      "name": "Linah Mogale",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Linah Mogale",
+      "email": "mogale.linah@gmail.com",
+      "phone": "+27614047623",
+      "created": "2025-10-10T08:19:10.390Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | All Chiropractic (DDM)",
+        "adId": "Weight-Loss HQ",
+        "adName": "Weight-Loss HQ",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364929900335",
+        "ad_name": "Weight-Loss HQ",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "ad_set_name": "LLA 1% (ZA) | All Chiropractic (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "T1QVLE18VVk2V9oXEWqp",
+      "name": "Tsuki Rametse",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Tsuki Rametse",
+      "email": "tsukimd@yahoo.com",
+      "phone": "+27725429104",
+      "created": "2025-10-09T09:04:01.444Z",
+      "attribution": {
+        "campaignName": "Matthys - 29082025 - ABOLEADFORM (DDM) - Nurse",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | Nurse (DDM)",
+        "adId": "120231848331100335",
+        "adName": "Nurse Campaigns",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120231848331100335",
+        "ad_name": "Nurse Campaigns",
+        "campaign_name": "Matthys - 29082025 - ABOLEADFORM (DDM) - Nurse",
+        "ad_set_name": "LLA 1% (ZA) | Nurse (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "EuEJWG03RSUOdLqEE8qY",
+      "name": "Musa Dube",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "musa dube",
+      "email": "musadubepwc@gmail.com",
+      "phone": "+27827213417",
+      "created": "2025-10-08T09:17:36.300Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | Chiro's over 30 (DDM)",
+        "adId": "120232878586170335",
+        "adName": "Health Providers",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232878547980335",
+        "ad_name": "Health Providers",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "ad_set_name": "LLA 1% (ZA) | Chiro's over 30 (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "p9caNNFqXgw9mbEh4lHd",
+      "name": "Joyce Cossa",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Joyce Cossa",
+      "email": "joyce.cossa@mediclinic.co.za",
+      "phone": "+27659414503",
+      "created": "2025-10-03T14:18:27.235Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - Nurses",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | Nurses (DDM)",
+        "adId": "120232978952890335",
+        "adName": "Nurses - Urgent Call",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232978952890335",
+        "ad_name": "Nurses - Urgent Call",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Nurses",
+        "ad_set_name": "LLA 1% (ZA) | Nurses (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "l2MnnKJhn8xaWjRSg6Cq",
+      "name": "Ayanda Mangcebetsha Pretorius",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Ayanda Mangcebetsha Pretorius",
+      "email": "ayandatn@gmail.com",
+      "phone": "+27721048820",
+      "created": "2025-10-03T11:01:56.957Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | Chiro's over 30 (DDM)",
+        "adId": "120232878615790335",
+        "adName": "GP & Nurses",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232878547930335",
+        "ad_name": "GP & Nurses",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "ad_set_name": "LLA 1% (ZA) | Chiro's over 30 (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "BQOTyupwHuCPQ3fvrOHy",
+      "name": "Elsabe Mocke",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Elsabe Mocke",
+      "email": "proteakliniek23@gmail.com",
+      "phone": "+27835578191",
+      "created": "2025-10-03T09:52:39.733Z",
+      "attribution": {
+        "campaignName": "GP - Swiss Army",
+        "campaignSource": "Matthys - 01082025 - ABOLANDER (DDM) - Medical Doctors",
+        "campaignMedium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "adId": "120230355249810335",
+        "adName": "120230355249810335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230355249810335",
+        "ad_name": "GP - Swiss Army",
+        "campaign_name": "Matthys - 01082025 - ABOLANDER (DDM) - Medical Doctors",
+        "ad_set_name": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "HzOiMMpALblrAEjIvyVZ",
+      "name": "Susana Serr\u00e3o Vlok",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Susana Serr\u00e3o Vlok",
+      "email": "suzyvlok@gmail.com",
+      "phone": "+27722047420",
+      "created": "2025-10-03T08:25:31.585Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "adId": "120230364307010335",
+        "adName": "GP - Swiss Army",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364306890335",
+        "ad_name": "GP - Swiss Army",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "ad_set_name": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "lTSIZJ7hgu5PoeybHPQC",
+      "name": "Nai'm Moola",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Nai'm Moola",
+      "email": "nmmoola@gmail.com",
+      "phone": "+27826125387",
+      "created": "2025-10-02T11:08:05.178Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 2-4% (ZA) | All Chiropractic (DDM)",
+        "adId": "120230364930090335",
+        "adName": "GP - Swiss Army",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364929960335",
+        "ad_name": "GP - Swiss Army",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "ad_set_name": "LLA 4-6% (ZA) | All Chiropractic (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "xqoaSXMVPxUHoajChE1l",
+      "name": "Ashley Marshall Bailey",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Ashley Marshall Bailey",
+      "email": "ambkrumpking@gmail.com",
+      "phone": "+27844401725",
+      "created": "2025-09-30T11:26:30.178Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | HCP Treating Weight Loss (DDM)",
+        "adId": "120232878045960335",
+        "adName": "Health Providers",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232877929090335",
+        "ad_name": "Health Providers",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "ad_set_name": "LLA 1% (ZA) | HCP Treating Weight Loss (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "AChDiFPZVhQ2mvwVnZVa",
+      "name": "Nicolas Havenga",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Nicolas Havenga",
+      "email": "nlhavenga@yahoo.com",
+      "phone": "+27736378529",
+      "created": "2025-09-30T08:27:24.119Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | Medical Doctor (DDM)",
+        "adId": "120232921650000335",
+        "adName": "Andries (Sun)",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232921412310335",
+        "ad_name": "Andries (Sun)",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "ad_set_name": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "LVmNkJOs6xIWNWvD3XEv",
+      "name": "Emerenzia Foster",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Emerenzia Foster",
+      "email": "frarris@gmail.com",
+      "phone": "+27847884459",
+      "created": "2025-09-29T13:56:57.210Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "adId": "120232921412310335",
+        "adName": "Andries (Sun)",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232921412310335",
+        "ad_name": "Andries (Sun)",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "ad_set_name": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "VY8idAi2KBHasLxqW9CA",
+      "name": "Nazeer Ebrahim",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Nazeer Ebrahim",
+      "email": "naebrahim@icloud.com",
+      "phone": "+27836106040",
+      "created": "2025-09-29T12:50:15.205Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | HCP Treating Weight Loss (DDM)",
+        "adId": "120232878045960335",
+        "adName": "Health Providers",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232877929090335",
+        "ad_name": "Health Providers",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "ad_set_name": "LLA 1% (ZA) | HCP Treating Weight Loss (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "3iiTz3OzoF1D4kWPYxxj",
+      "name": "Liane  Penny 082 739 0100",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Liane Penny",
+      "email": "lianepenny@gmail.com",
+      "phone": "+27827390100",
+      "created": "2025-09-29T11:21:29.087Z",
+      "attribution": {
+        "campaignName": "Dr. Loren Hilton (Testimonial ) - DDM",
+        "campaignSource": "Matthys - 23092025 - ABORETARGETING",
+        "campaignMedium": "Retargeting - ZA (DDM)",
+        "adId": "120233165222570335",
+        "adName": "120233165222570335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120233165222570335",
+        "ad_name": "Dr. Loren Hilton (Testimonial ) - DDM",
+        "campaign_name": "Matthys - 23092025 - ABORETARGETING",
+        "ad_set_name": "Retargeting - ZA (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "4sM0JkiLYDLK2QE12E2z",
+      "name": "Karen Hanekom",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Karen Hanekom",
+      "email": "roneva8444@ubxao.com",
+      "phone": "+27781352372",
+      "created": "2025-09-29T09:43:02.898Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | Medical Doctor (DDM)",
+        "adId": "120232921650000335",
+        "adName": "Andries (Sun)",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232921412310335",
+        "ad_name": "Andries (Sun)",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "ad_set_name": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "NObNpLx3LydadK5dp9mt",
+      "name": "Diane Brown",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Diane brown",
+      "email": "thedibrown@gmail.com",
+      "phone": "+27833772949",
+      "created": "2025-09-28T13:46:55.532Z",
+      "attribution": {
+        "campaignName": "Dr. Loren Hilton (Testimonial ) - DDM",
+        "campaignSource": "Matthys - 23092025 - ABORETARGETING",
+        "campaignMedium": "Retargeting - ZA (DDM)",
+        "adId": "120233165222570335",
+        "adName": "120233165222570335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120233165222570335",
+        "ad_name": "Dr. Loren Hilton (Testimonial ) - DDM",
+        "campaign_name": "Matthys - 23092025 - ABORETARGETING",
+        "ad_set_name": "Retargeting - ZA (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "mki1XpusWeqpMeK9HYeH",
+      "name": "Hanlie Vivier",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Hanlie Vivier",
+      "email": "hanlie@hve1.co.za",
+      "phone": "+27828747428",
+      "created": "2025-09-26T15:43:40.015Z",
+      "attribution": {
+        "campaignName": "1. MW - B2B - ZA - Aesthetic & Healthcare - 1% LAL $50 -> Andries Calendar",
+        "campaignSource": "facebook",
+        "campaignMedium": "Retargeting \u2013 New 3 creatives by the team",
+        "adId": "New Creative - Andries Form",
+        "adName": "New Creative - Andries Form",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120222249674970335",
+        "ad_name": "New Creative - Andries Form",
+        "campaign_name": "1. MW - B2B - ZA - Aesthetic & Healthcare - 1% LAL $50 -> Andries Calendar",
+        "ad_set_name": "Retargeting \u2013 New 3 creatives by the team",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "5bq4LCFYixMiTrvRLtYN",
+      "name": "Marcelle Herbst",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Marcelle Herbst",
+      "email": "mh@drmarcelle.co.za",
+      "phone": "+27826622457",
+      "created": "2025-09-26T12:00:33.107Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | HCP Treating Weight Loss (DDM)",
+        "adId": "120232921713710335",
+        "adName": "Andries (Sun)",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232921713580335",
+        "ad_name": "Andries (Sun)",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "ad_set_name": "LLA 1-2% (ZA) | HCP Treating Weight Loss (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "e0cUU06TvvpIR8Xwo5tc",
+      "name": "Isa Mini",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Isa Mini",
+      "email": "isacindymini@gmail.com",
+      "phone": "+27730632573",
+      "created": "2025-09-24T20:33:18.555Z",
+      "attribution": {
+        "campaignName": "Andries (Sun)",
+        "campaignSource": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "campaignMedium": "LLA 4-6% (ZA) | Medical Doctor (DDM)",
+        "adId": "120232921650000335",
+        "adName": "120232921650000335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232921650000335",
+        "ad_name": "Andries (Sun)",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "ad_set_name": "LLA 4-6% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "2tXN4yDIgX606o8gYQFo",
+      "name": "Seipati Nkuna",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Seipati Nkuna",
+      "email": "seipatinkuna@yahoo.com",
+      "phone": "+27681881495",
+      "created": "2025-09-24T18:34:41.423Z",
+      "attribution": {
+        "campaignName": "Nurses - Urgent Call",
+        "campaignSource": "Matthys - 17092025 - ABOLEADFORM (DDM) - Nurses",
+        "campaignMedium": "LLA 1-2% (ZA) | Nurses (DDM)",
+        "adId": "120232979771450335",
+        "adName": "120232979771450335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232979771450335",
+        "ad_name": "Nurses - Urgent Call",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Nurses",
+        "ad_set_name": "LLA 1-2% (ZA) | Nurses (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "Vez7HGHDMKTzIbotoa4v",
+      "name": "Faith Zaca",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Faith Zaca",
+      "email": "zacafd@gmail.com",
+      "phone": "+27721306214",
+      "created": "2025-09-24T10:32:44.052Z",
+      "attribution": {
+        "campaignName": "Testimonial - Margot de Kooker",
+        "campaignSource": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "campaignMedium": "LLA 4-6% (ZA) | Chiro's over 30 (DDM)",
+        "adId": "120232878615800335",
+        "adName": "120232878615800335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232878615800335",
+        "ad_name": "Testimonial - Margot de Kooker",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "ad_set_name": "LLA 4-6% (ZA) | Chiro's over 30 (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "TMXu2z8sYiAiMRplOG3T",
+      "name": "Sha Olivier",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Sharon Olivier",
+      "email": "shazaiden2@gmail.com",
+      "phone": "+27645217003",
+      "created": "2025-09-24T07:05:58.312Z",
+      "attribution": {
+        "campaignName": "Andries (Sun)",
+        "campaignSource": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "campaignMedium": "LLA 2-4% (ZA) | Medical Doctor (DDM)",
+        "adId": "120232921649870335",
+        "adName": "120232921649870335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232921649870335",
+        "ad_name": "Andries (Sun)",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "ad_set_name": "LLA 2-4% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "yYUD4GVsDopW8IDliwd4",
+      "name": "Dr Chuma Welhy",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Dr Chuma Welhy",
+      "email": "drmwchuma@gmail.com",
+      "phone": "+27658735571",
+      "created": "2025-09-23T13:17:22.752Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | Chiro's over 30 (DDM)",
+        "adId": "120232878615800335",
+        "adName": "Testimonial - Margot de Kooker",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232878548050335",
+        "ad_name": "Testimonial - Margot de Kooker",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "ad_set_name": "LLA 1% (ZA) | Chiro's over 30 (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "vCIjZLFKJRw5h58dtFiK",
+      "name": "Ilse Domingo",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Ilse Domingo",
+      "email": "docigd31@gmail.com",
+      "phone": "+27729148065",
+      "created": "2025-09-23T08:25:45.896Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Doctors - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | All Doctors (DDM)",
+        "adId": "120230363597710335",
+        "adName": "GP - Pain & Wounds",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230355930630335",
+        "ad_name": "GP - Pain & Wounds",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Doctors - Lead Ads",
+        "ad_set_name": "LLA 1% (ZA) | All Doctors (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "DHOoGnPYVeBsIoobQ117",
+      "name": "WAHEEDA RAHIM",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Waheeda RAHIM",
+      "email": "wrahim555@gmail.com",
+      "phone": "+27832743613",
+      "created": "2025-09-22T12:54:31.756Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Chronic Wounds",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | HCP Treating Chronic Wounds (DDM)",
+        "adId": "120232979822620335",
+        "adName": "Nurses - Urgent Call",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232979821800335",
+        "ad_name": "Nurses - Urgent Call",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Chronic Wounds",
+        "ad_set_name": "LLA 2-4% (ZA) | HCP Treating Chronic Wounds (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "e6mVeupPWKKPbCzxy5lz",
+      "name": "Heidi Opperman",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Heidi Opperman",
+      "email": "heidiopperman23@gmail.com",
+      "phone": "+27844086000",
+      "created": "2025-09-22T12:45:53.334Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | HCP Treating Weight Loss (DDM)",
+        "adId": "120232921713710335",
+        "adName": "Andries (Sun)",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232921713580335",
+        "ad_name": "Andries (Sun)",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "ad_set_name": "LLA 1-2% (ZA) | HCP Treating Weight Loss (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "dQKb1iCZLAF9huLXt90G",
+      "name": "Terry Hepburn",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Terry Hepburn",
+      "email": "teahepburn@gmail.com",
+      "phone": "+27742113334",
+      "created": "2025-09-22T09:51:41.389Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "adId": "120232921412310335",
+        "adName": "Andries (Sun)",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232921412310335",
+        "ad_name": "Andries (Sun)",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "ad_set_name": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "7FUET9cKQjiJRV8Lkmww",
+      "name": "Jeany Christos",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Jeany Christos",
+      "email": "skin@licurish.com",
+      "phone": "+27738138867",
+      "created": "2025-09-22T09:37:05.057Z",
+      "attribution": {
+        "campaignName": "Health Providers",
+        "campaignSource": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "campaignMedium": "LLA 2-4% (ZA) | Chiro's over 30 (DDM)",
+        "adId": "120232878606210335",
+        "adName": "120232878606210335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232878606210335",
+        "ad_name": "Health Providers",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "ad_set_name": "LLA 2-4% (ZA) | Chiro's over 30 (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "zgbAnLy9sc2RsUcCNvCa",
+      "name": "Kaylene Atcheson",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Kaylene Atcheson",
+      "email": "kaylenegierke@gmail.com",
+      "phone": "+27646520024",
+      "created": "2025-09-22T08:49:12.340Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Doctors - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | All Doctors (DDM)",
+        "adId": "Weight-Loss HQ",
+        "adName": "Weight-Loss HQ",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230360793740335",
+        "ad_name": "Weight-Loss HQ",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Doctors - Lead Ads",
+        "ad_set_name": "LLA 1% (ZA) | All Doctors (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "ADvw7WJFVU3TGmwo9GFs",
+      "name": "The Yoga Republic",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "The Yoga Republic",
+      "email": "claire@theyogarepublic.co.za",
+      "phone": "+27834614710",
+      "created": "2025-09-19T14:53:37.682Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | Chiro's over 30 (DDM)",
+        "adId": "120232878615810335",
+        "adName": "Health Providers",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232878547980335",
+        "ad_name": "Health Providers",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "ad_set_name": "LLA 1% (ZA) | Chiro's over 30 (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "ZQWjbGTjNqPEe3VjDGA9",
+      "name": "Lana Pieterse",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Lana Pieterse",
+      "email": "lanapieterse75@gmail.com",
+      "phone": "+27744155505",
+      "created": "2025-09-19T12:40:40.639Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | All Chiropractic (DDM)",
+        "adId": "GP - Pain & Wounds",
+        "adName": "GP - Pain & Wounds",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364929930335",
+        "ad_name": "GP - Pain & Wounds",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "ad_set_name": "LLA 1-2% (ZA) | All Chiropractic (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "uTiHGoSlDIwJLf1iQDsv",
+      "name": "Steve Uria",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Steve Uria",
+      "email": "steveuria@me.com",
+      "phone": "+27760355551",
+      "created": "2025-09-19T09:08:33.287Z",
+      "attribution": {
+        "campaignName": "Matthys - 10092025 - ABOLEADFORM (DDM) - Varied",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+        "adId": "120232542234770335",
+        "adName": "Margo Testimonial - DDM Form",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232541670790335",
+        "ad_name": "Margo Testimonial - DDM Form",
+        "campaign_name": "Matthys - 10092025 - ABOLEADFORM (DDM) - Varied",
+        "ad_set_name": "Interests - Doctors and Physical Therapist",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "MHm5ljRMpGy1Ao1q49aU",
+      "name": "Etienne Bruwer",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Etienne Bruwer",
+      "email": "ebruwer27@gmail.com",
+      "phone": "+27637217033",
+      "created": "2025-09-19T08:41:19.542Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | Chiro's over 30 (DDM)",
+        "adId": "120232878586170335",
+        "adName": "Health Providers",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232878547980335",
+        "ad_name": "Health Providers",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+        "ad_set_name": "LLA 1% (ZA) | Chiro's over 30 (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "HQp6uAbao04Mt8gC1Cev",
+      "name": "Hijama Islamic Health Centre Sandton",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Hijama Islamic Health Centre Sandton",
+      "email": "rayuys14@gmail.com",
+      "phone": "+27662217934",
+      "created": "2025-09-19T08:11:46.910Z",
+      "attribution": {
+        "campaignName": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+        "adId": "120232921649880335",
+        "adName": "Andries (Sun)",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232921412310335",
+        "ad_name": "Andries (Sun)",
+        "campaign_name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+        "ad_set_name": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "gj9lX2EQFt3wnEqMN8KV",
+      "name": "Marlida Ferreira",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Marlida Ferreira",
+      "email": "mzmarlida@gmail.com",
+      "phone": "+27824669496",
+      "created": "2025-09-18T08:39:49.534Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "adId": "120230364307010335",
+        "adName": "GP - Swiss Army",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364306890335",
+        "ad_name": "GP - Swiss Army",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "ad_set_name": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "meSU9yT860x56Wa4cfkx",
+      "name": "Kashemera Devraj",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Kashemera Devraj",
+      "email": "dkashemera@gmail.com",
+      "phone": "+27785130023",
+      "created": "2025-09-17T13:52:03.910Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 2-4% (ZA) | Medical Doctor (DDM)",
+        "adId": "120230364306960335",
+        "adName": "Weight-Loss Demo",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364306910335",
+        "ad_name": "Weight-Loss Demo",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "ad_set_name": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "TqdBdFITYDcGWtuhCM3i",
+      "name": "Natalie Goncalves",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Natalie Goncalves",
+      "email": "natz0912@hotmail.com",
+      "phone": "+27721986308",
+      "created": "2025-09-17T08:24:52.840Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "adId": "120230364307010335",
+        "adName": "GP - Swiss Army",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364306890335",
+        "ad_name": "GP - Swiss Army",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "ad_set_name": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "qcK8EnfLs9cNgKyu7qXj",
+      "name": "Siboleke Sphamandla Mbaswana",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Siboleke Sphamandla Mbaswana",
+      "email": "sibolekembaswana@gmail.com",
+      "phone": "+27729490461",
+      "created": "2025-09-17T08:12:27.226Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 2-4% (ZA) | Medical Doctor (DDM)",
+        "adId": "120230364306950335",
+        "adName": "GP - Swiss Army",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364306890335",
+        "ad_name": "GP - Swiss Army",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "ad_set_name": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "5JPmkYVFJnXCjmM2MMFr",
+      "name": "Khumo Merafe",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Khumo Merafe",
+      "email": "khumomerafe@gmail.com",
+      "phone": "+27820840185",
+      "created": "2025-09-16T14:18:20.256Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Doctors - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | All Doctors (DDM)",
+        "adId": "120230363597700335",
+        "adName": "GP - Swiss Army",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230360359820335",
+        "ad_name": "GP - Swiss Army",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Doctors - Lead Ads",
+        "ad_set_name": "LLA 1% (ZA) | All Doctors (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "5TqfVj8kkAsLqTyIZvll",
+      "name": "Thys Swart",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Thys Swart",
+      "email": "thysswart@tiscali.co.za",
+      "phone": "+27836292266",
+      "created": "2025-09-16T13:59:09.877Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | All Chiropractic (DDM)",
+        "adId": "GP - Swiss Army",
+        "adName": "GP - Swiss Army",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364929960335",
+        "ad_name": "GP - Swiss Army",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "ad_set_name": "LLA 4-6% (ZA) | All Chiropractic (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "VCFr2f4jvyHBFvFwXqwD",
+      "name": "Akhona Felani",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Akhona Felani",
+      "email": "akhonaf2@gmail.com",
+      "phone": "+27786174671",
+      "created": "2025-09-16T11:41:55.171Z",
+      "attribution": {
+        "campaignName": "Matthys - 29082025 - ABOLEADFORM (DDM) - Nurse",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 2-4% (ZA) | Nurse (DDM)",
+        "adId": "120231849432520335",
+        "adName": "Nurse Campaigns",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120231848331100335",
+        "ad_name": "Nurse Campaigns",
+        "campaign_name": "Matthys - 29082025 - ABOLEADFORM (DDM) - Nurse",
+        "ad_set_name": "LLA 1% (ZA) | Nurse (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "KDeeSPN6A9pydhJZagjU",
+      "name": "Adele Jackel Barnard Barnard",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Adele Jackel Barnard Barnard",
+      "email": "leon@dbmarchitects.net",
+      "phone": "+27828935965",
+      "created": "2025-09-16T08:24:23.189Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | All Chiropractic (DDM)",
+        "adId": "120230364930070335",
+        "adName": "GP - Swiss Army",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364929960335",
+        "ad_name": "GP - Swiss Army",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "ad_set_name": "LLA 4-6% (ZA) | All Chiropractic (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "gdEdyL6lgV6lpMzuRZWG",
+      "name": "Audrey Jansen Van Vuuren",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Audrey Jansen van Vuuren",
+      "email": "draudrey@thehomeopath.co.za",
+      "phone": "+27663554032",
+      "created": "2025-09-16T07:42:12.433Z",
+      "attribution": {
+        "campaignName": "Matthys - 10092025 - ABOLEADFORM (DDM) - Varied",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 2-4% (ZA) | Chiro (DDM)",
+        "adId": "120232543360200335",
+        "adName": "Margo Testimonial - DDM Form",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232541670790335",
+        "ad_name": "Margo Testimonial - DDM Form",
+        "campaign_name": "Matthys - 10092025 - ABOLEADFORM (DDM) - Varied",
+        "ad_set_name": "Interests - Doctors and Physical Therapist",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "0d9H3iR2O1NxTvi6qPOo",
+      "name": "Anne-Marie Rossouw",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Anne-Marie Rossouw",
+      "email": "amnitosso@yahoo.com.au",
+      "phone": "+27724038208",
+      "created": "2025-09-14T05:11:09.981Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | All Chiropractic (DDM)",
+        "adId": "120230364929970335",
+        "adName": "GP - Swiss Army",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364929960335",
+        "ad_name": "GP - Swiss Army",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "ad_set_name": "LLA 4-6% (ZA) | All Chiropractic (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "X2kP7ibQIVtBSS8XmsvB",
+      "name": "Ndandu Kwinda",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Ndandu Kwinda",
+      "email": "n.dandu@hotmail.com",
+      "phone": "+27727974639",
+      "created": "2025-09-12T11:42:13.701Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+        "adId": "120230364307040335",
+        "adName": "Weight-Loss Demo",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364306910335",
+        "ad_name": "Weight-Loss Demo",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "ad_set_name": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "cFn3vsUcEVPC9RR7KSj8",
+      "name": "Dr. Angel NBA Madlala",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Dr. Angel NBA Madlala",
+      "email": "amthalane@icloud.com",
+      "phone": "+27838956967",
+      "created": "2025-09-12T11:09:54.950Z",
+      "attribution": {
+        "campaignName": "Matthys - 29082025 - ABOLEADFORM (DDM) - Nurse",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 2-4% (ZA) | Nurse (DDM)",
+        "adId": "120231849432520335",
+        "adName": "Nurse Campaigns",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120231848331100335",
+        "ad_name": "Nurse Campaigns",
+        "campaign_name": "Matthys - 29082025 - ABOLEADFORM (DDM) - Nurse",
+        "ad_set_name": "LLA 1% (ZA) | Nurse (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "TBUsEDQU70PCNqPFFLqw",
+      "name": "Nom Lerumo",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Nom Lerumo",
+      "email": "nomthandazolerumo@gmail.com",
+      "phone": "+27829920330",
+      "created": "2025-09-12T10:06:59.902Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | Medical Doctor (DDM)",
+        "adId": "120230364306940335",
+        "adName": "Weight-Loss Demo",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364306910335",
+        "ad_name": "Weight-Loss Demo",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "ad_set_name": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "LzhXBRa1enxG7rqkbR7l",
+      "name": "Alex Bartholomew",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Alex Bartholomew",
+      "email": "administrator@venividivici.global",
+      "phone": "+27832501082",
+      "created": "2025-09-12T08:57:55.174Z",
+      "attribution": {
+        "campaignName": "Matthys - 10092025 - ABOLEADFORM (DDM) - Varied",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | All Doctors (DDM)",
+        "adId": "120232542151110335",
+        "adName": "Margo Testimonial - DDM Form",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232541670790335",
+        "ad_name": "Margo Testimonial - DDM Form",
+        "campaign_name": "Matthys - 10092025 - ABOLEADFORM (DDM) - Varied",
+        "ad_set_name": "Interests - Doctors and Physical Therapist",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "RfXDBkFkqkghdvQc5aXJ",
+      "name": "Madeleen Van Niekerk",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Madeleen Van Niekerk",
+      "email": "madeleen1968@gmail.com",
+      "phone": "+27827461185",
+      "created": "2025-09-12T07:50:37.742Z",
+      "attribution": {
+        "campaignName": "Matthys - 23062025 - ABOLEADFORMZA (DDM) - / 17072025 [Nurse] Davide Wounds DDM - Audiences",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | Nurse \u2013 DD",
+        "adId": "Treating Diabetes | Davide",
+        "adName": "Treating Diabetes | Davide",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120229210068900335",
+        "ad_name": "Treating Diabetes | Davide",
+        "campaign_name": "Matthys - 23062025 - ABOLEADFORMZA (DDM) - / 17072025 [Nurse] Davide Wounds DDM - Audiences",
+        "ad_set_name": "LLA 4-6% (ZA) | Nurse \u2013 DD",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "1YOo9z2oWxUsvZkCgsu3",
+      "name": "Hlehle Mangaliso",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Hlehle Mangaliso",
+      "email": "nshlmangaliso@yahoo.com",
+      "phone": "+27732057444",
+      "created": "2025-09-12T07:16:01.712Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 4-6% (ZA) | Medical Doctor (DDM)",
+        "adId": "120230364306940335",
+        "adName": "Weight-Loss Demo",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230364306910335",
+        "ad_name": "Weight-Loss Demo",
+        "campaign_name": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+        "ad_set_name": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "eq7oKj24DT1FQxcCIKbY",
+      "name": "Beury Kinsey",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Beury Kinsey",
+      "email": "kinseybeuron2@gmail.com",
+      "phone": "+27713452991",
+      "created": "2025-09-11T08:48:34.703Z",
+      "attribution": {
+        "campaignName": "Matthys - 10092025 - ABOLEADFORM (DDM) - Varied",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1% (ZA) | Nurse (DDM)",
+        "adId": "120232542284230335",
+        "adName": "Margo Testimonial - DDM Form",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120232541670790335",
+        "ad_name": "Margo Testimonial - DDM Form",
+        "campaign_name": "Matthys - 10092025 - ABOLEADFORM (DDM) - Varied",
+        "ad_set_name": "Interests - Doctors and Physical Therapist",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    },
+    {
+      "id": "7tXz3q47qcovKWj0N0hV",
+      "name": "Ilze Santos 082 776 1449",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Ilze Santos",
+      "email": "info@nushape.co.za",
+      "phone": "+27827761449",
+      "created": "2025-09-10T17:39:03.314Z",
+      "attribution": {
+        "campaignName": "Wound Care | DDM",
+        "campaignSource": "Matthys - 06082025 ABOLEAD [Wounds] (DDM) - Lander",
+        "campaignMedium": "PNP Contact List [Custom Audience] (DDM)",
+        "adId": "120230603049970335",
+        "adName": "120230603049970335",
+        "adSetName": ""
+      },
+      "matched_facebook_ad": {
+        "ad_id": "120230603049970335",
+        "ad_name": "Wound Care | DDM",
+        "campaign_name": "Matthys - 06082025 ABOLANDER [Wounds] (DDM) - Lead Ads",
+        "ad_set_name": "PNP Contact List [Custom Audience] (DDM)",
+        "spend": 0,
+        "impressions": 0,
+        "clicks": 0
+      }
+    }
+  ],
+  "unmatched_opportunities": [
+    {
+      "id": "fgmPDevWF3K1xCIFh5yY",
+      "name": "Aysha Sarkhot",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Aysha Sarkhot",
+      "email": "sarkhot2rawat@gmail.com",
+      "phone": "+27837866176",
+      "created": "2025-11-04T11:22:04.326Z",
+      "attribution": {
+        "campaignName": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "campaignSource": "facebook",
+        "campaignMedium": "Interests - General Hospital (DDM)",
+        "adId": "",
+        "adName": "",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "DvOFyEARXsgBKBsbG63G",
+      "name": "Pritesh Modi",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Pritesh Modi",
+      "email": "info.drmodi@gmail.com",
+      "phone": "+278476767557",
+      "created": "2025-11-02T10:07:05.065Z",
+      "attribution": {
+        "campaignName": "MedWave Image Ads",
+        "campaignSource": "Matthys - 13102025 - ABOLANDER - Varied",
+        "campaignMedium": "LLA 1% (ZA) | Grouped",
+        "adId": "120234319885440335",
+        "adName": "120234319885440335",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "KDxdx338vflZwlcEhA2p",
+      "name": "Dr. Marita Boshoff",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Dr. Marita Boshoff",
+      "email": "dr.boshoffm@gmail.com",
+      "phone": "+27837420492",
+      "created": "2025-10-31T08:15:47.191Z",
+      "attribution": {
+        "campaignName": "MedWave Image Ads",
+        "campaignSource": "Matthys - 13102025 - ABOLANDER - Varied",
+        "campaignMedium": "LLA 1% (ZA) | Grouped",
+        "adId": "120234319885450335",
+        "adName": "120234319885450335",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "eiCuo8OexQbhQJpO9hka",
+      "name": "Nafeesa Bhamjee",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Nafeesa Bhamjee",
+      "email": "naf.seedat@gmail.com",
+      "phone": "+27767124881",
+      "created": "2025-10-24T13:52:46.087Z",
+      "attribution": {
+        "campaignName": "MedWave Image Ads",
+        "campaignSource": "Matthys - 13102025 - ABOLANDER - Varied",
+        "campaignMedium": "LLA 1% (ZA) | Grouped",
+        "adId": "120234319885440335",
+        "adName": "120234319885440335",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "983WCIssvUje4eaWRnup",
+      "name": "Ann-Riley Kotze",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Ann-Riley Kotze",
+      "email": "bluann007@gmail.com",
+      "phone": "+27824601764",
+      "created": "2025-10-19T10:53:11.922Z",
+      "attribution": {
+        "campaignName": "Obesity - DDM",
+        "campaignSource": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "campaignMedium": "Interests - Business (DDM)",
+        "adId": "120234497980390335",
+        "adName": "120234497980390335",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "kmKVSSaHb5HvHIvOWdJS",
+      "name": "Jenny Alves",
+      "value": 150000.0,
+      "stage": "Unknown",
+      "contact": "Jenny Alves",
+      "email": "j.alves@absamail.co.za",
+      "phone": "+27837707232",
+      "created": "2025-10-09T13:01:54.116Z",
+      "attribution": {
+        "campaignName": "MedWave South Africa (B2B) - Davide - Retargeting 18 Feb 2025",
+        "campaignSource": "facebook",
+        "campaignMedium": "Retargeting \u2013 New Dwayne Creative",
+        "adId": "New Creative - Andries Form",
+        "adName": "New Creative - Andries Form",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "CN4PAH3RXcXdvQhbgxhr",
+      "name": "Katalina Dorward",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Katalina Dorward",
+      "email": "info@junipergreen.co.za",
+      "phone": "+27820511213",
+      "created": "2025-10-09T10:41:36.106Z",
+      "attribution": {
+        "campaignName": "MedWave Image Ads",
+        "campaignSource": "Matthys - 17092025 - ABOLANDER - Varied",
+        "campaignMedium": "LLA 1% (ZA) | Grouped",
+        "adId": "120232883487010335",
+        "adName": "120232883487010335",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "THIAah3WSFCkfuXssTZh",
+      "name": "Rapi Tadi",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Rapi Tadi",
+      "email": "tetechnologi@gmail.com",
+      "phone": "+27828588347",
+      "created": "2025-10-08T14:38:58.269Z",
+      "attribution": {
+        "campaignName": "MedWave South Africa (B2B) - Davide - ?el=davide_za",
+        "campaignSource": "facebook",
+        "campaignMedium": "Retargeting \u2013 New Davide Ad - AdCopy 2",
+        "adId": "New Creative - Davide Form",
+        "adName": "New Creative - Davide Form",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "go5zalldwIt1kh2ttNhi",
+      "name": "Simone Hewetson",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Simone Hewetson",
+      "email": "simonehewetson@me.com",
+      "phone": "+27825535570",
+      "created": "2025-10-03T13:23:31.543Z",
+      "attribution": {
+        "campaignName": "MedWave Image Ads",
+        "campaignSource": "Matthys - 17092025 - ABOLANDER - Varied",
+        "campaignMedium": "LLA 1% (ZA) | Grouped",
+        "adId": "120232883487010335",
+        "adName": "120232883487010335",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "GcUDwkbQQyVvcfs5Z6FA",
+      "name": "Jacqueline  Du Toit ",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Jacqueline Du Toit",
+      "email": "zinniagracewellnesscenter@gmail.com",
+      "phone": "+27686367229",
+      "created": "2025-09-25T12:04:57.938Z",
+      "attribution": {
+        "campaignName": "MedWave Image Ads",
+        "campaignSource": "Matthys - 17092025 - ABOLANDER - Varied",
+        "campaignMedium": "LLA 1% (ZA) | Grouped",
+        "adId": "120232883487010335",
+        "adName": "120232883487010335",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "XluUR14RStve0OLuIGSo",
+      "name": "Ilara Vorster",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Ilara Vorster",
+      "email": "helloskinfluence@gmail.com",
+      "phone": "+27726910225",
+      "created": "2025-09-23T14:35:06.970Z",
+      "attribution": {
+        "campaignName": "MedWave Image Ads",
+        "campaignSource": "Matthys - 17092025 - ABOLANDER - Varied",
+        "campaignMedium": "LLA 1% (ZA) | Grouped",
+        "adId": "120232883487010335",
+        "adName": "120232883487010335",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "GYSt9O0dfnmepmQsWeIN",
+      "name": "Lindiwe Ntlatleng",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Lindiwe Ntlatleng",
+      "email": "leemohube@gmail.com",
+      "phone": "+27835628049",
+      "created": "2025-09-22T15:49:26.948Z",
+      "attribution": {
+        "campaignName": "Nurses - Urgent Call",
+        "campaignSource": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Chronic Wounds",
+        "campaignMedium": "LLA 4-6% (ZA) | HCP Treating Chronic Wounds (DDM)",
+        "adId": "120232979893970335",
+        "adName": "120232979893970335",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "lgTYsus8uSA0ExkeVdjB",
+      "name": "Nazira Cassim",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Nazira Cassim",
+      "email": "naziracassim1@gmail.com",
+      "phone": "+27828873061",
+      "created": "2025-09-19T10:11:11.519Z",
+      "attribution": {
+        "campaignName": "MedWave Image Ads",
+        "campaignSource": "Matthys - 17092025 - ABOLANDER - Varied",
+        "campaignMedium": "LLA 1% (ZA) | Grouped",
+        "adId": "120232883484430335",
+        "adName": "120232883484430335",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "A9XIKa6GjOf9oNZ5Rsk9",
+      "name": "Strini Naidoo",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "Strini Naidoo",
+      "email": "strininaidoo108@gmail.com",
+      "phone": "+27833909616",
+      "created": "2025-09-15T08:46:33.501Z",
+      "attribution": {
+        "campaignName": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+        "campaignSource": "facebook",
+        "campaignMedium": "LLA 1-2% (ZA) | All Chiropractic (DDM)",
+        "adId": "",
+        "adName": "",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    },
+    {
+      "id": "EOnvSY6qX8xtj094cLaW",
+      "name": "Bibi Aysha Bhabha",
+      "value": 0.0,
+      "stage": "Unknown",
+      "contact": "bibi aysha bhabha",
+      "email": "drbabhabha@gmail.com",
+      "phone": "+27828234364",
+      "created": "2025-09-11T07:14:22.388Z",
+      "attribution": {
+        "campaignName": "Margo Testimonial - DDM Form",
+        "campaignSource": "Matthys - 10092025 - ABOLEADFORM (DDM) - Varied",
+        "campaignMedium": "LLA 4-6% (ZA) | Nurse (DDM)",
+        "adId": "120232544491980335",
+        "adName": "120232544491980335",
+        "adSetName": ""
+      },
+      "match_failure_reason": "No Facebook ad found matching campaign and ad name"
+    }
+  ],
+  "no_attribution": [
+    {
+      "id": "pI0NOGrz4b7vsbwm0f1B",
+      "name": "Kobus Theron",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": null
+    },
+    {
+      "id": "gorsSpa36y9H4eD1rHOU",
+      "name": "Lynita Greyling",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": null
+    },
+    {
+      "id": "YjlnZvURD92b0u2aDAHp",
+      "name": "Elemer Veres",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Erich Pipeline -DDM"
+    },
+    {
+      "id": "ugjUsQdOpNRfMDiaRQar",
+      "name": "Dominique Vogel",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Facebook"
+    },
+    {
+      "id": "MPzvPADXWQeVadypEmnt",
+      "name": "Rouve Van Gend",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Facebook"
+    },
+    {
+      "id": "pyCHSDyFFYKtQGvce8TG",
+      "name": "Pregasen Moodley",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Facebook"
+    },
+    {
+      "id": "Zymb7mSMzjjFie7ReiL4",
+      "name": "Vera Retief",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": null
+    },
+    {
+      "id": "oqRnfK6BwKluYg4mrsaa",
+      "name": "Johan Goosen",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": null
+    },
+    {
+      "id": "pEfP4xTdqVdui7PIFWGa",
+      "name": "Rajendra Gumil",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Erich Pipeline -DDM"
+    },
+    {
+      "id": "Xm93Y1gz3lAnSAQ1Wp61",
+      "name": "Faye Marg",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Erich Pipeline -DDM"
+    },
+    {
+      "id": "k47UgOqSabRZmj9R6Rdj",
+      "name": "Tanya Odendaal",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Erich Pipeline -DDM"
+    },
+    {
+      "id": "AFlJizhec8GLKs4uiFSr",
+      "name": "Michelle Brits",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "test form"
+    },
+    {
+      "id": "36YxrmWMl23ewIbVD7iN",
+      "name": "Aayesha Kholvadia",
+      "value": 220000.0,
+      "stage": "Unknown",
+      "source": "Calendly"
+    },
+    {
+      "id": "T8MIlt3sNIuNMV8cxtZQ",
+      "name": "Adelle And Jan Botes",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Karin - Pipeline - DDM"
+    },
+    {
+      "id": "r92DWOVOdmoHHdlcsHSc",
+      "name": "Ntimbo  Mgqweto ",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Erich Pipeline -DDM"
+    },
+    {
+      "id": "txi1HtPSRSD5VGoAslsY",
+      "name": "Francois Coetzee",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Erich Pipeline -DDM"
+    },
+    {
+      "id": "VkDNQ5zDNv5QFUqX4ZNF",
+      "name": "Laura Muffy Emanuel",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Karin - Pipeline - DDM"
+    },
+    {
+      "id": "LB9puAPNVB0crdu4P2SB",
+      "name": "Sandra Trethewey ",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Erich Pipeline -DDM"
+    },
+    {
+      "id": "7AgQ302VRVAQV339XxpI",
+      "name": "Elaine Barnard",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": null
+    },
+    {
+      "id": "yJb6wV0Hv3TbLZl7gdjq",
+      "name": "Bronwyn Rutherfoord",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": "Discovery Call With MedWave\u2122"
+    },
+    {
+      "id": "FpC06XpdpWsWVBapYzBJ",
+      "name": "Adi-Marie Schoeman",
+      "value": 0.0,
+      "stage": "Unknown",
+      "source": null
+    }
+  ]
+}

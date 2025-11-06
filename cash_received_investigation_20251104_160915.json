@@ -1,0 +1,1048 @@
+{
+  "timestamp": "2025-11-04T16:09:15.443527",
+  "analysis": {
+    "total_opportunities": 112,
+    "cash_received_count": 0,
+    "cash_received_opps": [],
+    "total_cash_value": 0
+  },
+  "issues": {
+    "missing_source": [
+      {
+        "id": "JDynGtHVkkKWH4XuJ5NF",
+        "name": "Andries Maritz"
+      },
+      {
+        "id": "URCIEwK4zsRPl5v9felL",
+        "name": "Elemer Veres"
+      },
+      {
+        "id": "5gi2md9WBxQHfyClsnc4",
+        "name": "Dr Ndabazihle NF"
+      }
+    ],
+    "missing_monetary_value": [
+      {
+        "id": "4g872u959y6AdCzkLKX8",
+        "name": "Andile Nsele"
+      },
+      {
+        "id": "M06ufZ01V6RiVxoe8kWp",
+        "name": "Csilla-Joe Young"
+      },
+      {
+        "id": "OyaYWXJVd2TYonq4KYuc",
+        "name": "Samkelo Canon Khumalo"
+      },
+      {
+        "id": "S9d3d9FFRAOycQJyXbgs",
+        "name": "Gerald Fourie"
+      },
+      {
+        "id": "AJMEqo394QLxwnt1e82l",
+        "name": "Arinda Botha"
+      },
+      {
+        "id": "rAHhAaI7nC5syqdy1opi",
+        "name": "Pinkie Mhlungu"
+      },
+      {
+        "id": "23htbYpsTuFmLzEELANb",
+        "name": "Bronwyn Cele"
+      },
+      {
+        "id": "pFdHCmf9joF39AHEtoan",
+        "name": "Annie Fourie"
+      },
+      {
+        "id": "4xlSbZIzBSjza1anWiww",
+        "name": "Xolani Mhlongo"
+      },
+      {
+        "id": "w7ksmwbkhsb8cBsT02y0",
+        "name": "Erika Byleveld"
+      },
+      {
+        "id": "27WqRm3fZjIZqsBRVi2W",
+        "name": "Greshan Padiachy"
+      },
+      {
+        "id": "O1ITWJSUrYvuM8TtcyJx",
+        "name": "MoniqueVLBez Bezuidenhout"
+      },
+      {
+        "id": "EObFWPgNgHwovBirhcWu",
+        "name": "Almari Marais"
+      },
+      {
+        "id": "PDSoUkFaCI1QFfgtRYAQ",
+        "name": "Belinda Werner"
+      },
+      {
+        "id": "hBRRCe7htgtDJxEXkW9Z",
+        "name": "Gretha Bester"
+      },
+      {
+        "id": "qkyp1oo2vXALBdgxXzF5",
+        "name": "Cheryl-Ann Smith"
+      },
+      {
+        "id": "tLmHUuswhFWk92o4S7ou",
+        "name": "Morena July"
+      },
+      {
+        "id": "rW0Yt8MYuDfVEwXPxtC3",
+        "name": "Bev Gradidge"
+      },
+      {
+        "id": "VcL04pr3kTiI4soh7bzM",
+        "name": "Rachel Retief"
+      },
+      {
+        "id": "UCqwwfaT71TkUhIPePjN",
+        "name": "Johannamarie Beyers"
+      },
+      {
+        "id": "9pSST9D8T9sXbc0UE3TE",
+        "name": "Gloria La-Phinah"
+      },
+      {
+        "id": "REBzinFH6z0MzwhjmyoU",
+        "name": "Sydney Hall"
+      },
+      {
+        "id": "i2ssfzzhrkWtusAwvLfd",
+        "name": "Angelique Maree"
+      },
+      {
+        "id": "iFUvmAZBT8OxM4gHQ4IH",
+        "name": "Christine Truter"
+      },
+      {
+        "id": "rFMGczVTvV2T7bt0VFic",
+        "name": "Daniela Dos Santos"
+      },
+      {
+        "id": "xOSMoSkhq6rqzNWiChKf",
+        "name": "Beverly Hauptfleisch"
+      },
+      {
+        "id": "6PGPtCWIPG96tjyshcJq",
+        "name": "Tracey Stewart\u2019"
+      },
+      {
+        "id": "s0N8j0yMhMomAEcz80Rc",
+        "name": "Danielle Du Toit"
+      },
+      {
+        "id": "jjfVj6x6vdiHvyJXcnI3",
+        "name": "Fiona Francis"
+      },
+      {
+        "id": "Os8o9eiW5rJnMaZT5ohC",
+        "name": "Kotie Ackermann"
+      },
+      {
+        "id": "WZFM4blZ9yrHVPqGbkEk",
+        "name": "Yades Calivitis"
+      },
+      {
+        "id": "nqYsPTwdVwS8DuC4IM5p",
+        "name": "Christine Du Preez"
+      },
+      {
+        "id": "v67id1lKbJxL7EnzlYPz",
+        "name": "HAWA Safla"
+      },
+      {
+        "id": "1m8s9xIFaPtG2SSO5Oqp",
+        "name": "Khanyisile Mthombeni"
+      },
+      {
+        "id": "EsTK4zjQSU8kkKyiUxsA",
+        "name": "Retha Du Toit "
+      },
+      {
+        "id": "OMZjOjmy2iIu584paGc9",
+        "name": "Rosemary Modiba"
+      },
+      {
+        "id": "znCqsTfqnfub6JbuEZcT",
+        "name": "Safiyya Bhyat"
+      },
+      {
+        "id": "BTndijYGyQwNmV5MUUpx",
+        "name": "Inni Ismail"
+      },
+      {
+        "id": "g0baYDRIRzQ6TnWNedE5",
+        "name": "Ramola Ganasen"
+      },
+      {
+        "id": "GvUrrzJQQ0485C4vWeUg",
+        "name": "Jack Jack"
+      },
+      {
+        "id": "VuKg1WZ0RN6r6Gq9eSdU",
+        "name": "Tandeka  Jack"
+      },
+      {
+        "id": "vcZsbs6wCstNhQgkFPj7",
+        "name": "Sashni Ramjee"
+      },
+      {
+        "id": "G13h4B0I0w4YBAWfyyLH",
+        "name": "Mohamed Patel"
+      },
+      {
+        "id": "bSFcFDgoJiBdnPfNyGNY",
+        "name": "Ethon Meyer"
+      },
+      {
+        "id": "8mVPUTaIxaDbDEqB2Xns",
+        "name": "Tasleen Dawood"
+      },
+      {
+        "id": "sB94FxGg9CVwIB5gKSEw",
+        "name": "Mmapula Monkwe"
+      },
+      {
+        "id": "tq1rzWkgZ3DhufRKyRfi",
+        "name": "Lizelle  Bresler"
+      },
+      {
+        "id": "KoYbrYDv1MjREdo3T1FA",
+        "name": "Cecilia Kruger"
+      },
+      {
+        "id": "y0EF4l4LovI4v4f1sMhG",
+        "name": "NADIA HARRIS"
+      },
+      {
+        "id": "PsFj2rxxZmIxh1YE8CSi",
+        "name": "Jolene Govender"
+      },
+      {
+        "id": "JDynGtHVkkKWH4XuJ5NF",
+        "name": "Andries Maritz"
+      },
+      {
+        "id": "URCIEwK4zsRPl5v9felL",
+        "name": "Elemer Veres"
+      },
+      {
+        "id": "cmvBmHElHI01EbkI9mwl",
+        "name": "Beverley Fortuin"
+      },
+      {
+        "id": "8LHXweaMI48FSE4FNRpt",
+        "name": "Natasha Maharaj"
+      },
+      {
+        "id": "qOKfAwCOC9cQTnfEauzq",
+        "name": "Brendan Siphiwe Mthembu"
+      },
+      {
+        "id": "IBm0V4s3GF6L6oyfmiQp",
+        "name": "Ian Noel Human"
+      },
+      {
+        "id": "eyZmTKE343JdfjQfrvLN",
+        "name": "Nomsa Khumalo"
+      },
+      {
+        "id": "0Thid6kgZ87cr5oiAsJD",
+        "name": "Fran Hamilton"
+      },
+      {
+        "id": "uaPVLjPSmG5trms3mgml",
+        "name": "Nielette Smith"
+      },
+      {
+        "id": "aMrc6dbsb1qwWRnvMEQh",
+        "name": "Savingstone-Abongile Maliwa"
+      },
+      {
+        "id": "D2HBqsjtg3BLYSI3jO7g",
+        "name": "Terri Pickels"
+      },
+      {
+        "id": "bXlhmQinabM2W9GGEQp4",
+        "name": "Janine Taljaard"
+      },
+      {
+        "id": "Uev1QzEFlcRdosB50CcS",
+        "name": "Pen Jaquet"
+      },
+      {
+        "id": "yruaku0qkjoQXZrC6A6S",
+        "name": "Chantell Du Plessis"
+      },
+      {
+        "id": "EwZZRjnsYTVBror6Q9Sx",
+        "name": "Amanda Van Loggerenberg"
+      },
+      {
+        "id": "qRNw8DrBwKf6JsjasNxJ",
+        "name": "Dr Diago Dr Diago"
+      },
+      {
+        "id": "BAWeXG907KYmBWmrIenb",
+        "name": "Ewalda Kr\u00fcger (Lenting)"
+      },
+      {
+        "id": "XKBDbOiEKYh2xXqAOpWR",
+        "name": "Willie Fourie"
+      },
+      {
+        "id": "tBhp6kwAndBZLTPA72Lp",
+        "name": "Nota Paraskevopoulos"
+      },
+      {
+        "id": "knUlPRrDNJPkcVnxe0Rq",
+        "name": "Jennifer Zeelie"
+      },
+      {
+        "id": "10fkrX2fy3zPRiPBPXgn",
+        "name": "Sibusiso Zono"
+      },
+      {
+        "id": "rLJ7hMIZoUImDyqxuB7J",
+        "name": "Natasha Jeen A Spilg"
+      },
+      {
+        "id": "5gi2md9WBxQHfyClsnc4",
+        "name": "Dr Ndabazihle NF"
+      },
+      {
+        "id": "f4ZIc3MwXO2I97MfjQdu",
+        "name": "Adri Kotze"
+      },
+      {
+        "id": "DRu98r89061eiuGOurNp",
+        "name": "Sashnie Naicker"
+      },
+      {
+        "id": "HxCV41LzrMHsQ81HLtjR",
+        "name": "Moschini Moodliar"
+      },
+      {
+        "id": "JszAypfAWGg3iOtwJten",
+        "name": "Putswana Senoamadi"
+      },
+      {
+        "id": "g6oUzUYWr5j3PNOaiE43",
+        "name": "Lorina Prato"
+      },
+      {
+        "id": "UnszEsitbNy82iXCUtN1",
+        "name": "Joanna Evans"
+      },
+      {
+        "id": "qf13DCuOPuskRbosusMj",
+        "name": "Charlene Campher"
+      },
+      {
+        "id": "akMxGXJxGvdeA83zUylI",
+        "name": "Ida Du Plessis-Faurie Plessis-Faurie"
+      },
+      {
+        "id": "XkTUOy50I0iL4esUD2g8",
+        "name": "Miriam Suleman - SHIFA -Healing The Natural Suleman"
+      },
+      {
+        "id": "JLPnbAJ0RzXOrmisnHqI",
+        "name": "Xolani Zwane"
+      },
+      {
+        "id": "AVaGj7DAnveTzEd4Blj1",
+        "name": "Tebogo Molefe"
+      },
+      {
+        "id": "cLyqcsdwcZ9wSjZ0jbCz",
+        "name": "Jennifer Jooste"
+      },
+      {
+        "id": "ohAWVeqTksCHVlgInjQw",
+        "name": "Liezel Rothmann"
+      },
+      {
+        "id": "smOQILSvrTXqo0uIAVdk",
+        "name": "Annel Swart"
+      },
+      {
+        "id": "pAQP1bblkHfgkBOApOdI",
+        "name": "Esme Van Tonder"
+      },
+      {
+        "id": "CTC62nhqMEGDrr0JdH69",
+        "name": "Tristan F\u00fclscher"
+      },
+      {
+        "id": "53qRG98yn1KTKxfuwbMD",
+        "name": "Fatima Essa Ismail"
+      },
+      {
+        "id": "of10wMD86hnLMBCrUc6V",
+        "name": "Susan Di Ciccio"
+      },
+      {
+        "id": "2GHh9LDBGCTvd2BMEjsW",
+        "name": "Hettie Human"
+      },
+      {
+        "id": "W6g7sC3pG3wqPq5dBr4e",
+        "name": "Johan Hansson"
+      },
+      {
+        "id": "l2vRono9kBkbtdf5FfeP",
+        "name": "Rahima Grant"
+      },
+      {
+        "id": "jap0LqKBFKcQEB9LQ55W",
+        "name": "Magda Bester"
+      },
+      {
+        "id": "3BlC2yKlEqMjCKPtNG2W",
+        "name": "Kearn De Waal"
+      },
+      {
+        "id": "x8krdiJFNiemjSTJtHC6",
+        "name": "Hamida Gabru"
+      },
+      {
+        "id": "razab0Qn3rEbwQJO327S",
+        "name": "Sue Williams"
+      },
+      {
+        "id": "tZ7XR1zIljzaBtNyRbj8",
+        "name": "Ronald Anderson"
+      },
+      {
+        "id": "J8Iy3gNmqbK2eJZKsGJF",
+        "name": "Ronel Fransman"
+      },
+      {
+        "id": "YEuNzB3xz5ZQjUBEmtK5",
+        "name": "Carina Brits"
+      },
+      {
+        "id": "tF3t1an1rPlm3DXlL2sW",
+        "name": "Eloize Mellet"
+      },
+      {
+        "id": "k3e62ovo3gzlZyIoMagW",
+        "name": "Jeanne-Mich\u00e9le White"
+      },
+      {
+        "id": "u5pFDa5YBD9ohN8hkr2R",
+        "name": "Shannon Nel"
+      },
+      {
+        "id": "yq8YXnMv2ev5rlT6kkly",
+        "name": "David Verster"
+      },
+      {
+        "id": "mdlU43tux1EtqFbwEr0s",
+        "name": "Fairooz Kana"
+      },
+      {
+        "id": "ETh4fu5EftYClM4DJ7Nk",
+        "name": "Gerda Adendorff"
+      },
+      {
+        "id": "2nSQAlBCpUB0H658yr2c",
+        "name": "Lerato Luv-Luv Mabe"
+      },
+      {
+        "id": "4LsTZelByRbEMZjV9Beq",
+        "name": "Remuna Brooker"
+      },
+      {
+        "id": "OO5WL4Ca4p0g71gnXIk6",
+        "name": "Hanri Lochner"
+      },
+      {
+        "id": "Hpv2czguhah8yd2w5cA9",
+        "name": "Dorothy Kroh"
+      },
+      {
+        "id": "EqDC6xRQBVzpO3XRAZnV",
+        "name": "Kirsten Morse Physiotherapist"
+      }
+    ],
+    "no_campaign_identifier": [
+      {
+        "id": "4g872u959y6AdCzkLKX8",
+        "name": "Andile Nsele",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "M06ufZ01V6RiVxoe8kWp",
+        "name": "Csilla-Joe Young",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "OyaYWXJVd2TYonq4KYuc",
+        "name": "Samkelo Canon Khumalo",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "S9d3d9FFRAOycQJyXbgs",
+        "name": "Gerald Fourie",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "AJMEqo394QLxwnt1e82l",
+        "name": "Arinda Botha",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "rAHhAaI7nC5syqdy1opi",
+        "name": "Pinkie Mhlungu",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "23htbYpsTuFmLzEELANb",
+        "name": "Bronwyn Cele",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "pFdHCmf9joF39AHEtoan",
+        "name": "Annie Fourie",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "4xlSbZIzBSjza1anWiww",
+        "name": "Xolani Mhlongo",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "w7ksmwbkhsb8cBsT02y0",
+        "name": "Erika Byleveld",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "27WqRm3fZjIZqsBRVi2W",
+        "name": "Greshan Padiachy",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "O1ITWJSUrYvuM8TtcyJx",
+        "name": "MoniqueVLBez Bezuidenhout",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "EObFWPgNgHwovBirhcWu",
+        "name": "Almari Marais",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "PDSoUkFaCI1QFfgtRYAQ",
+        "name": "Belinda Werner",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "hBRRCe7htgtDJxEXkW9Z",
+        "name": "Gretha Bester",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "qkyp1oo2vXALBdgxXzF5",
+        "name": "Cheryl-Ann Smith",
+        "source": "Facebook"
+      },
+      {
+        "id": "tLmHUuswhFWk92o4S7ou",
+        "name": "Morena July",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "rW0Yt8MYuDfVEwXPxtC3",
+        "name": "Bev Gradidge",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "VcL04pr3kTiI4soh7bzM",
+        "name": "Rachel Retief",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "UCqwwfaT71TkUhIPePjN",
+        "name": "Johannamarie Beyers",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "9pSST9D8T9sXbc0UE3TE",
+        "name": "Gloria La-Phinah",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "REBzinFH6z0MzwhjmyoU",
+        "name": "Sydney Hall",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "i2ssfzzhrkWtusAwvLfd",
+        "name": "Angelique Maree",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "iFUvmAZBT8OxM4gHQ4IH",
+        "name": "Christine Truter",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "rFMGczVTvV2T7bt0VFic",
+        "name": "Daniela Dos Santos",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "xOSMoSkhq6rqzNWiChKf",
+        "name": "Beverly Hauptfleisch",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "6PGPtCWIPG96tjyshcJq",
+        "name": "Tracey Stewart\u2019",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "s0N8j0yMhMomAEcz80Rc",
+        "name": "Danielle Du Toit",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "jjfVj6x6vdiHvyJXcnI3",
+        "name": "Fiona Francis",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "Os8o9eiW5rJnMaZT5ohC",
+        "name": "Kotie Ackermann",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "WZFM4blZ9yrHVPqGbkEk",
+        "name": "Yades Calivitis",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "nqYsPTwdVwS8DuC4IM5p",
+        "name": "Christine Du Preez",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "v67id1lKbJxL7EnzlYPz",
+        "name": "HAWA Safla",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "1m8s9xIFaPtG2SSO5Oqp",
+        "name": "Khanyisile Mthombeni",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "EsTK4zjQSU8kkKyiUxsA",
+        "name": "Retha Du Toit ",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "OMZjOjmy2iIu584paGc9",
+        "name": "Rosemary Modiba",
+        "source": "None"
+      },
+      {
+        "id": "znCqsTfqnfub6JbuEZcT",
+        "name": "Safiyya Bhyat",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "BTndijYGyQwNmV5MUUpx",
+        "name": "Inni Ismail",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "g0baYDRIRzQ6TnWNedE5",
+        "name": "Ramola Ganasen",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "GvUrrzJQQ0485C4vWeUg",
+        "name": "Jack Jack",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "VuKg1WZ0RN6r6Gq9eSdU",
+        "name": "Tandeka  Jack",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "vcZsbs6wCstNhQgkFPj7",
+        "name": "Sashni Ramjee",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "G13h4B0I0w4YBAWfyyLH",
+        "name": "Mohamed Patel",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "bSFcFDgoJiBdnPfNyGNY",
+        "name": "Ethon Meyer",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "8mVPUTaIxaDbDEqB2Xns",
+        "name": "Tasleen Dawood",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "sB94FxGg9CVwIB5gKSEw",
+        "name": "Mmapula Monkwe",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "tq1rzWkgZ3DhufRKyRfi",
+        "name": "Lizelle  Bresler",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "KoYbrYDv1MjREdo3T1FA",
+        "name": "Cecilia Kruger",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "y0EF4l4LovI4v4f1sMhG",
+        "name": "NADIA HARRIS",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "PsFj2rxxZmIxh1YE8CSi",
+        "name": "Jolene Govender",
+        "source": "Facebook"
+      },
+      {
+        "id": "JDynGtHVkkKWH4XuJ5NF",
+        "name": "Andries Maritz",
+        "source": null
+      },
+      {
+        "id": "URCIEwK4zsRPl5v9felL",
+        "name": "Elemer Veres",
+        "source": null
+      },
+      {
+        "id": "cmvBmHElHI01EbkI9mwl",
+        "name": "Beverley Fortuin",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "8LHXweaMI48FSE4FNRpt",
+        "name": "Natasha Maharaj",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "qOKfAwCOC9cQTnfEauzq",
+        "name": "Brendan Siphiwe Mthembu",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "IBm0V4s3GF6L6oyfmiQp",
+        "name": "Ian Noel Human",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "eyZmTKE343JdfjQfrvLN",
+        "name": "Nomsa Khumalo",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "0Thid6kgZ87cr5oiAsJD",
+        "name": "Fran Hamilton",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "uaPVLjPSmG5trms3mgml",
+        "name": "Nielette Smith",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "aMrc6dbsb1qwWRnvMEQh",
+        "name": "Savingstone-Abongile Maliwa",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "D2HBqsjtg3BLYSI3jO7g",
+        "name": "Terri Pickels",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "bXlhmQinabM2W9GGEQp4",
+        "name": "Janine Taljaard",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "Uev1QzEFlcRdosB50CcS",
+        "name": "Pen Jaquet",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "yruaku0qkjoQXZrC6A6S",
+        "name": "Chantell Du Plessis",
+        "source": "Facebook"
+      },
+      {
+        "id": "EwZZRjnsYTVBror6Q9Sx",
+        "name": "Amanda Van Loggerenberg",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "qRNw8DrBwKf6JsjasNxJ",
+        "name": "Dr Diago Dr Diago",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "BAWeXG907KYmBWmrIenb",
+        "name": "Ewalda Kr\u00fcger (Lenting)",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "XKBDbOiEKYh2xXqAOpWR",
+        "name": "Willie Fourie",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "tBhp6kwAndBZLTPA72Lp",
+        "name": "Nota Paraskevopoulos",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "knUlPRrDNJPkcVnxe0Rq",
+        "name": "Jennifer Zeelie",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "10fkrX2fy3zPRiPBPXgn",
+        "name": "Sibusiso Zono",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "rLJ7hMIZoUImDyqxuB7J",
+        "name": "Natasha Jeen A Spilg",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "5gi2md9WBxQHfyClsnc4",
+        "name": "Dr Ndabazihle NF",
+        "source": null
+      },
+      {
+        "id": "f4ZIc3MwXO2I97MfjQdu",
+        "name": "Adri Kotze",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "DRu98r89061eiuGOurNp",
+        "name": "Sashnie Naicker",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "HxCV41LzrMHsQ81HLtjR",
+        "name": "Moschini Moodliar",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "JszAypfAWGg3iOtwJten",
+        "name": "Putswana Senoamadi",
+        "source": "Facebook"
+      },
+      {
+        "id": "g6oUzUYWr5j3PNOaiE43",
+        "name": "Lorina Prato",
+        "source": "Facebook"
+      },
+      {
+        "id": "UnszEsitbNy82iXCUtN1",
+        "name": "Joanna Evans",
+        "source": "Facebook"
+      },
+      {
+        "id": "qf13DCuOPuskRbosusMj",
+        "name": "Charlene Campher",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "akMxGXJxGvdeA83zUylI",
+        "name": "Ida Du Plessis-Faurie Plessis-Faurie",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "XkTUOy50I0iL4esUD2g8",
+        "name": "Miriam Suleman - SHIFA -Healing The Natural Suleman",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "JLPnbAJ0RzXOrmisnHqI",
+        "name": "Xolani Zwane",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "AVaGj7DAnveTzEd4Blj1",
+        "name": "Tebogo Molefe",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "cLyqcsdwcZ9wSjZ0jbCz",
+        "name": "Jennifer Jooste",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "ohAWVeqTksCHVlgInjQw",
+        "name": "Liezel Rothmann",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "smOQILSvrTXqo0uIAVdk",
+        "name": "Annel Swart",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "pAQP1bblkHfgkBOApOdI",
+        "name": "Esme Van Tonder",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "CTC62nhqMEGDrr0JdH69",
+        "name": "Tristan F\u00fclscher",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "53qRG98yn1KTKxfuwbMD",
+        "name": "Fatima Essa Ismail",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "of10wMD86hnLMBCrUc6V",
+        "name": "Susan Di Ciccio",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "2GHh9LDBGCTvd2BMEjsW",
+        "name": "Hettie Human",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "W6g7sC3pG3wqPq5dBr4e",
+        "name": "Johan Hansson",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "l2vRono9kBkbtdf5FfeP",
+        "name": "Rahima Grant",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "jap0LqKBFKcQEB9LQ55W",
+        "name": "Magda Bester",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "3BlC2yKlEqMjCKPtNG2W",
+        "name": "Kearn De Waal",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "x8krdiJFNiemjSTJtHC6",
+        "name": "Hamida Gabru",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "razab0Qn3rEbwQJO327S",
+        "name": "Sue Williams",
+        "source": "Facebook"
+      },
+      {
+        "id": "tZ7XR1zIljzaBtNyRbj8",
+        "name": "Ronald Anderson",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "J8Iy3gNmqbK2eJZKsGJF",
+        "name": "Ronel Fransman",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "YEuNzB3xz5ZQjUBEmtK5",
+        "name": "Carina Brits",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "tF3t1an1rPlm3DXlL2sW",
+        "name": "Eloize Mellet",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "k3e62ovo3gzlZyIoMagW",
+        "name": "Jeanne-Mich\u00e9le White",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "u5pFDa5YBD9ohN8hkr2R",
+        "name": "Shannon Nel",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "yq8YXnMv2ev5rlT6kkly",
+        "name": "David Verster",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "mdlU43tux1EtqFbwEr0s",
+        "name": "Fairooz Kana",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "ETh4fu5EftYClM4DJ7Nk",
+        "name": "Gerda Adendorff",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "2nSQAlBCpUB0H658yr2c",
+        "name": "Lerato Luv-Luv Mabe",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "4LsTZelByRbEMZjV9Beq",
+        "name": "Remuna Brooker",
+        "source": "Karin - Pipeline - DDM"
+      },
+      {
+        "id": "OO5WL4Ca4p0g71gnXIk6",
+        "name": "Hanri Lochner",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "Hpv2czguhah8yd2w5cA9",
+        "name": "Dorothy Kroh",
+        "source": "Erich Pipeline -DDM"
+      },
+      {
+        "id": "EqDC6xRQBVzpO3XRAZnV",
+        "name": "Kirsten Morse Physiotherapist",
+        "source": "Erich Pipeline -DDM"
+      }
+    ],
+    "inactive_status": [
+      {
+        "id": "yq8YXnMv2ev5rlT6kkly",
+        "name": "David Verster",
+        "status": "lost"
+      }
+    ]
+  },
+  "pipeline": {
+    "id": "XeAGJWRnUGJ5tuhXam2g",
+    "name": "Andries Pipeline - DDM"
+  }
+}

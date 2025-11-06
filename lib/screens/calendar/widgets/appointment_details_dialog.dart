@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../models/appointment.dart';
 import '../../../providers/patient_provider.dart';
+import '../../../providers/user_profile_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../services/paystack_service.dart';
+import '../../payments/payment_qr_dialog.dart';
 import 'complete_appointment_dialog.dart';
 
 class AppointmentDetailsDialog extends StatelessWidget {
@@ -436,6 +439,45 @@ class AppointmentDetailsDialog extends StatelessWidget {
                   // Secondary actions
                   Row(
                     children: [
+                      // Show Payment QR button (if session fees enabled)
+                      Consumer<UserProfileProvider>(
+                        builder: (context, userProfileProvider, _) {
+                          final settings = userProfileProvider.appSettings;
+                          if (settings.sessionFeeEnabled && 
+                              (appointment.status == AppointmentStatus.scheduled ||
+                               appointment.status == AppointmentStatus.confirmed ||
+                               appointment.status == AppointmentStatus.inProgress)) {
+                            return Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _showPaymentQR(context),
+                                icon: const Icon(Icons.qr_code_2, size: 18),
+                                label: const Text('Payment QR'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.successColor,
+                                  side: const BorderSide(color: AppTheme.successColor, width: 1.5),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                      Consumer<UserProfileProvider>(
+                        builder: (context, userProfileProvider, _) {
+                          final settings = userProfileProvider.appSettings;
+                          if (settings.sessionFeeEnabled && 
+                              (appointment.status == AppointmentStatus.scheduled ||
+                               appointment.status == AppointmentStatus.confirmed ||
+                               appointment.status == AppointmentStatus.inProgress)) {
+                            return const SizedBox(width: 12);
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () => _updateStatus(context, AppointmentStatus.rescheduled),
@@ -652,6 +694,77 @@ class AppointmentDetailsDialog extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _showPaymentQR(BuildContext context) async {
+    try {
+      // Check if payment already exists for this appointment
+      final paystackService = PaystackService();
+      final existingPayment = await paystackService.getPaymentByAppointment(appointment.id);
+      
+      if (existingPayment != null && existingPayment.isCompleted) {
+        // Payment already completed
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payment already completed for this appointment'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+        return;
+      }
+
+      // Get user settings for session fee
+      final userProfileProvider = context.read<UserProfileProvider>();
+      final settings = userProfileProvider.appSettings;
+      
+      if (!settings.sessionFeeEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Session fees are not enabled'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        return;
+      }
+
+      // Get patient to retrieve email
+      final patientProvider = context.read<PatientProvider>();
+      final patient = patientProvider.patients.firstWhere(
+        (p) => p.id == appointment.patientId,
+        orElse: () => throw Exception('Patient not found'),
+      );
+
+      // Show payment QR dialog
+      final result = await Navigator.of(context).push(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (context) => PaymentQRDialog(
+            appointment: appointment,
+            amount: settings.defaultSessionFee,
+            patientEmail: patient.email,
+          ),
+        ),
+      );
+
+      // If payment was completed, show success message
+      if (result != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payment completed successfully'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    }
   }
 
   void _editAppointment(BuildContext context) {

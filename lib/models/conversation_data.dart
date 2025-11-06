@@ -34,6 +34,7 @@ enum ConversationStep {
   greeting,
   practitionerName,
   practitionerDetails,
+  // Wound-specific steps
   woundHistoryAndType,
   woundOccurrence, 
   comorbidities,
@@ -44,6 +45,17 @@ enum ConversationStep {
   currentTreatment,
   treatmentDates,
   additionalNotes,
+  // Weight management specific steps
+  weightHistoryAndGoals,
+  metabolicAssessment,
+  dietaryAndExerciseAssessment,
+  weightTreatmentPlan,
+  // Pain management specific steps
+  painHistoryAndType,
+  painLocationAndIntensity,
+  painMedicationAndTreatments,
+  functionalImpactAssessment,
+  painTreatmentPlan,
   completed,
 }
 
@@ -56,6 +68,7 @@ extension ConversationStepExtension on ConversationStep {
         return 'Practitioner Name';
       case ConversationStep.practitionerDetails:
         return 'Practitioner Details';
+      // Wound-specific steps
       case ConversationStep.woundHistoryAndType:
         return 'Wound History & Type';
       case ConversationStep.woundOccurrence:
@@ -76,6 +89,26 @@ extension ConversationStepExtension on ConversationStep {
         return 'Treatment Dates';
       case ConversationStep.additionalNotes:
         return 'Additional Information';
+      // Weight management steps
+      case ConversationStep.weightHistoryAndGoals:
+        return 'Weight History & Goals';
+      case ConversationStep.metabolicAssessment:
+        return 'Metabolic Assessment';
+      case ConversationStep.dietaryAndExerciseAssessment:
+        return 'Dietary & Exercise Assessment';
+      case ConversationStep.weightTreatmentPlan:
+        return 'Weight Treatment Plan';
+      // Pain management steps
+      case ConversationStep.painHistoryAndType:
+        return 'Pain History & Type';
+      case ConversationStep.painLocationAndIntensity:
+        return 'Pain Location & Intensity';
+      case ConversationStep.painMedicationAndTreatments:
+        return 'Pain Medication & Treatments';
+      case ConversationStep.functionalImpactAssessment:
+        return 'Functional Impact Assessment';
+      case ConversationStep.painTreatmentPlan:
+        return 'Pain Treatment Plan';
       case ConversationStep.completed:
         return 'Report Generation';
     }
@@ -109,6 +142,23 @@ class ExtractedClinicalData {
   final String? woundOccurrence;
   final List<String> patientComorbidities;
 
+  // Appointment information (from calendar)
+  final List<DateTime>? upcomingAppointmentDates;
+  final String appointmentSummary;
+
+  // Pain-specific fields
+  final int? currentVasScore;
+  final List<String>? painLocations;
+  final String? painType;
+  final String? painMedicationPlan;
+
+  // Weight-specific fields
+  final double? currentWeight;
+  final double? targetWeight;
+  final double? weightChange;
+  final String? dietaryPlan;
+  final String? exercisePlan;
+
   const ExtractedClinicalData({
     required this.patientName,
     required this.medicalAid,
@@ -129,6 +179,20 @@ class ExtractedClinicalData {
     this.woundHistory,
     this.woundOccurrence,
     this.patientComorbidities = const [],
+    // Appointment fields
+    this.upcomingAppointmentDates,
+    this.appointmentSummary = 'No upcoming appointments scheduled',
+    // Pain fields
+    this.currentVasScore,
+    this.painLocations,
+    this.painType,
+    this.painMedicationPlan,
+    // Weight fields
+    this.currentWeight,
+    this.targetWeight,
+    this.weightChange,
+    this.dietaryPlan,
+    this.exercisePlan,
   });
 
   Map<String, dynamic> toMap() {
@@ -152,6 +216,17 @@ class ExtractedClinicalData {
       'woundHistory': woundHistory,
       'woundOccurrence': woundOccurrence,
       'patientComorbidities': patientComorbidities,
+      'upcomingAppointmentDates': upcomingAppointmentDates?.map((d) => d.toIso8601String()).toList(),
+      'appointmentSummary': appointmentSummary,
+      'currentVasScore': currentVasScore,
+      'painLocations': painLocations,
+      'painType': painType,
+      'painMedicationPlan': painMedicationPlan,
+      'currentWeight': currentWeight,
+      'targetWeight': targetWeight,
+      'weightChange': weightChange,
+      'dietaryPlan': dietaryPlan,
+      'exercisePlan': exercisePlan,
     };
   }
 }

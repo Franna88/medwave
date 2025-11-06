@@ -52,6 +52,16 @@ class UserProfile {
   final bool syncEnabled;
   final String? googleRefreshToken;
   final DateTime? tokenExpiresAt;
+  
+  // Paystack Subaccount Integration
+  final String? paystackSubaccountCode; // e.g., "ACCT_8f4k1eq7ml0rlzj"
+  final bool paystackSubaccountVerified;
+  final String? bankName; // e.g., "First National Bank"
+  final String? bankCode; // Paystack bank code (e.g., "011")
+  final String? bankAccountNumber;
+  final String? bankAccountName; // Account holder name
+  final double platformCommissionPercentage; // e.g., 5.0 for 5%
+  final DateTime? subaccountCreatedAt;
 
   UserProfile({
     required this.id,
@@ -91,6 +101,14 @@ class UserProfile {
     this.syncEnabled = false,
     this.googleRefreshToken,
     this.tokenExpiresAt,
+    this.paystackSubaccountCode,
+    this.paystackSubaccountVerified = false,
+    this.bankName,
+    this.bankCode,
+    this.bankAccountNumber,
+    this.bankAccountName,
+    this.platformCommissionPercentage = 5.0, // Default 5% commission
+    this.subaccountCreatedAt,
   });
 
   String get fullName => '$firstName $lastName';
@@ -103,6 +121,9 @@ class UserProfile {
   bool get isSuperAdmin => role == 'super_admin';
   bool get isPractitioner => role == 'practitioner';
   bool get isCountryAdmin => role == 'country_admin';
+  
+  bool get hasBankAccountLinked => paystackSubaccountCode != null && paystackSubaccountCode!.isNotEmpty;
+  bool get canReceivePayments => hasBankAccountLinked && paystackSubaccountVerified;
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -147,6 +168,14 @@ class UserProfile {
       syncEnabled: data['syncEnabled'] ?? false,
       googleRefreshToken: data['googleRefreshToken'],
       tokenExpiresAt: data['tokenExpiresAt']?.toDate(),
+      paystackSubaccountCode: data['paystackSubaccountCode'],
+      paystackSubaccountVerified: data['paystackSubaccountVerified'] ?? false,
+      bankName: data['bankName'],
+      bankCode: data['bankCode'],
+      bankAccountNumber: data['bankAccountNumber'],
+      bankAccountName: data['bankAccountName'],
+      platformCommissionPercentage: (data['platformCommissionPercentage'] ?? 5.0).toDouble(),
+      subaccountCreatedAt: data['subaccountCreatedAt']?.toDate(),
     );
   }
 
@@ -188,6 +217,14 @@ class UserProfile {
       'syncEnabled': syncEnabled,
       'googleRefreshToken': googleRefreshToken,
       'tokenExpiresAt': tokenExpiresAt != null ? Timestamp.fromDate(tokenExpiresAt!) : null,
+      'paystackSubaccountCode': paystackSubaccountCode,
+      'paystackSubaccountVerified': paystackSubaccountVerified,
+      'bankName': bankName,
+      'bankCode': bankCode,
+      'bankAccountNumber': bankAccountNumber,
+      'bankAccountName': bankAccountName,
+      'platformCommissionPercentage': platformCommissionPercentage,
+      'subaccountCreatedAt': subaccountCreatedAt != null ? Timestamp.fromDate(subaccountCreatedAt!) : null,
     };
   }
 
@@ -227,6 +264,14 @@ class UserProfile {
     bool? syncEnabled,
     String? googleRefreshToken,
     DateTime? tokenExpiresAt,
+    String? paystackSubaccountCode,
+    bool? paystackSubaccountVerified,
+    String? bankName,
+    String? bankCode,
+    String? bankAccountNumber,
+    String? bankAccountName,
+    double? platformCommissionPercentage,
+    DateTime? subaccountCreatedAt,
   }) {
     return UserProfile(
       id: id,
@@ -266,6 +311,14 @@ class UserProfile {
       syncEnabled: syncEnabled ?? this.syncEnabled,
       googleRefreshToken: googleRefreshToken ?? this.googleRefreshToken,
       tokenExpiresAt: tokenExpiresAt ?? this.tokenExpiresAt,
+      paystackSubaccountCode: paystackSubaccountCode ?? this.paystackSubaccountCode,
+      paystackSubaccountVerified: paystackSubaccountVerified ?? this.paystackSubaccountVerified,
+      bankName: bankName ?? this.bankName,
+      bankCode: bankCode ?? this.bankCode,
+      bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
+      bankAccountName: bankAccountName ?? this.bankAccountName,
+      platformCommissionPercentage: platformCommissionPercentage ?? this.platformCommissionPercentage,
+      subaccountCreatedAt: subaccountCreatedAt ?? this.subaccountCreatedAt,
     );
   }
 }
@@ -312,6 +365,13 @@ class UserSettings {
   final bool biometricEnabled;
   final String language;
   final String timezone;
+  
+  // Payment settings
+  final bool sessionFeeEnabled;
+  final double defaultSessionFee;
+  final String currency;
+  final String? paystackPublicKey;
+  final String? paystackSecretKey;
 
   UserSettings({
     required this.notificationsEnabled,
@@ -319,6 +379,12 @@ class UserSettings {
     required this.biometricEnabled,
     required this.language,
     required this.timezone,
+    this.sessionFeeEnabled = true, // Enabled by default for testing
+    this.defaultSessionFee = 100.0, // R100 default test fee
+    this.currency = 'ZAR',
+    // Paystack test keys (for testing only - replace with live keys in production)
+    this.paystackPublicKey = 'pk_test_56da7f16c90f66bf8fd6a88c2e1a893dad0858fb',
+    this.paystackSecretKey = 'sk_test_ac22dfb632bdf746bc0bcb2834fff58827a06f7e',
   });
 
   factory UserSettings.fromMap(Map<String, dynamic> map) {
@@ -328,6 +394,12 @@ class UserSettings {
       biometricEnabled: map['biometricEnabled'] ?? false,
       language: map['language'] ?? 'en',
       timezone: map['timezone'] ?? 'UTC',
+      sessionFeeEnabled: map['sessionFeeEnabled'] ?? true, // Enabled by default for testing
+      defaultSessionFee: (map['defaultSessionFee'] ?? 100.0).toDouble(), // R100 default
+      currency: map['currency'] ?? 'ZAR',
+      // Use test keys if not provided (for testing only)
+      paystackPublicKey: map['paystackPublicKey'] ?? 'pk_test_56da7f16c90f66bf8fd6a88c2e1a893dad0858fb',
+      paystackSecretKey: map['paystackSecretKey'] ?? 'sk_test_ac22dfb632bdf746bc0bcb2834fff58827a06f7e',
     );
   }
 
@@ -338,6 +410,11 @@ class UserSettings {
       'biometricEnabled': biometricEnabled,
       'language': language,
       'timezone': timezone,
+      'sessionFeeEnabled': sessionFeeEnabled,
+      'defaultSessionFee': defaultSessionFee,
+      'currency': currency,
+      'paystackPublicKey': paystackPublicKey,
+      'paystackSecretKey': paystackSecretKey,
     };
   }
 
@@ -347,6 +424,11 @@ class UserSettings {
     bool? biometricEnabled,
     String? language,
     String? timezone,
+    bool? sessionFeeEnabled,
+    double? defaultSessionFee,
+    String? currency,
+    String? paystackPublicKey,
+    String? paystackSecretKey,
   }) {
     return UserSettings(
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -354,6 +436,11 @@ class UserSettings {
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
       language: language ?? this.language,
       timezone: timezone ?? this.timezone,
+      sessionFeeEnabled: sessionFeeEnabled ?? this.sessionFeeEnabled,
+      defaultSessionFee: defaultSessionFee ?? this.defaultSessionFee,
+      currency: currency ?? this.currency,
+      paystackPublicKey: paystackPublicKey ?? this.paystackPublicKey,
+      paystackSecretKey: paystackSecretKey ?? this.paystackSecretKey,
     );
   }
 }

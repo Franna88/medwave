@@ -27,6 +27,7 @@ class _AddAppointmentDialogState extends State<AddAppointmentDialog> {
   final _descriptionController = TextEditingController();
   final _locationController = TextEditingController();
   final _practitionerController = TextEditingController();
+  final _patientEmailController = TextEditingController();
 
   Patient? _selectedPatient;
   String _manualPatientName = '';
@@ -35,6 +36,7 @@ class _AddAppointmentDialogState extends State<AddAppointmentDialog> {
   TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 10, minute: 0);
   Duration _duration = const Duration(hours: 1);
+  bool _isSaving = false; // Prevent double submissions
 
   @override
   void initState() {
@@ -49,6 +51,7 @@ class _AddAppointmentDialogState extends State<AddAppointmentDialog> {
     _descriptionController.dispose();
     _locationController.dispose();
     _practitionerController.dispose();
+    _patientEmailController.dispose();
     super.dispose();
   }
 
@@ -110,6 +113,8 @@ class _AddAppointmentDialogState extends State<AddAppointmentDialog> {
                             _manualPatientName = '';
                             if (patient != null) {
                               _titleController.text = '${_selectedType.displayName} - ${patient.name}';
+                              // Pre-fill email if patient has one
+                              _patientEmailController.text = patient.email ?? '';
                             }
                           });
                         },
@@ -118,7 +123,44 @@ class _AddAppointmentDialogState extends State<AddAppointmentDialog> {
                             _selectedPatient = null;
                             _manualPatientName = name;
                             _titleController.text = '${_selectedType.displayName} - $name';
+                            // Clear email when entering manual patient
+                            _patientEmailController.clear();
                           });
+                        },
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // Patient Email (for notifications)
+                      const Text(
+                        'Patient Email',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Optional - for appointment confirmations and reminders',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _patientEmailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          hintText: 'patient@example.com',
+                          prefixIcon: Icon(Icons.email),
+                        ),
+                        validator: (value) {
+                          if (value != null && value.trim().isNotEmpty) {
+                            // Basic email validation
+                            final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                            if (!emailRegex.hasMatch(value.trim())) {
+                              return 'Please enter a valid email address';
+                            }
+                          }
+                          return null;
                         },
                       ),
                       
@@ -474,7 +516,10 @@ class _AddAppointmentDialogState extends State<AddAppointmentDialog> {
     }
   }
 
-  void _saveAppointment() {
+  Future<void> _saveAppointment() async {
+    // Prevent double submissions
+    if (_isSaving) return;
+    
     // Validate patient selection
     if (_selectedPatient == null && _manualPatientName.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -487,6 +532,9 @@ class _AddAppointmentDialogState extends State<AddAppointmentDialog> {
     }
 
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isSaving = true;
+      });
       final startDateTime = DateTime(
         _selectedDate.year,
         _selectedDate.month,
@@ -512,11 +560,15 @@ class _AddAppointmentDialogState extends State<AddAppointmentDialog> {
       // Determine patient info
       final patientId = _selectedPatient?.id ?? 'manual_${DateTime.now().millisecondsSinceEpoch}';
       final patientName = _selectedPatient?.name ?? _manualPatientName.trim();
+      final patientEmail = _patientEmailController.text.trim().isEmpty 
+          ? null 
+          : _patientEmailController.text.trim();
       
       final appointment = Appointment(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         patientId: patientId,
         patientName: patientName,
+        patientEmail: patientEmail,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim().isEmpty 
             ? null 
@@ -535,19 +587,40 @@ class _AddAppointmentDialogState extends State<AddAppointmentDialog> {
         createdAt: DateTime.now(),
       );
       
-      widget.onAppointmentAdded(appointment);
-      Navigator.of(context).pop();
+      // Save to Firebase and wait for result
+      final success = await provider.addAppointment(appointment);
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _selectedPatient == null 
-                ? 'Appointment scheduled for $patientName (new patient)'
-                : 'Appointment scheduled successfully'
+      if (!mounted) return;
+      
+      setState(() {
+        _isSaving = false;
+      });
+      
+      if (success) {
+        Navigator.of(context).pop();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _selectedPatient == null 
+                  ? 'Appointment scheduled for $patientName (new patient)'
+                  : 'Appointment scheduled successfully'
+            ),
+            backgroundColor: AppTheme.successColor,
           ),
-          backgroundColor: AppTheme.successColor,
-        ),
-      );
+        );
+        
+        // Call the callback after successful save
+        widget.onAppointmentAdded(appointment);
+      } else {
+        // Show error if save failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.errorMessage ?? 'Failed to create appointment'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
     }
   }
 }

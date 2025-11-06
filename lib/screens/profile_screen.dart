@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../theme/app_theme.dart';
+import 'profile/bank_account_setup_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -26,12 +27,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _licenseNumberController = TextEditingController();
   
+  // Payment settings controllers
+  final TextEditingController _sessionFeeController = TextEditingController();
+  final TextEditingController _paystackPublicKeyController = TextEditingController();
+  final TextEditingController _paystackSecretKeyController = TextEditingController();
+  
   // Settings
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = false;
   bool _biometricEnabled = false;
   String _language = 'English';
   String _timezone = 'Africa/Johannesburg';
+  
+  // Payment settings
+  bool _sessionFeeEnabled = false;
+  String _currency = 'ZAR';
   
   // App info
   String _appVersion = '';
@@ -60,14 +70,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _licenseNumberController.dispose();
+    _sessionFeeController.dispose();
+    _paystackPublicKeyController.dispose();
+    _paystackSecretKeyController.dispose();
     super.dispose();
   }
 
-  void _loadUserData() {
+  void _loadUserData() async {
     final authProvider = context.read<AuthProvider>();
     final userProfileProvider = context.read<UserProfileProvider>();
     
-    // Initialize profile if needed
+    // Try to load from Firebase first
+    final userId = authProvider.user?.uid;
+    if (userId != null) {
+      await userProfileProvider.loadProfileFromFirebase(userId);
+    }
+    
+    // Fallback: Initialize profile if still null
     if (userProfileProvider.userProfile == null) {
       final userName = authProvider.userName ?? '';
       final userEmail = authProvider.userEmail ?? '';
@@ -94,6 +113,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _language = settings.language;
       _timezone = settings.timezone;
       
+      // Load payment settings
+      _sessionFeeEnabled = settings.sessionFeeEnabled;
+      _sessionFeeController.text = settings.defaultSessionFee.toString();
+      _currency = settings.currency;
+      _paystackPublicKeyController.text = settings.paystackPublicKey ?? '';
+      _paystackSecretKeyController.text = settings.paystackSecretKey ?? '';
+      
       setState(() {});
     });
   }
@@ -116,6 +142,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildPersonalInfoCard(),
                   const SizedBox(height: 20),
                   _buildProfessionalInfoCard(),
+                  const SizedBox(height: 20),
+                  _buildBankAccountCard(),
+                  const SizedBox(height: 20),
+                  _buildPaymentSettingsCard(),
                   const SizedBox(height: 20),
                   _buildSettingsCard(),
                   const SizedBox(height: 20),
@@ -522,6 +552,417 @@ class _ProfileScreenState extends State<ProfileScreen> {
                value: profile.practiceLocation,
                icon: Icons.location_on_outlined,
              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBankAccountCard() {
+    final userProfileProvider = context.watch<UserProfileProvider>();
+    final profile = userProfileProvider.userProfile;
+    
+    if (profile == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Check if bank account details have been added
+    final hasBankAccount = profile.bankAccountNumber != null && 
+                          profile.bankAccountNumber!.isNotEmpty;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.account_balance, size: 20, color: AppTheme.successColor),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Bank Account',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            if (hasBankAccount) ...[
+              // Show saved bank account details
+              _buildLinkedBankAccount(),
+            ] else ...[
+              // Show "Add Bank Account" prompt
+              _buildLinkBankAccountPrompt(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLinkedBankAccount() {
+    final userProfileProvider = context.watch<UserProfileProvider>();
+    final profile = userProfileProvider.userProfile;
+    
+    if (profile == null) return const SizedBox.shrink();
+    
+    // Mask account number (show last 4 digits)
+    String maskedAccountNumber = '';
+    if (profile.bankAccountNumber != null && profile.bankAccountNumber!.length > 4) {
+      final lastFour = profile.bankAccountNumber!.substring(profile.bankAccountNumber!.length - 4);
+      maskedAccountNumber = '****$lastFour';
+    }
+    
+    return Column(
+      children: [
+        // Bank Name
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.successColor.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppTheme.successColor.withOpacity(0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.check_circle, color: AppTheme.successColor, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bank Account Added',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.successColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      profile.bankName ?? 'Unknown Bank',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Account: $maskedAccountNumber',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Commission Info
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.blue.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.blue.withOpacity(0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Platform commission: 5% • Payments settled in 1 business day',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Update Bank Account Button
+        if (!_isEditing)
+          OutlinedButton.icon(
+            onPressed: () => _navigateToBankAccountSetup(),
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Update Bank Account'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              side: const BorderSide(color: AppTheme.primaryColor),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLinkBankAccountPrompt() {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.warningColor.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppTheme.warningColor.withOpacity(0.3),
+              width: 2,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.account_balance_outlined,
+                size: 48,
+                color: AppTheme.warningColor,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No Bank Account Linked',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Link your bank account to receive payments directly from patients',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () => _navigateToBankAccountSetup(),
+                icon: const Icon(Icons.add_card, size: 20),
+                label: const Text('Add Bank Account'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.successColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Benefits
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.blue.withOpacity(0.2),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.check_circle_outline, size: 16, color: Colors.blue[700]),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Automatic payouts to your bank',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.check_circle_outline, size: 16, color: Colors.blue[700]),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Secure & encrypted bank details',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.check_circle_outline, size: 16, color: Colors.blue[700]),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Settlement in 1 business day',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _navigateToBankAccountSetup() async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const BankAccountSetupScreen(),
+      ),
+    );
+    
+    if (result == true && mounted) {
+      // Bank account was saved successfully
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bank account details saved successfully!'),
+          backgroundColor: AppTheme.successColor,
+        ),
+      );
+      
+      // Reload profile data
+      setState(() {});
+    }
+  }
+
+  Widget _buildPaymentSettingsCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.payments_outlined, size: 20, color: AppTheme.successColor),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Payment Settings',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            // Enable Session Fees
+            _buildSettingTile(
+              title: 'Enable Session Fees',
+              subtitle: 'Charge patients for sessions via QR code',
+              icon: Icons.qr_code_scanner,
+              trailing: Switch(
+                value: _sessionFeeEnabled,
+                onChanged: _isEditing ? (value) {
+                  setState(() {
+                    _sessionFeeEnabled = value;
+                  });
+                } : null,
+                activeColor: AppTheme.primaryColor,
+              ),
+            ),
+            
+            if (_sessionFeeEnabled) ...[
+              const SizedBox(height: 16),
+              
+              // Session Fee Amount
+              TextFormField(
+                controller: _sessionFeeController,
+                enabled: true,  // Always enabled so practitioners can edit
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Consultation Fee (per session)',
+                  hintText: 'Enter amount',
+                  prefixText: 'R ',  // Changed from $_currency to R
+                  prefixIcon: Icon(Icons.attach_money, color: AppTheme.primaryColor),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppTheme.primaryColor),
+                  ),
+                  helperText: 'Amount patients will pay per session',
+                ),
+                onChanged: (value) {
+                  setState(() {}); // Rebuild to update breakdown
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Payment Breakdown
+              _buildPaymentBreakdown(),
+            ],
           ],
         ),
       ),
@@ -939,6 +1380,102 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildPaymentBreakdown() {
+    final feeText = _sessionFeeController.text.trim();
+    final fee = double.tryParse(feeText) ?? 0.0;
+    
+    if (fee <= 0) {
+      return const SizedBox.shrink();
+    }
+    
+    final platformCommission = fee * 0.05; // 5%
+    final practitionerAmount = fee - platformCommission;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.blue.withOpacity(0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 18, color: Colors.blue[700]),
+              const SizedBox(width: 8),
+              Text(
+                'Payment Breakdown',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildBreakdownRow(
+            'Patient Pays',
+            'R ${fee.toStringAsFixed(2)}',
+            Colors.grey[700]!,
+            FontWeight.w600,
+          ),
+          const SizedBox(height: 8),
+          _buildBreakdownRow(
+            'Platform Commission (5%)',
+            '- R ${platformCommission.toStringAsFixed(2)}',
+            Colors.orange[700]!,
+            FontWeight.normal,
+          ),
+          const Divider(height: 16),
+          _buildBreakdownRow(
+            'You Receive',
+            'R ${practitionerAmount.toStringAsFixed(2)}',
+            AppTheme.successColor,
+            FontWeight.bold,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Payouts processed manually within 48 hours',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildBreakdownRow(String label, String amount, Color color, FontWeight weight) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: color,
+            fontWeight: weight,
+          ),
+        ),
+        Text(
+          amount,
+          style: TextStyle(
+            fontSize: 13,
+            color: color,
+            fontWeight: weight,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSettingTile({
     required String title,
     required String subtitle,
@@ -1086,13 +1623,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       licenseNumber: _licenseNumberController.text,
     );
     
-    // Update settings
+    // Update settings (including payment settings)
     final settingsSuccess = await userProfileProvider.updateSettings(
       notificationsEnabled: _notificationsEnabled,
       darkModeEnabled: _darkModeEnabled,
       biometricEnabled: _biometricEnabled,
       language: _language,
       timezone: _timezone,
+      sessionFeeEnabled: _sessionFeeEnabled,
+      defaultSessionFee: double.tryParse(_sessionFeeController.text) ?? 0.0,
+      currency: _currency,
+      paystackPublicKey: _paystackPublicKeyController.text.trim().isEmpty 
+          ? null 
+          : _paystackPublicKeyController.text.trim(),
+      paystackSecretKey: _paystackSecretKeyController.text.trim().isEmpty 
+          ? null 
+          : _paystackSecretKeyController.text.trim(),
     );
     
     setState(() {

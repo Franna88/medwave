@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:intl/intl.dart';
 import '../../models/patient.dart';
 import '../../models/conversation_data.dart';
+import '../../models/appointment.dart';
 import '../../services/ai/openai_service.dart';
+import '../../services/ai/ai_report_service_factory.dart';
 import '../../services/ai/icd10_service.dart';
 import '../../services/pdf_generation_service.dart';
 import '../../services/firebase/practitioner_service.dart';
+import '../../services/firebase/appointment_service.dart';
 import '../../theme/app_theme.dart';
 
 class AIReportChatScreen extends StatefulWidget {
@@ -31,7 +35,8 @@ class AIReportChatScreen extends StatefulWidget {
 class _AIReportChatScreenState extends State<AIReportChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final OpenAIService _openAIService = OpenAIService();
+  late final dynamic _aiService;
+  final OpenAIService _validationService = OpenAIService(); // For validation methods
   
   List<AIMessage> _messages = [];
   ConversationStep _currentStep = ConversationStep.greeting;
@@ -56,11 +61,20 @@ class _AIReportChatScreenState extends State<AIReportChatScreen> {
   String _currentTreatment = '';
   List<String> _treatmentDates = [];
   String _additionalNotes = '';
+  
+  // Appointment data
+  List<Appointment> _upcomingAppointments = [];
+  String _appointmentSummary = 'No upcoming appointments scheduled';
 
   @override
   void initState() {
     super.initState();
+    debugPrint('🤖 AI CHAT: Initializing for patient ${widget.patient.id}');
+    debugPrint('🤖 AI CHAT: Patient type: ${widget.patient.treatmentType.name}');
+    _aiService = AIReportServiceFactory.getServiceForPatient(widget.patient);
+    debugPrint('🤖 AI CHAT: Using AI service: ${_aiService.runtimeType}');
     _initializeConversation();
+    _fetchUpcomingAppointments();
   }
 
   @override
@@ -69,6 +83,28 @@ class _AIReportChatScreenState extends State<AIReportChatScreen> {
     _scrollController.dispose();
     _reportEditController.dispose();
     super.dispose();
+  }
+  
+  /// Fetch upcoming appointments for the patient
+  Future<void> _fetchUpcomingAppointments() async {
+    try {
+      final appointments = await AppointmentService.getUpcomingAppointmentsByPatient(widget.patientId);
+      setState(() {
+        _upcomingAppointments = appointments;
+        if (appointments.isEmpty) {
+          _appointmentSummary = 'No upcoming appointments scheduled';
+        } else {
+          final dateFormat = DateFormat('EEEE, MMMM d, yyyy \'at\' h:mm a');
+          final appointmentStrings = appointments.map((apt) {
+            return '${apt.type.displayName} on ${dateFormat.format(apt.startTime)}';
+          }).toList();
+          _appointmentSummary = 'Upcoming appointments: ${appointmentStrings.join('; ')}';
+        }
+      });
+    } catch (e) {
+      debugPrint('Error fetching appointments: $e');
+      // Keep default "No upcoming appointments scheduled"
+    }
   }
   
   void _startEditReport() {
@@ -177,12 +213,7 @@ I need to collect additional information to complete the motivation report. Plea
         
         // Add a message showing auto-populated details
         final autoPopulatedMessage = AIMessage(
-          content: 'Perfect! I\'ve loaded your practitioner details and ${widget.patient.fullNames}\'s medical history:\n'
-                  '• Practitioner: $_practitionerName\n'
-                  '• License: ${_practitionerPracticeNumber.isNotEmpty ? _practitionerPracticeNumber : 'Not found'}\n'
-                  '• Patient has existing medical history: ${_patientComorbidities.isNotEmpty ? 'Yes' : 'No'}\n'
-                  '• Previous wound history: ${widget.patient.woundHistory?.isNotEmpty == true ? 'Yes' : 'No'}\n\n'
-                  'I\'ll focus on this session\'s specific clinical details.',
+          content: _buildAutoPopulatedMessage(),
           isBot: true,
           timestamp: DateTime.now(),
         );
@@ -193,7 +224,7 @@ I need to collect additional information to complete the motivation report. Plea
         
         // Skip practitioner questions and patient demographics
         if (_practitionerName.isNotEmpty) {
-          _currentStep = ConversationStep.woundHistoryAndType;
+          _currentStep = _getFirstClinicalStep();
         }
       } else {
         // No practitioner details found, proceed with manual entry
@@ -334,7 +365,28 @@ I need to collect additional information to complete the motivation report. Plea
       summary.writeln('• Referring Doctor: ${widget.patient.referringDoctorName}');
     }
     
-    // Wound history
+    // Patient-type specific information
+    switch (widget.patient.treatmentType) {
+      case TreatmentType.wound:
+        _addWoundSpecificData(summary);
+        break;
+      case TreatmentType.pain:
+        _addPainSpecificData(summary);
+        break;
+      case TreatmentType.weight:
+        _addWeightSpecificData(summary);
+        break;
+    }
+    
+    // Medical conditions (common to all types)
+    if (_patientComorbidities.isNotEmpty) {
+      summary.writeln('• Medical Conditions: $_patientComorbidities');
+    }
+    
+    return summary.toString();
+  }
+
+  void _addWoundSpecificData(StringBuffer summary) {
     if (widget.patient.woundHistory != null && widget.patient.woundHistory!.isNotEmpty) {
       summary.writeln('• Wound History: ${widget.patient.woundHistory}');
     } else if (widget.patient.baselineWounds.isNotEmpty) {
@@ -349,13 +401,82 @@ I need to collect additional information to complete the motivation report. Plea
     if (widget.patient.woundStartDate != null) {
       summary.writeln('• Wound Start Date: ${widget.patient.woundStartDate!.day}/${widget.patient.woundStartDate!.month}/${widget.patient.woundStartDate!.year}');
     }
-    
-    // Medical conditions
-    if (_patientComorbidities.isNotEmpty) {
-      summary.writeln('• Medical Conditions: $_patientComorbidities');
+  }
+
+  void _addPainSpecificData(StringBuffer summary) {
+    if (widget.patient.painType?.isNotEmpty == true) {
+      summary.writeln('• Pain Type: ${widget.patient.painType}');
     }
     
-    return summary.toString();
+    if (widget.patient.painLocations?.isNotEmpty == true) {
+      summary.writeln('• Pain Locations: ${widget.patient.painLocations!.join(", ")}');
+    }
+    
+    if (widget.patient.baselineVasScore != null) {
+      summary.writeln('• Baseline VAS Score: ${widget.patient.baselineVasScore}/10');
+    }
+    
+    if (widget.patient.painDuration?.isNotEmpty == true) {
+      summary.writeln('• Pain Duration: ${widget.patient.painDuration}');
+    }
+    
+    if (widget.patient.impactOnDailyActivities?.isNotEmpty == true) {
+      summary.writeln('• Impact on Daily Activities: ${widget.patient.impactOnDailyActivities}');
+    }
+  }
+
+  void _addWeightSpecificData(StringBuffer summary) {
+    if (widget.patient.baselineWeight != null) {
+      summary.writeln('• Baseline Weight: ${widget.patient.baselineWeight} kg');
+    }
+    
+    if (widget.patient.baselineTargetWeight != null) {
+      summary.writeln('• Target Weight: ${widget.patient.baselineTargetWeight} kg');
+    }
+    
+    final baselineWeight = widget.patient.baselineWeight;
+    final targetWeight = widget.patient.baselineTargetWeight;
+    if (baselineWeight != null && targetWeight != null) {
+      final goalDifference = baselineWeight - targetWeight;
+      summary.writeln('• Weight Loss Goal: ${goalDifference.toStringAsFixed(1)} kg');
+    }
+    
+    if (widget.patient.metabolicConditions?.isNotEmpty == true) {
+      summary.writeln('• Metabolic Conditions: ${widget.patient.metabolicConditions}');
+    }
+    
+    if (widget.patient.dietaryHabits?.isNotEmpty == true) {
+      summary.writeln('• Dietary Habits: ${widget.patient.dietaryHabits}');
+    }
+    
+    if (widget.patient.exerciseRoutine?.isNotEmpty == true) {
+      summary.writeln('• Exercise Routine: ${widget.patient.exerciseRoutine}');
+    }
+  }
+
+  String _buildAutoPopulatedMessage() {
+    final buffer = StringBuffer();
+    buffer.write('Perfect! I\'ve loaded your practitioner details and ${widget.patient.fullNames}\'s medical history:\n');
+    buffer.write('• Practitioner: $_practitionerName\n');
+    buffer.write('• License: ${_practitionerPracticeNumber.isNotEmpty ? _practitionerPracticeNumber : 'Not found'}\n');
+    buffer.write('• Patient has existing medical history: ${_patientComorbidities.isNotEmpty ? 'Yes' : 'No'}\n');
+    
+    // Add patient-type specific history info
+    switch (widget.patient.treatmentType) {
+      case TreatmentType.wound:
+        buffer.write('• Previous wound history: ${widget.patient.woundHistory?.isNotEmpty == true ? 'Yes' : 'No'}\n');
+        break;
+      case TreatmentType.pain:
+        buffer.write('• Previous pain history: ${widget.patient.painType?.isNotEmpty == true ? 'Yes' : 'No'}\n');
+        break;
+      case TreatmentType.weight:
+        final hasBaselineData = widget.patient.baselineWeight != null;
+        buffer.write('• Baseline weight data: ${hasBaselineData ? 'Yes' : 'No'}\n');
+        break;
+    }
+    
+    buffer.write('\nI\'ll focus on this session\'s specific clinical details.');
+    return buffer.toString();
   }
 
   String _buildSessionDataSummary() {
@@ -363,14 +484,32 @@ I need to collect additional information to complete the motivation report. Plea
     
     summary.writeln('• Session Date: ${widget.session.date.day}/${widget.session.date.month}/${widget.session.date.year}');
     summary.writeln('• Session Number: ${widget.session.sessionNumber}');
-    summary.writeln('• Weight: ${widget.session.weight} kg');
-    summary.writeln('• VAS Pain Score: ${widget.session.vasScore}/10');
     
-    if (widget.session.wounds.isNotEmpty) {
-      final wound = widget.session.wounds.first;
-      summary.writeln('• Current Wound: ${wound.type} at ${wound.location}');
-      summary.writeln('• Wound Size: ${wound.length} x ${wound.width} x ${wound.depth} cm');
-      summary.writeln('• Wound Stage: ${wound.stage}');
+    // Common session data
+    if (widget.session.weight > 0) {
+      summary.writeln('• Weight: ${widget.session.weight} kg');
+    }
+    
+    if (widget.session.vasScore > 0) {
+      summary.writeln('• VAS Pain Score: ${widget.session.vasScore}/10');
+    }
+    
+    // Patient-type specific session information
+    switch (widget.patient.treatmentType) {
+      case TreatmentType.wound:
+        if (widget.session.wounds.isNotEmpty) {
+          final wound = widget.session.wounds.first;
+          summary.writeln('• Current Wound: ${wound.type} at ${wound.location}');
+          summary.writeln('• Wound Size: ${wound.length} x ${wound.width} x ${wound.depth} cm');
+          summary.writeln('• Wound Stage: ${wound.stage}');
+        }
+        break;
+      case TreatmentType.pain:
+        // Pain-specific session data could be added here if needed
+        break;
+      case TreatmentType.weight:
+        // Weight-specific session data is already shown above (weight)
+        break;
     }
     
     if (widget.session.notes.isNotEmpty) {
@@ -398,7 +537,149 @@ I need to collect additional information to complete the motivation report. Plea
     }
   }
 
+  /// Get the first clinical step based on patient treatment type
+  ConversationStep _getFirstClinicalStep() {
+    debugPrint('🤖 AI CHAT: Getting first clinical step for patient type: ${widget.patient.treatmentType.name}');
+    final step = switch (widget.patient.treatmentType) {
+      TreatmentType.wound => ConversationStep.woundHistoryAndType,
+      TreatmentType.pain => ConversationStep.painHistoryAndType,
+      TreatmentType.weight => ConversationStep.weightHistoryAndGoals,
+    };
+    debugPrint('🤖 AI CHAT: First clinical step will be: ${step.displayName}');
+    return step;
+  }
+
+  /// Get the next step in the conversation based on patient treatment type
+  void _advanceToNextStep() {
+    switch (widget.patient.treatmentType) {
+      case TreatmentType.wound:
+        _advanceWoundStep();
+        break;
+      case TreatmentType.pain:
+        _advancePainStep();
+        break;
+      case TreatmentType.weight:
+        _advanceWeightStep();
+        break;
+    }
+  }
+
+  void _advanceWoundStep() {
+    switch (_currentStep) {
+      case ConversationStep.practitionerName:
+        _currentStep = ConversationStep.practitionerDetails;
+        break;
+      case ConversationStep.practitionerDetails:
+        _currentStep = ConversationStep.woundHistoryAndType;
+        break;
+      case ConversationStep.woundHistoryAndType:
+        _currentStep = ConversationStep.woundOccurrence;
+        break;
+      case ConversationStep.woundOccurrence:
+        _currentStep = ConversationStep.comorbidities;
+        break;
+      case ConversationStep.comorbidities:
+        _currentStep = ConversationStep.currentInfection;
+        break;
+      case ConversationStep.currentInfection:
+        _currentStep = ConversationStep.testsPerformed;
+        break;
+      case ConversationStep.testsPerformed:
+        _currentStep = ConversationStep.woundDetailsClassification;
+        break;
+      case ConversationStep.woundDetailsClassification:
+        _currentStep = ConversationStep.timesAssessment;
+        break;
+      case ConversationStep.timesAssessment:
+        _currentStep = ConversationStep.currentTreatment;
+        break;
+      case ConversationStep.currentTreatment:
+        _currentStep = ConversationStep.treatmentDates;
+        break;
+      case ConversationStep.treatmentDates:
+        _currentStep = ConversationStep.additionalNotes;
+        break;
+      case ConversationStep.additionalNotes:
+        _currentStep = ConversationStep.completed;
+        break;
+      default:
+        break;
+    }
+  }
+
+  void _advancePainStep() {
+    switch (_currentStep) {
+      case ConversationStep.practitionerName:
+        _currentStep = ConversationStep.practitionerDetails;
+        break;
+      case ConversationStep.practitionerDetails:
+        _currentStep = ConversationStep.painHistoryAndType;
+        break;
+      case ConversationStep.painHistoryAndType:
+        _currentStep = ConversationStep.painLocationAndIntensity;
+        break;
+      case ConversationStep.painLocationAndIntensity:
+        _currentStep = ConversationStep.comorbidities;
+        break;
+      case ConversationStep.comorbidities:
+        _currentStep = ConversationStep.testsPerformed;
+        break;
+      case ConversationStep.testsPerformed:
+        _currentStep = ConversationStep.painMedicationAndTreatments;
+        break;
+      case ConversationStep.painMedicationAndTreatments:
+        _currentStep = ConversationStep.functionalImpactAssessment;
+        break;
+      case ConversationStep.functionalImpactAssessment:
+        _currentStep = ConversationStep.painTreatmentPlan;
+        break;
+      case ConversationStep.painTreatmentPlan:
+        _currentStep = ConversationStep.additionalNotes;
+        break;
+      case ConversationStep.additionalNotes:
+        _currentStep = ConversationStep.completed;
+        break;
+      default:
+        break;
+    }
+  }
+
+  void _advanceWeightStep() {
+    switch (_currentStep) {
+      case ConversationStep.practitionerName:
+        _currentStep = ConversationStep.practitionerDetails;
+        break;
+      case ConversationStep.practitionerDetails:
+        _currentStep = ConversationStep.weightHistoryAndGoals;
+        break;
+      case ConversationStep.weightHistoryAndGoals:
+        _currentStep = ConversationStep.metabolicAssessment;
+        break;
+      case ConversationStep.metabolicAssessment:
+        _currentStep = ConversationStep.comorbidities;
+        break;
+      case ConversationStep.comorbidities:
+        _currentStep = ConversationStep.testsPerformed;
+        break;
+      case ConversationStep.testsPerformed:
+        _currentStep = ConversationStep.dietaryAndExerciseAssessment;
+        break;
+      case ConversationStep.dietaryAndExerciseAssessment:
+        _currentStep = ConversationStep.weightTreatmentPlan;
+        break;
+      case ConversationStep.weightTreatmentPlan:
+        _currentStep = ConversationStep.additionalNotes;
+        break;
+      case ConversationStep.additionalNotes:
+        _currentStep = ConversationStep.completed;
+        break;
+      default:
+        break;
+    }
+  }
+
   void _askNextQuestion() {
+    debugPrint('🤖 AI CHAT: Asking next question for step: ${_currentStep.displayName}');
     String question;
     
     switch (_currentStep) {
@@ -483,6 +764,66 @@ I need to collect additional information to complete the motivation report. Plea
       case ConversationStep.additionalNotes:
         question = 'Any additional notes? Is this treatment in lieu of hospitalization? Any other relevant clinical information? (Optional - or say "none" to proceed to report generation)';
         break;
+      
+      // Pain management specific questions
+      case ConversationStep.painHistoryAndType:
+        if (widget.patient.painType?.isNotEmpty == true && widget.patient.painDuration?.isNotEmpty == true) {
+          question = 'I see the patient has ${widget.patient.painType} with a duration of ${widget.patient.painDuration}. Has there been any change in the pain type or pattern since baseline? Please provide any updates to the pain history.';
+        } else if (widget.patient.painType?.isNotEmpty == true) {
+          question = 'I see the patient has ${widget.patient.painType}. How long has this pain been present? Please describe the pain history and any changes since onset.';
+        } else {
+          question = 'Please describe the pain history and type. For example: "Chronic lower back pain due to degenerative disc disease, onset 2 years ago." This helps determine the primary ICD-10 code.';
+        }
+        break;
+      case ConversationStep.painLocationAndIntensity:
+        if (widget.patient.painLocations?.isNotEmpty == true) {
+          question = 'From baseline, the patient\'s pain locations are: ${widget.patient.painLocations!.join(", ")}. What is the current pain intensity using VAS score (0-10)? Have there been any changes or new pain locations?';
+        } else {
+          question = 'Please describe the pain location(s) and current intensity. Include the Visual Analogue Scale (VAS) score from 0-10, and specify which body parts are affected.';
+        }
+        break;
+      case ConversationStep.painMedicationAndTreatments:
+        question = 'What pain medications and treatments has the patient tried or is currently using? Include dosages, frequency, and effectiveness if known.';
+        break;
+      case ConversationStep.functionalImpactAssessment:
+        question = 'How does the pain impact the patient\'s daily activities and function? Please describe limitations in work, mobility, sleep, or quality of life.';
+        break;
+      case ConversationStep.painTreatmentPlan:
+        question = 'What is the treatment plan for this session? Include any interventions performed, medications prescribed, or therapies recommended (e.g., physiotherapy, injections, pain management techniques).';
+        break;
+      
+      // Weight management specific questions
+      case ConversationStep.weightHistoryAndGoals:
+        if (widget.patient.baselineWeight != null && widget.patient.baselineTargetWeight != null) {
+          question = 'I see the patient\'s baseline weight is ${widget.patient.baselineWeight} kg with a target of ${widget.patient.baselineTargetWeight} kg. Has there been any significant weight change since baseline? Please describe the patient\'s weight loss journey and any challenges encountered.';
+        } else {
+          question = 'Please describe the patient\'s weight history and goals. Include baseline weight, target weight, and any significant weight changes. This helps determine appropriate ICD-10 codes.';
+        }
+        break;
+      case ConversationStep.metabolicAssessment:
+        if (widget.patient.metabolicConditions?.isNotEmpty == true) {
+          question = 'I see the patient has metabolic conditions: ${widget.patient.metabolicConditions}. What is the current status of these conditions? Please provide current BMI and any relevant lab results from this session.';
+        } else {
+          question = 'What is the patient\'s metabolic assessment? Include current BMI, any metabolic conditions (e.g., metabolic syndrome, insulin resistance), and relevant lab results if available.';
+        }
+        break;
+      case ConversationStep.dietaryAndExerciseAssessment:
+        final hasDietInfo = widget.patient.dietaryHabits?.isNotEmpty == true;
+        final hasExerciseInfo = widget.patient.exerciseRoutine?.isNotEmpty == true;
+        if (hasDietInfo && hasExerciseInfo) {
+          question = 'From baseline, the patient\'s dietary habits were: ${widget.patient.dietaryHabits}, and exercise routine: ${widget.patient.exerciseRoutine}. Have there been any changes to their diet or exercise in this session? Any new barriers or successes?';
+        } else if (hasDietInfo) {
+          question = 'From baseline, the patient\'s dietary habits were: ${widget.patient.dietaryHabits}. What is their current exercise routine, and have there been any changes to their diet?';
+        } else if (hasExerciseInfo) {
+          question = 'From baseline, the patient\'s exercise routine was: ${widget.patient.exerciseRoutine}. What are their current dietary habits, and have there been any changes to their exercise?';
+        } else {
+          question = 'Please describe the patient\'s current dietary habits and exercise routine. Include any barriers to healthy eating or physical activity.';
+        }
+        break;
+      case ConversationStep.weightTreatmentPlan:
+        question = 'What is the weight management treatment plan for this session? Include dietary recommendations, exercise prescriptions, behavioral interventions, or any medications prescribed.';
+        break;
+      
       default:
         return;
     }
@@ -626,7 +967,7 @@ I need to collect additional information to complete the motivation report. Plea
       String currentQuestion = _getCurrentQuestionContext();
       
       // Ask AI to analyze the user's response (silent mode - only for corrections)
-      final analysisResult = await _openAIService.analyzeUserResponseWithValidation(
+      final analysisResult = await _validationService.analyzeUserResponseWithValidation(
         userResponse: lastUserMessage,
         conversationContext: context,
         currentQuestion: currentQuestion,
@@ -740,47 +1081,6 @@ Collected Information:
     }
   }
 
-  void _advanceToNextStep() {
-    switch (_currentStep) {
-      case ConversationStep.practitionerName:
-        _currentStep = ConversationStep.practitionerDetails;
-        break;
-      case ConversationStep.practitionerDetails:
-        _currentStep = ConversationStep.woundHistoryAndType;
-        break;
-      case ConversationStep.woundHistoryAndType:
-        _currentStep = ConversationStep.woundOccurrence;
-        break;
-      case ConversationStep.woundOccurrence:
-        _currentStep = ConversationStep.comorbidities;
-        break;
-      case ConversationStep.comorbidities:
-        _currentStep = ConversationStep.currentInfection;
-        break;
-      case ConversationStep.currentInfection:
-        _currentStep = ConversationStep.testsPerformed;
-        break;
-      case ConversationStep.testsPerformed:
-        _currentStep = ConversationStep.woundDetailsClassification;
-        break;
-      case ConversationStep.woundDetailsClassification:
-        _currentStep = ConversationStep.timesAssessment;
-        break;
-      case ConversationStep.timesAssessment:
-        _currentStep = ConversationStep.currentTreatment;
-        break;
-      case ConversationStep.currentTreatment:
-        _currentStep = ConversationStep.treatmentDates;
-        break;
-      case ConversationStep.treatmentDates:
-        _currentStep = ConversationStep.additionalNotes;
-        break;
-      default:
-        _currentStep = ConversationStep.completed;
-        break;
-    }
-  }
-
   Future<void> _generateReport() async {
     // Dismiss keyboard first
     FocusScope.of(context).unfocus();
@@ -836,6 +1136,18 @@ Collected Information:
           skinProtectant: _extractSkinProtectantFromTreatment(),
           plannedTreatments: _extractPlannedTreatments(),
         ),
+        
+        // Appointment information from calendar
+        upcomingAppointmentDates: _upcomingAppointments.map((apt) => apt.startTime).toList(),
+        appointmentSummary: _appointmentSummary,
+        
+        // Patient type specific fields
+        currentVasScore: widget.patient.currentVasScore,
+        painLocations: widget.patient.painLocations,
+        painType: widget.patient.painType,
+        currentWeight: widget.patient.currentWeight,
+        targetWeight: widget.patient.baselineTargetWeight,
+        weightChange: widget.patient.weightChange,
       );
 
       // Analyze conversation and generate ICD-10 code suggestions
@@ -857,8 +1169,8 @@ Collected Information:
       
       final suggestedCodes = ICD10Service.autoSuggestFromConversation(allClinicalText);
 
-      // Generate the report using OpenAI with ICD-10 codes
-      final report = await _openAIService.generateMotivationReport(
+      // Generate the report using the appropriate AI service based on patient type
+      final report = await _aiService.generateMotivationReport(
         clinicalData: clinicalData,
         selectedCodes: suggestedCodes,
         treatmentCodes: ['88002', '88031', '88045'], // Standard codes

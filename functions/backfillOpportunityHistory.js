@@ -137,11 +137,24 @@ async function backfillOpportunityHistory() {
         const lastAttribution = opp.attributions?.find(attr => attr.isLast) || 
                               (opp.attributions && opp.attributions[opp.attributions.length - 1]);
         
-        const campaignName = lastAttribution?.utmCampaign || '';
+        // Client's UTM structure (NEW):
+        // utm_source={{campaign.name}}
+        // utm_medium={{adset.name}}
+        // utm_campaign={{ad.name}}
+        // fbc_id={{adset.id}}
+        // h_ad_id={{ad.id}}
+        // 
+        // OLD structure (backward compatibility):
+        // utm_campaign={{campaign.name}}
+        // utm_content={{ad.name}}
+        
+        // Try NEW structure first, fallback to OLD
+        const campaignName = lastAttribution?.utmSource || lastAttribution?.utmCampaign || '';
         const campaignSource = lastAttribution?.utmSource || '';
         const campaignMedium = lastAttribution?.utmMedium || '';
-        const adId = lastAttribution?.utmAdId || lastAttribution?.utmContent || '';
-        const adName = lastAttribution?.utmContent || adId;
+        const adSetName = lastAttribution?.utmMedium || lastAttribution?.utmAdset || lastAttribution?.adset || '';
+        const adId = lastAttribution?.h_ad_id || lastAttribution?.utmAdId || lastAttribution?.utmContent || '';
+        const adName = lastAttribution?.utmCampaign || lastAttribution?.utmContent || adId;
         
         // Skip opportunities without campaign tracking (non-ad leads)
         if (!campaignName) {
@@ -176,6 +189,7 @@ async function backfillOpportunityHistory() {
           campaignMedium,
           adId,
           adName,
+          adSetName,
           assignedTo,
           assignedToName,
           monetaryValue: opp.monetaryValue || 0,

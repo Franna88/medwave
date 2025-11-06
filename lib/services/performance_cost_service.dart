@@ -350,7 +350,7 @@ class PerformanceCostService {
         final double cashAmount = (matchingAd?['totalMonetaryValue'] ?? 0).toDouble();
         
         if (kDebugMode) {
-          print('📊 Ad: ${adCost.adName} | Leads: $leads | Bookings: $bookings | Deposits: $deposits | Cash: R$cashAmount | Budget: R${adCost.budget}');
+          print('📊 Ad: ${adCost.adName} | Leads: $leads | Bookings: $bookings | Deposits: $deposits | Cash: R$cashAmount | FB Spend: R${adCost.facebookSpend?.toStringAsFixed(2) ?? "null"} | Budget: R${adCost.budget}');
         }
 
         // Get linked product if exists

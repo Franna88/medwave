@@ -48,6 +48,7 @@ class Appointment {
   final String id;
   final String patientId;
   final String patientName;
+  final String? patientEmail; // Email for notifications
   final String title;
   final String? description;
   final DateTime startTime;
@@ -67,11 +68,15 @@ class Appointment {
   final String? googleEventId;
   final String syncStatus; // 'synced', 'pending', 'error', 'conflict'
   final DateTime? lastSyncedAt;
+  
+  // Email Notifications
+  final Map<String, dynamic>? emailNotifications;
 
   const Appointment({
     required this.id,
     required this.patientId,
     required this.patientName,
+    this.patientEmail,
     required this.title,
     this.description,
     required this.startTime,
@@ -89,6 +94,7 @@ class Appointment {
     this.googleEventId,
     this.syncStatus = 'pending',
     this.lastSyncedAt,
+    this.emailNotifications,
   });
 
   Duration get duration => endTime.difference(startTime);
@@ -129,6 +135,7 @@ class Appointment {
     String? id,
     String? patientId,
     String? patientName,
+    String? patientEmail,
     String? title,
     String? description,
     DateTime? startTime,
@@ -146,11 +153,13 @@ class Appointment {
     String? googleEventId,
     String? syncStatus,
     DateTime? lastSyncedAt,
+    Map<String, dynamic>? emailNotifications,
   }) {
     return Appointment(
       id: id ?? this.id,
       patientId: patientId ?? this.patientId,
       patientName: patientName ?? this.patientName,
+      patientEmail: patientEmail ?? this.patientEmail,
       title: title ?? this.title,
       description: description ?? this.description,
       startTime: startTime ?? this.startTime,
@@ -168,6 +177,7 @@ class Appointment {
       googleEventId: googleEventId ?? this.googleEventId,
       syncStatus: syncStatus ?? this.syncStatus,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      emailNotifications: emailNotifications ?? this.emailNotifications,
     );
   }
 
@@ -176,6 +186,7 @@ class Appointment {
       'id': id,
       'patientId': patientId,
       'patientName': patientName,
+      'patientEmail': patientEmail,
       'title': title,
       'description': description,
       'startTime': startTime.toIso8601String(),
@@ -193,6 +204,7 @@ class Appointment {
       'googleEventId': googleEventId,
       'syncStatus': syncStatus,
       'lastSyncedAt': lastSyncedAt?.toIso8601String(),
+      'emailNotifications': emailNotifications,
     };
   }
 
@@ -201,6 +213,7 @@ class Appointment {
       id: json['id'],
       patientId: json['patientId'],
       patientName: json['patientName'],
+      patientEmail: json['patientEmail'],
       title: json['title'],
       description: json['description'],
       startTime: DateTime.parse(json['startTime']),
@@ -218,6 +231,7 @@ class Appointment {
       googleEventId: json['googleEventId'],
       syncStatus: json['syncStatus'] ?? 'pending',
       lastSyncedAt: json['lastSyncedAt'] != null ? DateTime.parse(json['lastSyncedAt']) : null,
+      emailNotifications: json['emailNotifications'] != null ? Map<String, dynamic>.from(json['emailNotifications']) : null,
     );
   }
 
@@ -241,6 +255,7 @@ class Appointment {
       'id': id,
       'patientId': patientId,
       'patientName': patientName,
+      'patientEmail': patientEmail,
       'title': title,
       'description': description,
       'startTime': Timestamp.fromDate(startTime),
@@ -258,6 +273,7 @@ class Appointment {
       'googleEventId': googleEventId,
       'syncStatus': syncStatus,
       'lastSyncedAt': lastSyncedAt != null ? Timestamp.fromDate(lastSyncedAt!) : null,
+      'emailNotifications': emailNotifications,
       // Additional fields for Firebase
       'dateKey': '${startTime.year}-${startTime.month.toString().padLeft(2, '0')}-${startTime.day.toString().padLeft(2, '0')}',
       'timeSlot': '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
@@ -272,6 +288,7 @@ class Appointment {
       id: doc.id,
       patientId: data['patientId'] ?? '',
       patientName: data['patientName'] ?? '',
+      patientEmail: data['patientEmail'],
       title: data['title'] ?? '',
       description: data['description'],
       startTime: data['startTime']?.toDate() ?? DateTime.now(),
@@ -295,6 +312,7 @@ class Appointment {
       googleEventId: data['googleEventId'],
       syncStatus: data['syncStatus'] ?? 'pending',
       lastSyncedAt: data['lastSyncedAt']?.toDate(),
+      emailNotifications: data['emailNotifications'] != null ? Map<String, dynamic>.from(data['emailNotifications']) : null,
     );
   }
 }

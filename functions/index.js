@@ -4,7 +4,11 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 // Cumulative metrics functions for parallel tracking system
-const { storeStageTransition, getCumulativeStageMetrics, syncOpportunitiesFromAPI } = require('./lib/opportunityHistoryService');
+const { storeStageTransition, getCumulativeStageMetrics, syncOpportunitiesFromAPI, matchAndUpdateGHLDataToFacebookAds } = require('./lib/opportunityHistoryService');
+// Facebook Ads sync function
+const { syncFacebookAdsToFirebase } = require('./lib/facebookAdsSync');
+// Email service for appointment notifications
+const { EmailService } = require('./lib/emailService');
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -102,7 +106,7 @@ app.get('/api/download/apk', async (req, res) => {
 });
 
 // Specific endpoints for GoHighLevel API
-app.get('/api/ghl/pipelines', async (req, res) => {
+app.get('/ghl/pipelines', async (req, res) => {
   try {
     console.log('📊 Fetching pipelines from GoHighLevel...');
     
@@ -139,7 +143,7 @@ app.get('/api/ghl/pipelines', async (req, res) => {
   }
 });
 
-app.get('/api/ghl/opportunities/search', async (req, res) => {
+app.get('/ghl/opportunities/search', async (req, res) => {
   try {
     console.log('💼 Fetching opportunities from GoHighLevel...');
     
@@ -171,7 +175,7 @@ app.get('/api/ghl/opportunities/search', async (req, res) => {
 });
 
 // Pipeline Performance Analytics Endpoint (Altus + Andries) - SNAPSHOT VIEW
-app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
+app.get('/ghl/analytics/pipeline-performance', async (req, res) => {
   try {
     console.log('📊 [DEPRECATED] Calculating SNAPSHOT pipeline performance analytics...');
     
@@ -344,12 +348,25 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
           ? opp.attributions.find(attr => attr.isLast) || opp.attributions[opp.attributions.length - 1]
           : null;
         
-        const campaignName = lastAttribution?.utmCampaign || '';
+        // Client's UTM structure (NEW):
+        // utm_source={{campaign.name}}
+        // utm_medium={{adset.name}}
+        // utm_campaign={{ad.name}}
+        // fbc_id={{adset.id}}
+        // h_ad_id={{ad.id}}
+        // 
+        // OLD structure (backward compatibility):
+        // utm_campaign={{campaign.name}}
+        // utm_content={{ad.name}}
+        
+        // Try NEW structure first, fallback to OLD
+        const campaignName = lastAttribution?.utmSource || lastAttribution?.utmCampaign || '';
         const campaignSource = lastAttribution?.utmSource || '';
         const campaignMedium = lastAttribution?.utmMedium || '';
+        const adSetName = lastAttribution?.utmMedium || lastAttribution?.utmAdset || lastAttribution?.adset || '';
         
         // 🎯 FILTER: Skip opportunities without UTM campaign tracking (non-ad leads)
-        // Only include leads that have proper ad tracking (utmCampaign must exist)
+        // Only include leads that have proper ad tracking (utmSource must exist since that's where campaign is)
         if (!campaignName) {
           console.log(`⏭️  Skipping non-ad lead: ${opp.name} (Source: ${opp.source || 'None'})`);
           return; // Skip this opportunity - it's not from an ad
@@ -369,8 +386,8 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
         }
         
         // Extract ad information with better naming and URL support
-        const adId = lastAttribution?.utmAdId || lastAttribution?.utmContent || lastAttribution?.utmTerm || 'Unknown Ad';
-        const adName = lastAttribution?.utmContent || lastAttribution?.utmTerm || adId;
+        const adId = lastAttribution?.h_ad_id || lastAttribution?.utmAdId || lastAttribution?.utmContent || lastAttribution?.utmTerm || 'Unknown Ad';
+        const adName = lastAttribution?.utmCampaign || lastAttribution?.utmContent || lastAttribution?.utmTerm || adId;  // Ad name is in utm_campaign
         const adSource = lastAttribution?.adSource || lastAttribution?.utmSource || '';
         const fbclid = lastAttribution?.fbclid || '';
         const gclid = lastAttribution?.gclid || '';
@@ -603,7 +620,7 @@ app.get('/api/ghl/analytics/pipeline-performance', async (req, res) => {
  * Parallel system - does not affect snapshot view
  * Fixed: location_id parameter (snake_case required by GHL API)
  */
-app.post('/api/ghl/sync-opportunity-history', async (req, res) => {
+app.post('/ghl/sync-opportunity-history', async (req, res) => {
   try {
     console.log('🔄 Starting opportunity history sync from GoHighLevel API...');
     
@@ -712,7 +729,7 @@ app.post('/api/ghl/sync-opportunity-history', async (req, res) => {
  * Returns cumulative metrics where stage counts never decrease
  * Parallel system - does not affect snapshot endpoint
  */
-app.get('/api/ghl/analytics/pipeline-performance-cumulative', async (req, res) => {
+app.get('/ghl/analytics/pipeline-performance-cumulative', async (req, res) => {
   try {
     console.log('📊 Calculating CUMULATIVE pipeline performance analytics...');
     
@@ -758,7 +775,7 @@ app.get('/api/ghl/analytics/pipeline-performance-cumulative', async (req, res) =
  * DEPRECATED - Use direct API sync endpoint instead
  * Kept for backwards compatibility
  */
-app.post('/api/ghl/webhooks/opportunity-stage-update', async (req, res) => {
+app.post('/ghl/webhooks/opportunity-stage-update', async (req, res) => {
   try {
     console.log('🪝 Received OpportunityStageUpdate webhook');
     console.log('📦 Payload:', JSON.stringify(req.body, null, 2));
@@ -791,15 +808,49 @@ app.post('/api/ghl/webhooks/opportunity-stage-update', async (req, res) => {
       
       const opportunity = oppResponse.data.opportunity || oppResponse.data;
       
+      // Extract custom field values (Contract Value, R Cash Collected)
+      const customFields = opportunity.customFields || [];
+      let contractValue = 0;
+      let cashCollectedValue = 0;
+      
+      customFields.forEach(field => {
+        const fieldKey = field.key || field.id || '';
+        const fieldValue = parseFloat(field.value) || 0;
+        
+        // Match custom fields by key/name
+        if (fieldKey.toLowerCase().includes('contract') || fieldKey.toLowerCase().includes('value')) {
+          contractValue = fieldValue;
+        }
+        if (fieldKey.toLowerCase().includes('cash') && fieldKey.toLowerCase().includes('collected')) {
+          cashCollectedValue = fieldValue;
+        }
+      });
+      
+      // Use custom field value if available, otherwise fall back to standard monetaryValue
+      const monetaryValue = cashCollectedValue || contractValue || opportunity.monetaryValue || 0;
+      
       // Extract attribution data
       const lastAttribution = opportunity.attributions?.find(attr => attr.isLast) || 
                             (opportunity.attributions && opportunity.attributions[opportunity.attributions.length - 1]);
       
-      const campaignName = lastAttribution?.utmCampaign || '';
+      // Client's UTM structure (NEW):
+      // utm_source={{campaign.name}}
+      // utm_medium={{adset.name}}
+      // utm_campaign={{ad.name}}
+      // fbc_id={{adset.id}}
+      // h_ad_id={{ad.id}}
+      // 
+      // OLD structure (backward compatibility):
+      // utm_campaign={{campaign.name}}
+      // utm_content={{ad.name}}
+      
+      // Try NEW structure first, fallback to OLD
+      const campaignName = lastAttribution?.utmSource || lastAttribution?.utmCampaign || '';
       const campaignSource = lastAttribution?.utmSource || '';
       const campaignMedium = lastAttribution?.utmMedium || '';
-      const adId = lastAttribution?.utmAdId || lastAttribution?.utmContent || '';
-      const adName = lastAttribution?.utmContent || adId;
+      const adSetName = lastAttribution?.utmMedium || lastAttribution?.utmAdset || lastAttribution?.adset || '';
+      const adId = lastAttribution?.h_ad_id || lastAttribution?.utmAdId || lastAttribution?.utmContent || '';
+      const adName = lastAttribution?.utmCampaign || lastAttribution?.utmContent || adId;
       
       // Get pipeline and stage names
       let pipelineName = '';
@@ -872,9 +923,10 @@ app.post('/api/ghl/webhooks/opportunity-stage-update', async (req, res) => {
         campaignMedium,
         adId,
         adName,
+        adSetName,
         assignedTo,
         assignedToName,
-        monetaryValue: opportunity.monetaryValue || 0,
+        monetaryValue: monetaryValue, // Uses custom field if available
         isBackfilled: false
       });
       
@@ -907,6 +959,7 @@ app.post('/api/ghl/webhooks/opportunity-stage-update', async (req, res) => {
         campaignMedium: '',
         adId: '',
         adName: '',
+        adSetName: '',
         assignedTo: 'unassigned',
         assignedToName: 'Unassigned',
         monetaryValue: 0,
@@ -949,6 +1002,67 @@ app.all('/api/ghl/*', async (req, res) => {
     console.error('❌ GoHighLevel API Error:', error.message);
     res.status(error.response?.status || 500).json({
       error: error.response?.data || error.message
+    });
+  }
+});
+
+// ============================================================================
+// FACEBOOK ADS API ENDPOINTS
+// ============================================================================
+
+/**
+ * Manual trigger endpoint for Facebook Ads sync
+ * POST /facebook/sync-ads
+ */
+app.post('/facebook/sync-ads', async (req, res) => {
+  try {
+    console.log('🔄 Manual Facebook Ads sync triggered...');
+    
+    const forceRefresh = req.body?.forceRefresh !== false; // Default to true
+    const datePreset = req.body?.datePreset || 'last_30d';
+    
+    const result = await syncFacebookAdsToFirebase(datePreset);
+    
+    res.json({
+      success: true,
+      message: 'Facebook Ads sync completed successfully',
+      stats: result.stats,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Facebook Ads sync failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * Manual trigger endpoint for GHL to Facebook matching
+ * POST /facebook/match-ghl
+ */
+app.post('/facebook/match-ghl', async (req, res) => {
+  try {
+    console.log('🔄 Manual GHL to Facebook matching triggered...');
+    
+    const result = await matchAndUpdateGHLDataToFacebookAds();
+    
+    res.json({
+      success: true,
+      message: 'GHL matching completed successfully',
+      stats: result,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ GHL matching failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 });
@@ -1067,6 +1181,29 @@ exports.scheduledSync = functions
     }
   });
 
+/**
+ * Scheduled function to auto-sync Facebook Ads data to Firebase
+ * Runs every 15 minutes to keep Facebook ad performance data up-to-date
+ */
+exports.scheduledFacebookSync = functions
+  .pubsub
+  .schedule('every 15 minutes')
+  .timeZone('Africa/Johannesburg')
+  .onRun(async (context) => {
+    try {
+      console.log('⏰ Scheduled Facebook sync triggered at:', new Date().toISOString());
+      
+      const result = await syncFacebookAdsToFirebase('last_30d');
+      
+      console.log('✅ Scheduled Facebook sync completed:', result.stats);
+      
+      return { success: true, stats: result.stats };
+    } catch (error) {
+      console.error('❌ Scheduled Facebook sync failed:', error);
+      throw error;
+    }
+  });
+
 // Export the Express app as a Firebase Cloud Function (1st gen)
 exports.api = functions
   .runWith({
@@ -1075,3 +1212,340 @@ exports.api = functions
   })
   .https
   .onRequest(app);
+
+// ============================================
+// APPOINTMENT EMAIL NOTIFICATION FUNCTIONS
+// ============================================
+
+/**
+ * Send appointment booking confirmation email
+ * Triggered when a new appointment is created
+ */
+exports.sendAppointmentBookingEmail = functions.firestore
+  .document('appointments/{appointmentId}')
+  .onCreate(async (snapshot, context) => {
+    try {
+      const appointment = snapshot.data();
+      const appointmentId = context.params.appointmentId;
+      
+      console.log(`📧 Sending booking confirmation email for appointment: ${appointmentId}`);
+      
+      // Check if patient email exists
+      if (!appointment.patientEmail) {
+        console.log('⚠️ No patient email provided, skipping email notification');
+        return null;
+      }
+      
+      // Add appointment ID to the appointment object
+      const appointmentWithId = { ...appointment, id: appointmentId };
+      
+      // Send booking confirmation email
+      const result = await EmailService.sendBookingConfirmation(
+        appointmentWithId,
+        appointment.patientEmail
+      );
+      
+      if (result.success) {
+        // Update appointment with email sent status
+        const updateData = {
+          'emailNotifications.bookingConfirmationSent': true,
+          'emailNotifications.bookingConfirmationSentAt': admin.firestore.FieldValue.serverTimestamp(),
+        };
+        if (result.messageId) {
+          updateData['emailNotifications.bookingConfirmationMessageId'] = result.messageId;
+        }
+        await snapshot.ref.update(updateData);
+        console.log(`✅ Booking confirmation email sent successfully`);
+      } else {
+        console.error(`❌ Failed to send booking confirmation email: ${result.error}`);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Error in sendAppointmentBookingEmail:', error);
+      return null;
+    }
+  });
+
+/**
+ * Send appointment confirmed email
+ * Triggered when appointment status changes to 'confirmed'
+ */
+exports.sendAppointmentConfirmedEmail = functions.firestore
+  .document('appointments/{appointmentId}')
+  .onUpdate(async (change, context) => {
+    try {
+      const before = change.before.data();
+      const after = change.after.data();
+      const appointmentId = context.params.appointmentId;
+      
+      // Check if status changed to 'confirmed'
+      if (before.status !== 'confirmed' && after.status === 'confirmed') {
+        console.log(`📧 Sending appointment confirmed email for: ${appointmentId}`);
+        
+        // Check if patient email exists
+        if (!after.patientEmail) {
+          console.log('⚠️ No patient email provided, skipping email notification');
+          return null;
+        }
+        
+        // Add appointment ID to the appointment object
+        const appointmentWithId = { ...after, id: appointmentId };
+        
+        // Send confirmed email
+        const result = await EmailService.sendAppointmentConfirmed(
+          appointmentWithId,
+          after.patientEmail
+        );
+        
+        if (result.success) {
+          // Update appointment with email sent status
+          const updateData = {
+            'emailNotifications.confirmedEmailSent': true,
+            'emailNotifications.confirmedEmailSentAt': admin.firestore.FieldValue.serverTimestamp(),
+          };
+          if (result.messageId) {
+            updateData['emailNotifications.confirmedEmailMessageId'] = result.messageId;
+          }
+          await change.after.ref.update(updateData);
+          console.log(`✅ Appointment confirmed email sent successfully`);
+        } else {
+          console.error(`❌ Failed to send confirmed email: ${result.error}`);
+        }
+        
+        return result;
+      }
+      
+      // Check if status changed to 'cancelled'
+      if (before.status !== 'cancelled' && after.status === 'cancelled') {
+        console.log(`📧 Sending appointment cancellation email for: ${appointmentId}`);
+        
+        if (!after.patientEmail) {
+          console.log('⚠️ No patient email provided, skipping email notification');
+          return null;
+        }
+        
+        const appointmentWithId = { ...after, id: appointmentId };
+        
+        const result = await EmailService.sendAppointmentCancellation(
+          appointmentWithId,
+          after.patientEmail
+        );
+        
+        if (result.success) {
+          const updateData = {
+            'emailNotifications.cancellationEmailSent': true,
+            'emailNotifications.cancellationEmailSentAt': admin.firestore.FieldValue.serverTimestamp(),
+          };
+          if (result.messageId) {
+            updateData['emailNotifications.cancellationEmailMessageId'] = result.messageId;
+          }
+          await change.after.ref.update(updateData);
+          console.log(`✅ Appointment cancellation email sent successfully`);
+        } else {
+          console.error(`❌ Failed to send cancellation email: ${result.error}`);
+        }
+        
+        return result;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ Error in sendAppointmentConfirmedEmail:', error);
+      return null;
+    }
+  });
+
+/**
+ * Confirm appointment via email link
+ * HTTP callable function
+ */
+exports.confirmAppointmentViaEmail = functions.https.onRequest(async (req, res) => {
+  // Enable CORS
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, POST');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+  
+  try {
+    const appointmentId = req.query.id || req.body?.appointmentId;
+    
+    if (!appointmentId) {
+      res.status(400).send('Missing appointment ID');
+      return;
+    }
+    
+    console.log(`✅ Confirming appointment via email link: ${appointmentId}`);
+    
+    // Get appointment document
+    const appointmentRef = admin.firestore().collection('appointments').doc(appointmentId);
+    const appointmentDoc = await appointmentRef.get();
+    
+    if (!appointmentDoc.exists) {
+      res.status(404).send('Appointment not found');
+      return;
+    }
+    
+    // Update appointment status to confirmed
+    await appointmentRef.update({
+      status: 'confirmed',
+      confirmedAt: admin.firestore.FieldValue.serverTimestamp(),
+      confirmedViaEmail: true
+    });
+    
+    console.log(`✅ Appointment ${appointmentId} confirmed successfully`);
+    
+    // Return success HTML page
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Appointment Confirmed</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+          }
+          .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+          }
+          .checkmark {
+            font-size: 64px;
+            color: #4caf50;
+            margin-bottom: 20px;
+          }
+          h1 {
+            color: #333;
+            margin-bottom: 10px;
+          }
+          p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+          }
+          .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="checkmark">✅</div>
+          <h1>Appointment Confirmed!</h1>
+          <p>Thank you for confirming your appointment. You will receive a confirmation email shortly.</p>
+          <p>We look forward to seeing you!</p>
+          <a href="#" class="button" onclick="window.close()">Close</a>
+        </div>
+      </body>
+      </html>
+    `);
+    
+  } catch (error) {
+    console.error('❌ Error confirming appointment:', error);
+    res.status(500).send('Error confirming appointment: ' + error.message);
+  }
+});
+
+/**
+ * Schedule appointment reminder emails
+ * Runs daily to check for appointments happening tomorrow
+ */
+exports.scheduleAppointmentReminders = functions.pubsub
+  .schedule('every day 09:00')
+  .timeZone('Africa/Johannesburg') // Adjust to your timezone
+  .onRun(async (context) => {
+    try {
+      console.log('📧 Running daily appointment reminder check...');
+      
+      // Calculate tomorrow's date range
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      
+      const dayAfterTomorrow = new Date(tomorrow);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+      
+      // Query appointments for tomorrow that are confirmed or scheduled
+      const appointmentsSnapshot = await admin.firestore()
+        .collection('appointments')
+        .where('startTime', '>=', admin.firestore.Timestamp.fromDate(tomorrow))
+        .where('startTime', '<', admin.firestore.Timestamp.fromDate(dayAfterTomorrow))
+        .where('status', 'in', ['Scheduled', 'Confirmed'])
+        .get();
+      
+      console.log(`Found ${appointmentsSnapshot.size} appointments for tomorrow`);
+      
+      let sentCount = 0;
+      
+      // Send reminders
+      for (const doc of appointmentsSnapshot.docs) {
+        const appointment = doc.data();
+        const appointmentId = doc.id;
+        
+        // Check if reminder already sent
+        if (appointment.emailNotifications?.reminderSent) {
+          console.log(`Reminder already sent for appointment ${appointmentId}`);
+          continue;
+        }
+        
+        // Check if patient email exists
+        if (!appointment.patientEmail) {
+          console.log(`No email for appointment ${appointmentId}`);
+          continue;
+        }
+        
+        // Send reminder
+        const appointmentWithId = { ...appointment, id: appointmentId };
+        const result = await EmailService.sendAppointmentReminder(
+          appointmentWithId,
+          appointment.patientEmail
+        );
+        
+        if (result.success) {
+          // Update appointment with reminder sent status
+          const updateData = {
+            'emailNotifications.reminderSent': true,
+            'emailNotifications.reminderSentAt': admin.firestore.FieldValue.serverTimestamp(),
+          };
+          if (result.messageId) {
+            updateData['emailNotifications.reminderMessageId'] = result.messageId;
+          }
+          await doc.ref.update(updateData);
+          sentCount++;
+          console.log(`✅ Reminder sent for appointment ${appointmentId}`);
+        } else {
+          console.error(`❌ Failed to send reminder for ${appointmentId}: ${result.error}`);
+        }
+      }
+      
+      console.log(`✅ Sent ${sentCount} appointment reminders`);
+      return { success: true, sentCount };
+      
+    } catch (error) {
+      console.error('❌ Error in scheduleAppointmentReminders:', error);
+      throw error;
+    }
+  });

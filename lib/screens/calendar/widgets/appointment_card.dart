@@ -6,12 +6,14 @@ class AppointmentCard extends StatelessWidget {
   final Appointment appointment;
   final VoidCallback? onTap;
   final Function(AppointmentStatus)? onStatusChanged;
+  final VoidCallback? onPaymentRequested;
 
   const AppointmentCard({
     super.key,
     required this.appointment,
     this.onTap,
     this.onStatusChanged,
+    this.onPaymentRequested,
   });
 
   @override
@@ -80,6 +82,32 @@ class AppointmentCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        
+                        // Payment QR button (only for confirmed/in-progress appointments)
+                        if (onPaymentRequested != null &&
+                            (appointment.status == AppointmentStatus.confirmed ||
+                             appointment.status == AppointmentStatus.inProgress)) ...[
+                          const SizedBox(width: 8),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: onPaymentRequested,
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.greenColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Icon(
+                                  Icons.qr_code_scanner,
+                                  size: 20,
+                                  color: AppTheme.greenColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     

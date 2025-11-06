@@ -10,6 +10,7 @@ import '../../models/patient.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/localization.dart';
 import '../../utils/id_validation.dart';
+import '../../utils/validation_utils.dart';
 import '../../widgets/signature_pad.dart';
 import '../../widgets/pmb_chip_selector.dart';
 import '../../services/firebase/patient_service.dart';
@@ -49,6 +50,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   final _medicalAidSchemeController = TextEditingController();
   final _medicalAidNumberController = TextEditingController();
   final _mainMemberNameController = TextEditingController();
+  bool _isPrivatePatient = false;
 
   // Medical History Controllers (simplified)
   final Map<String, bool> _medicalConditions = {
@@ -71,6 +73,27 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   
   // PMB Conditions
   List<String> _selectedPMBConditions = [];
+  
+  // Treatment Type Selection
+  TreatmentType _selectedTreatmentType = TreatmentType.wound;
+  
+  // Weight Management Controllers
+  final _targetWeightController = TextEditingController();
+  final _metabolicConditionsController = TextEditingController();
+  final _weightMedicationsController = TextEditingController();
+  final _dietaryHabitsController = TextEditingController();
+  final _exerciseRoutineController = TextEditingController();
+  final _weightLossAttemptsController = TextEditingController();
+  final _psychologicalFactorsController = TextEditingController();
+  
+  // Pain Management Controllers
+  List<String> _selectedPainLocations = [];
+  int _painIntensityBaseline = 5;
+  final _painDurationController = TextEditingController();
+  final _painTriggersController = TextEditingController();
+  String _painType = 'mixed';
+  final _painMedicationHistoryController = TextEditingController();
+  final _impactOnDailyActivitiesController = TextEditingController();
 
   // Signature pads
   final GlobalKey _accountSignatureKey = GlobalKey();
@@ -273,14 +296,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                     _currentPage = page;
                   });
                 },
-                children: [
-                  _buildPatientDetailsPage(),
-                  _buildResponsiblePersonPage(),
-                  _buildMedicalAidPage(),
-                  _buildMedicalHistoryPage(),
-                  _buildConsentPage(),
-                  _buildConfirmationPage(),
-              ],
+                children: _buildPages(),
             ),
           ),
           _buildNavigationButtons(),
@@ -290,16 +306,47 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     );
   }
 
+  List<Widget> _buildPages() {
+    List<Widget> pages = [
+      _buildPatientDetailsPage(),          // 0
+      _buildResponsiblePersonPage(),       // 1
+      _buildMedicalAidPage(),              // 2
+      _buildTreatmentTypeSelectionPage(),  // 3
+    ];
+    
+    // Add treatment-specific page if needed
+    if (_selectedTreatmentType == TreatmentType.weight) {
+      pages.add(_buildWeightManagementQuestionsPage()); // 4
+    } else if (_selectedTreatmentType == TreatmentType.pain) {
+      pages.add(_buildPainManagementQuestionsPage());   // 4
+    }
+    
+    // Add remaining common pages
+    pages.addAll([
+      _buildMedicalHistoryPage(),          // 4 or 5
+      _buildConsentPage(),                 // 5 or 6
+      _buildConfirmationPage(),            // 6 or 7
+    ]);
+    
+    return pages;
+  }
+  
   Widget _buildProgressIndicator() {
+    // Calculate total pages based on treatment type
+    int totalPages = 7; // Base: Patient Details, Responsible Person, Medical Aid, Treatment Selection, Medical History, Consent, Confirmation
+    if (_selectedTreatmentType == TreatmentType.weight || _selectedTreatmentType == TreatmentType.pain) {
+      totalPages = 8; // Add one more for treatment-specific questions
+    }
+    
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
-        children: List.generate(6, (index) {
+        children: List.generate(totalPages, (index) {
           final isActive = index <= _currentPage;
           return Expanded(
             child: Container(
               height: 4,
-              margin: EdgeInsets.only(right: index < 5 ? 8 : 0),
+              margin: EdgeInsets.only(right: index < totalPages - 1 ? 8 : 0),
               decoration: BoxDecoration(
                 color: isActive ? AppTheme.primaryColor : AppTheme.borderColor,
                 borderRadius: BorderRadius.circular(2),
@@ -595,32 +642,121 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           ),
           const SizedBox(height: 24),
           
-          TextFormField(
-            controller: _medicalAidSchemeController,
-            decoration: InputDecoration(
-              labelText: '${AppLocalizations.get('name_of_scheme')} *',
-              prefixIcon: const Icon(Icons.medical_services),
+          // Private Patient Option
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isPrivatePatient 
+                    ? AppTheme.primaryColor 
+                    : AppTheme.primaryColor.withOpacity(0.2),
+                width: _isPrivatePatient ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: _isPrivatePatient,
+                  onChanged: (value) {
+                    setState(() {
+                      _isPrivatePatient = value ?? false;
+                      // Clear medical aid fields when switching to private
+                      if (_isPrivatePatient) {
+                        _medicalAidSchemeController.clear();
+                        _medicalAidNumberController.clear();
+                        _mainMemberNameController.clear();
+                      }
+                    });
+                  },
+                  activeColor: AppTheme.primaryColor,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.get('private_patient'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        AppLocalizations.get('private_patient_description'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.secondaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           
-          TextFormField(
-            controller: _medicalAidNumberController,
-            decoration: InputDecoration(
-              labelText: '${AppLocalizations.get('medical_aid_no')} *',
-              prefixIcon: const Icon(Icons.credit_card),
+          // Show medical aid fields only if not private patient
+          if (!_isPrivatePatient) ...[
+            TextFormField(
+              controller: _medicalAidSchemeController,
+              decoration: InputDecoration(
+                labelText: '${AppLocalizations.get('name_of_scheme')} *',
+                prefixIcon: const Icon(Icons.medical_services),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          
-          TextFormField(
-            controller: _mainMemberNameController,
-            decoration: InputDecoration(
-              labelText: '${AppLocalizations.get('name_of_main_member')} *',
-              prefixIcon: const Icon(Icons.person),
+            const SizedBox(height: 16),
+            
+            TextFormField(
+              controller: _medicalAidNumberController,
+              decoration: InputDecoration(
+                labelText: '${AppLocalizations.get('medical_aid_no')} *',
+                prefixIcon: const Icon(Icons.credit_card),
+              ),
             ),
-          ),
-          const SizedBox(height: 32),
+            const SizedBox(height: 16),
+            
+            TextFormField(
+              controller: _mainMemberNameController,
+              decoration: InputDecoration(
+                labelText: '${AppLocalizations.get('name_of_main_member')} *',
+                prefixIcon: const Icon(Icons.person),
+              ),
+            ),
+            const SizedBox(height: 32),
+          ] else ...[
+            // Show private patient indicator
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green.shade700, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Patient Type: Private (No Medical Aid)',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.green.shade900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
           
           // Referring Doctor Section
           const Text(
@@ -651,6 +787,432 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
               hintText: '011 123 4567',
             ),
             keyboardType: TextInputType.phone,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTreatmentTypeSelectionPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Select Treatment Type',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Please select the primary treatment type for this patient.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.secondaryColor,
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          // Wound Treatment Card
+          _buildTreatmentTypeCard(
+            type: TreatmentType.wound,
+            icon: Icons.healing,
+            title: 'Wound Care',
+            description: 'For patients requiring wound treatment and management',
+          ),
+          const SizedBox(height: 16),
+          
+          // Weight Management Card
+          _buildTreatmentTypeCard(
+            type: TreatmentType.weight,
+            icon: Icons.monitor_weight,
+            title: 'Weight Management',
+            description: 'For patients in weight loss or weight management programs',
+          ),
+          const SizedBox(height: 16),
+          
+          // Pain Management Card
+          _buildTreatmentTypeCard(
+            type: TreatmentType.pain,
+            icon: Icons.medical_services,
+            title: 'Pain Management',
+            description: 'For patients requiring chronic or acute pain management',
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildTreatmentTypeCard({
+    required TreatmentType type,
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    final isSelected = _selectedTreatmentType == type;
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedTreatmentType = type;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.white,
+          border: Border.all(
+            color: isSelected ? AppTheme.primaryColor : AppTheme.borderColor,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: AppTheme.primaryColor.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ] : [],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isSelected ? AppTheme.primaryColor : AppTheme.borderColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                size: 32,
+                color: isSelected ? Colors.white : AppTheme.secondaryColor,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? AppTheme.primaryColor : AppTheme.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.secondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(
+                Icons.check_circle,
+                color: AppTheme.primaryColor,
+                size: 28,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildWeightManagementQuestionsPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Weight Management Assessment',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Please provide additional information for weight management.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.secondaryColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          TextFormField(
+            controller: _targetWeightController,
+            decoration: const InputDecoration(
+              labelText: 'Target Weight Goal (kg)',
+              prefixIcon: Icon(Icons.flag),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _metabolicConditionsController,
+            decoration: const InputDecoration(
+              labelText: 'Metabolic Conditions',
+              prefixIcon: Icon(Icons.health_and_safety),
+              hintText: 'e.g., Thyroid, PCOS, Metabolic Syndrome',
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _weightMedicationsController,
+            decoration: const InputDecoration(
+              labelText: 'Medications Affecting Weight',
+              prefixIcon: Icon(Icons.medication),
+              hintText: 'List any medications that may affect weight',
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _dietaryHabitsController,
+            decoration: const InputDecoration(
+              labelText: 'Dietary Habits',
+              prefixIcon: Icon(Icons.restaurant),
+              hintText: 'Describe current eating patterns',
+            ),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _exerciseRoutineController,
+            decoration: const InputDecoration(
+              labelText: 'Exercise Routine',
+              prefixIcon: Icon(Icons.fitness_center),
+              hintText: 'Describe current physical activity',
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _weightLossAttemptsController,
+            decoration: const InputDecoration(
+              labelText: 'Previous Weight Loss Attempts',
+              prefixIcon: Icon(Icons.history),
+              hintText: 'Describe previous attempts and outcomes',
+            ),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _psychologicalFactorsController,
+            decoration: const InputDecoration(
+              labelText: 'Psychological Factors Related to Weight',
+              prefixIcon: Icon(Icons.psychology),
+              hintText: 'e.g., Emotional eating, stress, depression',
+            ),
+            maxLines: 3,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildPainManagementQuestionsPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Pain Management Assessment',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Please provide additional information for pain management.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.secondaryColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Pain locations multi-select
+          const Text(
+            'Primary Pain Location(s)',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              'Head/Neck', 'Shoulders', 'Upper Back', 'Lower Back', 'Chest',
+              'Arms', 'Hands', 'Hips', 'Legs', 'Knees', 'Feet', 'Abdomen'
+            ].map((location) {
+              final isSelected = _selectedPainLocations.contains(location);
+              return FilterChip(
+                label: Text(location),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedPainLocations.add(location);
+                    } else {
+                      _selectedPainLocations.remove(location);
+                    }
+                  });
+                },
+                selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+                checkmarkColor: AppTheme.primaryColor,
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 24),
+          
+          // Pain Intensity Slider
+          const Text(
+            'Baseline Pain Intensity',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text('0', style: TextStyle(fontSize: 12)),
+              Expanded(
+                child: Slider(
+                  value: _painIntensityBaseline.toDouble(),
+                  min: 0,
+                  max: 10,
+                  divisions: 10,
+                  label: _painIntensityBaseline.toString(),
+                  onChanged: (value) {
+                    setState(() {
+                      _painIntensityBaseline = value.toInt();
+                    });
+                  },
+                ),
+              ),
+              const Text('10', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+          Text(
+            'Current: $_painIntensityBaseline/10',
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.secondaryColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          TextFormField(
+            controller: _painDurationController,
+            decoration: const InputDecoration(
+              labelText: 'Pain Duration',
+              prefixIcon: Icon(Icons.access_time),
+              hintText: 'How long have you had this pain?',
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _painTriggersController,
+            decoration: const InputDecoration(
+              labelText: 'Pain Triggers',
+              prefixIcon: Icon(Icons.warning_amber),
+              hintText: 'What makes the pain worse?',
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          
+          // Pain Type Radio Buttons
+          const Text(
+            'Pain Type Assessment',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          RadioListTile<String>(
+            title: const Text('Neuropathic (nerve-related)'),
+            value: 'neuropathic',
+            groupValue: _painType,
+            onChanged: (value) {
+              setState(() {
+                _painType = value!;
+              });
+            },
+          ),
+          RadioListTile<String>(
+            title: const Text('Nociceptive (tissue damage-related)'),
+            value: 'nociceptive',
+            groupValue: _painType,
+            onChanged: (value) {
+              setState(() {
+                _painType = value!;
+              });
+            },
+          ),
+          RadioListTile<String>(
+            title: const Text('Mixed'),
+            value: 'mixed',
+            groupValue: _painType,
+            onChanged: (value) {
+              setState(() {
+                _painType = value!;
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _painMedicationHistoryController,
+            decoration: const InputDecoration(
+              labelText: 'Pain Medication History',
+              prefixIcon: Icon(Icons.medication),
+              hintText: 'Current and past pain medications',
+            ),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 16),
+          
+          TextFormField(
+            controller: _impactOnDailyActivitiesController,
+            decoration: const InputDecoration(
+              labelText: 'Impact on Daily Activities',
+              prefixIcon: Icon(Icons.accessibility),
+              hintText: 'How does pain affect your daily life?',
+            ),
+            maxLines: 3,
           ),
         ],
       ),
@@ -1306,7 +1868,19 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     );
   }
 
-  void _nextPage() {
+  void _nextPage() async {
+    List<String> missingFields = _getMissingFieldsForCurrentPage();
+    
+    if (missingFields.isNotEmpty) {
+      await ValidationUtils.showValidationDialog(
+        context,
+        title: 'Section Incomplete',
+        missingFields: missingFields,
+        additionalMessage: 'Please complete all required fields before proceeding to the next section.',
+      );
+      return;
+    }
+    
     if (_validateCurrentPage()) {
       if (_currentPage < 5) {
         _pageController.nextPage(
@@ -1318,6 +1892,11 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   }
 
   bool _validateCurrentPage() {
+    // Determine page indices based on treatment type
+    int assessmentPageIndex = 4; // Page after treatment type selection
+    int medicalHistoryPageIndex = (_selectedTreatmentType == TreatmentType.weight || _selectedTreatmentType == TreatmentType.pain) ? 5 : 4;
+    int consentPageIndex = (_selectedTreatmentType == TreatmentType.weight || _selectedTreatmentType == TreatmentType.pain) ? 6 : 5;
+    
     switch (_currentPage) {
       case 0: // Patient Details
         return _formKey.currentState!.validate() && _dateOfBirth != null;
@@ -1327,27 +1906,137 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                _responsibleIdNumberController.text.isNotEmpty &&
                _responsibleCellController.text.isNotEmpty;
       case 2: // Medical Aid
+        // If private patient, no validation needed
+        if (_isPrivatePatient) {
+          return true;
+        }
+        // Otherwise, validate all medical aid fields
         return _medicalAidSchemeController.text.isNotEmpty &&
                _medicalAidNumberController.text.isNotEmpty &&
                _mainMemberNameController.text.isNotEmpty;
-      case 3: // Medical History
-        return true; // No specific validation for medical history
-      case 4: // Consent
-        final hasAccountSig = _accountSignatureBytes != null;
-        final hasWoundSig = _woundConsentSignatureBytes != null;
-        final hasTrainingConsent = _trainingPhotosConsent != null;
-        
-        print('🔍 VALIDATION DEBUG: Account signature: $hasAccountSig (${_accountSignatureBytes?.length ?? 0} bytes)');
-        print('🔍 VALIDATION DEBUG: Wound consent signature: $hasWoundSig (${_woundConsentSignatureBytes?.length ?? 0} bytes)');
-        print('🔍 VALIDATION DEBUG: Training consent selected: $hasTrainingConsent ($_trainingPhotosConsent)');
-        
-        final isValid = hasAccountSig && hasWoundSig && hasTrainingConsent;
-        print('🔍 VALIDATION DEBUG: Page 4 (Consent) valid: $isValid');
-        
-        return isValid;
+      case 3: // Treatment Type Selection
+        return true; // No specific validation for treatment type selection
       default:
+        // Check if this is the assessment page (Weight/Pain Management)
+        if (_currentPage == assessmentPageIndex) {
+          if (_selectedTreatmentType == TreatmentType.weight) {
+            return _targetWeightController.text.isNotEmpty &&
+                   _dietaryHabitsController.text.isNotEmpty &&
+                   _exerciseRoutineController.text.isNotEmpty;
+          } else if (_selectedTreatmentType == TreatmentType.pain) {
+            return _selectedPainLocations.isNotEmpty &&
+                   _painDurationController.text.isNotEmpty;
+          }
+        }
+        
+        // Check if this is the medical history page
+        if (_currentPage == medicalHistoryPageIndex) {
+          return true; // No specific validation for medical history
+        }
+        
+        // Check if this is the consent page
+        if (_currentPage == consentPageIndex) {
+          final hasAccountSig = _accountSignatureBytes != null;
+          final hasWoundSig = _woundConsentSignatureBytes != null;
+          final hasTrainingConsent = _trainingPhotosConsent != null;
+          
+          print('🔍 VALIDATION DEBUG: Account signature: $hasAccountSig (${_accountSignatureBytes?.length ?? 0} bytes)');
+          print('🔍 VALIDATION DEBUG: Wound consent signature: $hasWoundSig (${_woundConsentSignatureBytes?.length ?? 0} bytes)');
+          print('🔍 VALIDATION DEBUG: Training consent selected: $hasTrainingConsent ($_trainingPhotosConsent)');
+          
+          final isValid = hasAccountSig && hasWoundSig && hasTrainingConsent;
+          print('🔍 VALIDATION DEBUG: Page $consentPageIndex (Consent) valid: $isValid');
+          
+          return isValid;
+        }
+        
         return true;
     }
+  }
+
+  List<String> _getMissingFieldsForCurrentPage() {
+    List<String> missingFields = [];
+    
+    // Determine page indices based on treatment type
+    int assessmentPageIndex = 4; // Page after treatment type selection
+    int consentPageIndex = (_selectedTreatmentType == TreatmentType.weight || _selectedTreatmentType == TreatmentType.pain) ? 6 : 5;
+    
+    switch (_currentPage) {
+      case 0: // Patient Details
+        if (!_formKey.currentState!.validate()) {
+          missingFields.add('Valid patient information');
+        }
+        if (_dateOfBirth == null) {
+          missingFields.add('Date of Birth');
+        }
+        break;
+      case 1: // Responsible Person
+        if (_responsibleSurnameController.text.trim().isEmpty) {
+          missingFields.add('Responsible Person Surname');
+        }
+        if (_responsibleFullNamesController.text.trim().isEmpty) {
+          missingFields.add('Responsible Person Full Names');
+        }
+        if (_responsibleIdNumberController.text.trim().isEmpty) {
+          missingFields.add('Responsible Person ID Number');
+        }
+        if (_responsibleCellController.text.trim().isEmpty) {
+          missingFields.add('Responsible Person Cell Number');
+        }
+        break;
+      case 2: // Medical Aid
+        // If private patient, no validation needed
+        if (!_isPrivatePatient) {
+          if (_medicalAidSchemeController.text.trim().isEmpty) {
+            missingFields.add('Medical Aid Scheme Name');
+          }
+          if (_medicalAidNumberController.text.trim().isEmpty) {
+            missingFields.add('Medical Aid Number');
+          }
+          if (_mainMemberNameController.text.trim().isEmpty) {
+            missingFields.add('Main Member Name');
+          }
+        }
+        break;
+      default:
+        // Check if this is the assessment page (Weight/Pain Management)
+        if (_currentPage == assessmentPageIndex) {
+          if (_selectedTreatmentType == TreatmentType.weight) {
+            if (_targetWeightController.text.trim().isEmpty) {
+              missingFields.add('Target Weight Goal');
+            }
+            if (_dietaryHabitsController.text.trim().isEmpty) {
+              missingFields.add('Dietary Habits');
+            }
+            if (_exerciseRoutineController.text.trim().isEmpty) {
+              missingFields.add('Exercise Routine');
+            }
+          } else if (_selectedTreatmentType == TreatmentType.pain) {
+            if (_selectedPainLocations.isEmpty) {
+              missingFields.add('Primary Pain Location(s)');
+            }
+            if (_painDurationController.text.trim().isEmpty) {
+              missingFields.add('Pain Duration');
+            }
+          }
+        }
+        
+        // Check if this is the consent page
+        if (_currentPage == consentPageIndex) {
+          if (_accountSignatureBytes == null) {
+            missingFields.add('Account Opening Signature');
+          }
+          if (_woundConsentSignatureBytes == null) {
+            missingFields.add('Wound Consent Signature');
+          }
+          if (_trainingPhotosConsent == null) {
+            missingFields.add('Training Photos Consent');
+          }
+        }
+        break;
+    }
+    
+    return missingFields;
   }
 
   void _copyPatientDetailsToResponsible() {
@@ -1469,9 +2158,9 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       responsiblePersonCell: _responsibleCellController.text,
       
       // Medical Aid
-      medicalAidSchemeName: _medicalAidSchemeController.text,
-      medicalAidNumber: _medicalAidNumberController.text,
-      mainMemberName: _mainMemberNameController.text,
+      medicalAidSchemeName: _isPrivatePatient ? 'Private' : _medicalAidSchemeController.text,
+      medicalAidNumber: _isPrivatePatient ? 'N/A' : _medicalAidNumberController.text,
+      mainMemberName: _isPrivatePatient ? 'N/A' : _mainMemberNameController.text,
       
       // Referring Doctor
       referringDoctorName: _referringDoctorController.text.isEmpty ? null : _referringDoctorController.text,
@@ -1487,7 +2176,56 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       // PMB Conditions
       pmbConditionIds: _selectedPMBConditions,
       
-      // Enhanced Wound History (will be collected in Patient Case History)
+      // Treatment Type
+      treatmentType: _selectedTreatmentType,
+      
+      // Weight Management fields (only if weight treatment type)
+      baselineTargetWeight: _selectedTreatmentType == TreatmentType.weight && _targetWeightController.text.isNotEmpty
+          ? double.tryParse(_targetWeightController.text)
+          : null,
+      metabolicConditions: _selectedTreatmentType == TreatmentType.weight && _metabolicConditionsController.text.isNotEmpty
+          ? _metabolicConditionsController.text
+          : null,
+      weightAffectingMedications: _selectedTreatmentType == TreatmentType.weight && _weightMedicationsController.text.isNotEmpty
+          ? _weightMedicationsController.text
+          : null,
+      dietaryHabits: _selectedTreatmentType == TreatmentType.weight && _dietaryHabitsController.text.isNotEmpty
+          ? _dietaryHabitsController.text
+          : null,
+      exerciseRoutine: _selectedTreatmentType == TreatmentType.weight && _exerciseRoutineController.text.isNotEmpty
+          ? _exerciseRoutineController.text
+          : null,
+      previousWeightLossAttempts: _selectedTreatmentType == TreatmentType.weight && _weightLossAttemptsController.text.isNotEmpty
+          ? _weightLossAttemptsController.text
+          : null,
+      psychologicalFactors: _selectedTreatmentType == TreatmentType.weight && _psychologicalFactorsController.text.isNotEmpty
+          ? _psychologicalFactorsController.text
+          : null,
+      
+      // Pain Management fields (only if pain treatment type)
+      painLocations: _selectedTreatmentType == TreatmentType.pain && _selectedPainLocations.isNotEmpty
+          ? _selectedPainLocations
+          : null,
+      painIntensity: _selectedTreatmentType == TreatmentType.pain
+          ? _painIntensityBaseline
+          : null,
+      painDuration: _selectedTreatmentType == TreatmentType.pain && _painDurationController.text.isNotEmpty
+          ? _painDurationController.text
+          : null,
+      painTriggers: _selectedTreatmentType == TreatmentType.pain && _painTriggersController.text.isNotEmpty
+          ? _painTriggersController.text
+          : null,
+      painType: _selectedTreatmentType == TreatmentType.pain
+          ? _painType
+          : null,
+      painMedicationHistory: _selectedTreatmentType == TreatmentType.pain && _painMedicationHistoryController.text.isNotEmpty
+          ? _painMedicationHistoryController.text
+          : null,
+      impactOnDailyActivities: _selectedTreatmentType == TreatmentType.pain && _impactOnDailyActivitiesController.text.isNotEmpty
+          ? _impactOnDailyActivitiesController.text
+          : null,
+      
+      // Enhanced Wound History (will be collected in Patient Case History - only for wound patients)
       woundStartDate: null,
       woundOccurrence: null,
       woundOccurrenceDetails: null,

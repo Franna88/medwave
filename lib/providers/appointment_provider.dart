@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../models/appointment.dart';
 import '../services/firebase/appointment_service.dart';
+import '../services/emailjs_service.dart';
 
 class AppointmentProvider with ChangeNotifier {
   final List<Appointment> _appointments = [];
@@ -47,6 +48,7 @@ class AppointmentProvider with ChangeNotifier {
       _appointmentsSubscription?.cancel();
       _appointmentsSubscription = AppointmentService.getAppointmentsStream().listen(
         (appointments) {
+          debugPrint('📅 APPOINTMENTS: Received ${appointments.length} appointments from Firebase');
           _appointments.clear();
           _appointments.addAll(appointments);
           _setLoading(false);
@@ -144,6 +146,25 @@ class AppointmentProvider with ChangeNotifier {
       
       final appointmentId = await AppointmentService.createAppointment(appointment);
       
+      // Send booking confirmation email if patient email is provided
+      if (appointment.patientEmail != null && appointment.patientEmail!.isNotEmpty) {
+        debugPrint('📧 Sending booking confirmation email...');
+        
+        final confirmationLink = EmailJSService.generateConfirmationLink(appointmentId);
+        
+        EmailJSService.sendBookingConfirmation(
+          appointment: appointment.copyWith(id: appointmentId),
+          patientEmail: appointment.patientEmail!,
+          confirmationLink: confirmationLink,
+        ).then((success) {
+          if (success) {
+            debugPrint('✅ Booking confirmation email sent');
+          } else {
+            debugPrint('⚠️ Failed to send booking confirmation email');
+          }
+        });
+      }
+      
       // The real-time listener will automatically update the UI
       debugPrint('Appointment created with ID: $appointmentId');
       return true;
@@ -210,6 +231,29 @@ class AppointmentProvider with ChangeNotifier {
       _setError(null);
       
       await AppointmentService.updateAppointmentStatus(appointmentId, status);
+      
+      // Send confirmation email if status changed to confirmed
+      if (status == AppointmentStatus.confirmed) {
+        final appointment = _appointments.firstWhere(
+          (apt) => apt.id == appointmentId,
+          orElse: () => throw Exception('Appointment not found'),
+        );
+        
+        if (appointment.patientEmail != null && appointment.patientEmail!.isNotEmpty) {
+          debugPrint('📧 Sending appointment confirmed email...');
+          
+          EmailJSService.sendAppointmentConfirmed(
+            appointment: appointment,
+            patientEmail: appointment.patientEmail!,
+          ).then((success) {
+            if (success) {
+              debugPrint('✅ Appointment confirmed email sent');
+            } else {
+              debugPrint('⚠️ Failed to send confirmed email');
+            }
+          });
+        }
+      }
       
       // The real-time listener will automatically update the UI
       return true;

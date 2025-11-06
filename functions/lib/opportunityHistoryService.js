@@ -5,8 +5,19 @@ const getDb = () => admin.firestore();
 
 /**
  * Stage category mapping - matches stage names to our 5 key categories
+ * Updated to prioritize exact matches for better accuracy
  */
 const keyStageNames = {
+  // Exact matches (case-insensitive)
+  exactMatches: {
+    'booked appointments': 'bookedAppointments',
+    'booked appointment': 'bookedAppointments',
+    'call completed': 'callCompleted',
+    'no show': 'noShowCancelledDisqualified',
+    'deposit received': 'deposits',
+    'cash collected': 'cashCollected'
+  },
+  // Keyword fallbacks
   bookedAppointments: ['booked', 'appointment', 'scheduled'],
   callCompleted: ['call completed', 'contacted', 'responded'],
   noShowCancelledDisqualified: ['no show', 'cancelled', 'disqualified', 'lost', 'reschedule'],
@@ -16,11 +27,18 @@ const keyStageNames = {
 
 /**
  * Match a stage name to its category
+ * Priority: Exact matches > Keyword matching
  */
 function matchStageCategory(stageName) {
   if (!stageName) return 'other';
-  const lowerStageName = stageName.toLowerCase();
+  const lowerStageName = stageName.toLowerCase().trim();
   
+  // Try exact match first
+  if (keyStageNames.exactMatches[lowerStageName]) {
+    return keyStageNames.exactMatches[lowerStageName];
+  }
+  
+  // Fall back to keyword matching
   if (keyStageNames.bookedAppointments.some(keyword => lowerStageName.includes(keyword))) {
     return 'bookedAppointments';
   }
@@ -58,6 +76,7 @@ async function storeStageTransition(data) {
     campaignMedium = '',
     adId = '',
     adName = '',
+    adSetName = '',
     assignedTo = 'unassigned',
     assignedToName = 'Unassigned',
     monetaryValue = 0,
@@ -79,11 +98,17 @@ async function storeStageTransition(data) {
     previousStageName: previousStageName || '',
     newStageId,
     newStageName,
+    stageName: newStageName, // For easier querying
     campaignName,
     campaignSource,
     campaignMedium,
     adId,
     adName,
+    adSetName,
+    // These fields will be populated by the matching function during sync
+    facebookAdId: '',
+    matchedAdSetId: '',
+    matchedAdSetName: '',
     assignedTo,
     assignedToName,
     timestamp,
@@ -553,6 +578,7 @@ async function syncOpportunitiesFromAPI(opportunities, pipelineStages, users) {
         const campaignMedium = lastAttribution?.utmMedium || '';
         const adId = lastAttribution?.utmAdId || lastAttribution?.utmContent || '';
         const adName = lastAttribution?.utmContent || adId;
+        const adSetName = lastAttribution?.utmAdset || lastAttribution?.adset || '';
         
         const assignedTo = opportunity.assignedTo || 'unassigned';
         const assignedToName = users[assignedTo]?.name || users[assignedTo]?.email || assignedTo;
@@ -572,6 +598,7 @@ async function syncOpportunitiesFromAPI(opportunities, pipelineStages, users) {
           campaignMedium,
           adId,
           adName,
+          adSetName,
           assignedTo,
           assignedToName,
           monetaryValue: opportunity.monetaryValue || 0,
@@ -601,13 +628,250 @@ async function syncOpportunitiesFromAPI(opportunities, pipelineStages, users) {
 
   console.log(`📊 Sync complete: ${stats.synced} synced, ${stats.skipped} skipped, ${stats.errors} errors`);
 
+  // After syncing opportunities, match them to Facebook ads
+  try {
+    await matchAndUpdateGHLDataToFacebookAds();
+  } catch (error) {
+    console.error('⚠️ Error matching GHL data to Facebook ads:', error.message);
+    // Don't fail the whole sync if matching fails
+  }
+
   return stats;
+}
+
+/**
+ * Normalize ad/campaign name for matching
+ * Removes special characters, converts to lowercase, normalizes whitespace
+ */
+function normalizeAdName(name) {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '') // Remove special characters
+    .replace(/\s+/g, ' ')    // Normalize whitespace
+    .trim();
+}
+
+/**
+ * Match GHL opportunities to Facebook ads and update adPerformance collection
+ * This function aggregates GHL metrics (leads, bookings, deposits, cash) and updates
+ * the ghlStats field in each Facebook ad's document
+ * 
+ * NOTE: Stores COUNTS for deposits/cash. Monetary amounts are calculated on frontend
+ * using Product configuration (default R1500 per deposit)
+ */
+async function matchAndUpdateGHLDataToFacebookAds() {
+  console.log('🔄 Matching GHL data to Facebook ads...');
+
+  const db = getDb();
+  
+  try {
+    // Get all Facebook ads from adPerformance collection
+    const adPerformanceSnapshot = await db.collection('adPerformance').get();
+    
+    if (adPerformanceSnapshot.empty) {
+      console.log('⚠️ No Facebook ads found in adPerformance collection. Run Facebook sync first.');
+      return { matched: 0, unmatched: 0 };
+    }
+
+    // Load default deposit amount from Product configuration
+    let defaultDepositAmount = 1500; // Default R1500
+    try {
+      const productsSnapshot = await db.collection('products').limit(1).get();
+      if (!productsSnapshot.empty) {
+        const productData = productsSnapshot.docs[0].data();
+        defaultDepositAmount = productData.depositAmount || 1500;
+        console.log(`📦 Using default deposit amount from Product: R${defaultDepositAmount}`);
+      }
+    } catch (error) {
+      console.log(`⚠️ Could not load Product config, using default R${defaultDepositAmount}`);
+    }
+
+    const stats = {
+      matched: 0,
+      unmatched: 0,
+      errors: 0
+    };
+
+    // Process each Facebook ad
+    for (const adDoc of adPerformanceSnapshot.docs) {
+      try {
+        const adData = adDoc.data();
+        const adId = adDoc.id;
+        const adName = adData.adName || '';
+        const campaignName = adData.campaignName || '';
+        const adSetName = adData.adSetName || '';
+
+        // Normalize names for matching
+        const normalizedAdName = normalizeAdName(adName);
+        const normalizedCampaignName = normalizeAdName(campaignName);
+        const normalizedAdSetName = normalizeAdName(adSetName);
+
+        // Query opportunities that match this ad
+        // Match by: campaign name AND (ad name OR ad set name)
+        const historyQuery = await db.collection('opportunityStageHistory')
+          .where('campaignName', '==', campaignName)
+          .get();
+
+        // Filter opportunities using improved composite matching
+        const matchingOpportunities = [];
+        console.log(`🔍 Matching ad: ${adName} (ID: ${adId}) in ad set: ${adSetName}`);
+        
+        for (const oppDoc of historyQuery.docs) {
+          const oppData = oppDoc.data();
+          const oppAdName = normalizeAdName(oppData.adName || '');
+          const oppAdSetName = normalizeAdName(oppData.adSetName || '');
+          
+          // Priority 1: Match by Facebook Ad ID if available (most accurate)
+          if (oppData.facebookAdId && oppData.facebookAdId === adId) {
+            matchingOpportunities.push({ ...oppData, docId: oppDoc.id });
+            continue;
+          }
+          
+          // Priority 2: Match by Campaign + Ad Set + Ad Name (composite matching)
+          if (oppAdName === normalizedAdName) {
+            // If we have ad set info from both sides, require it to match
+            if (normalizedAdSetName && oppAdSetName) {
+              if (oppAdSetName === normalizedAdSetName) {
+                matchingOpportunities.push({ ...oppData, docId: oppDoc.id });
+              }
+            } else {
+              // Fallback: match by ad name only (backward compatibility for old data)
+              // This handles opportunities captured before ad set tracking was added
+              matchingOpportunities.push({ ...oppData, docId: oppDoc.id });
+            }
+          }
+        }
+        
+        console.log(`   Found ${matchingOpportunities.length} matching opportunities`);
+        if (matchingOpportunities.length > 0) {
+          console.log(`   Matched IDs: ${matchingOpportunities.map(o => o.opportunityId).join(', ')}`);
+        }
+
+        // Aggregate GHL metrics from matching opportunities
+        const ghlMetrics = {
+          leads: 0,
+          bookings: 0,
+          deposits: 0,
+          cashCollected: 0,  // Count of opportunities in cash collected stage
+          cashAmount: 0       // Total cash amount (deposits + cash collected)
+        };
+
+        // Track unique opportunities and their latest stage
+        const opportunityLatestState = new Map();
+
+        // First pass: Find the latest state for each unique opportunity
+        for (const opp of matchingOpportunities) {
+          const oppId = opp.opportunityId;
+          const oppTimestamp = opp.timestamp?.toDate?.() || new Date(opp.timestamp);
+          
+          if (!opportunityLatestState.has(oppId) || 
+              oppTimestamp > opportunityLatestState.get(oppId).timestamp) {
+            opportunityLatestState.set(oppId, {
+              stageCategory: opp.stageCategory,
+              stageName: opp.newStageName,
+              timestamp: oppTimestamp,
+              monetaryValue: opp.monetaryValue || 0
+            });
+          }
+        }
+
+        // Second pass: Count opportunities and calculate cash amounts
+        for (const [oppId, state] of opportunityLatestState) {
+          ghlMetrics.leads++; // Count each unique opportunity as a lead
+
+          // Count by stage category
+          if (state.stageCategory === 'bookedAppointments') {
+            ghlMetrics.bookings++;
+          }
+          if (state.stageCategory === 'deposits') {
+            ghlMetrics.deposits++;
+            // Use monetaryValue if exists, otherwise use default deposit amount
+            const depositValue = state.monetaryValue > 0 ? state.monetaryValue : defaultDepositAmount;
+            ghlMetrics.cashAmount += depositValue;
+          }
+          if (state.stageCategory === 'cashCollected') {
+            ghlMetrics.cashCollected++;
+            // Use monetaryValue if exists, otherwise use default deposit amount
+            const cashValue = state.monetaryValue > 0 ? state.monetaryValue : defaultDepositAmount;
+            ghlMetrics.cashAmount += cashValue;
+          }
+        }
+
+        // Update ad performance document with GHL stats
+        const updateData = {
+          lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (ghlMetrics.leads > 0) {
+          // Has GHL data - mark as matched
+          updateData.ghlStats = {
+            campaignKey: campaignName,
+            leads: ghlMetrics.leads,
+            bookings: ghlMetrics.bookings,
+            deposits: ghlMetrics.deposits,
+            cashCollected: ghlMetrics.cashCollected,
+            cashAmount: ghlMetrics.cashAmount,
+            lastSync: admin.firestore.FieldValue.serverTimestamp()
+          };
+          updateData.matchingStatus = 'matched';
+          stats.matched++;
+
+          console.log(`✅ Matched: ${adName} → ${ghlMetrics.leads} leads, ${ghlMetrics.bookings} bookings, ${ghlMetrics.deposits} deposits, ${ghlMetrics.cashCollected} cash (R${ghlMetrics.cashAmount.toFixed(2)})`);
+          
+          // Back-populate Facebook Ad ID into opportunity history for future accurate matching
+          const backPopulatePromises = [];
+          for (const opp of matchingOpportunities) {
+            // Only update if the opportunity doesn't already have the correct Facebook Ad ID
+            if (!opp.facebookAdId || opp.facebookAdId !== adId) {
+              const updatePromise = db.collection('opportunityStageHistory').doc(opp.docId).update({
+                facebookAdId: adId,
+                matchedAdSetId: adSetId || '',
+                matchedAdSetName: adSetName || '',
+                lastMatched: admin.firestore.FieldValue.serverTimestamp()
+              }).catch(err => {
+                console.error(`⚠️  Failed to back-populate ad ID for opportunity ${opp.opportunityId}:`, err.message);
+              });
+              backPopulatePromises.push(updatePromise);
+            }
+          }
+          
+          // Execute all back-population updates in parallel
+          if (backPopulatePromises.length > 0) {
+            await Promise.all(backPopulatePromises);
+            console.log(`   📝 Back-populated Facebook Ad ID to ${backPopulatePromises.length} opportunities`);
+          }
+        } else {
+          // No GHL data - remains unmatched
+          updateData.matchingStatus = 'unmatched';
+          // Clear any old GHL stats
+          updateData.ghlStats = admin.firestore.FieldValue.delete();
+          stats.unmatched++;
+        }
+
+        await db.collection('adPerformance').doc(adId).update(updateData);
+
+      } catch (error) {
+        console.error(`❌ Error matching ad ${adDoc.id}:`, error.message);
+        stats.errors++;
+      }
+    }
+
+    console.log(`✅ GHL matching complete: ${stats.matched} matched, ${stats.unmatched} unmatched, ${stats.errors} errors`);
+    return stats;
+
+  } catch (error) {
+    console.error('❌ Error in matchAndUpdateGHLDataToFacebookAds:', error);
+    throw error;
+  }
 }
 
 module.exports = {
   storeStageTransition,
   getCumulativeStageMetrics,
   matchStageCategory,
-  syncOpportunitiesFromAPI
+  syncOpportunitiesFromAPI,
+  matchAndUpdateGHLDataToFacebookAds,
+  normalizeAdName
 };
 

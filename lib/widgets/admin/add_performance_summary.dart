@@ -172,7 +172,7 @@ class _AddPerformanceSummaryState extends State<AddPerformanceSummary> {
                               ),
                               DataCell(
                                 Text(
-                                  'R${data.budget.toStringAsFixed(2)}',
+                                  '\$${data.budget.toStringAsFixed(2)}',
                                   style: const TextStyle(fontWeight: FontWeight.w500),
                                 ),
                               ),
@@ -187,7 +187,7 @@ class _AddPerformanceSummaryState extends State<AddPerformanceSummary> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    'R${data.cpl.toStringAsFixed(2)}',
+                                    '\$${data.cpl.toStringAsFixed(2)}',
                                     style: TextStyle(
                                       color: _getCPLColor(data.cpl),
                                       fontWeight: FontWeight.w500,
@@ -206,7 +206,7 @@ class _AddPerformanceSummaryState extends State<AddPerformanceSummary> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    'R${data.cpb.toStringAsFixed(2)}',
+                                    '\$${data.cpb.toStringAsFixed(2)}',
                                     style: TextStyle(
                                       color: _getCPBColor(data.cpb),
                                       fontWeight: FontWeight.w500,
@@ -225,7 +225,7 @@ class _AddPerformanceSummaryState extends State<AddPerformanceSummary> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    'R${data.cpa.toStringAsFixed(2)}',
+                                    '\$${data.cpa.toStringAsFixed(2)}',
                                     style: TextStyle(
                                       color: _getCPAColor(data.cpa),
                                       fontWeight: FontWeight.w500,
@@ -247,7 +247,7 @@ class _AddPerformanceSummaryState extends State<AddPerformanceSummary> {
                                     ),
                                   ),
                                   child: Text(
-                                    'R${data.actualProfit.toStringAsFixed(2)}',
+                                    '\$${data.actualProfit.toStringAsFixed(2)}',
                                     style: TextStyle(
                                       color: profitColor,
                                       fontWeight: FontWeight.bold,

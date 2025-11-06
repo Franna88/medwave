@@ -162,23 +162,32 @@ class TabletMainScreen extends StatelessWidget {
         _buildActionButton(
           icon: Icons.settings_outlined,
           onPressed: () {
-            // Settings panel coming soon
+            context.push('/profile'); // Navigate to profile/settings
           },
         ),
         const SizedBox(width: 12),
         
         // User Profile
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            Icons.person_outline,
-            color: AppTheme.primaryColor,
-            size: 18,
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              context.push('/profile'); // Navigate to profile
+            },
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.person_outline,
+                color: AppTheme.primaryColor,
+                size: 18,
+              ),
+            ),
           ),
         ),
       ],

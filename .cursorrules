@@ -1,0 +1,31 @@
+# Cursor AI Rules for MedWave Project
+
+## Documentation Policy - STRICT
+- NEVER create markdown (.md) files unless explicitly requested
+- NEVER create documentation files for completed work
+- NEVER create summary documents, quick reference guides, or implementation notes
+- NEVER create README files proactively
+- ONLY create .md files when user specifically says "create documentation" or "write docs"
+- Keep all explanations in chat responses only
+
+## Response Style
+- Be direct and concise
+- Show code changes inline in response
+- Explain what was done briefly in chat
+- Don't document your work in files
+- Focus on actual code implementation
+
+## Code Changes
+- Make the changes requested
+- Explain briefly what was changed
+- Test if needed
+- Move on - don't create documentation artifacts
+
+## When Documentation IS Allowed
+- User explicitly says: "create documentation", "write a guide", "make a README"
+- User asks: "can you document this?"
+- User requests: "write instructions for..."
+
+## Summary
+If the user didn't ask for documentation, DON'T CREATE IT.
+

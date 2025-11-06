@@ -122,6 +122,14 @@ class AppLocalizations {
       'en': 'Name of Main Member',
       'af': 'Naam van Hooflid'
     },
+    'private_patient': {
+      'en': 'Private Patient',
+      'af': 'Privaat Pasiënt'
+    },
+    'private_patient_description': {
+      'en': 'Patient is not on medical aid',
+      'af': 'Pasiënt is nie op mediese fonds nie'
+    },
     
     // Medical History
     'treated_for_illness': {

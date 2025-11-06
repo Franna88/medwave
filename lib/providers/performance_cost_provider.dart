@@ -1,47 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../models/performance/product.dart';
+import '../models/performance/ad_performance_data.dart';
 import '../models/performance/ad_performance_cost.dart';
-import '../models/facebook/facebook_ad_data.dart';
+import '../models/performance/campaign_aggregate.dart';
+import '../models/performance/ad_set_aggregate.dart';
+import '../services/firebase/ad_performance_service.dart';
 import '../services/performance_cost_service.dart';
-import '../services/facebook/facebook_ads_service.dart';
-import 'gohighlevel_provider.dart';
 
-/// Provider for managing performance cost data and state
+/// Provider for managing ad performance data (Facebook + GHL from Firebase)
 class PerformanceCostProvider extends ChangeNotifier {
   // Data
   List<Product> _products = [];
-  List<AdPerformanceCost> _adCosts = [];
-  List<AdPerformanceCostWithMetrics> _mergedData = [];
-  
-  // Facebook data
-  List<FacebookCampaignData> _facebookCampaigns = [];
-  Map<String, List<FacebookAdData>> _facebookAdsByCampaign = {};
-  bool _isFacebookDataLoading = false;
-  DateTime? _lastFacebookSync;
-  String? _facebookError;
+  List<AdPerformanceData> _adPerformanceData = [];
+  List<AdPerformanceWithProduct> _adPerformanceWithProducts = [];
   
   // State
   bool _isLoading = false;
   bool _isInitialized = false;
   String? _error;
+  DateTime? _lastSync;
+  bool _isSyncing = false;
   
   // Getters
   List<Product> get products => _products;
-  List<AdPerformanceCost> get adCosts => _adCosts;
-  List<AdPerformanceCostWithMetrics> get mergedData => _mergedData;
+  List<AdPerformanceData> get adPerformanceData => _adPerformanceData;
+  List<AdPerformanceWithProduct> get adPerformanceWithProducts => _adPerformanceWithProducts;
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
   String? get error => _error;
+  DateTime? get lastSync => _lastSync;
+  bool get isSyncing => _isSyncing;
   
-  // Facebook getters
-  List<FacebookCampaignData> get facebookCampaigns => _facebookCampaigns;
-  Map<String, List<FacebookAdData>> get facebookAdsByCampaign => _facebookAdsByCampaign;
-  bool get isFacebookDataLoading => _isFacebookDataLoading;
-  DateTime? get lastFacebookSync => _lastFacebookSync;
-  String? get facebookError => _facebookError;
-  bool get hasFacebookData => _facebookCampaigns.isNotEmpty;
-
+  // Quick stats
+  int get totalAds => _adPerformanceData.length;
+  int get matchedAds => _adPerformanceData.where((ad) => ad.matchingStatus == MatchingStatus.matched).length;
+  int get unmatchedAds => _adPerformanceData.where((ad) => ad.matchingStatus == MatchingStatus.unmatched).length;
+  
   /// Initialize the provider
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -56,7 +51,7 @@ class PerformanceCostProvider extends ChangeNotifier {
     
     try {
       await loadProducts();
-      await loadAdCosts();
+      await loadAdPerformanceData();
       
       _isInitialized = true;
       _isLoading = false;
@@ -64,7 +59,7 @@ class PerformanceCostProvider extends ChangeNotifier {
       if (kDebugMode) {
         print('✅ Performance Cost Provider: Initialized successfully');
         print('   - Products: ${_products.length}');
-        print('   - Ad Costs: ${_adCosts.length}');
+        print('   - Ads: ${_adPerformanceData.length} (Matched: $matchedAds, Unmatched: $unmatchedAds)');
       }
     } catch (e) {
       _error = e.toString();
@@ -102,25 +97,52 @@ class PerformanceCostProvider extends ChangeNotifier {
     }
   }
 
-  /// Load all ad performance costs
-  Future<void> loadAdCosts() async {
+  /// Load all ad performance data from Firebase
+  Future<void> loadAdPerformanceData() async {
     try {
       if (kDebugMode) {
-        print('🔄 Loading ad performance costs...');
+        print('🔄 Loading ad performance data from Firebase...');
       }
       
-      _adCosts = await PerformanceCostService.getAdPerformanceCosts();
+      _adPerformanceData = await AdPerformanceService.getAllAdPerformance();
+      
+      // Combine with products
+      _adPerformanceWithProducts = _adPerformanceData.map((ad) {
+        Product? product;
+        if (ad.adminConfig?.linkedProductId != null) {
+          product = _products.firstWhere(
+            (p) => p.id == ad.adminConfig!.linkedProductId,
+            orElse: () => Product(
+              id: '',
+              name: 'Unknown',
+              depositAmount: 0,
+              expenseCost: 0,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+        }
+        
+        return AdPerformanceWithProduct(
+          data: ad,
+          product: product,
+        );
+      }).toList();
+      
+      _lastSync = DateTime.now();
       
       if (kDebugMode) {
-        print('✅ Loaded ${_adCosts.length} ad performance costs');
+        print('✅ Loaded ${_adPerformanceData.length} ad performance records');
+        print('   - Matched (FB + GHL): $matchedAds');
+        print('   - Unmatched (FB only): $unmatchedAds');
       }
       
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error loading ad costs: $e');
+        print('❌ Error loading ad performance data: $e');
       }
-      _error = 'Failed to load ad costs: ${e.toString()}';
+      _error = 'Failed to load ad performance data: ${e.toString()}';
       notifyListeners();
       rethrow;
     }
@@ -134,7 +156,7 @@ class PerformanceCostProvider extends ChangeNotifier {
     
     try {
       await loadProducts();
-      await loadAdCosts();
+      await loadAdPerformanceData();
       
       _isLoading = false;
       
@@ -153,223 +175,86 @@ class PerformanceCostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ========== FACEBOOK ADS DATA ==========
+  // ========== SYNC OPERATIONS ==========
 
-  /// Fetch Facebook Ads data
-  Future<void> fetchFacebookData({bool forceRefresh = false}) async {
-    _isFacebookDataLoading = true;
-    _facebookError = null;
+  /// Trigger Facebook data sync
+  Future<void> syncFacebookData() async {
+    if (_isSyncing) {
+      if (kDebugMode) {
+        print('⏳ Sync already in progress, skipping...');
+      }
+      return;
+    }
+    
+    _isSyncing = true;
+    _error = null;
     notifyListeners();
     
     try {
       if (kDebugMode) {
-        print('🌐 Fetching Facebook Ads data...');
+        print('🔄 Triggering Facebook sync...');
       }
       
-      // Fetch campaigns
-      _facebookCampaigns = await FacebookAdsService.fetchCampaigns(
-        forceRefresh: forceRefresh,
-      );
-      
-      // Fetch ads for all campaigns
-      _facebookAdsByCampaign = await FacebookAdsService.fetchAllAds(
-        forceRefresh: forceRefresh,
-      );
-      
-      _lastFacebookSync = DateTime.now();
-      _isFacebookDataLoading = false;
+      final result = await AdPerformanceService.triggerFacebookSync();
       
       if (kDebugMode) {
-        print('✅ Facebook Ads data fetched successfully');
-        print('   - Campaigns: ${_facebookCampaigns.length}');
-        print('   - Total ads: ${_facebookAdsByCampaign.values.fold(0, (sum, ads) => sum + ads.length)}');
+        print('✅ Facebook sync completed: ${result['message']}');
       }
+      
+      // Reload data after sync
+      await loadAdPerformanceData();
+      
+      _isSyncing = false;
     } catch (e) {
-      _facebookError = e.toString();
-      _isFacebookDataLoading = false;
+      _error = 'Failed to sync Facebook data: ${e.toString()}';
+      _isSyncing = false;
       
       if (kDebugMode) {
-        print('❌ Error fetching Facebook data: $e');
+        print('❌ Error syncing Facebook data: $e');
       }
     }
     
     notifyListeners();
   }
 
-  /// Refresh Facebook data (force fetch)
-  Future<void> refreshFacebookData() async {
-    return fetchFacebookData(forceRefresh: true);
-  }
-
-  /// Clear Facebook cache
-  void clearFacebookCache() {
-    FacebookAdsService.clearCache();
-    _lastFacebookSync = null;
-    if (kDebugMode) {
-      print('🗑️ Facebook cache cleared');
+  /// Trigger GHL data sync
+  Future<void> syncGHLData() async {
+    if (_isSyncing) {
+      if (kDebugMode) {
+        print('⏳ Sync already in progress, skipping...');
+      }
+      return;
     }
+    
+    _isSyncing = true;
+    _error = null;
     notifyListeners();
-  }
-
-  /// Merge ad costs with cumulative campaign data and Facebook data
-  Future<void> mergeWithCumulativeData(GoHighLevelProvider ghlProvider) async {
+    
     try {
       if (kDebugMode) {
-        print('🔄 Merging ad costs with cumulative data and Facebook data...');
+        print('🔄 Triggering GHL sync...');
       }
-
-      // Fetch Facebook data first (using cache if available)
-      if (_facebookCampaigns.isEmpty) {
-        await fetchFacebookData();
-      }
-
-      // Sync Facebook data with adCosts (update spend, impressions, etc.)
-      final updatedAdCosts = _syncFacebookDataWithAdCosts(_adCosts);
-
-      _mergedData = await PerformanceCostService.getMergedPerformanceData(
-        adCosts: updatedAdCosts,
-        cumulativeCampaigns: ghlProvider.pipelineCampaigns,
-        products: _products,
-      );
-
+      
+      final result = await AdPerformanceService.triggerGHLSync();
+      
       if (kDebugMode) {
-        print('✅ Merged ${_mergedData.length} ad performance entries');
+        print('✅ GHL sync completed: ${result['message']}');
       }
-
-      notifyListeners();
+      
+      // Reload data after sync
+      await loadAdPerformanceData();
+      
+      _isSyncing = false;
     } catch (e) {
+      _error = 'Failed to sync GHL data: ${e.toString()}';
+      _isSyncing = false;
+      
       if (kDebugMode) {
-        print('❌ Error merging data: $e');
-      }
-      _error = 'Failed to merge data: ${e.toString()}';
-      notifyListeners();
-      rethrow;
-    }
-  }
-
-  /// Sync Facebook data with AdPerformanceCost records
-  /// Uses multiple matching strategies: exact ID match, fuzzy name match
-  List<AdPerformanceCost> _syncFacebookDataWithAdCosts(List<AdPerformanceCost> adCosts) {
-    if (_facebookCampaigns.isEmpty) {
-      // If no Facebook data, return empty list (hide all ads)
-      if (kDebugMode) {
-        print('⚠️ No Facebook campaigns loaded - hiding all ads until Facebook data is available');
-      }
-      return [];
-    }
-
-    // Create a map of Facebook campaigns by ID for quick lookup
-    final fbCampaignMap = {for (var c in _facebookCampaigns) c.id: c};
-
-    // Filter to ONLY ads that have matching Facebook campaigns
-    final matchedAds = <AdPerformanceCost>[];
-    
-    for (final adCost in adCosts) {
-      FacebookCampaignData? fbCampaign;
-      String matchStrategy = 'none';
-      
-      // Strategy 1: Exact Facebook Campaign ID match
-      if (adCost.facebookCampaignId != null && adCost.facebookCampaignId!.isNotEmpty) {
-        fbCampaign = fbCampaignMap[adCost.facebookCampaignId];
-        if (fbCampaign != null) {
-          matchStrategy = 'exact_id';
-        }
-      }
-      
-      // Strategy 2: Fuzzy name matching (extract campaign prefix from campaignName)
-      if (fbCampaign == null) {
-        fbCampaign = _fuzzyMatchCampaign(adCost.campaignName, _facebookCampaigns);
-        if (fbCampaign != null) {
-          matchStrategy = 'fuzzy_name';
-        }
-      }
-      
-      if (fbCampaign != null) {
-        // Update with Facebook data and add to matched list
-        matchedAds.add(adCost.copyWith(
-          facebookCampaignId: fbCampaign.id, // Store the matched ID for future exact matches
-          facebookSpend: fbCampaign.spend,
-          impressions: fbCampaign.impressions,
-          reach: fbCampaign.reach,
-          clicks: fbCampaign.clicks,
-          cpm: fbCampaign.cpm,
-          cpc: fbCampaign.cpc,
-          ctr: fbCampaign.ctr,
-          lastFacebookSync: DateTime.now(),
-        ));
-        
-        if (kDebugMode) {
-          print('✅ Matched ($matchStrategy): ${adCost.adName} → FB Campaign: ${fbCampaign.name} (${fbCampaign.id})');
-        }
-      } else {
-        if (kDebugMode) {
-          print('❌ No FB match for: ${adCost.adName} (campaignKey: ${adCost.campaignKey})');
-        }
-      }
-    }
-
-    if (kDebugMode) {
-      print('📊 Filtered ${adCosts.length} ads → ${matchedAds.length} ads with Facebook matches');
-    }
-
-    return matchedAds;
-  }
-
-  /// Helper: Fuzzy match by campaign name
-  FacebookCampaignData? _fuzzyMatchCampaign(String ghlCampaignName, List<FacebookCampaignData> fbCampaigns) {
-    // Extract prefix (e.g., "Matthys - 17102025 - ABOLEADFORMZA")
-    final ghlPrefix = _extractCampaignPrefix(ghlCampaignName);
-    
-    if (kDebugMode) {
-      print('🔍 Fuzzy matching: "$ghlPrefix" against ${fbCampaigns.length} Facebook campaigns');
-    }
-    
-    for (final fbCampaign in fbCampaigns) {
-      // Try to match the extracted prefix with Facebook campaign name
-      if (fbCampaign.name.contains(ghlPrefix)) {
-        if (kDebugMode) {
-          print('   ✓ Found match: "${fbCampaign.name}"');
-        }
-        return fbCampaign;
-      }
-      
-      // Also try reverse: does the GHL prefix contain the FB campaign name?
-      final fbPrefix = _extractCampaignPrefix(fbCampaign.name);
-      if (ghlPrefix.contains(fbPrefix) && fbPrefix.length > 10) { // Minimum length to avoid false positives
-        if (kDebugMode) {
-          print('   ✓ Found reverse match: "${fbCampaign.name}"');
-        }
-        return fbCampaign;
+        print('❌ Error syncing GHL data: $e');
       }
     }
     
-    if (kDebugMode) {
-      print('   ✗ No fuzzy match found');
-    }
-    
-    return null;
-  }
-
-  /// Extract campaign prefix for matching
-  /// "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Afrikaans" -> "Matthys - 17102025 - ABOLEADFORMZA"
-  String _extractCampaignPrefix(String campaignName) {
-    // Remove common suffixes and extract core campaign identifier
-    final parts = campaignName.split(' - ');
-    if (parts.length >= 3) {
-      // Take first 3 parts and remove anything in parentheses from the 3rd part
-      final thirdPart = parts[2].split(' ')[0].replaceAll(RegExp(r'\(.*?\)'), '').trim();
-      return '${parts[0]} - ${parts[1]} - $thirdPart';
-    }
-    return campaignName;
-  }
-
-  /// Get merged data (synchronous, returns cached data)
-  List<AdPerformanceCostWithMetrics> getMergedData(GoHighLevelProvider ghlProvider) {
-    // Trigger async merge in background if needed
-    if (_mergedData.isEmpty && _adCosts.isNotEmpty) {
-      mergeWithCumulativeData(ghlProvider);
-    }
-    return _mergedData;
+    notifyListeners();
   }
 
   // ========== PRODUCT CRUD OPERATIONS ==========
@@ -472,107 +357,95 @@ class PerformanceCostProvider extends ChangeNotifier {
     }
   }
 
-  // ========== AD PERFORMANCE COST CRUD OPERATIONS ==========
+  // ========== AD PERFORMANCE OPERATIONS ==========
 
-  /// Create a new ad performance cost
-  Future<AdPerformanceCost> createAdPerformanceCost({
-    required String campaignName,
-    required String campaignKey,
-    required String adId,
-    required String adName,
-    required double budget,
-    String? linkedProductId,
-    String? facebookCampaignId,
-    String? createdBy,
-  }) async {
+  /// Update budget for an ad
+  Future<void> updateAdBudget(String adId, double budget) async {
     try {
       if (kDebugMode) {
-        print('📝 Creating ad performance cost: $adName');
+        print('📝 Updating budget for ad: $adId to R$budget');
       }
 
-      final cost = AdPerformanceCost(
-        id: '', // Will be set by Firestore
-        campaignName: campaignName,
-        campaignKey: campaignKey,
-        adId: adId,
-        adName: adName,
-        budget: budget,
-        linkedProductId: linkedProductId,
-        facebookCampaignId: facebookCampaignId,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        createdBy: createdBy,
-      );
-
-      final createdCost = await PerformanceCostService.createAdPerformanceCost(cost);
-      _adCosts.add(createdCost);
+      await AdPerformanceService.updateBudget(adId, budget);
       
-      notifyListeners();
-      
-      if (kDebugMode) {
-        print('✅ Ad performance cost created: ${createdCost.id}');
-      }
-      
-      return createdCost;
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error creating ad performance cost: $e');
-      }
-      _error = 'Failed to create ad cost: ${e.toString()}';
-      notifyListeners();
-      rethrow;
-    }
-  }
-
-  /// Update an existing ad performance cost
-  Future<void> updateAdPerformanceCost(AdPerformanceCost cost) async {
-    try {
-      if (kDebugMode) {
-        print('📝 Updating ad performance cost: ${cost.id}');
-      }
-
-      await PerformanceCostService.updateAdPerformanceCost(cost);
-      
-      final index = _adCosts.indexWhere((c) => c.id == cost.id);
+      // Update local data
+      final index = _adPerformanceData.indexWhere((ad) => ad.adId == adId);
       if (index != -1) {
-        _adCosts[index] = cost;
+        final ad = _adPerformanceData[index];
+        final updatedConfig = ad.adminConfig?.copyWith(
+          budget: budget,
+          updatedAt: DateTime.now(),
+        ) ?? AdminConfig(
+          budget: budget,
+          createdBy: 'system',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        
+        _adPerformanceData[index] = ad.copyWith(
+          adminConfig: updatedConfig,
+          lastUpdated: DateTime.now(),
+        );
       }
       
       notifyListeners();
       
       if (kDebugMode) {
-        print('✅ Ad performance cost updated: ${cost.id}');
+        print('✅ Budget updated for ad: $adId');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error updating ad performance cost: $e');
+        print('❌ Error updating budget: $e');
       }
-      _error = 'Failed to update ad cost: ${e.toString()}';
+      _error = 'Failed to update budget: ${e.toString()}';
       notifyListeners();
       rethrow;
     }
   }
 
-  /// Delete an ad performance cost
-  Future<void> deleteAdPerformanceCost(String costId) async {
+  /// Update linked product for an ad
+  Future<void> updateAdLinkedProduct(String adId, String? productId) async {
     try {
       if (kDebugMode) {
-        print('🗑️ Deleting ad performance cost: $costId');
+        print('📝 Updating linked product for ad: $adId to $productId');
       }
 
-      await PerformanceCostService.deleteAdPerformanceCost(costId);
-      _adCosts.removeWhere((c) => c.id == costId);
+      await AdPerformanceService.updateLinkedProduct(adId, productId);
+      
+      // Update local data
+      final index = _adPerformanceData.indexWhere((ad) => ad.adId == adId);
+      if (index != -1) {
+        final ad = _adPerformanceData[index];
+        final updatedConfig = ad.adminConfig?.copyWith(
+          linkedProductId: productId,
+          updatedAt: DateTime.now(),
+        ) ?? AdminConfig(
+          budget: 0,
+          linkedProductId: productId,
+          createdBy: 'system',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        
+        _adPerformanceData[index] = ad.copyWith(
+          adminConfig: updatedConfig,
+          lastUpdated: DateTime.now(),
+        );
+      }
+      
+      // Rebuild with products list
+      await loadAdPerformanceData();
       
       notifyListeners();
       
       if (kDebugMode) {
-        print('✅ Ad performance cost deleted: $costId');
+        print('✅ Linked product updated for ad: $adId');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error deleting ad performance cost: $e');
+        print('❌ Error updating linked product: $e');
       }
-      _error = 'Failed to delete ad cost: ${e.toString()}';
+      _error = 'Failed to update linked product: ${e.toString()}';
       notifyListeners();
       rethrow;
     }
@@ -592,5 +465,304 @@ class PerformanceCostProvider extends ChangeNotifier {
       return null;
     }
   }
+
+  // ========== BACKWARD COMPATIBILITY METHODS ==========
+  // These methods provide compatibility with old UI code
+  
+  /// Get merged data (compatibility method)
+  List<AdPerformanceWithProduct> getMergedData(dynamic ghlProvider) {
+    return _adPerformanceWithProducts;
+  }
+
+  /// Merge with cumulative data (compatibility method - now handled by Cloud Functions)
+  Future<void> mergeWithCumulativeData(dynamic ghlProvider) async {
+    // Data is already merged in Firebase by Cloud Functions
+    // Just refresh to get latest
+    await refreshData();
+  }
+
+  /// Refresh Facebook data (compatibility method)
+  Future<void> refreshFacebookData() async {
+    await syncFacebookData();
+  }
+
+  /// Check if has Facebook data (compatibility getter)
+  bool get hasFacebookData => _adPerformanceData.isNotEmpty;
+
+  /// Last Facebook sync time (compatibility getter)
+  DateTime? get lastFacebookSync => _lastSync;
+
+  /// Is Facebook data loading (compatibility getter)
+  bool get isFacebookDataLoading => _isSyncing;
+
+  /// Get Facebook campaigns (compatibility getter)
+  List<FacebookCampaignSummary> get facebookCampaigns {
+    // Group ads by campaign
+    final campaigns = <String, FacebookCampaignSummary>{};
+    
+    for (final ad in _adPerformanceData) {
+      if (!campaigns.containsKey(ad.campaignId)) {
+        // Calculate total spend for this campaign
+        double campaignSpend = _adPerformanceData
+            .where((a) => a.campaignId == ad.campaignId)
+            .fold(0.0, (sum, a) => sum + a.facebookStats.spend);
+        
+        campaigns[ad.campaignId] = FacebookCampaignSummary(
+          id: ad.campaignId,
+          name: ad.campaignName,
+          spend: campaignSpend,
+        );
+      }
+    }
+    
+    return campaigns.values.toList();
+  }
+
+  /// Get ad costs (compatibility getter) - returns empty list
+  List<dynamic> get adCosts => [];
+
+  /// Create ad performance cost (compatibility method - not used in new system)
+  Future<void> createAdPerformanceCost({
+    required String campaignName,
+    required String campaignKey,
+    required String adId,
+    required String adName,
+    required double budget,
+    String? linkedProductId,
+    String? facebookCampaignId,
+  }) async {
+    // In the new system, ads come from Facebook API
+    // This method is not used but kept for compatibility
+    throw UnimplementedError('Use syncFacebookData() to add ads from Facebook API');
+  }
+
+  /// Update ad performance cost (compatibility method)
+  Future<void> updateAdPerformanceCost(
+    AdPerformanceCost cost, {
+    double? budget,
+    String? linkedProductId,
+  }) async {
+    // Update budget if provided
+    if (budget != null) {
+      await updateAdBudget(cost.id, budget);
+    }
+    
+    // Update linked product if provided
+    if (linkedProductId != null) {
+      await updateAdLinkedProduct(cost.id, linkedProductId);
+    }
+  }
+
+  /// Delete ad performance cost (compatibility method - not used in new system)
+  Future<void> deleteAdPerformanceCost(String id) async {
+    // In the new system, ads come from Facebook and shouldn't be manually deleted
+    // This method is not used but kept for compatibility
+    throw UnimplementedError('Ads are synced from Facebook API and should not be manually deleted');
+  }
+
+  // ========== AGGREGATION METHODS ==========
+
+  /// Get campaign-level aggregates from ad performance data
+  List<CampaignAggregate> getCampaignAggregates(List<AdPerformanceWithProduct> ads) {
+    final Map<String, List<AdPerformanceWithProduct>> campaignGroups = {};
+    
+    // Group ads by campaign
+    for (final ad in ads) {
+      if (!campaignGroups.containsKey(ad.campaignId)) {
+        campaignGroups[ad.campaignId] = [];
+      }
+      campaignGroups[ad.campaignId]!.add(ad);
+    }
+    
+    // Create aggregates for each campaign
+    final aggregates = <CampaignAggregate>[];
+    for (final entry in campaignGroups.entries) {
+      final campaignId = entry.key;
+      final campaignAds = entry.value;
+      
+      if (campaignAds.isEmpty) continue;
+      
+      // Count unique ad sets
+      final uniqueAdSets = campaignAds
+          .where((ad) => ad.adSetId != null && ad.adSetId!.isNotEmpty)
+          .map((ad) => ad.adSetId)
+          .toSet()
+          .length;
+      
+      // Aggregate metrics
+      double totalFbSpend = 0;
+      int totalImpressions = 0;
+      int totalReach = 0;
+      int totalClicks = 0;
+      int totalLeads = 0;
+      int totalBookings = 0;
+      int totalDeposits = 0;
+      int totalCashCollected = 0;
+      double totalCashAmount = 0;
+      double totalBudget = 0;
+      DateTime? latestUpdate;
+      
+      for (final ad in campaignAds) {
+        totalFbSpend += ad.facebookStats.spend;
+        totalImpressions += ad.facebookStats.impressions;
+        totalReach += ad.facebookStats.reach;
+        totalClicks += ad.facebookStats.clicks;
+        
+        if (ad.ghlStats != null) {
+          totalLeads += ad.ghlStats!.leads;
+          totalBookings += ad.ghlStats!.bookings;
+          totalDeposits += ad.ghlStats!.deposits;
+          totalCashCollected += ad.ghlStats!.cashCollected;
+          totalCashAmount += ad.ghlStats!.cashAmount;
+        }
+        
+        if (ad.adminConfig != null) {
+          totalBudget += ad.adminConfig!.budget;
+        }
+        
+        if (latestUpdate == null || ad.lastUpdated.isAfter(latestUpdate)) {
+          latestUpdate = ad.lastUpdated;
+        }
+      }
+      
+      aggregates.add(CampaignAggregate(
+        campaignId: campaignId,
+        campaignName: campaignAds.first.campaignName,
+        totalAds: campaignAds.length,
+        totalAdSets: uniqueAdSets,
+        totalFbSpend: totalFbSpend,
+        totalImpressions: totalImpressions,
+        totalReach: totalReach,
+        totalClicks: totalClicks,
+        totalLeads: totalLeads,
+        totalBookings: totalBookings,
+        totalDeposits: totalDeposits,
+        totalCashCollected: totalCashCollected,
+        totalCashAmount: totalCashAmount,
+        totalBudget: totalBudget,
+        lastUpdated: latestUpdate ?? DateTime.now(),
+        ads: campaignAds,
+      ));
+    }
+    
+    return aggregates;
+  }
+
+  /// Get ad set-level aggregates from ad performance data
+  List<AdSetAggregate> getAdSetAggregates(List<AdPerformanceWithProduct> ads) {
+    final Map<String, List<AdPerformanceWithProduct>> adSetGroups = {};
+    
+    // Group ads by ad set
+    for (final ad in ads) {
+      // Skip ads without ad set ID
+      if (ad.adSetId == null || ad.adSetId!.isEmpty) continue;
+      
+      if (!adSetGroups.containsKey(ad.adSetId)) {
+        adSetGroups[ad.adSetId!] = [];
+      }
+      adSetGroups[ad.adSetId]!.add(ad);
+    }
+    
+    // Create aggregates for each ad set
+    final aggregates = <AdSetAggregate>[];
+    for (final entry in adSetGroups.entries) {
+      final adSetId = entry.key;
+      final adSetAds = entry.value;
+      
+      if (adSetAds.isEmpty) continue;
+      
+      // Aggregate metrics
+      double totalFbSpend = 0;
+      int totalImpressions = 0;
+      int totalReach = 0;
+      int totalClicks = 0;
+      int totalLeads = 0;
+      int totalBookings = 0;
+      int totalDeposits = 0;
+      int totalCashCollected = 0;
+      double totalCashAmount = 0;
+      double totalBudget = 0;
+      DateTime? latestUpdate;
+      
+      for (final ad in adSetAds) {
+        totalFbSpend += ad.facebookStats.spend;
+        totalImpressions += ad.facebookStats.impressions;
+        totalReach += ad.facebookStats.reach;
+        totalClicks += ad.facebookStats.clicks;
+        
+        if (ad.ghlStats != null) {
+          totalLeads += ad.ghlStats!.leads;
+          totalBookings += ad.ghlStats!.bookings;
+          totalDeposits += ad.ghlStats!.deposits;
+          totalCashCollected += ad.ghlStats!.cashCollected;
+          totalCashAmount += ad.ghlStats!.cashAmount;
+        }
+        
+        if (ad.adminConfig != null) {
+          totalBudget += ad.adminConfig!.budget;
+        }
+        
+        if (latestUpdate == null || ad.lastUpdated.isAfter(latestUpdate)) {
+          latestUpdate = ad.lastUpdated;
+        }
+      }
+      
+      aggregates.add(AdSetAggregate(
+        adSetId: adSetId,
+        adSetName: adSetAds.first.adSetName ?? 'Unknown Ad Set',
+        campaignId: adSetAds.first.campaignId,
+        campaignName: adSetAds.first.campaignName,
+        totalAds: adSetAds.length,
+        totalFbSpend: totalFbSpend,
+        totalImpressions: totalImpressions,
+        totalReach: totalReach,
+        totalClicks: totalClicks,
+        totalLeads: totalLeads,
+        totalBookings: totalBookings,
+        totalDeposits: totalDeposits,
+        totalCashCollected: totalCashCollected,
+        totalCashAmount: totalCashAmount,
+        totalBudget: totalBudget,
+        lastUpdated: latestUpdate ?? DateTime.now(),
+        ads: adSetAds,
+      ));
+    }
+    
+    return aggregates;
+  }
+
+  /// Get top performing ads by profit
+  List<AdPerformanceWithProduct> getTopAdsByProfit(List<AdPerformanceWithProduct> ads, {int limit = 5}) {
+    final sortedAds = List<AdPerformanceWithProduct>.from(ads)
+      ..sort((a, b) => b.profit.compareTo(a.profit));
+    return sortedAds.take(limit).toList();
+  }
+
+  /// Get top performing ad sets by profit
+  List<AdSetAggregate> getTopAdSetsByProfit(List<AdPerformanceWithProduct> ads, {int limit = 5}) {
+    final adSets = getAdSetAggregates(ads);
+    adSets.sort((a, b) => b.totalProfit.compareTo(a.totalProfit));
+    return adSets.take(limit).toList();
+  }
+
+  /// Get top performing campaigns by profit
+  List<CampaignAggregate> getTopCampaignsByProfit(List<AdPerformanceWithProduct> ads, {int limit = 5}) {
+    final campaigns = getCampaignAggregates(ads);
+    campaigns.sort((a, b) => b.totalProfit.compareTo(a.totalProfit));
+    return campaigns.take(limit).toList();
+  }
+}
+
+/// Helper class for Facebook campaign summary (compatibility)
+class FacebookCampaignSummary {
+  final String id;
+  final String name;
+  final double spend;
+
+  FacebookCampaignSummary({
+    required this.id,
+    required this.name,
+    required this.spend,
+  });
 }
 

@@ -5,8 +5,15 @@ import '../theme/app_theme.dart';
 import '../utils/role_manager.dart';
 import '../providers/auth_provider.dart';
 
-class SidebarNavigation extends StatelessWidget {
+class SidebarNavigation extends StatefulWidget {
   const SidebarNavigation({super.key});
+
+  @override
+  State<SidebarNavigation> createState() => _SidebarNavigationState();
+}
+
+class _SidebarNavigationState extends State<SidebarNavigation> {
+  final Set<String> _expandedItems = {};
 
   @override
   Widget build(BuildContext context) {
@@ -97,20 +104,161 @@ class SidebarNavigation extends StatelessWidget {
     // Get role-based navigation items
     final roleNavItems = RoleManager.getNavigationItems(userRole);
     
-    // Convert to internal navigation items
-    final navigationItems = roleNavItems.map((roleItem) {
-      return _NavigationItem(
-        icon: _getIconData(roleItem.icon, false),
-        activeIcon: _getIconData(roleItem.icon, true),
-        label: roleItem.title,
-        route: roleItem.route,
-        isActive: _isRouteActive(currentLocation, roleItem.route),
-      );
-    }).toList();
+    // Auto-expand items if a sub-route is active
+    for (final roleItem in roleNavItems) {
+      if (roleItem.hasSubItems) {
+        for (final subItem in roleItem.subItems!) {
+          if (currentLocation.startsWith(subItem.route)) {
+            _expandedItems.add(roleItem.route);
+            break;
+          }
+        }
+      }
+    }
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: navigationItems.map((item) => _buildExpandedNavigationTile(context, item)).toList(),
+      children: roleNavItems.map((roleItem) {
+        return _buildNavigationItemWithSubItems(context, roleItem, currentLocation);
+      }).toList(),
+    );
+  }
+
+  Widget _buildNavigationItemWithSubItems(
+    BuildContext context,
+    NavigationItem roleItem,
+    String currentLocation,
+  ) {
+    final isExpanded = _expandedItems.contains(roleItem.route);
+    final hasSubItems = roleItem.hasSubItems;
+    final isParentActive = _isRouteActive(currentLocation, roleItem.route);
+
+    return Column(
+      children: [
+        // Main navigation item
+        Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                if (hasSubItems) {
+                  // Toggle expansion
+                  setState(() {
+                    if (isExpanded) {
+                      _expandedItems.remove(roleItem.route);
+                    } else {
+                      _expandedItems.add(roleItem.route);
+                    }
+                  });
+                } else {
+                  // Navigate to route
+                  GoRouter.of(context).go(roleItem.route);
+                }
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: isParentActive
+                      ? AppTheme.primaryColor.withOpacity(0.1)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: isParentActive
+                      ? Border.all(color: AppTheme.primaryColor.withOpacity(0.2))
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getIconData(roleItem.icon, isParentActive),
+                      color: isParentActive
+                          ? AppTheme.primaryColor
+                          : AppTheme.secondaryColor.withOpacity(0.7),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        roleItem.title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isParentActive ? FontWeight.w600 : FontWeight.w500,
+                          color: isParentActive
+                              ? AppTheme.primaryColor
+                              : AppTheme.secondaryColor.withOpacity(0.8),
+                        ),
+                      ),
+                    ),
+                    if (hasSubItems)
+                      AnimatedRotation(
+                        duration: const Duration(milliseconds: 200),
+                        turns: isExpanded ? 0.5 : 0,
+                        child: Icon(
+                          Icons.expand_more,
+                          size: 18,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        
+        // Sub-items (if expanded)
+        if (hasSubItems && isExpanded)
+          ...roleItem.subItems!.map((subItem) {
+            final isSubActive = currentLocation == subItem.route;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 4, left: 16),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => GoRouter.of(context).go(subItem.route),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: isSubActive
+                          ? AppTheme.primaryColor.withOpacity(0.08)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getIconData(subItem.icon, isSubActive),
+                          size: 16,
+                          color: isSubActive
+                              ? AppTheme.primaryColor
+                              : Colors.grey[600],
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            subItem.title,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSubActive ? FontWeight.w600 : FontWeight.w500,
+                              color: isSubActive
+                                  ? AppTheme.primaryColor
+                                  : Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+      ],
     );
   }
 
@@ -143,6 +291,12 @@ class SidebarNavigation extends StatelessWidget {
         return filled ? Icons.trending_up : Icons.trending_up_outlined;
       case 'build':
         return filled ? Icons.build : Icons.build_outlined;
+      case 'summarize':
+        return filled ? Icons.summarize : Icons.summarize_outlined;
+      case 'ads_click':
+        return filled ? Icons.ads_click : Icons.ads_click;
+      case 'inventory':
+        return filled ? Icons.inventory : Icons.inventory_outlined;
       default:
         return filled ? Icons.circle : Icons.circle_outlined;
     }
@@ -154,61 +308,6 @@ class SidebarNavigation extends StatelessWidget {
       return currentLocation == '/' || currentLocation == '/dashboard';
     }
     return currentLocation.startsWith(route);
-  }
-
-  Widget _buildExpandedNavigationTile(BuildContext context, _NavigationItem item) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => GoRouter.of(context).go(item.route),
-          borderRadius: BorderRadius.circular(12),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: item.isActive 
-                ? AppTheme.primaryColor.withOpacity(0.1)
-                : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              border: item.isActive
-                ? Border.all(color: AppTheme.primaryColor.withOpacity(0.2))
-                : null,
-            ),
-            child: Row(
-              children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    item.isActive ? item.activeIcon : item.icon,
-                    key: ValueKey(item.isActive),
-                    color: item.isActive 
-                      ? AppTheme.primaryColor 
-                      : AppTheme.secondaryColor.withOpacity(0.7),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    item.label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: item.isActive ? FontWeight.w600 : FontWeight.w500,
-                      color: item.isActive 
-                        ? AppTheme.primaryColor 
-                        : AppTheme.secondaryColor.withOpacity(0.8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildExpandedFooter() {
@@ -273,20 +372,4 @@ class SidebarNavigation extends StatelessWidget {
       ),
     );
   }
-}
-
-class _NavigationItem {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final String route;
-  final bool isActive;
-
-  const _NavigationItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.route,
-    required this.isActive,
-  });
 }

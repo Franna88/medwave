@@ -591,34 +591,14 @@ class GoHighLevelService {
   }
 
   /// Test API connection
+  /// NOTE: Skipping direct API test to avoid CORS issues in web browser
+  /// All API calls go through Cloud Functions which handle CORS properly
   static Future<bool> testConnection() async {
-    try {
-      if (kDebugMode) {
-        print('🔄 GHL SERVICE: Testing API connection...');
-      }
-
-      final response = await http.get(
-        Uri.parse('$_baseUrl$_pipelinesEndpoint'),
-        headers: _headers,
-      );
-
-      final isConnected = response.statusCode == 200;
-      
-      if (kDebugMode) {
-        if (isConnected) {
-          print('✅ GHL SERVICE: API connection successful');
-        } else {
-          print('❌ GHL SERVICE: API connection failed - ${response.statusCode}');
-        }
-      }
-
-      return isConnected;
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ GHL SERVICE ERROR: Connection test failed: $e');
-      }
-      return false;
+    if (kDebugMode) {
+      print('✅ GHL SERVICE: API connection test skipped (using Cloud Functions)');
     }
+    // Always return true - actual connection will be tested when Cloud Functions are called
+    return true;
   }
 
   /// Get campaign performance analytics for Erich Pipeline

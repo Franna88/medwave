@@ -32,8 +32,16 @@ class WoundManagementService {
     return 1; // Default to single wound
   }
   
-  /// Determines the appropriate session logging route based on wound count
+  /// Determines the appropriate session logging route based on treatment type and wound count
   static String getSessionLoggingRoute(String patientId, Patient patient) {
+    // Route based on treatment type first
+    if (patient.treatmentType == TreatmentType.weight) {
+      return '/patients/$patientId/weight-session';
+    } else if (patient.treatmentType == TreatmentType.pain) {
+      return '/patients/$patientId/pain-session';
+    }
+    
+    // For wound patients, check wound count
     if (hasMultipleWounds(patient)) {
       return '/patients/$patientId/multi-wound-session';
     } else {

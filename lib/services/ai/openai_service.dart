@@ -20,8 +20,10 @@ IMPORTANT: The following information is already available from patient onboardin
 - Wound measurements (length, width, depth in centimeters) - these are captured during the session
 - Wound location and anatomical details
 - Wound classification/staging information
+- Next appointment dates - these are automatically pulled from the calendar system
 
 NEVER ask about comorbidities or medical conditions if they are listed in the patient's medical history from registration.
+NEVER ask about next appointment dates or follow-up scheduling - these are automatically included from the booking system.
 
 Key Guidelines for Session-Specific Questions:
 
@@ -189,11 +191,17 @@ WOUND HISTORY AND BACKGROUND: ${clinicalData.woundHistory ?? 'Not specified'}, O
 
 CURRENT SESSION INFORMATION: Practitioner: ${clinicalData.practitionerName}, Practice Number: ${clinicalData.practitionerPracticeNumber ?? 'Not provided'}, Contact: ${clinicalData.practitionerContactDetails ?? 'Not provided'}, Wound Type: ${clinicalData.woundTypeAndHistory ?? 'Not provided'}, Occurrence Description: ${clinicalData.woundOccurrenceDescription ?? 'Not provided'}, Infection Status: ${clinicalData.infectionStatus ?? 'None reported'}, Tests Performed: ${clinicalData.testsPerformed.isNotEmpty ? clinicalData.testsPerformed.join(', ') : 'None performed'}, Treatment Dates: ${clinicalData.treatmentDates.isNotEmpty ? clinicalData.treatmentDates.join(', ') : 'Not scheduled'}, Current Wound Status: ${clinicalData.woundDetails?.type ?? 'Not specified'}, Size: ${clinicalData.woundDetails?.size ?? 'Not measured'}, Location: ${clinicalData.woundDetails?.location ?? 'Not specified'}, TIMES Assessment - Tissue: ${clinicalData.woundDetails?.timesAssessment?.tissue ?? 'Not assessed'}, Inflammation: ${clinicalData.woundDetails?.timesAssessment?.inflammation ?? 'Not assessed'}, Moisture: ${clinicalData.woundDetails?.timesAssessment?.moisture ?? 'Not assessed'}, Treatment Plan: ${clinicalData.treatmentDetails?.plannedTreatments.isNotEmpty == true ? clinicalData.treatmentDetails!.plannedTreatments.join(', ') : 'Standard wound care'}, Additional Notes: ${clinicalData.additionalNotes ?? 'None'}
 
+NEXT APPOINTMENTS: ${clinicalData.appointmentSummary}
+
 CODING INFORMATION: 
 ${selectedCodes.isNotEmpty ? ICD10Service.formatCodesForReport(selectedCodes) : 'ICD-10 codes to be determined based on clinical assessment'}
 Treatment Codes: ${treatmentCodes.join(', ')}
 
-Generate a professional clinical motivation letter written in fluent paragraph format. Begin with patient identification, describe the wound history and current condition in narrative form, detail the current session findings and treatments in complete sentences, and PROMINENTLY include the ICD-10 diagnostic codes within the text (especially noting any PMB-eligible codes for guaranteed coverage). Conclude with the authorization request. Do NOT use bullet points, lists, or formatting symbols. Write as a complete, flowing medical report that clearly includes the diagnostic codes for insurance processing.
+Generate a professional clinical motivation letter written in fluent paragraph format. Begin with patient identification, describe the wound history and current condition in narrative form, detail the current session findings and treatments in complete sentences, and PROMINENTLY include the ICD-10 diagnostic codes within the text (especially noting any PMB-eligible codes for guaranteed coverage).
+
+CRITICAL APPOINTMENT SECTION: After discussing the treatment plan and before the final authorization request, you MUST include a clearly labeled section that starts with "FOLLOW-UP APPOINTMENTS:" on its own line, then list each appointment on a separate line below it using the EXACT information from "NEXT APPOINTMENTS" above. Format each appointment on its own line with a dash prefix (e.g., "- Friday, November 14, 2025 at 9:00 AM"). Include ALL appointment dates and times listed - do not summarize or abbreviate. If no appointments are scheduled, state "No upcoming appointments have been scheduled at this time." Do NOT make up or infer appointment dates - only use what is provided.
+
+Conclude with the authorization request. Do NOT use bullet points, lists, or formatting symbols. Write as a complete, flowing medical report that clearly includes the diagnostic codes and appointment information for insurance processing.
 ''';
 
       final response = await http.post(

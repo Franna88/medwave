@@ -147,11 +147,12 @@ class GoHighLevelProvider extends ChangeNotifier {
       ? (erichInstallations / erichTotalLeads) * 100 : 0;
 
   /// Initialize the provider and start data loading
+  /// NOTE: All API calls go through Cloud Functions to avoid CORS issues
   Future<void> initialize() async {
     if (_isInitialized) return;
     
     if (kDebugMode) {
-      print('🔄 GHL PROVIDER: Initializing...');
+      print('🔄 GHL PROVIDER: Initializing (using Cloud Functions for all API calls)...');
     }
     
     _isLoading = true;
@@ -159,13 +160,8 @@ class GoHighLevelProvider extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // Test API connection first
-      final isConnected = await GoHighLevelService.testConnection();
-      if (!isConnected) {
-        throw Exception('Unable to connect to GoHighLevel API. This is likely due to CORS restrictions when running in a web browser. The GoHighLevel integration will work properly when deployed to a server or when running as a mobile app.');
-      }
-      
-      // Load initial data
+      // Skip direct API test - Cloud Functions handle this
+      // Load initial data (which calls Cloud Functions, not direct API)
       await _loadAllData();
       
       // Start automatic refresh timer

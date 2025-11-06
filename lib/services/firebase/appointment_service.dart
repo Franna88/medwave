@@ -109,6 +109,9 @@ class AppointmentService {
       // Update the document with its own ID
       await docRef.update({'id': docRef.id});
       
+      debugPrint('✅ APPOINTMENT: Created appointment ${docRef.id} for practitioner $userId');
+      debugPrint('   Start: ${appointmentData.startTime}, End: ${appointmentData.endTime}');
+      
       // Sync to Google Calendar in background (don't wait for it)
       _syncToGoogleCalendar(appointmentData.copyWith(id: docRef.id));
       
@@ -261,6 +264,13 @@ class AppointmentService {
 
       return conflicts;
     } catch (e) {
+      // If the error is about missing index, return empty list (no conflicts)
+      // This allows appointments to be created while the index is building
+      if (e.toString().contains('failed-precondition') || 
+          e.toString().contains('requires an index')) {
+        debugPrint('⚠️ CONFLICT CHECK: Index not ready, skipping conflict check');
+        return [];
+      }
       throw Exception('Failed to check appointment conflicts: $e');
     }
   }
@@ -355,6 +365,35 @@ class AppointmentService {
       return snapshot.docs.map((doc) => Appointment.fromFirestore(doc)).toList();
     } catch (e) {
       throw Exception('Failed to get patient appointments: $e');
+    }
+  }
+
+  /// Get upcoming appointments for a specific patient
+  static Future<List<Appointment>> getUpcomingAppointmentsByPatient(String patientId) async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) throw Exception('User not authenticated');
+
+      final now = DateTime.now();
+
+      final snapshot = await _appointmentsCollection
+          .where('practitionerId', isEqualTo: userId)
+          .where('patientId', isEqualTo: patientId)
+          .where('startTime', isGreaterThan: Timestamp.fromDate(now))
+          .orderBy('startTime', descending: false)
+          .get();
+
+      // Filter out cancelled appointments
+      final upcomingAppointments = snapshot.docs
+          .map((doc) => Appointment.fromFirestore(doc))
+          .where((appointment) => appointment.status != AppointmentStatus.cancelled)
+          .toList();
+
+      return upcomingAppointments;
+    } catch (e) {
+      debugPrint('Failed to get upcoming patient appointments: $e');
+      // Return empty list instead of throwing to not break report generation
+      return [];
     }
   }
 

@@ -1,0 +1,83 @@
+{
+  "timestamp": "2025-10-28T21:41:53.087666",
+  "summary": {
+    "total_campaigns": 6,
+    "perfect_matches": 0,
+    "discrepancies": 6,
+    "totals": {
+      "ghl_deposits": 0,
+      "fb_deposits": 5,
+      "ghl_cash": 0,
+      "fb_cash": 1
+    }
+  },
+  "perfect_matches": [],
+  "discrepancies": [
+    {
+      "campaign": "GP - Swiss Army",
+      "pipeline": "Davide",
+      "ghl_deposits": 0,
+      "fb_deposits": 1,
+      "ghl_cash": 0,
+      "fb_cash": 0,
+      "match": false,
+      "ghl_deposit_opps": [],
+      "ghl_cash_opps": []
+    },
+    {
+      "campaign": "Health Providers",
+      "pipeline": "Andries",
+      "ghl_deposits": 0,
+      "fb_deposits": 0,
+      "ghl_cash": 0,
+      "fb_cash": 1,
+      "match": false,
+      "ghl_deposit_opps": [],
+      "ghl_cash_opps": []
+    },
+    {
+      "campaign": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - All Doctors",
+      "pipeline": "Andries",
+      "ghl_deposits": 0,
+      "fb_deposits": 1,
+      "ghl_cash": 0,
+      "fb_cash": 0,
+      "match": false,
+      "ghl_deposit_opps": [],
+      "ghl_cash_opps": []
+    },
+    {
+      "campaign": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Medical Doctor",
+      "pipeline": "Andries",
+      "ghl_deposits": 0,
+      "fb_deposits": 1,
+      "ghl_cash": 0,
+      "fb_cash": 0,
+      "match": false,
+      "ghl_deposit_opps": [],
+      "ghl_cash_opps": []
+    },
+    {
+      "campaign": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+      "pipeline": "Davide",
+      "ghl_deposits": 0,
+      "fb_deposits": 1,
+      "ghl_cash": 0,
+      "fb_cash": 0,
+      "match": false,
+      "ghl_deposit_opps": [],
+      "ghl_cash_opps": []
+    },
+    {
+      "campaign": "MedWave South Africa (B2B) - Davide - Retargeting 18 Feb 2025",
+      "pipeline": "Davide",
+      "ghl_deposits": 0,
+      "fb_deposits": 1,
+      "ghl_cash": 0,
+      "fb_cash": 0,
+      "match": false,
+      "ghl_deposit_opps": [],
+      "ghl_cash_opps": []
+    }
+  ]
+}

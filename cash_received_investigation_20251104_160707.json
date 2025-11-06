@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-11-04T16:07:07.907230",
+  "analysis": {
+    "total_opportunities": 0,
+    "cash_received_count": 0,
+    "cash_received_opps": [],
+    "total_cash_value": 0
+  },
+  "issues": {
+    "missing_source": [],
+    "missing_monetary_value": [],
+    "no_campaign_identifier": [],
+    "inactive_status": []
+  },
+  "pipeline": {
+    "id": "XeAGJWRnUGJ5tuhXam2g",
+    "name": "Andries Pipeline - DDM"
+  }
+}

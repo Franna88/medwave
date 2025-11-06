@@ -4,10 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../models/patient.dart';
+import '../../models/payment.dart';
 import '../../theme/app_theme.dart';
 import '../ai/ai_report_chat_screen.dart';
 import '../../services/firebase/patient_service.dart';
+import '../../services/paystack_service.dart';
 import '../../services/wound_management_service.dart';
+import '../../services/ai/ai_report_service_factory.dart';
 import '../../widgets/wound_progress_card.dart';
 import '../../widgets/multi_wound_summary.dart';
 import '../../widgets/firebase_image.dart';
@@ -31,13 +34,15 @@ class SessionDetailScreen extends StatefulWidget {
 }
 
 class _SessionDetailScreenState extends State<SessionDetailScreen>
-    with TickerProviderStateMixin {
+with TickerProviderStateMixin {
   late TabController _tabController;
   Session? _previousSession;
   List<Session> _allSessions = [];
   bool _isLoadingSessions = true;
   bool _isMultiWound = false;
   int _expandedWoundIndex = 0;
+  Payment? _payment;
+  bool _isLoadingPayment = false;
 
   @override
   void initState() {
@@ -45,6 +50,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
     _isMultiWound = WoundManagementService.hasMultipleWounds(widget.patient);
     _tabController = TabController(length: _isMultiWound ? 4 : 3, vsync: this);
     _loadAllSessions();
+    _loadPaymentInfo();
   }
 
   @override
@@ -110,18 +116,51 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
     }
   }
 
+  Future<void> _loadPaymentInfo() async {
+    if (widget.session.paymentId == null) {
+      return; // No payment associated with this session
+    }
+
+    setState(() {
+      _isLoadingPayment = true;
+    });
+
+    try {
+      final paystackService = PaystackService();
+      final payment = await paystackService.getPayment(widget.session.paymentId!);
+      
+      if (mounted) {
+        setState(() {
+          _payment = payment;
+          _isLoadingPayment = false;
+        });
+      }
+    } catch (e) {
+      print('❌ DEBUG: Error loading payment: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingPayment = false;
+        });
+      }
+    }
+  }
+
   void _generateAIReport() {
     HapticFeedback.mediumImpact();
+    
+    // Get report type name and description based on patient type
+    final reportTypeName = AIReportServiceFactory.getReportTypeName(widget.patient);
+    final reportDescription = AIReportServiceFactory.getReportDescription(widget.patient);
     
     // Show confirmation dialog first
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.smart_toy, color: AppTheme.primaryColor),
-            SizedBox(width: 12),
-            Text('Generate AI Report'),
+            const Icon(Icons.smart_toy, color: AppTheme.primaryColor),
+            const SizedBox(width: 12),
+            Text('Generate $reportTypeName Report'),
           ],
         ),
         content: Column(
@@ -129,7 +168,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Generate a clinical motivation report for ${widget.patient.name}?',
+              'Generate a $reportTypeName clinical motivation report for ${widget.patient.name}?',
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 12),
@@ -141,15 +180,33 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                 border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.info_outline, 
+                      const Icon(Icons.info_outline, 
                            color: AppTheme.primaryColor, size: 16),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'This will use patient data from their file and ask 3-5 questions about this session.',
+                          reportDescription,
+                          style: const TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Row(
+                    children: [
+                      Icon(Icons.calendar_today, 
+                           color: AppTheme.primaryColor, size: 16),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Next appointment dates will be automatically included from calendar.',
                           style: TextStyle(
                             color: AppTheme.primaryColor,
                             fontSize: 12,
@@ -159,11 +216,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  const Row(
                     children: [
                       Icon(Icons.schedule, 
                            color: AppTheme.primaryColor, size: 16),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Estimated time: 2-3 minutes',
@@ -2290,6 +2347,60 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
       default:
         return AppTheme.secondaryColor;
     }
+  }
+
+  Widget _buildPaymentStatusBadge() {
+    if (widget.session.paymentStatus == null) {
+      return const SizedBox.shrink();
+    }
+
+    Color badgeColor;
+    IconData badgeIcon;
+    String badgeText;
+
+    switch (widget.session.paymentStatus) {
+      case 'completed':
+        badgeColor = AppTheme.successColor;
+        badgeIcon = Icons.check_circle;
+        badgeText = 'Paid';
+        break;
+      case 'pending':
+        badgeColor = AppTheme.warningColor;
+        badgeIcon = Icons.pending;
+        badgeText = 'Pending';
+        break;
+      case 'failed':
+        badgeColor = AppTheme.errorColor;
+        badgeIcon = Icons.error;
+        badgeText = 'Failed';
+        break;
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: badgeColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: badgeColor, width: 1.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(badgeIcon, size: 14, color: badgeColor),
+          const SizedBox(width: 4),
+          Text(
+            badgeText,
+            style: TextStyle(
+              color: badgeColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

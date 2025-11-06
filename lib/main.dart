@@ -9,20 +9,25 @@ import 'theme/app_theme.dart';
 import 'models/patient.dart';
 import 'providers/patient_provider.dart';
 import 'providers/notification_provider.dart';
-// import 'providers/appointment_provider.dart'; // Disabled until appointment system is complete
+import 'providers/appointment_provider.dart';
 import 'providers/performance_cost_provider.dart';
 import 'screens/main_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/patients/patient_list_screen.dart';
 import 'screens/patients/add_patient_screen.dart';
+import 'screens/patients/edit_patient_screen.dart';
 import 'screens/patients/patient_profile_screen.dart';
 import 'screens/patients/patient_case_history_screen.dart';
 import 'screens/patients/wound_count_selection_screen.dart';
 import 'screens/patients/multi_wound_case_history_screen.dart';
+import 'screens/patients/weight_case_history_screen.dart';
+import 'screens/patients/pain_case_history_screen.dart';
 import 'screens/ai/enhanced_ai_report_chat_screen.dart';
 import 'screens/patients/session_detail_screen.dart';
 import 'screens/sessions/session_logging_screen.dart';
 import 'screens/sessions/multi_wound_session_logging_screen.dart';
+import 'screens/sessions/weight_session_logging_screen.dart';
+import 'screens/sessions/pain_session_logging_screen.dart';
 import 'screens/reports/reports_screen.dart';
 import 'screens/calendar/calendar_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -41,6 +46,10 @@ import 'screens/admin/admin_sales_performance_screen.dart';
 import 'screens/admin/admin_analytics_screen.dart';
 import 'screens/admin/admin_patient_management_screen.dart';
 import 'screens/admin/admin_advert_performance_screen.dart';
+import 'screens/admin/adverts/admin_adverts_overview_screen.dart';
+import 'screens/admin/adverts/admin_adverts_campaigns_screen.dart';
+import 'screens/admin/adverts/admin_adverts_ads_screen.dart';
+import 'screens/admin/adverts/admin_adverts_products_screen.dart';
 import 'screens/admin/admin_user_management_screen.dart';
 import 'screens/admin/admin_report_builder_screen.dart';
 import 'providers/auth_provider.dart';
@@ -84,8 +93,7 @@ class MedWaveApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PatientProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()..loadNotifications()..initializeFCM()),
-        // AppointmentProvider disabled until appointment system is complete
-        // ChangeNotifierProvider(create: (_) => AppointmentProvider()),
+        ChangeNotifierProvider(create: (_) => AppointmentProvider()..loadAppointments()),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         // Admin provider for superadmin functionality
         ChangeNotifierProvider(create: (_) => AdminProvider()),
@@ -335,6 +343,29 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           path: '/admin/adverts',
           name: 'admin-adverts',
           builder: (context, state) => const AdminAdvertPerformanceScreen(),
+          routes: [
+            // Sub-routes for Advertisement Performance
+            GoRoute(
+              path: 'overview',
+              name: 'admin-adverts-overview',
+              builder: (context, state) => const AdminAdvertsOverviewScreen(),
+            ),
+            GoRoute(
+              path: 'campaigns',
+              name: 'admin-adverts-campaigns',
+              builder: (context, state) => const AdminAdvertsCampaignsScreen(),
+            ),
+            GoRoute(
+              path: 'ads',
+              name: 'admin-adverts-ads',
+              builder: (context, state) => const AdminAdvertsAdsScreen(),
+            ),
+            GoRoute(
+              path: 'products',
+              name: 'admin-adverts-products',
+              builder: (context, state) => const AdminAdvertsProductsScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/admin/sales-performance',
@@ -367,6 +398,14 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       },
     ),
     GoRoute(
+      path: '/patients/:patientId/edit',
+      name: 'edit-patient',
+      builder: (context, state) {
+        final patientId = state.pathParameters['patientId']!;
+        return EditPatientScreen(patientId: patientId);
+      },
+    ),
+    GoRoute(
       path: '/patients/:patientId/wound-selection',
       name: 'wound-count-selection',
       builder: (context, state) {
@@ -392,6 +431,22 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
             builder: (context, state) {
               final patientId = state.pathParameters['patientId']!;
               return MultiWoundCaseHistoryScreen(patientId: patientId);
+            },
+          ),
+          GoRoute(
+            path: '/patients/:patientId/weight-case-history',
+            name: 'weight-case-history',
+            builder: (context, state) {
+              final patientId = state.pathParameters['patientId']!;
+              return WeightCaseHistoryScreen(patientId: patientId);
+            },
+          ),
+          GoRoute(
+            path: '/patients/:patientId/pain-case-history',
+            name: 'pain-case-history',
+            builder: (context, state) {
+              final patientId = state.pathParameters['patientId']!;
+              return PainCaseHistoryScreen(patientId: patientId);
             },
           ),
           GoRoute(
@@ -424,7 +479,23 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       name: 'session-logging',
       builder: (context, state) {
         final patientId = state.pathParameters['patientId']!;
-        return SessionLoggingScreen(patientId: patientId);
+        
+        // Get patient and route based on treatment type
+        final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+        final patient = patientProvider.patients.firstWhere(
+          (p) => p.id == patientId,
+          orElse: () => throw Exception('Patient not found'),
+        );
+        
+        // Route to appropriate session screen based on treatment type
+        switch (patient.treatmentType) {
+          case TreatmentType.weight:
+            return WeightSessionLoggingScreen(patientId: patientId);
+          case TreatmentType.pain:
+            return PainSessionLoggingScreen(patientId: patientId);
+          case TreatmentType.wound:
+            return SessionLoggingScreen(patientId: patientId);
+        }
       },
     ),
     GoRoute(
@@ -433,6 +504,22 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       builder: (context, state) {
         final patientId = state.pathParameters['patientId']!;
         return MultiWoundSessionLoggingScreen(patientId: patientId);
+      },
+    ),
+    GoRoute(
+      path: '/patients/:patientId/weight-session',
+      name: 'weight-session-logging',
+      builder: (context, state) {
+        final patientId = state.pathParameters['patientId']!;
+        return WeightSessionLoggingScreen(patientId: patientId);
+      },
+    ),
+    GoRoute(
+      path: '/patients/:patientId/pain-session',
+      name: 'pain-session-logging',
+      builder: (context, state) {
+        final patientId = state.pathParameters['patientId']!;
+        return PainSessionLoggingScreen(patientId: patientId);
       },
     ),
     GoRoute(

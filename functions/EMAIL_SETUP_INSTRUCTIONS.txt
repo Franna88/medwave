@@ -1,0 +1,223 @@
+═══════════════════════════════════════════════════════════════
+  MEDWAVE EMAIL NOTIFICATION SETUP INSTRUCTIONS
+═══════════════════════════════════════════════════════════════
+
+📧 Email Service: Resend (https://resend.com)
+✅ All code is implemented and ready to go!
+
+You just need to complete these setup steps:
+
+═══════════════════════════════════════════════════════════════
+STEP 1: CREATE RESEND ACCOUNT & GET API KEY
+═══════════════════════════════════════════════════════════════
+
+1. Go to: https://resend.com
+2. Sign up for a free account (no credit card required)
+3. Once logged in, go to "API Keys" section
+4. Click "Create API Key"
+5. Give it a name: "MedWave Production"
+6. Copy the API key (starts with "re_...")
+
+FREE TIER LIMITS:
+• 3,000 emails per month
+• 100 emails per day
+• Perfect for starting out!
+
+═══════════════════════════════════════════════════════════════
+STEP 2: CONFIGURE FIREBASE FUNCTIONS WITH API KEY
+═══════════════════════════════════════════════════════════════
+
+Run this command (replace YOUR_API_KEY with your actual key):
+
+firebase functions:config:set resend.api_key="re_YOUR_ACTUAL_API_KEY_HERE"
+
+Example:
+firebase functions:config:set resend.api_key="re_abc123xyz789..."
+
+═══════════════════════════════════════════════════════════════
+STEP 3: DEPLOY FIREBASE FUNCTIONS
+═══════════════════════════════════════════════════════════════
+
+Deploy the new email functions to Firebase:
+
+cd /Users/mac/dev/medwave
+firebase deploy --only functions
+
+This will deploy:
+✅ sendAppointmentBookingEmail - Sends booking confirmation
+✅ sendAppointmentConfirmedEmail - Sends confirmed/cancelled emails
+✅ confirmAppointmentViaEmail - Handles email link confirmations
+✅ scheduleAppointmentReminders - Daily job to send reminders
+
+═══════════════════════════════════════════════════════════════
+STEP 4: UPDATE EMAIL "FROM" ADDRESS (OPTIONAL BUT RECOMMENDED)
+═══════════════════════════════════════════════════════════════
+
+By default, emails will come from: appointments@medwave.app
+
+To use your own domain:
+
+1. In Resend dashboard, go to "Domains"
+2. Add your domain (e.g., medwave.com or yourdomain.com)
+3. Add the DNS records they provide to your domain registrar
+4. Wait for verification (usually 5-10 minutes)
+5. Update the "from" field in: functions/lib/emailService.js
+   
+   Change line 41 from:
+   from: 'MedWave <appointments@medwave.app>',
+   
+   To:
+   from: 'MedWave <appointments@yourdomain.com>',
+
+6. Redeploy: firebase deploy --only functions
+
+FOR TESTING: You can skip this and use the default sender address.
+
+═══════════════════════════════════════════════════════════════
+STEP 5: UPDATE CONFIRMATION URL (IMPORTANT!)
+═══════════════════════════════════════════════════════════════
+
+Update the confirmation link URL in functions/lib/emailService.js
+
+Find line 39 and replace with your actual Firebase project URL:
+
+const confirmationUrl = `https://YOUR-PROJECT-ID.web.app/confirm-appointment/${appointment.id}`;
+
+OR use your Cloud Functions URL:
+
+const confirmationUrl = `https://us-central1-YOUR-PROJECT-ID.cloudfunctions.net/confirmAppointmentViaEmail?id=${appointment.id}`;
+
+To find your Cloud Functions URL:
+firebase functions:list
+
+Look for: confirmAppointmentViaEmail
+
+═══════════════════════════════════════════════════════════════
+TESTING THE SYSTEM
+═══════════════════════════════════════════════════════════════
+
+1. Run the app and create a new appointment
+2. Make sure to enter a patient email address
+3. Check the email inbox - you should receive:
+   ✅ Booking confirmation email with "Confirm Appointment" button
+   
+4. Click "Confirm Appointment" button
+5. Appointment status changes to "Confirmed"
+6. Check email again - you should receive:
+   ✅ Appointment confirmed email
+
+7. The reminder email will be sent automatically 24 hours before
+   the appointment (runs daily at 9 AM)
+
+═══════════════════════════════════════════════════════════════
+TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════
+
+📋 Check Firebase Functions Logs:
+firebase functions:log --only sendAppointmentBookingEmail
+
+🔍 Common Issues:
+
+1. "Resend not initialized" error
+   → API key not set. Run: firebase functions:config:get
+   → Should show: resend.api_key
+
+2. Emails not sending
+   → Check Resend dashboard for failed sends
+   → Verify email address format is correct
+   → Check Firebase Functions logs
+
+3. Confirmation link not working
+   → Update the confirmationUrl in emailService.js
+   → Make sure function is deployed
+
+4. Patient email field not showing
+   → Run: flutter clean
+   → Run: flutter pub get
+   → Restart the app
+
+═══════════════════════════════════════════════════════════════
+MONITORING & ANALYTICS
+═══════════════════════════════════════════════════════════════
+
+Resend Dashboard:
+• View all sent emails
+• Check delivery status
+• See open rates (if you enable tracking)
+• Monitor failures
+
+Firebase Functions Dashboard:
+• View function invocations
+• Check for errors
+• Monitor performance
+
+═══════════════════════════════════════════════════════════════
+WHAT'S INCLUDED
+═══════════════════════════════════════════════════════════════
+
+📧 Email Types:
+1. Booking Confirmation - Sent when appointment is created
+2. Appointment Confirmed - Sent when patient confirms
+3. Appointment Reminder - Sent 24 hours before (daily cron job)
+4. Cancellation Email - Sent when appointment is cancelled
+
+🎨 Email Features:
+• Beautiful HTML templates with gradients
+• Mobile-responsive design
+• Professional branding
+• Clear call-to-action buttons
+• Appointment details displayed nicely
+
+🔒 Security:
+• Email validation in the app
+• Secure confirmation links
+• No sensitive data in emails
+• HIPAA-compliant approach
+
+═══════════════════════════════════════════════════════════════
+COST ESTIMATION
+═══════════════════════════════════════════════════════════════
+
+Resend Free Tier: 3,000 emails/month
+
+Scenario 1: Small Practice
+• 10 patients/day
+• 2 emails per patient (booking + confirmation)
+• 20 emails/day = 600/month
+• Cost: FREE ✅
+
+Scenario 2: Medium Practice  
+• 50 patients/day
+• 2 emails per patient + reminders
+• 150 emails/day = 4,500/month
+• Cost: $20/month (Pro plan)
+
+Scenario 3: Large Practice
+• 100 patients/day
+• 3 emails per patient
+• 300 emails/day = 9,000/month
+• Cost: $20/month (Pro plan covers up to 50,000/month)
+
+═══════════════════════════════════════════════════════════════
+NEXT STEPS
+═══════════════════════════════════════════════════════════════
+
+1. ✅ Get Resend API key
+2. ✅ Configure Firebase Functions
+3. ✅ Deploy functions
+4. ✅ Update confirmation URL
+5. ✅ Test with a real appointment
+6. 🎉 You're done!
+
+═══════════════════════════════════════════════════════════════
+SUPPORT
+═══════════════════════════════════════════════════════════════
+
+Resend Documentation: https://resend.com/docs
+Resend Support: help@resend.com
+Firebase Functions Docs: https://firebase.google.com/docs/functions
+
+═══════════════════════════════════════════════════════════════
+
+Need help? Check the Firebase Functions logs or Resend dashboard!
+

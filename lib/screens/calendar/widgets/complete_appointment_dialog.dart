@@ -6,7 +6,10 @@ import 'package:intl/intl.dart';
 import '../../../models/appointment.dart';
 import '../../../models/patient.dart';
 import '../../../providers/patient_provider.dart';
+import '../../../providers/user_profile_provider.dart';
+import '../../../services/paystack_service.dart';
 import '../../../theme/app_theme.dart';
+import '../../payments/payment_qr_dialog.dart';
 
 class CompleteAppointmentDialog extends StatefulWidget {
   final Appointment appointment;
@@ -911,12 +914,38 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
     // Dismiss keyboard before processing
     _dismissKeyboard();
 
+    // Check if payment is required and completed
+    final userProfileProvider = context.read<UserProfileProvider>();
+    final settings = userProfileProvider.appSettings;
+    
+    if (settings.sessionFeeEnabled) {
+      final paymentCheck = await _checkPaymentStatus();
+      if (!paymentCheck) {
+        return; // Payment required but not completed
+      }
+    }
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Create session data
+      // Get payment ID if payment was made
+      String? paymentId;
+      String? paymentStatus = 'not_required';
+      double? paymentAmount;
+      
+      if (settings.sessionFeeEnabled) {
+        final paystackService = PaystackService();
+        final payment = await paystackService.getPaymentByAppointment(widget.appointment.id);
+        if (payment != null && payment.isCompleted) {
+          paymentId = payment.id;
+          paymentStatus = 'completed';
+          paymentAmount = payment.amount;
+        }
+      }
+
+      // Create session data with payment information
       final session = Session(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         patientId: widget.appointment.patientId,
@@ -928,6 +957,9 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
         notes: _notesController.text.trim(),
         photos: _sessionPhotos,
         practitionerId: 'current_practitioner_id',
+        paymentId: paymentId,
+        paymentStatus: paymentStatus,
+        paymentAmount: paymentAmount,
       );
 
       // Update appointment status
@@ -958,6 +990,134 @@ class _CompleteAppointmentDialogState extends State<CompleteAppointmentDialog> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<bool> _checkPaymentStatus() async {
+    try {
+      final paystackService = PaystackService();
+      final payment = await paystackService.getPaymentByAppointment(widget.appointment.id);
+      
+      if (payment == null || !payment.isCompleted) {
+        // Payment required but not completed
+        final result = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.payment, color: AppTheme.warningColor),
+                const SizedBox(width: 12),
+                const Text('Payment Required'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'This session requires payment before completion.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.warningColor.withOpacity(0.3),
+                    ),
+                  ),
+                  child: const Text(
+                    'Would you like to show the payment QR code to the patient now?',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).pop(true),
+                icon: const Icon(Icons.qr_code_2),
+                label: const Text('Show Payment QR'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                ),
+              ),
+            ],
+          ),
+        );
+
+        if (result == true) {
+          // Show payment QR dialog
+          await _showPaymentQR();
+          // Check payment status again after showing QR
+          return await _checkPaymentStatus();
+        }
+        
+        return false; // User cancelled
+      }
+      
+      return true; // Payment completed
+    } catch (e) {
+      debugPrint('Error checking payment status: $e');
+      // On error, ask user if they want to proceed anyway
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Payment Check Failed'),
+          content: Text('Unable to verify payment status: $e\n\nProceed anyway?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Proceed'),
+            ),
+          ],
+        ),
+      );
+      return result ?? false;
+    }
+  }
+
+  Future<void> _showPaymentQR() async {
+    try {
+      final userProfileProvider = context.read<UserProfileProvider>();
+      final settings = userProfileProvider.appSettings;
+      
+      final patientProvider = context.read<PatientProvider>();
+      final patient = patientProvider.patients.firstWhere(
+        (p) => p.id == widget.appointment.patientId,
+        orElse: () => throw Exception('Patient not found'),
+      );
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (context) => PaymentQRDialog(
+            appointment: widget.appointment,
+            amount: settings.defaultSessionFee,
+            patientEmail: patient.email,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error showing payment QR: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
     }
   }
 

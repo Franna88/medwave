@@ -132,8 +132,8 @@ class _ProductSetupWidgetState extends State<ProductSetupWidget> {
                           return DataRow(
                             cells: [
                               DataCell(Text(product.name)),
-                              DataCell(Text('R${product.depositAmount.toStringAsFixed(2)}')),
-                              DataCell(Text('R${product.expenseCost.toStringAsFixed(2)}')),
+                              DataCell(Text('\$${product.depositAmount.toStringAsFixed(2)}')),
+                              DataCell(Text('\$${product.expenseCost.toStringAsFixed(2)}')),
                               DataCell(
                                 Row(
                                   mainAxisSize: MainAxisSize.min,

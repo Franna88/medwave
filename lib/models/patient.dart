@@ -1,6 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
+// Treatment type enumeration
+enum TreatmentType {
+  wound('Wound Care'),
+  weight('Weight Management'),
+  pain('Pain Management');
+
+  const TreatmentType(this.displayName);
+  final String displayName;
+}
+
 class Patient {
   final String id;
   
@@ -80,6 +90,27 @@ class Patient {
   final String? country; // Inherited from practitioner for analytics
   final String? countryName; // Inherited from practitioner for analytics
   final String? province; // Inherited from practitioner for analytics
+  
+  // Treatment Type
+  final TreatmentType treatmentType; // wound, weight, or pain
+  
+  // Weight Management specific fields
+  final double? baselineTargetWeight;
+  final String? metabolicConditions; // thyroid, PCOS, metabolic syndrome
+  final String? weightAffectingMedications;
+  final String? dietaryHabits;
+  final String? exerciseRoutine;
+  final String? previousWeightLossAttempts;
+  final String? psychologicalFactors;
+  
+  // Pain Management specific fields
+  final List<String>? painLocations; // multi-select body locations
+  final int? painIntensity; // 0-10 scale baseline
+  final String? painDuration; // how long they've had it
+  final String? painTriggers;
+  final String? painType; // 'neuropathic', 'nociceptive', 'mixed'
+  final String? painMedicationHistory;
+  final String? impactOnDailyActivities;
   
   // Baseline measurements
   final double baselineWeight;
@@ -168,6 +199,23 @@ class Patient {
     this.country,
     this.countryName,
     this.province,
+    this.treatmentType = TreatmentType.wound, // Default to wound for backward compatibility
+    // Weight Management fields
+    this.baselineTargetWeight,
+    this.metabolicConditions,
+    this.weightAffectingMedications,
+    this.dietaryHabits,
+    this.exerciseRoutine,
+    this.previousWeightLossAttempts,
+    this.psychologicalFactors,
+    // Pain Management fields
+    this.painLocations,
+    this.painIntensity,
+    this.painDuration,
+    this.painTriggers,
+    this.painType,
+    this.painMedicationHistory,
+    this.impactOnDailyActivities,
     required this.baselineWeight,
     required this.baselineVasScore,
     required this.baselineWounds,
@@ -281,6 +329,23 @@ class Patient {
     String? country,
     String? countryName,
     String? province,
+    TreatmentType? treatmentType,
+    // Weight Management fields
+    double? baselineTargetWeight,
+    String? metabolicConditions,
+    String? weightAffectingMedications,
+    String? dietaryHabits,
+    String? exerciseRoutine,
+    String? previousWeightLossAttempts,
+    String? psychologicalFactors,
+    // Pain Management fields
+    List<String>? painLocations,
+    int? painIntensity,
+    String? painDuration,
+    String? painTriggers,
+    String? painType,
+    String? painMedicationHistory,
+    String? impactOnDailyActivities,
     double? baselineWeight,
     int? baselineVasScore,
     List<Wound>? baselineWounds,
@@ -353,6 +418,23 @@ class Patient {
       country: country ?? this.country,
       countryName: countryName ?? this.countryName,
       province: province ?? this.province,
+      treatmentType: treatmentType ?? this.treatmentType,
+      // Weight Management fields
+      baselineTargetWeight: baselineTargetWeight ?? this.baselineTargetWeight,
+      metabolicConditions: metabolicConditions ?? this.metabolicConditions,
+      weightAffectingMedications: weightAffectingMedications ?? this.weightAffectingMedications,
+      dietaryHabits: dietaryHabits ?? this.dietaryHabits,
+      exerciseRoutine: exerciseRoutine ?? this.exerciseRoutine,
+      previousWeightLossAttempts: previousWeightLossAttempts ?? this.previousWeightLossAttempts,
+      psychologicalFactors: psychologicalFactors ?? this.psychologicalFactors,
+      // Pain Management fields
+      painLocations: painLocations ?? this.painLocations,
+      painIntensity: painIntensity ?? this.painIntensity,
+      painDuration: painDuration ?? this.painDuration,
+      painTriggers: painTriggers ?? this.painTriggers,
+      painType: painType ?? this.painType,
+      painMedicationHistory: painMedicationHistory ?? this.painMedicationHistory,
+      impactOnDailyActivities: impactOnDailyActivities ?? this.impactOnDailyActivities,
       baselineWeight: baselineWeight ?? this.baselineWeight,
       baselineVasScore: baselineVasScore ?? this.baselineVasScore,
       baselineWounds: baselineWounds ?? this.baselineWounds,
@@ -423,6 +505,23 @@ class Patient {
       'country': country,
       'countryName': countryName,
       'province': province,
+      'treatmentType': treatmentType.name,
+      // Weight Management fields
+      'baselineTargetWeight': baselineTargetWeight,
+      'metabolicConditions': metabolicConditions,
+      'weightAffectingMedications': weightAffectingMedications,
+      'dietaryHabits': dietaryHabits,
+      'exerciseRoutine': exerciseRoutine,
+      'previousWeightLossAttempts': previousWeightLossAttempts,
+      'psychologicalFactors': psychologicalFactors,
+      // Pain Management fields
+      'painLocations': painLocations,
+      'painIntensity': painIntensity,
+      'painDuration': painDuration,
+      'painTriggers': painTriggers,
+      'painType': painType,
+      'painMedicationHistory': painMedicationHistory,
+      'impactOnDailyActivities': impactOnDailyActivities,
       'baselineWeight': baselineWeight,
       'baselineVasScore': baselineVasScore,
       'baselineWounds': baselineWounds.map((w) => w.toJson()).toList(),
@@ -499,6 +598,25 @@ class Patient {
       country: json['country'],
       countryName: json['countryName'],
       province: json['province'],
+      treatmentType: json['treatmentType'] != null 
+          ? TreatmentType.values.firstWhere((e) => e.name == json['treatmentType'], orElse: () => TreatmentType.wound)
+          : TreatmentType.wound,
+      // Weight Management fields
+      baselineTargetWeight: json['baselineTargetWeight']?.toDouble(),
+      metabolicConditions: json['metabolicConditions'],
+      weightAffectingMedications: json['weightAffectingMedications'],
+      dietaryHabits: json['dietaryHabits'],
+      exerciseRoutine: json['exerciseRoutine'],
+      previousWeightLossAttempts: json['previousWeightLossAttempts'],
+      psychologicalFactors: json['psychologicalFactors'],
+      // Pain Management fields
+      painLocations: json['painLocations'] != null ? List<String>.from(json['painLocations']) : null,
+      painIntensity: json['painIntensity'],
+      painDuration: json['painDuration'],
+      painTriggers: json['painTriggers'],
+      painType: json['painType'],
+      painMedicationHistory: json['painMedicationHistory'],
+      impactOnDailyActivities: json['impactOnDailyActivities'],
       baselineWeight: json['baselineWeight']?.toDouble(),
       baselineVasScore: json['baselineVasScore'],
       baselineWounds: (json['baselineWounds'] as List).map((w) => Wound.fromJson(w)).toList(),
@@ -576,6 +694,23 @@ class Patient {
       'country': country,
       'countryName': countryName,
       'province': province,
+      'treatmentType': treatmentType.name,
+      // Weight Management fields
+      'baselineTargetWeight': baselineTargetWeight,
+      'metabolicConditions': metabolicConditions,
+      'weightAffectingMedications': weightAffectingMedications,
+      'dietaryHabits': dietaryHabits,
+      'exerciseRoutine': exerciseRoutine,
+      'previousWeightLossAttempts': previousWeightLossAttempts,
+      'psychologicalFactors': psychologicalFactors,
+      // Pain Management fields
+      'painLocations': painLocations,
+      'painIntensity': painIntensity,
+      'painDuration': painDuration,
+      'painTriggers': painTriggers,
+      'painType': painType,
+      'painMedicationHistory': painMedicationHistory,
+      'impactOnDailyActivities': impactOnDailyActivities,
       'baselineWeight': baselineWeight,
       'baselineVasScore': baselineVasScore,
       'baselineWounds': baselineWounds.map((w) => w.toFirestore()).toList(),
@@ -655,6 +790,25 @@ class Patient {
       country: data['country'],
       countryName: data['countryName'],
       province: data['province'],
+      treatmentType: data['treatmentType'] != null 
+          ? TreatmentType.values.firstWhere((e) => e.name == data['treatmentType'], orElse: () => TreatmentType.wound)
+          : TreatmentType.wound,
+      // Weight Management fields
+      baselineTargetWeight: data['baselineTargetWeight']?.toDouble(),
+      metabolicConditions: data['metabolicConditions'],
+      weightAffectingMedications: data['weightAffectingMedications'],
+      dietaryHabits: data['dietaryHabits'],
+      exerciseRoutine: data['exerciseRoutine'],
+      previousWeightLossAttempts: data['previousWeightLossAttempts'],
+      psychologicalFactors: data['psychologicalFactors'],
+      // Pain Management fields
+      painLocations: data['painLocations'] != null ? List<String>.from(data['painLocations']) : null,
+      painIntensity: data['painIntensity'],
+      painDuration: data['painDuration'],
+      painTriggers: data['painTriggers'],
+      painType: data['painType'],
+      painMedicationHistory: data['painMedicationHistory'],
+      impactOnDailyActivities: data['impactOnDailyActivities'],
       baselineWeight: data['baselineWeight']?.toDouble() ?? 0.0,
       baselineVasScore: data['baselineVasScore'] ?? 0,
       baselineWounds: (data['baselineWounds'] as List? ?? [])
@@ -823,6 +977,21 @@ class Session {
   final String notes;
   final List<String> photos;
   final String practitionerId;
+  
+  // Weight Management specific fields
+  final double? waistMeasurement;
+  final double? hipMeasurement;
+  final Map<String, double>? otherBodyMeasurements; // e.g., {"chest": 95.5, "thigh": 58.2}
+  
+  // Pain Management specific fields
+  final List<String>? painLocations; // Pain locations for this session
+  final String? painDescription;
+  final int? functionalAssessmentScore; // 0-10 scale for mobility/activity
+  
+  // Payment fields
+  final String? paymentId; // Reference to payment document
+  final String? paymentStatus; // 'pending', 'completed', 'not_required'
+  final double? paymentAmount; // Session fee amount
 
   const Session({
     required this.id,
@@ -835,6 +1004,18 @@ class Session {
     required this.notes,
     required this.photos,
     required this.practitionerId,
+    // Weight Management fields
+    this.waistMeasurement,
+    this.hipMeasurement,
+    this.otherBodyMeasurements,
+    // Pain Management fields
+    this.painLocations,
+    this.painDescription,
+    this.functionalAssessmentScore,
+    // Payment fields
+    this.paymentId,
+    this.paymentStatus,
+    this.paymentAmount,
   });
 
   Session copyWith({
@@ -848,6 +1029,15 @@ class Session {
     String? notes,
     List<String>? photos,
     String? practitionerId,
+    double? waistMeasurement,
+    double? hipMeasurement,
+    Map<String, double>? otherBodyMeasurements,
+    List<String>? painLocations,
+    String? painDescription,
+    int? functionalAssessmentScore,
+    String? paymentId,
+    String? paymentStatus,
+    double? paymentAmount,
   }) {
     return Session(
       id: id ?? this.id,
@@ -860,6 +1050,15 @@ class Session {
       notes: notes ?? this.notes,
       photos: photos ?? this.photos,
       practitionerId: practitionerId ?? this.practitionerId,
+      waistMeasurement: waistMeasurement ?? this.waistMeasurement,
+      hipMeasurement: hipMeasurement ?? this.hipMeasurement,
+      otherBodyMeasurements: otherBodyMeasurements ?? this.otherBodyMeasurements,
+      painLocations: painLocations ?? this.painLocations,
+      painDescription: painDescription ?? this.painDescription,
+      functionalAssessmentScore: functionalAssessmentScore ?? this.functionalAssessmentScore,
+      paymentId: paymentId ?? this.paymentId,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      paymentAmount: paymentAmount ?? this.paymentAmount,
     );
   }
 
@@ -875,6 +1074,15 @@ class Session {
       'notes': notes,
       'photos': photos,
       'practitionerId': practitionerId,
+      'waistMeasurement': waistMeasurement,
+      'hipMeasurement': hipMeasurement,
+      'otherBodyMeasurements': otherBodyMeasurements,
+      'painLocations': painLocations,
+      'painDescription': painDescription,
+      'functionalAssessmentScore': functionalAssessmentScore,
+      'paymentId': paymentId,
+      'paymentStatus': paymentStatus,
+      'paymentAmount': paymentAmount,
     };
   }
 
@@ -890,6 +1098,17 @@ class Session {
       notes: json['notes'],
       photos: List<String>.from(json['photos']),
       practitionerId: json['practitionerId'],
+      waistMeasurement: json['waistMeasurement']?.toDouble(),
+      hipMeasurement: json['hipMeasurement']?.toDouble(),
+      otherBodyMeasurements: json['otherBodyMeasurements'] != null 
+          ? Map<String, double>.from(json['otherBodyMeasurements']) 
+          : null,
+      painLocations: json['painLocations'] != null ? List<String>.from(json['painLocations']) : null,
+      painDescription: json['painDescription'],
+      functionalAssessmentScore: json['functionalAssessmentScore'],
+      paymentId: json['paymentId'],
+      paymentStatus: json['paymentStatus'],
+      paymentAmount: json['paymentAmount']?.toDouble(),
     );
   }
 
@@ -906,6 +1125,15 @@ class Session {
       'notes': notes,
       'photos': photos,
       'practitionerId': practitionerId,
+      'waistMeasurement': waistMeasurement,
+      'hipMeasurement': hipMeasurement,
+      'otherBodyMeasurements': otherBodyMeasurements,
+      'painLocations': painLocations,
+      'painDescription': painDescription,
+      'functionalAssessmentScore': functionalAssessmentScore,
+      'paymentId': paymentId,
+      'paymentStatus': paymentStatus,
+      'paymentAmount': paymentAmount,
       'createdAt': Timestamp.fromDate(DateTime.now()),
       'lastUpdated': Timestamp.fromDate(DateTime.now()),
     };
@@ -927,6 +1155,17 @@ class Session {
       notes: data['notes'] ?? '',
       photos: List<String>.from(data['photos'] ?? []),
       practitionerId: data['practitionerId'] ?? '',
+      waistMeasurement: data['waistMeasurement']?.toDouble(),
+      hipMeasurement: data['hipMeasurement']?.toDouble(),
+      otherBodyMeasurements: data['otherBodyMeasurements'] != null 
+          ? Map<String, double>.from(data['otherBodyMeasurements']) 
+          : null,
+      painLocations: data['painLocations'] != null ? List<String>.from(data['painLocations']) : null,
+      painDescription: data['painDescription'],
+      functionalAssessmentScore: data['functionalAssessmentScore'],
+      paymentId: data['paymentId'],
+      paymentStatus: data['paymentStatus'],
+      paymentAmount: data['paymentAmount']?.toDouble(),
     );
   }
 }

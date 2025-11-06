@@ -26,13 +26,19 @@ service cloud.firestore {
       allow read, write: if request.auth != null && isAdmin();
     }
     
+    // Ad Performance - Combined Facebook + GHL data, Admin only access
+    match /adPerformance/{adId} {
+      allow read: if request.auth != null && isAdmin();
+      allow write: if request.auth != null && isAdmin();
+    }
+    
     // Helper function to check if user is admin
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin' ||
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    // Google Calendar Tokens - Only practitioner can access their own tokens
+    // Google Calendar Tokens & Paystack Subaccount - Only practitioner can access their own data
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow write: if request.auth != null && request.auth.uid == userId;
@@ -45,6 +51,9 @@ service cloud.firestore {
       allow update: if request.auth != null && request.auth.uid == userId &&
         (!('googleRefreshToken' in request.resource.data) || 
          request.auth.uid == userId);
+      
+      // Paystack subaccount fields (paystackSubaccountCode, bankAccountNumber, etc.)
+      // are protected by the userId match above - only the user can access their own data
     }
     
     // Appointments - Can include sync status and Google event ID
@@ -55,6 +64,26 @@ service cloud.firestore {
         (resource.data.practitionerId == request.auth.uid || isAdmin());
       allow delete: if request.auth != null && 
         (resource.data.practitionerId == request.auth.uid || isAdmin());
+    }
+    
+    // Payments - Practitioners can only access their own payments
+    match /payments/{paymentId} {
+      // Practitioners can read their own payments
+      allow read: if request.auth != null && 
+        (resource.data.practitionerId == request.auth.uid || isAdmin());
+      
+      // Practitioners can create payments for their appointments
+      allow create: if request.auth != null && 
+        request.resource.data.practitionerId == request.auth.uid;
+      
+      // Practitioners can update their own payments (e.g., mark as paid, cancel)
+      allow update: if request.auth != null && 
+        (resource.data.practitionerId == request.auth.uid || isAdmin()) &&
+        // Ensure practitionerId cannot be changed
+        request.resource.data.practitionerId == resource.data.practitionerId;
+      
+      // Only admins can delete payments
+      allow delete: if request.auth != null && isAdmin();
     }
     
     // SUPER PERMISSIVE RULES - Allow all authenticated users to do everything

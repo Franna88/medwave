@@ -5,10 +5,12 @@ import 'package:intl/intl.dart';
 import '../../models/appointment.dart';
 import '../../providers/appointment_provider.dart';
 import '../../providers/patient_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../theme/app_theme.dart';
 import 'widgets/appointment_card.dart';
 import 'widgets/add_appointment_dialog.dart';
 import 'widgets/appointment_details_dialog.dart';
+import '../payments/payment_qr_dialog.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -38,12 +40,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
       appointmentProvider.loadAppointments();
       patientProvider.loadPatients();
       
+      // Add listener to update selected events when provider changes
+      appointmentProvider.addListener(_updateSelectedEvents);
+      
       _updateSelectedEvents();
     });
   }
 
   @override
   void dispose() {
+    // Remove listener to prevent memory leaks
+    try {
+      context.read<AppointmentProvider>().removeListener(_updateSelectedEvents);
+    } catch (e) {
+      // Context might not be available during dispose
+    }
     _selectedEvents.dispose();
     super.dispose();
   }
@@ -171,6 +182,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   status,
                                 );
                               },
+                              onPaymentRequested: () => _showPaymentQR(appointment),
                             );
                           },
                         ),
@@ -420,7 +432,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         builder: (context) => AddAppointmentDialog(
           selectedDate: _selectedDay ?? DateTime.now(),
           onAppointmentAdded: (appointment) {
-            context.read<AppointmentProvider>().addAppointment(appointment);
+            // No need to call addAppointment here - dialog already saves it
+            // Just update the UI to reflect the new appointment
             _updateSelectedEvents();
           },
         ),
@@ -523,6 +536,59 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: const Text('Apply'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showPaymentQR(Appointment appointment) async {
+    // Check if session fees are enabled
+    final userProfileProvider = context.read<UserProfileProvider>();
+    final settings = userProfileProvider.appSettings;
+
+    if (!settings.sessionFeeEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Session fees are not enabled. Please configure in Settings.'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    if (settings.defaultSessionFee <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please set a default session fee in Settings.'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    // Get patient email from PatientProvider
+    final patientProvider = context.read<PatientProvider>();
+    final patient = patientProvider.patients.firstWhere(
+      (p) => p.id == appointment.patientId,
+      orElse: () => throw Exception('Patient not found'),
+    );
+
+    if (patient.email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Patient email not found. Please update patient profile.'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    // Show payment QR dialog directly as a popup
+    showDialog(
+      context: context,
+      builder: (context) => PaymentQRDialog(
+        appointment: appointment,
+        amount: settings.defaultSessionFee,
+        patientEmail: patient.email,
       ),
     );
   }

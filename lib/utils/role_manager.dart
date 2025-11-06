@@ -100,7 +100,16 @@ class RoleManager {
         // Super admin exclusive items
         if (role == UserRole.superAdmin) {
           adminItems.addAll([
-            NavigationItem('Advertisement Performance', '/admin/adverts', 'campaign'),
+            NavigationItem(
+              'Advertisement Performance',
+              '/admin/adverts/campaigns',
+              'campaign',
+              subItems: [
+                NavigationSubItem('Campaigns', '/admin/adverts/campaigns', 'campaign'),
+                NavigationSubItem('Ads', '/admin/adverts/ads', 'ads_click'),
+                NavigationSubItem('Products', '/admin/adverts/products', 'inventory'),
+              ],
+            ),
             NavigationItem('Sales Performance', '/admin/sales-performance', 'trending_up'),
             NavigationItem('Admin Management', '/admin/users', 'admin_panel_settings'),
             NavigationItem('Report Builder', '/admin/report-builder', 'build'),
@@ -126,6 +135,17 @@ class NavigationItem {
   final String title;
   final String route;
   final String icon;
+  final List<NavigationSubItem>? subItems;
 
-  NavigationItem(this.title, this.route, this.icon);
+  NavigationItem(this.title, this.route, this.icon, {this.subItems});
+  
+  bool get hasSubItems => subItems != null && subItems!.isNotEmpty;
+}
+
+class NavigationSubItem {
+  final String title;
+  final String route;
+  final String icon;
+
+  NavigationSubItem(this.title, this.route, this.icon);
 }

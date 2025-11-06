@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserProfile {
   final String id;
@@ -12,6 +13,12 @@ class UserProfile {
   final String practiceLocation;
   final DateTime createdAt;
   final DateTime lastUpdated;
+  
+  // Bank account fields for manual payouts
+  final String? bankName;
+  final String? bankCode;
+  final String? bankAccountNumber;
+  final String? bankAccountName;
 
   UserProfile({
     required this.id,
@@ -25,6 +32,10 @@ class UserProfile {
     required this.practiceLocation,
     required this.createdAt,
     required this.lastUpdated,
+    this.bankName,
+    this.bankCode,
+    this.bankAccountNumber,
+    this.bankAccountName,
   });
 
   String get fullName => '$firstName $lastName';
@@ -36,6 +47,9 @@ class UserProfile {
     }
     return 'U';
   }
+  
+  // Default platform commission percentage
+  double get platformCommissionPercentage => 5.0;
 
   UserProfile copyWith({
     String? id,
@@ -49,6 +63,10 @@ class UserProfile {
     String? practiceLocation,
     DateTime? createdAt,
     DateTime? lastUpdated,
+    String? bankName,
+    String? bankCode,
+    String? bankAccountNumber,
+    String? bankAccountName,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -62,6 +80,10 @@ class UserProfile {
       practiceLocation: practiceLocation ?? this.practiceLocation,
       createdAt: createdAt ?? this.createdAt,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      bankName: bankName ?? this.bankName,
+      bankCode: bankCode ?? this.bankCode,
+      bankAccountNumber: bankAccountNumber ?? this.bankAccountNumber,
+      bankAccountName: bankAccountName ?? this.bankAccountName,
     );
   }
 }
@@ -72,6 +94,13 @@ class AppSettings {
   final bool biometricEnabled;
   final String language;
   final String timezone;
+  
+  // Payment settings
+  final bool sessionFeeEnabled;
+  final double defaultSessionFee;
+  final String currency;
+  final String? paystackPublicKey;
+  final String? paystackSecretKey;
 
   AppSettings({
     required this.notificationsEnabled,
@@ -79,6 +108,11 @@ class AppSettings {
     required this.biometricEnabled,
     required this.language,
     required this.timezone,
+    this.sessionFeeEnabled = true,  // Enable by default for testing
+    this.defaultSessionFee = 500.0,  // R500 default consultation fee
+    this.currency = 'ZAR',
+    this.paystackPublicKey,
+    this.paystackSecretKey,
   });
 
   AppSettings copyWith({
@@ -87,6 +121,11 @@ class AppSettings {
     bool? biometricEnabled,
     String? language,
     String? timezone,
+    bool? sessionFeeEnabled,
+    double? defaultSessionFee,
+    String? currency,
+    String? paystackPublicKey,
+    String? paystackSecretKey,
   }) {
     return AppSettings(
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -94,6 +133,11 @@ class AppSettings {
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
       language: language ?? this.language,
       timezone: timezone ?? this.timezone,
+      sessionFeeEnabled: sessionFeeEnabled ?? this.sessionFeeEnabled,
+      defaultSessionFee: defaultSessionFee ?? this.defaultSessionFee,
+      currency: currency ?? this.currency,
+      paystackPublicKey: paystackPublicKey ?? this.paystackPublicKey,
+      paystackSecretKey: paystackSecretKey ?? this.paystackSecretKey,
     );
   }
 }
@@ -111,7 +155,41 @@ class UserProfileProvider extends ChangeNotifier {
   UserProfile? get userProfile => _userProfile;
   AppSettings get appSettings => _appSettings;
 
-  // Initialize with default data
+  // Load profile from Firebase
+  Future<void> loadProfileFromFirebase(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      
+      if (doc.exists) {
+        final data = doc.data()!;
+        _userProfile = UserProfile(
+          id: userId,
+          firstName: data['firstName'] ?? '',
+          lastName: data['lastName'] ?? '',
+          email: data['email'] ?? '',
+          phoneNumber: data['phoneNumber'],
+          licenseNumber: data['licenseNumber'],
+          specialization: data['specialization'] ?? 'Practitioner',
+          yearsOfExperience: data['yearsOfExperience'] ?? 0,
+          practiceLocation: data['practiceLocation'] ?? '',
+          createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          lastUpdated: (data['lastUpdated'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          bankName: data['bankName'],
+          bankCode: data['bankCode'],
+          bankAccountNumber: data['bankAccountNumber'],
+          bankAccountName: data['bankAccountName'],
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading profile from Firebase: $e');
+    }
+  }
+
+  // Initialize with default data (fallback if no Firebase profile)
   void initializeProfile(String email, String userName) {
     final nameParts = userName.split(' ');
     final firstName = nameParts.isNotEmpty ? nameParts.first : '';
@@ -143,13 +221,18 @@ class UserProfileProvider extends ChangeNotifier {
     String? specialization,
     int? yearsOfExperience,
     String? practiceLocation,
+    String? paystackSubaccountCode,
+    bool? paystackSubaccountVerified,
+    String? bankName,
+    String? bankCode,
+    String? bankAccountNumber,
+    String? bankAccountName,
+    DateTime? subaccountCreatedAt,
   }) async {
     if (_userProfile == null) return false;
 
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(milliseconds: 500));
-      
+      // Update local state first
       _userProfile = _userProfile!.copyWith(
         firstName: firstName,
         lastName: lastName,
@@ -159,12 +242,40 @@ class UserProfileProvider extends ChangeNotifier {
         specialization: specialization,
         yearsOfExperience: yearsOfExperience,
         practiceLocation: practiceLocation,
+        bankName: bankName,
+        bankCode: bankCode,
+        bankAccountNumber: bankAccountNumber,
+        bankAccountName: bankAccountName,
         lastUpdated: DateTime.now(),
       );
+      
+      // Write to Firebase
+      final updates = <String, dynamic>{};
+      if (firstName != null) updates['firstName'] = firstName;
+      if (lastName != null) updates['lastName'] = lastName;
+      if (email != null) updates['email'] = email;
+      if (phoneNumber != null) updates['phoneNumber'] = phoneNumber;
+      if (licenseNumber != null) updates['licenseNumber'] = licenseNumber;
+      if (specialization != null) updates['specialization'] = specialization;
+      if (yearsOfExperience != null) updates['yearsOfExperience'] = yearsOfExperience;
+      if (practiceLocation != null) updates['practiceLocation'] = practiceLocation;
+      if (bankName != null) updates['bankName'] = bankName;
+      if (bankCode != null) updates['bankCode'] = bankCode;
+      if (bankAccountNumber != null) updates['bankAccountNumber'] = bankAccountNumber;
+      if (bankAccountName != null) updates['bankAccountName'] = bankAccountName;
+      if (subaccountCreatedAt != null) updates['subaccountCreatedAt'] = Timestamp.fromDate(subaccountCreatedAt);
+      updates['lastUpdated'] = FieldValue.serverTimestamp();
+      
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_userProfile!.id)
+          .update(updates);
       
       notifyListeners();
       return true;
     } catch (e) {
+      debugPrint('Error updating profile: $e');
       return false;
     }
   }
@@ -176,6 +287,11 @@ class UserProfileProvider extends ChangeNotifier {
     bool? biometricEnabled,
     String? language,
     String? timezone,
+    bool? sessionFeeEnabled,
+    double? defaultSessionFee,
+    String? currency,
+    String? paystackPublicKey,
+    String? paystackSecretKey,
   }) async {
     try {
       // Simulate API call
@@ -187,6 +303,11 @@ class UserProfileProvider extends ChangeNotifier {
         biometricEnabled: biometricEnabled,
         language: language,
         timezone: timezone,
+        sessionFeeEnabled: sessionFeeEnabled,
+        defaultSessionFee: defaultSessionFee,
+        currency: currency,
+        paystackPublicKey: paystackPublicKey,
+        paystackSecretKey: paystackSecretKey,
       );
       
       notifyListeners();
