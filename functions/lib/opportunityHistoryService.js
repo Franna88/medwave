@@ -1,4 +1,10 @@
 const admin = require('firebase-admin');
+const { assignAdIdToOpportunity, getStageCategory } = require('./opportunityMappingService');
+const { aggregateCampaignTotals } = require('./campaignAggregation');
+const { aggregateAdSetTotals } = require('./adSetAggregation');
+
+// Feature flag for split collections dual-write
+const ENABLE_SPLIT_COLLECTIONS_WRITE = process.env.ENABLE_SPLIT_COLLECTIONS_WRITE === 'true';
 
 // Get Firestore instance (admin.initializeApp() is called in index.js)
 const getDb = () => admin.firestore();
@@ -218,6 +224,154 @@ async function getAssignedAdId(opportunityId, utmData, db) {
 }
 
 /**
+ * Write opportunity data to split collections (ghlOpportunities, ads aggregation)
+ * @param {Object} data - Opportunity data
+ * @param {string} assignedAdId - The assigned ad ID from mapping
+ * @param {Object} db - Firestore database instance
+ * @returns {Promise<void>}
+ */
+async function writeToSplitCollections(data, assignedAdId, db) {
+  try {
+    const {
+      opportunityId,
+      opportunityName,
+      contactId,
+      pipelineId,
+      pipelineName,
+      newStageName,
+      monetaryValue = 0,
+      facebookAdId = '',
+      adId = '',
+      adName = '',
+      adSetName = '',
+      campaignName = '',
+      campaignSource = '',
+      campaignMedium = ''
+    } = data;
+    
+    const timestamp = admin.firestore.Timestamp.now();
+    const stageCategory = getStageCategory(newStageName);
+    
+    console.log(`   📝 Writing opportunity ${opportunityId} to split collections...`);
+    
+    // Get the assigned ad details
+    const adDoc = await db.collection('ads').doc(assignedAdId).get();
+    
+    if (!adDoc.exists) {
+      console.log(`   ⚠️  Assigned ad ${assignedAdId} not found in ads collection, skipping split collections write`);
+      return;
+    }
+    
+    const adData = adDoc.data();
+    
+    // Create/update ghlOpportunities document
+    const oppDoc = {
+      opportunityId: opportunityId,
+      opportunityName: opportunityName,
+      contactId: contactId || '',
+      contactName: '', // Not available in stage transition data
+      adId: assignedAdId,
+      adName: adData.adName || '',
+      adSetId: adData.adSetId || '',
+      adSetName: adData.adSetName || '',
+      campaignId: adData.campaignId || '',
+      campaignName: adData.campaignName || '',
+      currentStage: newStageName,
+      stageCategory: stageCategory,
+      pipelineId: pipelineId || '',
+      pipelineName: pipelineName || '',
+      monetaryValue: monetaryValue,
+      utmSource: campaignSource || '',
+      utmMedium: campaignMedium || '',
+      utmCampaign: campaignName || '',
+      h_ad_id: facebookAdId || '',
+      lastStageChange: timestamp,
+      lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+    };
+    
+    // Set createdAt only on first write
+    const existingOpp = await db.collection('ghlOpportunities').doc(opportunityId).get();
+    if (!existingOpp.exists) {
+      oppDoc.createdAt = timestamp;
+    }
+    
+    await db.collection('ghlOpportunities').doc(opportunityId).set(oppDoc, { merge: true });
+    
+    // Update ad's GHL stats
+    const currentAdData = adDoc.data();
+    const currentGhlStats = currentAdData.ghlStats || {
+      leads: 0,
+      bookings: 0,
+      deposits: 0,
+      cashCollected: 0,
+      cashAmount: 0
+    };
+    
+    // Increment appropriate counters based on stage category
+    const newGhlStats = { ...currentGhlStats };
+    
+    // Always count as lead if this is first time seeing this opportunity
+    if (!existingOpp.exists) {
+      newGhlStats.leads = (newGhlStats.leads || 0) + 1;
+    }
+    
+    // Increment stage-specific counters
+    if (stageCategory === 'bookedAppointments') {
+      newGhlStats.bookings = (newGhlStats.bookings || 0) + 1;
+    } else if (stageCategory === 'deposits') {
+      newGhlStats.deposits = (newGhlStats.deposits || 0) + 1;
+      newGhlStats.cashAmount = (newGhlStats.cashAmount || 0) + monetaryValue;
+    } else if (stageCategory === 'cashCollected') {
+      newGhlStats.cashCollected = (newGhlStats.cashCollected || 0) + 1;
+      newGhlStats.cashAmount = (newGhlStats.cashAmount || 0) + monetaryValue;
+    }
+    
+    // Calculate new profit
+    const facebookStats = currentAdData.facebookStats || {};
+    const spend = facebookStats.spend || 0;
+    const profit = newGhlStats.cashAmount - spend;
+    const cpl = newGhlStats.leads > 0 ? spend / newGhlStats.leads : 0;
+    const cpb = newGhlStats.bookings > 0 ? spend / newGhlStats.bookings : 0;
+    const cpa = newGhlStats.deposits > 0 ? spend / newGhlStats.deposits : 0;
+    
+    // Update ad document
+    await db.collection('ads').doc(assignedAdId).update({
+      ghlStats: newGhlStats,
+      profit: profit,
+      cpl: cpl,
+      cpb: cpb,
+      cpa: cpa,
+      lastGHLSync: admin.firestore.FieldValue.serverTimestamp(),
+      lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    // Trigger ad set aggregation
+    if (adData.adSetId) {
+      try {
+        await aggregateAdSetTotals(adData.adSetId);
+      } catch (error) {
+        console.error(`   ⚠️ Error aggregating ad set ${adData.adSetId}:`, error.message);
+      }
+    }
+    
+    // Trigger campaign aggregation
+    if (adData.campaignId) {
+      try {
+        await aggregateCampaignTotals(adData.campaignId);
+      } catch (error) {
+        console.error(`   ⚠️ Error aggregating campaign ${adData.campaignId}:`, error.message);
+      }
+    }
+    
+    console.log(`   ✅ Successfully wrote opportunity ${opportunityId} to split collections`);
+    
+  } catch (error) {
+    console.error(`   ❌ Error writing to split collections:`, error.message);
+    // Don't fail the whole transaction if split collections write fails
+  }
+}
+
+/**
  * Store a stage transition in Firestore
  * Also updates advertData collection weekly metrics if facebookAdId exists
  */
@@ -341,6 +495,15 @@ async function storeStageTransition(data) {
       }, { merge: true });
       
       console.log(`   ✅ Updated advertData/${monthKey}/ads/${assignedAdId}/ghlWeekly/${weekId}`);
+      
+      // DUAL-WRITE: Also write to split collections if enabled
+      if (ENABLE_SPLIT_COLLECTIONS_WRITE) {
+        try {
+          await writeToSplitCollections(data, assignedAdId, db);
+        } catch (splitError) {
+          console.error(`   ⚠️ Failed to write to split collections for opportunity ${opportunityId}:`, splitError.message);
+        }
+      }
     } else {
       console.log(`   ⚠️  No Ad ID assigned for opportunity ${opportunityId}, skipping advertData update`);
     }

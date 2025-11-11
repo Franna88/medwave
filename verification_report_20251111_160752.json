@@ -1,0 +1,20 @@
+{
+  "timestamp": "2025-11-11T16:07:52.491226",
+  "document_counts": {
+    "campaigns": 80,
+    "adSets": 261,
+    "ads": 755,
+    "ghlOpportunities": 0,
+    "ghlOpportunityMapping": 1385
+  },
+  "errors": {
+    "campaign_aggregation_errors": 0,
+    "ad_set_aggregation_errors": 0,
+    "orphaned_ads": 0,
+    "orphaned_ad_sets": 0,
+    "cross_campaign_duplicates": 0,
+    "opportunities_without_mapping": 0,
+    "invalid_mappings": 0
+  },
+  "all_checks_passed": true
+}

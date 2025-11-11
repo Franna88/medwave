@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../models/performance/ad_performance_data.dart';
 import '../../../models/performance/campaign_aggregate.dart';
@@ -27,6 +28,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
   List<AdSetAggregate> _adSets = [];
   List<AdPerformanceWithProduct> _ads = [];
   
+  // Loading states for split collections
+  bool _isLoadingAdSets = false;
+  bool _isLoadingAds = false;
+  
   // Filter states
   String _campaignFilter = 'profit'; // profit, spend, leads, bookings, deposits, cash
   String _adSetFilter = 'profit';
@@ -41,68 +46,187 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
   @override
   void didUpdateWidget(ThreeColumnCampaignView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.ads != widget.ads) {
-      _loadCampaigns();
+    if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
+      // For split collections, reload if provider's filter dates changed
+      if (oldWidget.provider.filterStartDate != widget.provider.filterStartDate ||
+          oldWidget.provider.filterEndDate != widget.provider.filterEndDate) {
+        _loadCampaigns();
+      }
+    } else {
+      // For old schema, reload if ads changed
+      if (oldWidget.ads != widget.ads) {
+        _loadCampaigns();
+      }
     }
   }
 
   void _loadCampaigns() {
-    if (widget.ads.isEmpty) {
-      setState(() {
-        _campaigns = [];
-        _adSets = [];
-        _ads = [];
-        _selectedCampaignId = null;
-        _selectedAdSetId = null;
-      });
-      return;
-    }
-
-    final campaigns = widget.provider.getCampaignAggregates(widget.ads);
-    final campaignsWithSpend = campaigns.where((c) => c.totalFbSpend > 0).toList();
-    _sortCampaigns(campaignsWithSpend);
-
-    setState(() {
-      _campaigns = campaignsWithSpend;
-      // Don't auto-select on load - user must click a campaign
-      if (_selectedCampaignId != null && 
-          !campaignsWithSpend.any((c) => c.campaignId == _selectedCampaignId)) {
-        _selectedCampaignId = null;
-        _selectedAdSetId = null;
-        _adSets = [];
-        _ads = [];
-      }
-    });
-  }
-
-  void _onCampaignSelected(String campaignId) {
-    setState(() {
-      _selectedCampaignId = campaignId;
-      _selectedAdSetId = null;
+    if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
+      // NEW: Load from split collections with client-side filtering
+      // Get filtered campaigns based on the provider's date filter
+      final filteredCampaigns = widget.provider.getFilteredCampaigns(
+        startDate: widget.provider.filterStartDate,
+        endDate: widget.provider.filterEndDate,
+      );
       
-      // Load ad sets for selected campaign
-      final campaign = _campaigns.firstWhere((c) => c.campaignId == campaignId);
-      _adSets = widget.provider
-          .getAdSetAggregates(campaign.ads)
-          .where((adSet) => adSet.campaignId == campaignId && adSet.totalFbSpend > 0)
+      final campaigns = filteredCampaigns
+          .map((c) => widget.provider.campaignToCampaignAggregate(c))
+          .where((c) => c.totalFbSpend > 0)
           .toList();
-      _sortAdSets(_adSets);
       
-      // Auto-select first ad set
-      if (_adSets.isNotEmpty) {
-        _selectedAdSetId = _adSets.first.adSetId;
-        _loadAdsForAdSet(_adSets.first.adSetId);
-      } else {
+      _sortCampaigns(campaigns);
+      
+      setState(() {
+        _campaigns = campaigns;
+        _selectedCampaignId = null;
+        _selectedAdSetId = null;
+        _adSets = [];
         _ads = [];
+      });
+    } else {
+      // OLD: Aggregate from ads in memory
+      if (widget.ads.isEmpty) {
+        setState(() {
+          _campaigns = [];
+          _adSets = [];
+          _ads = [];
+          _selectedCampaignId = null;
+          _selectedAdSetId = null;
+        });
+        return;
       }
-    });
+
+      final campaigns = widget.provider.getCampaignAggregates(widget.ads);
+      final campaignsWithSpend = campaigns.where((c) => c.totalFbSpend > 0).toList();
+      _sortCampaigns(campaignsWithSpend);
+
+      setState(() {
+        _campaigns = campaignsWithSpend;
+        // Don't auto-select on load - user must click a campaign
+        if (_selectedCampaignId != null && 
+            !campaignsWithSpend.any((c) => c.campaignId == _selectedCampaignId)) {
+          _selectedCampaignId = null;
+          _selectedAdSetId = null;
+          _adSets = [];
+          _ads = [];
+        }
+      });
+    }
   }
 
-  void _onAdSetSelected(String adSetId) {
-    setState(() {
-      _selectedAdSetId = adSetId;
-      _loadAdsForAdSet(adSetId);
-    });
+  Future<void> _onCampaignSelected(String campaignId) async {
+    if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
+      // NEW: Load ad sets from Firebase on-demand
+      setState(() {
+        _selectedCampaignId = campaignId;
+        _selectedAdSetId = null;
+        _adSets = [];
+        _ads = [];
+        _isLoadingAdSets = true;
+      });
+      
+      try {
+        await widget.provider.loadAdSetsForCampaign(campaignId);
+        
+        // Apply date filtering to ad sets
+        final filteredAdSets = widget.provider.getFilteredAdSets(
+          startDate: widget.provider.filterStartDate,
+          endDate: widget.provider.filterEndDate,
+        );
+        
+        final adSets = filteredAdSets
+            .map((as) => widget.provider.adSetToAdSetAggregate(as))
+            .where((as) => as.totalFbSpend > 0)
+            .toList();
+        
+        _sortAdSets(adSets);
+        
+        setState(() {
+          _adSets = adSets;
+          _isLoadingAdSets = false;
+          
+          // Auto-select first ad set
+          if (_adSets.isNotEmpty) {
+            _selectedAdSetId = _adSets.first.adSetId;
+            _onAdSetSelected(_adSets.first.adSetId);
+          }
+        });
+      } catch (e) {
+        setState(() {
+          _isLoadingAdSets = false;
+        });
+        if (kDebugMode) {
+          print('❌ Error loading ad sets: $e');
+        }
+      }
+    } else {
+      // OLD: Get from in-memory aggregates
+      setState(() {
+        _selectedCampaignId = campaignId;
+        _selectedAdSetId = null;
+        
+        // Load ad sets for selected campaign
+        final campaign = _campaigns.firstWhere((c) => c.campaignId == campaignId);
+        _adSets = widget.provider
+            .getAdSetAggregates(campaign.ads)
+            .where((adSet) => adSet.campaignId == campaignId && adSet.totalFbSpend > 0)
+            .toList();
+        _sortAdSets(_adSets);
+        
+        // Auto-select first ad set
+        if (_adSets.isNotEmpty) {
+          _selectedAdSetId = _adSets.first.adSetId;
+          _loadAdsForAdSet(_adSets.first.adSetId);
+        } else {
+          _ads = [];
+        }
+      });
+    }
+  }
+
+  Future<void> _onAdSetSelected(String adSetId) async {
+    if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
+      // NEW: Load ads from Firebase on-demand
+      setState(() {
+        _selectedAdSetId = adSetId;
+        _ads = [];
+        _isLoadingAds = true;
+      });
+      
+      try {
+        await widget.provider.loadAdsForAdSet(adSetId);
+        
+        // Apply date filtering to ads
+        final filteredAds = widget.provider.getFilteredAds(
+          startDate: widget.provider.filterStartDate,
+          endDate: widget.provider.filterEndDate,
+        );
+        
+        final ads = filteredAds
+            .map((a) => widget.provider.adToAdPerformanceWithProduct(a))
+            .toList();
+        
+        _sortAds(ads);
+        
+        setState(() {
+          _ads = ads;
+          _isLoadingAds = false;
+        });
+      } catch (e) {
+        setState(() {
+          _isLoadingAds = false;
+        });
+        if (kDebugMode) {
+          print('❌ Error loading ads: $e');
+        }
+      }
+    } else {
+      // OLD: Get from in-memory data
+      setState(() {
+        _selectedAdSetId = adSetId;
+        _loadAdsForAdSet(adSetId);
+      });
+    }
   }
 
   void _loadAdsForAdSet(String adSetId) {
@@ -416,17 +540,19 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
           Expanded(
             child: _selectedCampaignId == null
                 ? _buildColumnEmptyState('Select a campaign to view ad sets')
-                : _adSets.isEmpty
-                    ? _buildColumnEmptyState('No ad sets found')
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _adSets.length,
-                        itemBuilder: (context, index) {
-                          final adSet = _adSets[index];
-                          final isSelected = _selectedAdSetId == adSet.adSetId;
-                          return _buildAdSetCard(adSet, isSelected);
-                        },
-                      ),
+                : _isLoadingAdSets
+                    ? _buildLoadingIndicator()
+                    : _adSets.isEmpty
+                        ? _buildColumnEmptyState('No ad sets found')
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(12),
+                            itemCount: _adSets.length,
+                            itemBuilder: (context, index) {
+                              final adSet = _adSets[index];
+                              final isSelected = _selectedAdSetId == adSet.adSetId;
+                              return _buildAdSetCard(adSet, isSelected);
+                            },
+                          ),
           ),
         ],
       ),
@@ -520,16 +646,18 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
           Expanded(
             child: _selectedAdSetId == null
                 ? _buildColumnEmptyState('Select an ad set to view ads')
-                : _ads.isEmpty
-                    ? _buildColumnEmptyState('No ads found')
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _ads.length,
-                        itemBuilder: (context, index) {
-                          final ad = _ads[index];
-                          return _buildAdCard(ad);
-                        },
-                      ),
+                : _isLoadingAds
+                    ? _buildLoadingIndicator()
+                    : _ads.isEmpty
+                        ? _buildColumnEmptyState('No ads found')
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(12),
+                            itemCount: _ads.length,
+                            itemBuilder: (context, index) {
+                              final ad = _ads[index];
+                              return _buildAdCard(ad);
+                            },
+                          ),
           ),
         ],
       ),
@@ -548,6 +676,15 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
             color: Colors.grey[500],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: CircularProgressIndicator(),
       ),
     );
   }

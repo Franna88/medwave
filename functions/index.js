@@ -1273,7 +1273,10 @@ app.post('/advertdata/sync-ghl', async (req, res) => {
  * Scheduled function to auto-sync GoHighLevel data to Firebase
  * Runs every 2 minutes to keep cumulative data up-to-date
  * This runs independently of user logins and ensures Firebase always has fresh data
+ * 
+ * DISABLED - Will be re-enabled on next deployment
  */
+/*
 exports.scheduledSync = functions
   .pubsub
   .schedule('every 2 minutes')
@@ -1378,11 +1381,15 @@ exports.scheduledSync = functions
       throw error;
     }
   });
+*/
 
 /**
  * Scheduled function to auto-sync Facebook Ads data to Firebase
  * Runs every 15 minutes to keep Facebook ad performance data up-to-date
+ * 
+ * DISABLED - Will be re-enabled on next deployment
  */
+/*
 exports.scheduledFacebookSync = functions
   .pubsub
   .schedule('every 15 minutes')
@@ -1401,6 +1408,7 @@ exports.scheduledFacebookSync = functions
       throw error;
     }
   });
+*/
 
 // Export the Express app as a Firebase Cloud Function (1st gen)
 exports.api = functions
@@ -1670,7 +1678,10 @@ exports.confirmAppointmentViaEmail = functions.https.onRequest(async (req, res) 
 /**
  * Schedule appointment reminder emails
  * Runs daily to check for appointments happening tomorrow
+ * 
+ * DISABLED - Will be re-enabled on next deployment
  */
+/*
 exports.scheduleAppointmentReminders = functions.pubsub
   .schedule('every day 09:00')
   .timeZone('Africa/Johannesburg') // Adjust to your timezone
@@ -1747,12 +1758,16 @@ exports.scheduleAppointmentReminders = functions.pubsub
       throw error;
     }
   });
+*/
 
 /**
  * Scheduled Facebook 6-Month Sync
  * Runs every hour to fetch Facebook ads and insights from the last 6 months
  * Handles rate limits with automatic checkpoint/resume
+ * 
+ * DISABLED - Will be re-enabled on next deployment
  */
+/*
 exports.scheduledFacebook6MonthSync = functions.pubsub
   .schedule('every 1 hours')
   .timeZone('Africa/Johannesburg')
@@ -1778,3 +1793,4 @@ exports.scheduledFacebook6MonthSync = functions.pubsub
       throw error;
     }
   });
+*/

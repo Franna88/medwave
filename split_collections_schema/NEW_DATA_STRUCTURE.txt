@@ -1,0 +1,568 @@
+================================================================================
+SPLIT COLLECTIONS SCHEMA - NEW DATA STRUCTURE
+Date: November 11, 2025
+================================================================================
+
+OVERVIEW
+========
+This document describes the new split collections architecture that replaces
+the nested advertData structure. The new design provides:
+- 20x faster loading (< 500ms vs 3-5 minutes)
+- Pre-aggregated metrics at all hierarchy levels
+- Prevention of cross-campaign duplicates
+- Better scalability and flexibility
+
+MIGRATION FROM: advertData/{month}/ads/{adId}
+MIGRATION TO: 5 separate collections (campaigns, adSets, ads, ghlOpportunities, ghlOpportunityMapping)
+
+================================================================================
+COLLECTION 1: campaigns
+================================================================================
+
+Path: campaigns/{campaignId}
+
+Purpose: Top-level campaign aggregates with pre-calculated metrics
+
+Document Structure:
+{
+  // Identity
+  campaignId: "120235556205010335",
+  campaignName: "Matthys - 16102025 - ABOLEADFORMZA (DDM) - Physiotherapist",
+  status: "ACTIVE",  // or "PAUSED", "ARCHIVED"
+  
+  // Facebook Metrics (aggregated from all ads in campaign)
+  totalSpend: 15000.50,
+  totalImpressions: 500000,
+  totalClicks: 2500,
+  totalReach: 100000,
+  avgCPM: 30.01,
+  avgCPC: 6.00,
+  avgCTR: 0.5,
+  
+  // GHL Metrics (aggregated from all opportunities in campaign)
+  totalLeads: 150,
+  totalBookings: 80,
+  totalDeposits: 40,
+  totalCashCollected: 35,
+  totalCashAmount: 600000,
+  
+  // Computed Metrics
+  totalProfit: 585000,        // totalCashAmount - totalSpend
+  cpl: 100.00,                // totalSpend / totalLeads
+  cpb: 187.50,                // totalSpend / totalBookings
+  cpa: 375.00,                // totalSpend / totalDeposits
+  roi: 3900,                  // ((totalCashAmount - totalSpend) / totalSpend) * 100
+  
+  // Conversion Rates
+  leadToBookingRate: 53.3,    // (totalBookings / totalLeads) * 100
+  bookingToDepositRate: 50.0, // (totalDeposits / totalBookings) * 100
+  depositToCashRate: 87.5,    // (totalCashCollected / totalDeposits) * 100
+  
+  // Metadata
+  adSetCount: 5,
+  adCount: 25,
+  lastUpdated: Timestamp,
+  lastFacebookSync: Timestamp,
+  lastGHLSync: Timestamp,
+  
+  // Date Tracking
+  createdAt: Timestamp,
+  firstAdDate: Timestamp,
+  lastAdDate: Timestamp
+}
+
+Indexes Required:
+- status + lastUpdated (DESC)
+- totalProfit (DESC)
+- totalSpend (DESC)
+- lastUpdated (DESC)
+
+================================================================================
+COLLECTION 2: adSets
+================================================================================
+
+Path: adSets/{adSetId}
+
+Purpose: Ad set level aggregates with parent campaign reference
+
+Document Structure:
+{
+  // Identity
+  adSetId: "120235556204970335",
+  adSetName: "Targeted Audiences",
+  
+  // Parent Reference
+  campaignId: "120235556205010335",
+  campaignName: "Matthys - 16102025 - ABOLEADFORMZA (DDM) - Physiotherapist",
+  
+  // Facebook Metrics (aggregated from all ads in ad set)
+  totalSpend: 3000.25,
+  totalImpressions: 100000,
+  totalClicks: 500,
+  totalReach: 20000,
+  avgCPM: 30.00,
+  avgCPC: 6.00,
+  avgCTR: 0.5,
+  
+  // GHL Metrics (aggregated from all opportunities in ad set)
+  totalLeads: 30,
+  totalBookings: 15,
+  totalDeposits: 8,
+  totalCashCollected: 7,
+  totalCashAmount: 120000,
+  
+  // Computed Metrics
+  totalProfit: 117000,
+  cpl: 100.00,
+  cpb: 200.00,
+  cpa: 375.00,
+  
+  // Metadata
+  adCount: 5,
+  lastUpdated: Timestamp,
+  
+  // Date Tracking
+  createdAt: Timestamp,
+  firstAdDate: Timestamp,
+  lastAdDate: Timestamp
+}
+
+Indexes Required:
+- campaignId + totalProfit (DESC)
+- campaignId + lastUpdated (DESC)
+
+================================================================================
+COLLECTION 3: ads
+================================================================================
+
+Path: ads/{adId}
+
+Purpose: Individual ad with aggregated stats and parent references
+
+Document Structure:
+{
+  // Identity
+  adId: "120234487479400335",
+  adName: "Physiotherapists - Elmien",
+  
+  // Parent References
+  adSetId: "120235556204970335",
+  adSetName: "Targeted Audiences",
+  campaignId: "120235556205010335",
+  campaignName: "Matthys - 16102025 - ABOLEADFORMZA (DDM) - Physiotherapist",
+  
+  // Facebook Stats (aggregated from insights subcollection)
+  facebookStats: {
+    spend: 500.50,
+    impressions: 20000,
+    clicks: 100,
+    reach: 15000,
+    cpm: 25.03,
+    cpc: 5.01,
+    ctr: 0.5,
+    dateStart: "2025-10-01",
+    dateStop: "2025-11-10"
+  },
+  
+  // GHL Stats (aggregated from opportunities)
+  ghlStats: {
+    leads: 4,
+    bookings: 2,
+    deposits: 1,
+    cashCollected: 1,
+    cashAmount: 15000
+  },
+  
+  // Computed Metrics
+  profit: 14500,
+  cpl: 125.13,
+  cpb: 250.25,
+  cpa: 500.50,
+  
+  // Metadata
+  status: "ACTIVE",
+  lastUpdated: Timestamp,
+  lastFacebookSync: Timestamp,
+  lastGHLSync: Timestamp,
+  
+  // Date Tracking
+  createdAt: Timestamp,
+  firstInsightDate: Timestamp,
+  lastInsightDate: Timestamp
+}
+
+OPTIONAL Subcollections (for detailed weekly breakdown):
+- insights/{weekId} - Facebook weekly metrics
+- ghlWeekly/{weekId} - GHL weekly metrics
+
+Indexes Required:
+- adSetId + facebookStats.spend (DESC)
+- campaignId + lastUpdated (DESC)
+- lastUpdated (DESC)
+
+================================================================================
+COLLECTION 4: ghlOpportunities
+================================================================================
+
+Path: ghlOpportunities/{opportunityId}
+
+Purpose: Individual GHL opportunities with SINGLE ad assignment
+
+Document Structure:
+{
+  // Identity
+  opportunityId: "opp_12345",
+  opportunityName: "John Doe - Consultation",
+  contactId: "contact_456",
+  contactName: "John Doe",
+  
+  // Ad Assignment (from ghlOpportunityMapping - SINGLE ad only!)
+  adId: "120234487479400335",
+  adName: "Physiotherapists - Elmien",
+  adSetId: "120235556204970335",
+  adSetName: "Targeted Audiences",
+  campaignId: "120235556205010335",
+  campaignName: "Matthys - 16102025 - ABOLEADFORMZA (DDM) - Physiotherapist",
+  
+  // Stage Info
+  currentStage: "Deposit Paid",
+  stageCategory: "deposits",  // leads, bookedAppointments, deposits, cashCollected
+  pipelineId: "XeAGJWRnUGJ5tuhXam2g",
+  pipelineName: "Andries Pipeline",
+  
+  // Financial
+  monetaryValue: 15000,
+  
+  // Attribution
+  utmSource: "facebook",
+  utmMedium: "Targeted Audiences",
+  utmCampaign: "Physiotherapists - Elmien",
+  h_ad_id: "120234487479400335",  // May be null if not captured
+  
+  // Timestamps
+  createdAt: Timestamp,
+  lastStageChange: Timestamp,
+  lastUpdated: Timestamp,
+  
+  // Stage History (optional - for tracking progression)
+  stageHistory: [
+    { stage: "Lead", timestamp: Timestamp },
+    { stage: "Appointment Booked", timestamp: Timestamp },
+    { stage: "Deposit Paid", timestamp: Timestamp }
+  ]
+}
+
+Indexes Required:
+- adId + createdAt (DESC)
+- campaignId + createdAt (DESC)
+- stageCategory + createdAt (DESC)
+- createdAt (DESC)
+
+================================================================================
+COLLECTION 5: ghlOpportunityMapping
+================================================================================
+
+Path: ghlOpportunityMapping/{opportunityId}
+
+Purpose: Prevents cross-campaign duplicates by assigning ONE ad per opportunity
+
+Document Structure:
+{
+  // Identity
+  opportunityId: "opp_12345",
+  
+  // Assignment
+  assignedAdId: "120234487479400335",  // THE ONE ad this opportunity belongs to
+  assignmentMethod: "h_ad_id",  // or "campaign_id_and_ad_name" or "campaign_id"
+  assignmentConfidence: 100,    // 100 for h_ad_id, 80 for campaign+name, 60 for campaign only
+  
+  // Context (for debugging/verification)
+  campaignId: "120235556205010335",
+  campaignName: "Matthys - 16102025 - ABOLEADFORMZA (DDM) - Physiotherapist",
+  adName: "Physiotherapists - Elmien",
+  
+  // Opportunity Details
+  stage: "Deposit Paid",
+  stageCategory: "deposits",
+  monetaryValue: 15000,
+  
+  // Timestamps
+  opportunityCreatedAt: Timestamp,
+  assignedAt: Timestamp,
+  lastVerified: Timestamp
+}
+
+Assignment Priority Logic:
+1. Priority 1 (h_ad_id): Use h_ad_id/utmAdId if available
+   - Coverage: ~24% of opportunities
+   - Confidence: 100% - Direct 1:1 match
+   
+2. Priority 2 (campaign_id + ad_name): Match by BOTH together
+   - Coverage: ~40% of opportunities
+   - Confidence: 80% - Finds ONE specific ad in campaign
+   
+3. Priority 3 (campaign_id): Match by campaign ID only
+   - Coverage: Remaining opportunities
+   - Confidence: 60% - Assigns to first ad in campaign
+
+Indexes Required:
+- opportunityId (for fast lookup)
+- assignedAdId + assignedAt (DESC)
+
+================================================================================
+COLLECTION 6: campaignMetricsHistory (Optional - Time-Series)
+================================================================================
+
+Path: campaignMetricsHistory/{campaignId}__{year}-{month}-{week}
+
+Purpose: Historical snapshots for week-over-week and month-over-month comparisons
+
+Document Structure:
+{
+  // Identity
+  campaignId: "120235556205010335",
+  campaignName: "Matthys - 16102025 - ABOLEADFORMZA (DDM) - Physiotherapist",
+  
+  // Time Period
+  year: 2025,
+  month: 11,
+  week: 45,
+  weekStart: "2025-11-03",
+  weekEnd: "2025-11-09",
+  
+  // Snapshot of Metrics (same as campaigns collection)
+  totalSpend: 1500.00,
+  totalLeads: 15,
+  totalBookings: 8,
+  totalProfit: 22500,
+  cpl: 100.00,
+  
+  // Timestamp
+  createdAt: Timestamp
+}
+
+Indexes Required:
+- campaignId + year + month + week
+- campaignId + createdAt (DESC)
+
+================================================================================
+FIRESTORE INDEXES SUMMARY
+================================================================================
+
+Required Composite Indexes:
+
+1. campaigns collection:
+   - status (ASC) + lastUpdated (DESC)
+   - totalProfit (DESC) + lastUpdated (DESC)
+   - totalSpend (DESC) + lastUpdated (DESC)
+
+2. adSets collection:
+   - campaignId (ASC) + totalProfit (DESC)
+   - campaignId (ASC) + lastUpdated (DESC)
+
+3. ads collection:
+   - adSetId (ASC) + facebookStats.spend (DESC)
+   - campaignId (ASC) + lastUpdated (DESC)
+
+4. ghlOpportunities collection:
+   - adId (ASC) + createdAt (DESC)
+   - campaignId (ASC) + createdAt (DESC)
+   - stageCategory (ASC) + createdAt (DESC)
+
+5. ghlOpportunityMapping collection:
+   - opportunityId (ASC) - single field index
+   - assignedAdId (ASC) + assignedAt (DESC)
+
+6. campaignMetricsHistory collection:
+   - campaignId (ASC) + year (ASC) + month (ASC) + week (ASC)
+   - campaignId (ASC) + createdAt (DESC)
+
+================================================================================
+LOADING STRATEGIES
+================================================================================
+
+Strategy 1: Dashboard Overview (SUPER FAST - <500ms)
+------------------------------------------------------
+Load only campaigns collection with pre-aggregated totals.
+No additional queries needed.
+
+Query:
+  campaigns.orderBy('totalProfit', 'desc').limit(50)
+
+Result: 50 campaigns with all metrics ready to display
+
+
+Strategy 2: Campaign Drill-Down (FAST - <1s)
+---------------------------------------------
+User clicks campaign → load ad sets for that campaign
+
+Queries:
+  1. campaigns.doc(campaignId).get()
+  2. adSets.where('campaignId', '==', campaignId).orderBy('totalProfit', 'desc')
+
+Result: Campaign + all ad sets with metrics
+
+
+Strategy 3: Ad Set Drill-Down (FAST - <1s)
+-------------------------------------------
+User clicks ad set → load ads for that ad set
+
+Queries:
+  1. adSets.doc(adSetId).get()
+  2. ads.where('adSetId', '==', adSetId).orderBy('facebookStats.spend', 'desc')
+
+Result: Ad set + all ads with metrics
+
+
+Strategy 4: Ad Detail with Opportunities (FAST - <1s)
+------------------------------------------------------
+User clicks ad → load opportunities for that ad
+
+Queries:
+  1. ads.doc(adId).get()
+  2. ghlOpportunities.where('adId', '==', adId).orderBy('createdAt', 'desc')
+
+Result: Ad + all opportunities
+
+
+Strategy 5: Week-over-Week Comparison (INSTANT - <100ms)
+---------------------------------------------------------
+Load two snapshots from campaignMetricsHistory
+
+Queries:
+  1. campaignMetricsHistory.where('campaignId', '==', id).where('week', '==', thisWeek)
+  2. campaignMetricsHistory.where('campaignId', '==', id).where('week', '==', lastWeek)
+
+Result: Instant comparison without aggregation
+
+================================================================================
+PERFORMANCE COMPARISON
+================================================================================
+
+Metric                    | Old (advertData)  | New (Split Collections)
+--------------------------|-------------------|-------------------------
+Dashboard Load            | 3-5 minutes       | <500ms (360x faster)
+Campaign Drill-Down       | Already loaded    | <1 second (on-demand)
+Ad Set Drill-Down         | Already loaded    | <1 second (on-demand)
+Individual Ad             | Already loaded    | <1 second (on-demand)
+Week Comparison           | N/A               | <100ms (instant)
+Firebase Read Ops         | 600+ queries      | 1-4 queries
+Data Accuracy             | Duplicates exist  | No duplicates
+Scalability               | Poor (gets slower)| Excellent (stays fast)
+
+================================================================================
+MIGRATION BENEFITS
+================================================================================
+
+1. PERFORMANCE
+   - 360x faster initial load (<500ms vs 3-5 minutes)
+   - Progressive disclosure (load what user needs)
+   - Scales to 10,000+ campaigns
+
+2. DATA ACCURACY
+   - NO cross-campaign duplicates
+   - Each opportunity counted once
+   - Accurate monetary values (no R1,500 defaults)
+
+3. FLEXIBILITY
+   - Filter at any hierarchy level
+   - Easy to add new metrics
+   - Time-series comparisons built-in
+
+4. MAINTAINABILITY
+   - Clear separation of concerns
+   - Easy to debug and verify
+   - Better code organization
+
+5. USER EXPERIENCE
+   - Instant feedback
+   - Smooth navigation
+   - Real-time updates
+
+================================================================================
+OPPORTUNITY MAPPING STRATEGY (CRITICAL)
+================================================================================
+
+Problem: Cross-Campaign Duplicates
+-----------------------------------
+Multi-level matching caused opportunities to appear in 10-100 ads across
+multiple campaigns, inflating metrics by 10x-100x.
+
+Example:
+- Ad Name: "Weight-Loss Demo" (reused across campaigns)
+- Opportunity matched by name → written to ALL "Weight-Loss Demo" ads
+- Appears in Campaign Z, Campaign Y, Campaign V
+- Metrics inflated 3x!
+
+Solution: ghlOpportunityMapping Collection
+-------------------------------------------
+Assign ONE ad per opportunity before writing GHL data.
+
+Process:
+1. Check if opportunity already has mapping
+2. If not, assign using priority logic:
+   - Priority 1: Use h_ad_id if available (24%)
+   - Priority 2: Match by (campaignId + adName) - finds ONE specific ad (40%)
+   - Priority 3: Match by campaignId only - first ad in campaign (remaining)
+3. Store mapping in ghlOpportunityMapping
+4. Use mapped adId for ALL subsequent writes
+
+Result:
+- Before: Opportunity in 76 ads across 19 campaigns
+- After: Opportunity in 1 ad in 1 campaign
+- Metrics accurate and reliable
+
+================================================================================
+MIGRATION TIMELINE
+================================================================================
+
+Week 1: Setup and Migration
+- Day 1-2: Documentation and scripts
+- Day 3-4: Cloud Functions
+- Day 5: Run migration
+- Day 6-7: Flutter services
+
+Week 2: Dual-Write Testing
+- Day 8: Enable dual-write
+- Day 9-14: Verification period
+
+Week 3: Flutter Cutover
+- Day 15-16: Update Flutter app
+- Day 17: Enable in production
+- Day 18-21: Monitoring
+
+Week 4: Cleanup
+- Day 22-28: Disable old system
+
+Week 5: Archive
+- Day 29-35: Archive advertData
+
+================================================================================
+SUCCESS CRITERIA
+================================================================================
+
+✅ Dashboard loads in < 500ms
+✅ All campaign/ad set/ad data displays correctly
+✅ Week-over-week comparisons work
+✅ No data loss during migration
+✅ NO cross-campaign duplicates
+✅ Each opportunity in exactly ONE ad
+✅ All existing features continue working
+✅ Firebase costs remain reasonable
+
+================================================================================
+ROLLBACK PLAN
+================================================================================
+
+If issues occur:
+1. Set ENABLE_SPLIT_COLLECTIONS_WRITE=false
+2. Set USE_SPLIT_COLLECTIONS=false
+3. System reverts to advertData
+4. Run rollback script to delete new collections
+5. Investigate and fix issues
+6. Retry migration
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
+

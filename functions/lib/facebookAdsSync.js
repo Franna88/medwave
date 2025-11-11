@@ -5,6 +5,11 @@
 
 const axios = require('axios');
 const admin = require('firebase-admin');
+const { aggregateCampaignTotals } = require('./campaignAggregation');
+const { aggregateAdSetTotals } = require('./adSetAggregation');
+
+// Feature flag for split collections dual-write
+const ENABLE_SPLIT_COLLECTIONS_WRITE = process.env.ENABLE_SPLIT_COLLECTIONS_WRITE === 'true';
 
 // Facebook API Configuration
 const FACEBOOK_API_VERSION = 'v24.0';
@@ -321,6 +326,92 @@ async function syncWeeklyInsightsForAd(adId, monthsBack = 6) {
 }
 
 /**
+ * Write ad data to split collections (campaigns, adSets, ads)
+ * @param {Object} adData - Ad data with insights
+ * @returns {Promise<Object>} Result with success status
+ */
+async function writeToSplitCollections(adData) {
+  const db = admin.firestore();
+  
+  try {
+    console.log(`   📝 Writing ad ${adData.adId} to split collections...`);
+    
+    // Write to ads collection
+    const adDoc = {
+      adId: adData.adId,
+      adName: adData.adName,
+      adSetId: adData.adSetId || '',
+      adSetName: adData.adSetName || '',
+      campaignId: adData.campaignId,
+      campaignName: adData.campaignName,
+      facebookStats: {
+        spend: adData.spend || 0,
+        impressions: adData.impressions || 0,
+        reach: adData.reach || 0,
+        clicks: adData.clicks || 0,
+        cpm: adData.cpm || 0,
+        cpc: adData.cpc || 0,
+        ctr: adData.ctr || 0,
+        dateStart: adData.dateStart || '',
+        dateStop: adData.dateStop || ''
+      },
+      ghlStats: {
+        leads: 0,
+        bookings: 0,
+        deposits: 0,
+        cashCollected: 0,
+        cashAmount: 0
+      },
+      profit: 0 - (adData.spend || 0), // Negative until GHL data comes in
+      cpl: 0,
+      cpb: 0,
+      cpa: 0,
+      status: 'ACTIVE',
+      lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+      lastFacebookSync: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      firstInsightDate: adData.dateStart || '',
+      lastInsightDate: adData.dateStop || ''
+    };
+    
+    await db.collection('ads').doc(adData.adId).set(adDoc, { merge: true });
+    
+    // Trigger ad set aggregation
+    if (adData.adSetId) {
+      try {
+        await aggregateAdSetTotals(adData.adSetId);
+      } catch (error) {
+        console.error(`   ⚠️ Error aggregating ad set ${adData.adSetId}:`, error.message);
+      }
+    }
+    
+    // Trigger campaign aggregation
+    if (adData.campaignId) {
+      try {
+        await aggregateCampaignTotals(adData.campaignId);
+      } catch (error) {
+        console.error(`   ⚠️ Error aggregating campaign ${adData.campaignId}:`, error.message);
+      }
+    }
+    
+    console.log(`   ✅ Successfully wrote ad ${adData.adId} to split collections`);
+    
+    return {
+      success: true,
+      adId: adData.adId
+    };
+    
+  } catch (error) {
+    console.error(`   ❌ Error writing ad ${adData.adId} to split collections:`, error.message);
+    return {
+      success: false,
+      adId: adData.adId,
+      error: error.message
+    };
+  }
+}
+
+/**
  * Update or create ad performance record in Firestore
  * Also writes to new advertData collection
  */
@@ -479,7 +570,7 @@ async function syncFacebookAdsToFirebase(datePreset = DEFAULT_DATE_PRESET) {
                 ...insights
               };
 
-              // Update in Firestore
+              // Update in Firestore (OLD collections)
               const result = await updateAdPerformanceInFirestore(adData);
               
               if (result.success) {
@@ -490,6 +581,15 @@ async function syncFacebookAdsToFirebase(datePreset = DEFAULT_DATE_PRESET) {
                   await syncWeeklyInsightsForAd(ad.id, 1); // 1 month = ~4 weeks
                 } catch (weeklyError) {
                   console.error(`   ⚠️ Failed to sync weekly data for ad ${ad.id}:`, weeklyError.message);
+                }
+                
+                // DUAL-WRITE: Also write to split collections if enabled
+                if (ENABLE_SPLIT_COLLECTIONS_WRITE) {
+                  try {
+                    await writeToSplitCollections(adData);
+                  } catch (splitError) {
+                    console.error(`   ⚠️ Failed to write to split collections for ad ${ad.id}:`, splitError.message);
+                  }
                 }
               } else {
                 stats.errors++;
@@ -534,6 +634,7 @@ module.exports = {
   normalizeAdName,
   fetchWeeklyInsights,
   storeWeeklyInsightsInFirestore,
-  syncWeeklyInsightsForAd
+  syncWeeklyInsightsForAd,
+  writeToSplitCollections
 };
 

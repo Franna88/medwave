@@ -1,0 +1,86 @@
+{
+  "id": "Itp8xcPYfTXFyWDp1pms",
+  "fullNameLowerCase": "yolandi nel",
+  "lastName": "Nel",
+  "type": "lead",
+  "firstNameLowerCase": "yolandi",
+  "locationId": "QdLXaFEqrdF0JbVbpKLw",
+  "dateAdded": "2025-11-07T02:43:15.066Z",
+  "attributionSource": {
+    "photoUrl": null,
+    "sessionSource": "Social media",
+    "adId": null,
+    "productId": null,
+    "videoUrl": null,
+    "mediumId": "24990281647276118",
+    "utmContent": null,
+    "pSid": "24990281647276118",
+    "medium": "facebook",
+    "postId": null,
+    "flowId": null
+  },
+  "lastNameLowerCase": "nel",
+  "firstName": "Yolandi",
+  "phone": "+27780198239",
+  "emailLowerCase": "yolandi1712@gmail.com",
+  "country": "ZA",
+  "source": "Facebook",
+  "email": "yolandi1712@gmail.com",
+  "additionalPhones": [],
+  "lastAttributionSource": {
+    "medium": "facebook",
+    "formId": "1168700714593335",
+    "formName": "A/B for Lander | DDM (5xQ) v2",
+    "campaign": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+    "utmCampaign": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+    "campaignId": "120235556205010335",
+    "utmMedium": "Interests - Healthcare and medical services (DDM)",
+    "adSetId": "120235556204830335",
+    "utmSource": "facebook",
+    "source": "facebook",
+    "referrer": "",
+    "keyword": null,
+    "adSource": "facebook",
+    "photoUrl": null,
+    "sessionSource": "Social media",
+    "adId": null,
+    "productId": null,
+    "videoUrl": null,
+    "mediumId": "24990281647276118",
+    "utmContent": null,
+    "pSid": "24990281647276118",
+    "postId": null,
+    "flowId": null
+  },
+  "followers": [],
+  "tags": [
+    "leads  pending - e",
+    "andries leads booked - e",
+    "andries booked appointments"
+  ],
+  "assignedTo": "Yj7mjEZBYBC5CqF1dNL2",
+  "dateUpdated": "2025-11-11T12:18:40.749Z",
+  "customFields": [
+    {
+      "id": "rfc7qxlvb17T3HtKTDzB",
+      "value": "Revive Skin and Body"
+    },
+    {
+      "id": "rVi7b2VGCcGgb1T7yfs2",
+      "value": "Healthcare provider"
+    },
+    {
+      "id": "6mcYhCsgPT77viSA5jWb",
+      "value": "None of the Above"
+    },
+    {
+      "id": "bc4LhOHnMuRlX9e3a1h8",
+      "value": "No"
+    },
+    {
+      "id": "2nq0c83hEH0MKz2l5mcE",
+      "value": "1-50"
+    }
+  ],
+  "additionalEmails": []
+}

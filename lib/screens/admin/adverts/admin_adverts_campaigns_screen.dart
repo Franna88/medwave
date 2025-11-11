@@ -49,8 +49,8 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
     // Calculate months to query based on month filter
     final months = _calculateMonthsToQuery(_monthFilter, perfProvider.availableMonths);
     
-    // Calculate date range based on date filter (for client-side filtering)
-    final dateRange = _calculateDateRange(_dateFilter);
+    // Calculate date range based on BOTH month filter and date filter
+    final dateRange = _calculateCombinedDateRange(_monthFilter, _dateFilter, months);
     
     if (kDebugMode) {
       print('🔄 LOADING DATA WITH FILTERS:');
@@ -102,12 +102,46 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
     }
   }
 
-  /// Calculate date range based on date filter selection (secondary filter)
-  Map<String, DateTime?> _calculateDateRange(String filter) {
+  /// Calculate combined date range from month filter and date filter
+  Map<String, DateTime?> _calculateCombinedDateRange(
+    String monthFilter, 
+    String dateFilter, 
+    List<String> selectedMonths,
+  ) {
+    // First, get the base date range from the month filter
+    DateTime? monthStart;
+    DateTime? monthEnd;
+    
+    if (selectedMonths.isNotEmpty) {
+      // Parse the first month (earliest)
+      final firstMonth = selectedMonths.last; // List is sorted newest first
+      final firstParts = firstMonth.split('-');
+      if (firstParts.length == 2) {
+        final year = int.tryParse(firstParts[0]);
+        final month = int.tryParse(firstParts[1]);
+        if (year != null && month != null) {
+          monthStart = DateTime(year, month, 1);
+        }
+      }
+      
+      // Parse the last month (latest)
+      final lastMonth = selectedMonths.first; // List is sorted newest first
+      final lastParts = lastMonth.split('-');
+      if (lastParts.length == 2) {
+        final year = int.tryParse(lastParts[0]);
+        final month = int.tryParse(lastParts[1]);
+        if (year != null && month != null) {
+          // End of month
+          monthEnd = DateTime(year, month + 1, 1).subtract(const Duration(seconds: 1));
+        }
+      }
+    }
+    
+    // Then, apply the date filter on top of the month range
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     
-    switch (filter) {
+    switch (dateFilter) {
       case 'today':
         return {'start': today, 'end': now};
       case 'yesterday':
@@ -120,11 +154,11 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
         final last30Days = today.subtract(const Duration(days: 30));
         return {'start': last30Days, 'end': now};
       case 'all':
-        // No date filtering - show all data from selected months
-        return {'start': null, 'end': null};
+        // Use the month range
+        return {'start': monthStart, 'end': monthEnd};
       default:
-        // Default to no date filtering
-        return {'start': null, 'end': null};
+        // Default to month range
+        return {'start': monthStart, 'end': monthEnd};
     }
   }
 
@@ -161,9 +195,21 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
             );
           }
 
-          final allAds = perfProvider.getMergedData(ghlProvider);
-          // No need to filter by date here - filtering happens at Firebase query level
-          final filteredAds = allAds.where((ad) => ad.facebookStats.spend > 0).toList();
+          // Determine if we have data based on which schema is being used
+          final bool hasData;
+          final int dataCount;
+          
+          if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
+            // NEW: Check campaigns from split collections
+            hasData = perfProvider.campaigns.isNotEmpty;
+            dataCount = perfProvider.campaigns.length;
+          } else {
+            // OLD: Check ads from advertData
+            final allAds = perfProvider.getMergedData(ghlProvider);
+            final filteredAds = allAds.where((ad) => ad.facebookStats.spend > 0).toList();
+            hasData = filteredAds.isNotEmpty;
+            dataCount = filteredAds.length;
+          }
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -171,17 +217,17 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header
-                _buildHeader(perfProvider, ghlProvider, filteredAds.length),
+                _buildHeader(perfProvider, ghlProvider, dataCount),
                 const SizedBox(height: 32),
                 
                 // Three-Column Campaign View or Empty State
-                if (!perfProvider.isInitialized || filteredAds.isEmpty)
-                  _buildEmptyOrInstructionState(perfProvider.isInitialized, filteredAds.isEmpty)
+                if (!perfProvider.isInitialized || !hasData)
+                  _buildEmptyOrInstructionState(perfProvider.isInitialized, !hasData)
                 else
                   SizedBox(
                     height: 600, // Fixed height for scrollable columns
                     child: ThreeColumnCampaignView(
-                      ads: filteredAds.cast(),
+                      ads: [], // Not used when USE_SPLIT_COLLECTIONS is true
                       provider: perfProvider,
                     ),
                   ),
@@ -268,20 +314,33 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
               const DropdownMenuItem(value: 'last6months', child: Text('📅 Last 6 Months')),
               const DropdownMenuItem(value: 'allmonths', child: Text('📅 All Months')),
               // Add individual months dynamically
-              ...perfProvider.availableMonths.take(6).map((month) {
-                return DropdownMenuItem(
-                  value: month,
-                  child: Text('📅 ${_formatMonthLabel(month)}'),
-                );
-              }),
+              if (!PerformanceCostProvider.USE_SPLIT_COLLECTIONS)
+                ...perfProvider.availableMonths.take(6).map((month) {
+                  return DropdownMenuItem(
+                    value: month,
+                    child: Text('📅 ${_formatMonthLabel(month)}'),
+                  );
+                })
+              else
+                // For split collections, show last 12 months
+                ...List.generate(12, (index) {
+                  final date = DateTime.now().subtract(Duration(days: 30 * index));
+                  final monthStr = '${date.year}-${date.month.toString().padLeft(2, '0')}';
+                  return DropdownMenuItem(
+                    value: monthStr,
+                    child: Text('📅 ${_formatMonthLabel(monthStr)}'),
+                  );
+                }),
             ],
             onChanged: (value) {
               if (value != null) {
                 if (kDebugMode) {
                   print('🔄 MONTH FILTER CHANGED: $_monthFilter → $value');
                 }
-                setState(() => _monthFilter = value);
-                // Reload data with new month filter
+                setState(() {
+                  _monthFilter = value;
+                  _dateFilter = 'all'; // Reset date filter when month changes
+                });
                 _loadDataWithFilters();
               }
             },

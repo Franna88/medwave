@@ -15,16 +15,31 @@ class SummaryView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (ads.isEmpty) {
-      return _buildEmptyState();
-    }
-
-    // Calculate totals from ads with FB spend > 0
+    // Calculate totals from split collections or ads
     double totalCost = 0;
     int totalLeads = 0;
     int totalBookings = 0;
     int totalDeposits = 0;
     double totalProfit = 0;
+
+    if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
+      // NEW: Calculate from campaigns collection (pre-aggregated)
+      if (provider.campaigns.isEmpty) {
+        return _buildEmptyState();
+      }
+      
+      for (final campaign in provider.campaigns) {
+        totalCost += campaign.totalSpend;
+        totalLeads += campaign.totalLeads;
+        totalBookings += campaign.totalBookings;
+        totalDeposits += campaign.totalDeposits;
+        totalProfit += campaign.totalProfit;
+      }
+    } else {
+      // OLD: Calculate from ads
+      if (ads.isEmpty) {
+        return _buildEmptyState();
+      }
 
     for (final ad in ads) {
       if (ad.facebookStats.spend > 0) {
@@ -34,6 +49,7 @@ class SummaryView extends StatelessWidget {
         totalLeads += ad.ghlStats!.leads;
         totalBookings += ad.ghlStats!.bookings;
         totalDeposits += ad.ghlStats!.deposits;
+          }
         }
       }
     }
