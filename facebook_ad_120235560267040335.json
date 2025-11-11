@@ -1,0 +1,42 @@
+{
+  "id": "120235560267040335",
+  "name": "Practitioners Image",
+  "status": "ACTIVE",
+  "creative": {
+    "id": "1842507386658835",
+    "name": "ATTENTION: Medical Practitioners 2025-11-05-765cdbfb8488dd40a11e868f3fb8c16f",
+    "object_story_spec": {
+      "page_id": "100391263069899",
+      "instagram_user_id": "17841458823670579",
+      "link_data": {
+        "link": "http://fb.me/",
+        "message": "ATTENTION Medical & Wellness Practitioners:\n\nWhat if your patients could experience rapid healing, lasting pain relief, and measurable body transformation \u2014 all while your practice grew month after month?\n\nClinics across South Africa are now offering exactly that\u2026\nwith MedWave\u2122, the SAHPRA-registered, fully autonomous light therapy system designed to deliver breakthrough outcomes in pain relief, wound regeneration, neurological recovery, and metabolic health.\n\nIt\u2019s noninvasive, safe, and effortless to operate \u2014 giving your patients visible results they can see and feel, while freeing up your time and expanding your revenue.\n\nFrom rapid weight loss and wound healing to pain reduction and neurological restoration, MedWave\u2122 is helping practitioners achieve results that no traditional treatment can match.\n\nClick below to discover why forward-thinking practitioners are adding MedWave\u2122 to their clinics \u2014 and how you can integrate it within the next 7\u201314 days to deliver results that set your practice apart.",
+        "name": "ATTENTION: Medical Practitioners",
+        "description": " ",
+        "image_hash": "81ac025b5a8eb0ebb297d9e40bb12054",
+        "call_to_action": {
+          "type": "LEARN_MORE",
+          "value": {
+            "lead_gen_form_id": "1168700714593335"
+          }
+        }
+      }
+    },
+    "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+    "call_to_action": {
+      "type": "LEARN_MORE",
+      "value": {
+        "lead_gen_form_id": "1168700714593335"
+      }
+    }
+  },
+  "effective_status": "ACTIVE",
+  "campaign": {
+    "id": "120235556205010335",
+    "name": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences"
+  },
+  "adset": {
+    "id": "120235556204820335",
+    "name": "Interests - Business (DDM)"
+  }
+}

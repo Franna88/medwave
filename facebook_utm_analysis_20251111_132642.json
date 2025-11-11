@@ -1,0 +1,237 @@
+{
+  "facebook_ads": {
+    "total_sampled": 20,
+    "with_utm": 20,
+    "with_h_ad_id": 20,
+    "without_utm": 0,
+    "sample_configs": [
+      {
+        "ad_id": "120233712403210335",
+        "ad_name": "Dynamic Video",
+        "campaign_id": "120233712403260335",
+        "campaign_name": "Matthys | 03102025 ABOLEADFORM (DDM)",
+        "adset_id": "120233712403200335",
+        "adset_name": "Dynamic Ads | Custom Audiences (Grouped) - DDM",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120233712910150335",
+        "ad_name": "Dynamic Video",
+        "campaign_id": "120233712403260335",
+        "campaign_name": "Matthys | 03102025 ABOLEADFORM (DDM)",
+        "adset_id": "120233712910140335",
+        "adset_name": "Dynamic Ads | 1% LLA (USA) | HCP > Weight Loss - DDM",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120233712943990335",
+        "ad_name": "Dynamic Video",
+        "campaign_id": "120233712403260335",
+        "campaign_name": "Matthys | 03102025 ABOLEADFORM (DDM)",
+        "adset_id": "120233712944000335",
+        "adset_name": "Dynamic Ads | 1% LLA (USA) | HCP > DB - DDM",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120233712971960335",
+        "ad_name": "Dynamic Video",
+        "campaign_id": "120233712403260335",
+        "campaign_name": "Matthys | 03102025 ABOLEADFORM (DDM)",
+        "adset_id": "120233712971950335",
+        "adset_name": "Dynamic Ads | 1% LLA (USA) | Chiro's with Shockwave - DDM",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120233713011700335",
+        "ad_name": "Dynamic Video",
+        "campaign_id": "120233712403260335",
+        "campaign_name": "Matthys | 03102025 ABOLEADFORM (DDM)",
+        "adset_id": "120233713011710335",
+        "adset_name": "Dynamic Ads | 1% LLA (USA) | Chiro's Over 30 - DDM",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234166546090335",
+        "ad_name": "Patient Results (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234166546180335",
+        "adset_name": "LLA 1% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234166917020335",
+        "ad_name": "Weight Loss & ROI v Landry (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234166546180335",
+        "adset_name": "LLA 1% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167175300335",
+        "ad_name": "Weight Loss & ROI v Rauch (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234166546180335",
+        "adset_name": "LLA 1% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167286420335",
+        "ad_name": "Patient Results (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234167286410335",
+        "adset_name": "LLA 1-2% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167286430335",
+        "ad_name": "Weight Loss & ROI v Landry (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234167286410335",
+        "adset_name": "LLA 1-2% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167286440335",
+        "ad_name": "Weight Loss & ROI v Rauch (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234167286410335",
+        "adset_name": "LLA 1-2% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167331140335",
+        "ad_name": "Weight Loss & ROI v Landry (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234167331130335",
+        "adset_name": "LLA 2-4% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167331150335",
+        "ad_name": "Weight Loss & ROI v Rauch (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234167331130335",
+        "adset_name": "LLA 2-4% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167331160335",
+        "ad_name": "Patient Results (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234167331130335",
+        "adset_name": "LLA 2-4% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167354570335",
+        "ad_name": "Patient Results (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234167354580335",
+        "adset_name": "LLA 4-6% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167354590335",
+        "ad_name": "Weight Loss & ROI v Landry (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234167354580335",
+        "adset_name": "LLA 4-6% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167354600335",
+        "ad_name": "Weight Loss & ROI v Rauch (ZA)",
+        "campaign_id": "120234166546100335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+        "adset_id": "120234167354580335",
+        "adset_name": "LLA 4-6% (ZA) | HCP > Weight Loss (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167419910335",
+        "ad_name": "Patient Results (ZA)",
+        "campaign_id": "120234167419990335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > DB",
+        "adset_id": "120234167420060335",
+        "adset_name": "LLA 2-4% (ZA) | HCP > DB (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167419920335",
+        "ad_name": "Weight Loss & ROI v Rauch (ZA)",
+        "campaign_id": "120234167419990335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > DB",
+        "adset_id": "120234167419900335",
+        "adset_name": "LLA 1-2% (ZA) | HCP > DB (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      },
+      {
+        "ad_id": "120234167419940335",
+        "ad_name": "Patient Results (ZA)",
+        "campaign_id": "120234167419990335",
+        "campaign_name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > DB",
+        "adset_id": "120234167419930335",
+        "adset_name": "LLA 4-6% (ZA) | HCP > DB (DDM)",
+        "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+        "has_utm_config": true,
+        "has_h_ad_id": true
+      }
+    ]
+  },
+  "ghl_opportunities": {
+    "total": 943,
+    "with_h_ad_id": 197,
+    "with_campaign_id": 225,
+    "with_ad_name": 172,
+    "with_no_utm": 349
+  }
+}

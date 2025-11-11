@@ -106,7 +106,8 @@ class RoleManager {
               'campaign',
               subItems: [
                 NavigationSubItem('Campaigns', '/admin/adverts/campaigns', 'campaign'),
-                NavigationSubItem('Ads', '/admin/adverts/ads', 'ads_click'),
+                NavigationSubItem('Campaigns (Old)', '/admin/adverts/campaigns-old', 'history'),
+                NavigationSubItem('Timeline', '/admin/adverts/timeline', 'timeline'),
                 NavigationSubItem('Products', '/admin/adverts/products', 'inventory'),
               ],
             ),

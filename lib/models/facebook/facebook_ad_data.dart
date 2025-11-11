@@ -224,4 +224,154 @@ class FacebookAdData {
   }
 }
 
+/// Facebook Weekly Insight data model for time-series analysis
+class FacebookWeeklyInsight {
+  final String adId;
+  final int weekNumber;
+  final DateTime dateStart;
+  final DateTime dateStop;
+  final double spend;
+  final int impressions;
+  final int reach;
+  final int clicks;
+  final double cpm;
+  final double cpc;
+  final double ctr;
+  final DateTime fetchedAt;
+
+  FacebookWeeklyInsight({
+    required this.adId,
+    required this.weekNumber,
+    required this.dateStart,
+    required this.dateStop,
+    required this.spend,
+    required this.impressions,
+    required this.reach,
+    required this.clicks,
+    required this.cpm,
+    required this.cpc,
+    required this.ctr,
+    required this.fetchedAt,
+  });
+
+  /// Create from Firestore document
+  factory FacebookWeeklyInsight.fromFirestore(Map<String, dynamic> data) {
+    return FacebookWeeklyInsight(
+      adId: data['adId']?.toString() ?? '',
+      weekNumber: data['weekNumber'] ?? 0,
+      dateStart: (data['dateStart'] as dynamic)?.toDate() ?? DateTime.now(),
+      dateStop: (data['dateStop'] as dynamic)?.toDate() ?? DateTime.now(),
+      spend: (data['spend'] ?? 0).toDouble(),
+      impressions: data['impressions'] ?? 0,
+      reach: data['reach'] ?? 0,
+      clicks: data['clicks'] ?? 0,
+      cpm: (data['cpm'] ?? 0).toDouble(),
+      cpc: (data['cpc'] ?? 0).toDouble(),
+      ctr: (data['ctr'] ?? 0).toDouble(),
+      fetchedAt: (data['fetchedAt'] as dynamic)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  /// Create from Facebook API JSON response (single week)
+  factory FacebookWeeklyInsight.fromJson(Map<String, dynamic> json, String adId, int weekNumber) {
+    return FacebookWeeklyInsight(
+      adId: adId,
+      weekNumber: weekNumber,
+      dateStart: DateTime.tryParse(json['date_start']?.toString() ?? '') ?? DateTime.now(),
+      dateStop: DateTime.tryParse(json['date_stop']?.toString() ?? '') ?? DateTime.now(),
+      spend: double.tryParse(json['spend']?.toString() ?? '0') ?? 0.0,
+      impressions: int.tryParse(json['impressions']?.toString() ?? '0') ?? 0,
+      reach: int.tryParse(json['reach']?.toString() ?? '0') ?? 0,
+      clicks: int.tryParse(json['clicks']?.toString() ?? '0') ?? 0,
+      cpm: double.tryParse(json['cpm']?.toString() ?? '0') ?? 0.0,
+      cpc: double.tryParse(json['cpc']?.toString() ?? '0') ?? 0.0,
+      ctr: double.tryParse(json['ctr']?.toString() ?? '0') ?? 0.0,
+      fetchedAt: DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'adId': adId,
+      'weekNumber': weekNumber,
+      'dateStart': dateStart.toIso8601String(),
+      'dateStop': dateStop.toIso8601String(),
+      'spend': spend,
+      'impressions': impressions,
+      'reach': reach,
+      'clicks': clicks,
+      'cpm': cpm,
+      'cpc': cpc,
+      'ctr': ctr,
+      'fetchedAt': fetchedAt.toIso8601String(),
+    };
+  }
+
+  /// Get formatted date range string (e.g., "Nov 1-7")
+  String get dateRangeString {
+    final startMonth = _getMonthAbbr(dateStart.month);
+    final stopMonth = _getMonthAbbr(dateStop.month);
+    
+    if (dateStart.month == dateStop.month) {
+      return '$startMonth ${dateStart.day}-${dateStop.day}';
+    } else {
+      return '$startMonth ${dateStart.day} - $stopMonth ${dateStop.day}';
+    }
+  }
+
+  /// Get week label (e.g., "Week 1", "Week 2")
+  String get weekLabel => 'Week $weekNumber';
+
+  String _getMonthAbbr(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
+  }
+
+  @override
+  String toString() {
+    return 'FacebookWeeklyInsight(adId: $adId, week: $weekNumber, spend: \$$spend, dateRange: $dateRangeString)';
+  }
+
+  /// Calculate week-over-week change percentage
+  double calculateChangePercent(FacebookWeeklyInsight previousWeek, String metric) {
+    double current = 0;
+    double previous = 0;
+
+    switch (metric.toLowerCase()) {
+      case 'spend':
+        current = spend;
+        previous = previousWeek.spend;
+        break;
+      case 'impressions':
+        current = impressions.toDouble();
+        previous = previousWeek.impressions.toDouble();
+        break;
+      case 'reach':
+        current = reach.toDouble();
+        previous = previousWeek.reach.toDouble();
+        break;
+      case 'clicks':
+        current = clicks.toDouble();
+        previous = previousWeek.clicks.toDouble();
+        break;
+      case 'cpm':
+        current = cpm;
+        previous = previousWeek.cpm;
+        break;
+      case 'cpc':
+        current = cpc;
+        previous = previousWeek.cpc;
+        break;
+      case 'ctr':
+        current = ctr;
+        previous = previousWeek.ctr;
+        break;
+    }
+
+    if (previous == 0) return 0;
+    return ((current - previous) / previous) * 100;
+  }
+}
+
 

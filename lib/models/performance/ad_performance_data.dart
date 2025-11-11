@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'product.dart';
 
 /// Matching status between Facebook and GHL data
 enum MatchingStatus {
@@ -156,59 +155,6 @@ class GHLStats {
   }
 }
 
-/// Admin configuration for ad budgets and product linking
-class AdminConfig {
-  final double budget;
-  final String? linkedProductId;
-  final String createdBy;
-  final DateTime createdAt;
-  final DateTime? updatedAt;
-
-  AdminConfig({
-    required this.budget,
-    this.linkedProductId,
-    required this.createdBy,
-    required this.createdAt,
-    this.updatedAt,
-  });
-
-  factory AdminConfig.fromFirestore(Map<String, dynamic> data) {
-    return AdminConfig(
-      budget: (data['budget'] ?? 0).toDouble(),
-      linkedProductId: data['linkedProductId'],
-      createdBy: data['createdBy'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
-    );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'budget': budget,
-      'linkedProductId': linkedProductId,
-      'createdBy': createdBy,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
-    };
-  }
-
-  AdminConfig copyWith({
-    double? budget,
-    String? linkedProductId,
-    String? createdBy,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return AdminConfig(
-      budget: budget ?? this.budget,
-      linkedProductId: linkedProductId ?? this.linkedProductId,
-      createdBy: createdBy ?? this.createdBy,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
-}
-
 /// Complete ad performance data combining Facebook and GHL metrics
 class AdPerformanceData {
   final String adId;
@@ -222,7 +168,6 @@ class AdPerformanceData {
   
   final FacebookStats facebookStats;
   final GHLStats? ghlStats;
-  final AdminConfig? adminConfig;
 
   AdPerformanceData({
     required this.adId,
@@ -235,7 +180,6 @@ class AdPerformanceData {
     required this.lastUpdated,
     required this.facebookStats,
     this.ghlStats,
-    this.adminConfig,
   });
 
   factory AdPerformanceData.fromFirestore(DocumentSnapshot doc) {
@@ -254,9 +198,6 @@ class AdPerformanceData {
       ghlStats: data['ghlStats'] != null 
           ? GHLStats.fromFirestore(data['ghlStats']) 
           : null,
-      adminConfig: data['adminConfig'] != null
-          ? AdminConfig.fromFirestore(data['adminConfig'])
-          : null,
     );
   }
 
@@ -272,7 +213,6 @@ class AdPerformanceData {
       'lastUpdated': Timestamp.fromDate(lastUpdated),
       'facebookStats': facebookStats.toFirestore(),
       'ghlStats': ghlStats?.toFirestore(),
-      'adminConfig': adminConfig?.toFirestore(),
     };
   }
 
@@ -327,9 +267,6 @@ class AdPerformanceData {
   /// Has GHL data
   bool get hasGHLData => ghlStats != null && ghlStats!.leads > 0;
 
-  /// Has admin configuration
-  bool get hasAdminConfig => adminConfig != null;
-
   AdPerformanceData copyWith({
     String? adId,
     String? adName,
@@ -341,7 +278,6 @@ class AdPerformanceData {
     DateTime? lastUpdated,
     FacebookStats? facebookStats,
     GHLStats? ghlStats,
-    AdminConfig? adminConfig,
   }) {
     return AdPerformanceData(
       adId: adId ?? this.adId,
@@ -354,19 +290,16 @@ class AdPerformanceData {
       lastUpdated: lastUpdated ?? this.lastUpdated,
       facebookStats: facebookStats ?? this.facebookStats,
       ghlStats: ghlStats ?? this.ghlStats,
-      adminConfig: adminConfig ?? this.adminConfig,
     );
   }
 }
 
-/// Extended class with product information for display purposes
+/// Extended class for display purposes (previously had product info, now just wraps AdPerformanceData)
 class AdPerformanceWithProduct {
   final AdPerformanceData data;
-  final Product? product;
 
   AdPerformanceWithProduct({
     required this.data,
-    this.product,
   });
 
   // Delegate all properties to data
@@ -380,7 +313,6 @@ class AdPerformanceWithProduct {
   DateTime get lastUpdated => data.lastUpdated;
   FacebookStats get facebookStats => data.facebookStats;
   GHLStats? get ghlStats => data.ghlStats;
-  AdminConfig? get adminConfig => data.adminConfig;
   
   // Computed metrics
   double get cpl => data.cpl;
@@ -389,6 +321,5 @@ class AdPerformanceWithProduct {
   double get profit => data.profit;
   double get totalCost => data.totalCost;
   bool get hasGHLData => data.hasGHLData;
-  bool get hasAdminConfig => data.hasAdminConfig;
 }
 

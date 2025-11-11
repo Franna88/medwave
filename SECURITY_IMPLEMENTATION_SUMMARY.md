@@ -27,7 +27,7 @@ This document summarizes the security measures implemented to protect sensitive 
 
 **Configuration:**
 ```env
-GHL_API_KEY=pit-009fb0b0-1799-4773-82d2-a58cefcd9c6a
+GHL_API_KEY=pit-22f8af95-3244-41e7-9a52-22c87b166f5a
 PORT=3001
 ```
 
@@ -150,7 +150,7 @@ New developers need to configure these files locally:
 ### Firebase Functions
 ```bash
 # Set production API key (one-time setup)
-firebase functions:config:set ghl.api_key="pit-009fb0b0-1799-4773-82d2-a58cefcd9c6a"
+firebase functions:config:set ghl.api_key="pit-22f8af95-3244-41e7-9a52-22c87b166f5a"
 
 # Deploy functions
 firebase deploy --only functions
@@ -159,7 +159,7 @@ firebase deploy --only functions
 ### Proxy Server (if hosting separately)
 Set environment variable in your hosting platform:
 ```
-GHL_API_KEY=pit-009fb0b0-1799-4773-82d2-a58cefcd9c6a
+GHL_API_KEY=pit-22f8af95-3244-41e7-9a52-22c87b166f5a
 ```
 
 ## ⚠️ Important Notes

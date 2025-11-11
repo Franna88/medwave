@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../models/performance/ad_performance_data.dart';
-import '../../models/performance/product.dart';
 
 /// Service for managing ad performance data in Firebase
 /// This service reads Facebook + GHL combined data from Firebase instead of making direct API calls
@@ -94,33 +93,22 @@ class AdPerformanceService {
         });
   }
 
-  /// Get ad performance data with product information
-  static Future<List<AdPerformanceWithProduct>> getAdPerformanceWithProducts(
-    List<Product> products,
-  ) async {
+  /// Get ad performance data wrapped in AdPerformanceWithProduct
+  static Future<List<AdPerformanceWithProduct>> getAdPerformanceWithProducts() async {
     try {
       final adPerformanceList = await getAllAdPerformance();
       
-      // Create a map of products for quick lookup
-      final productMap = {for (var p in products) p.id: p};
-      
-      // Combine ad performance with product data
+      // Wrap ad performance data (no product linking anymore)
       final combined = adPerformanceList.map((ad) {
-        Product? product;
-        if (ad.adminConfig?.linkedProductId != null) {
-          product = productMap[ad.adminConfig!.linkedProductId];
-        }
-        
         return AdPerformanceWithProduct(
           data: ad,
-          product: product,
         );
       }).toList();
       
       return combined;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error fetching ad performance with products: $e');
+        print('❌ Error fetching ad performance: $e');
       }
       rethrow;
     }
@@ -197,116 +185,6 @@ class AdPerformanceService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error triggering GHL sync: $e');
-      }
-      rethrow;
-    }
-  }
-
-  // ========== ADMIN OPERATIONS ==========
-
-  /// Update admin configuration (budget, linked product)
-  static Future<void> updateAdminConfig(
-    String adId,
-    AdminConfig config,
-  ) async {
-    try {
-      if (kDebugMode) {
-        print('📝 Updating admin config for ad: $adId');
-      }
-
-      await _firestore
-          .collection(_collectionName)
-          .doc(adId)
-          .update({
-            'adminConfig': config.toFirestore(),
-            'lastUpdated': FieldValue.serverTimestamp(),
-          });
-
-      if (kDebugMode) {
-        print('✅ Admin config updated for ad: $adId');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error updating admin config: $e');
-      }
-      rethrow;
-    }
-  }
-
-  /// Create or update admin configuration for an ad
-  static Future<void> setAdminConfig({
-    required String adId,
-    required double budget,
-    String? linkedProductId,
-    required String createdBy,
-  }) async {
-    try {
-      final config = AdminConfig(
-        budget: budget,
-        linkedProductId: linkedProductId,
-        createdBy: createdBy,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      await updateAdminConfig(adId, config);
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error setting admin config: $e');
-      }
-      rethrow;
-    }
-  }
-
-  /// Update only the budget for an ad
-  static Future<void> updateBudget(String adId, double budget) async {
-    try {
-      if (kDebugMode) {
-        print('📝 Updating budget for ad: $adId to R$budget');
-      }
-
-      await _firestore
-          .collection(_collectionName)
-          .doc(adId)
-          .update({
-            'adminConfig.budget': budget,
-            'adminConfig.updatedAt': FieldValue.serverTimestamp(),
-            'lastUpdated': FieldValue.serverTimestamp(),
-          });
-
-      if (kDebugMode) {
-        print('✅ Budget updated for ad: $adId');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error updating budget: $e');
-      }
-      rethrow;
-    }
-  }
-
-  /// Update only the linked product for an ad
-  static Future<void> updateLinkedProduct(String adId, String? productId) async {
-    try {
-      if (kDebugMode) {
-        print('📝 Updating linked product for ad: $adId to $productId');
-      }
-
-      await _firestore
-          .collection(_collectionName)
-          .doc(adId)
-          .update({
-            'adminConfig.linkedProductId': productId,
-            'adminConfig.updatedAt': FieldValue.serverTimestamp(),
-            'lastUpdated': FieldValue.serverTimestamp(),
-          });
-
-      if (kDebugMode) {
-        print('✅ Linked product updated for ad: $adId');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error updating linked product: $e');
       }
       rethrow;
     }

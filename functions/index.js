@@ -7,6 +7,10 @@ const axios = require('axios');
 const { storeStageTransition, getCumulativeStageMetrics, syncOpportunitiesFromAPI, matchAndUpdateGHLDataToFacebookAds } = require('./lib/opportunityHistoryService');
 // Facebook Ads sync function
 const { syncFacebookAdsToFirebase } = require('./lib/facebookAdsSync');
+// Advert Data sync functions
+const { fetchAndStoreAdvertsFromFacebook, getGHLTotals } = require('./lib/advertDataSync');
+// Facebook 6-month sync with checkpoint/resume
+const { sync6MonthsFacebookData } = require('./lib/facebook6MonthSync');
 // Email service for appointment notifications
 const { EmailService } = require('./lib/emailService');
 
@@ -1068,6 +1072,200 @@ app.post('/facebook/match-ghl', async (req, res) => {
 });
 
 // ============================================================================
+// ADVERT DATA API ENDPOINTS - New Collection Structure
+// ============================================================================
+
+/**
+ * Sync Facebook ads to advertData collection
+ * POST /advertdata/sync-facebook
+ */
+app.post('/advertdata/sync-facebook', async (req, res) => {
+  try {
+    console.log('🔄 Syncing Facebook ads to advertData collection...');
+    
+    const monthsBack = req.body?.monthsBack || 6;
+    const result = await fetchAndStoreAdvertsFromFacebook(monthsBack);
+    
+    res.json({
+      success: true,
+      message: 'Facebook adverts synced to advertData successfully',
+      stats: result.stats,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Facebook advertData sync failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * Get GHL totals for a specific advert
+ * GET /advertdata/:adId/totals
+ */
+app.get('/advertdata/:adId/totals', async (req, res) => {
+  try {
+    const adId = req.params.adId;
+    console.log(`📊 Calculating GHL totals for ad ${adId}...`);
+    
+    const totals = await getGHLTotals(adId);
+    
+    res.json({
+      success: true,
+      adId: adId,
+      totals: totals,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error(`❌ Error getting GHL totals for ad ${req.params.adId}:`, error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * Get advertData collection stats
+ * GET /advertdata/stats
+ */
+app.get('/advertdata/stats', async (req, res) => {
+  try {
+    console.log('📊 Fetching advertData collection stats...');
+    
+    const db = admin.firestore();
+    const advertsSnapshot = await db.collection('advertData').get();
+    
+    let withInsights = 0;
+    let withGHLData = 0;
+    
+    for (const advertDoc of advertsSnapshot.docs) {
+      const insightsSnapshot = await advertDoc.ref.collection('insights').limit(1).get();
+      if (!insightsSnapshot.empty) {
+        withInsights++;
+      }
+      
+      const ghlSnapshot = await advertDoc.ref.collection('ghlWeekly').limit(1).get();
+      if (!ghlSnapshot.empty) {
+        withGHLData++;
+      }
+    }
+    
+    res.json({
+      success: true,
+      stats: {
+        totalAdverts: advertsSnapshot.size,
+        withInsights: withInsights,
+        withGHLData: withGHLData
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting advertData stats:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * Sync GHL opportunities to advertData collection
+ * POST /advertdata/sync-ghl
+ * 
+ * Fetches opportunities directly from GHL API and matches to advertData ads
+ * using h_ad_id parameter with weekly breakdown
+ */
+app.post('/advertdata/sync-ghl', async (req, res) => {
+  try {
+    console.log('🔄 Syncing GHL opportunities to advertData collection...');
+    console.log('   ⚠️  Data source: GHL API ONLY (not Firebase collections)');
+    
+    // Import the sync functions
+    const { 
+      fetchAllOpportunitiesFromGHL, 
+      processOpportunities, 
+      groupByAdAndWeek, 
+      writeToAdvertData 
+    } = require('./syncGHLToAdvertData');
+    
+    // Step 1: Fetch opportunities from GHL API
+    console.log('📋 Fetching opportunities from GHL API...');
+    const opportunities = await fetchAllOpportunitiesFromGHL();
+    
+    if (opportunities.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No opportunities found',
+        stats: {
+          totalOpportunities: 0,
+          withHAdId: 0,
+          adsUpdated: 0,
+          weeksWritten: 0
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Step 2: Process and extract UTM data
+    console.log('🔍 Processing opportunities and extracting UTM parameters...');
+    const { processedData, stats: extractionStats } = processOpportunities(opportunities);
+    
+    if (processedData.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No opportunities with h_ad_id found',
+        stats: {
+          totalOpportunities: opportunities.length,
+          withHAdId: 0,
+          adsUpdated: 0,
+          weeksWritten: 0
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Step 3: Group by ad and week
+    console.log('📅 Grouping opportunities by ad and week...');
+    const adWeekMap = groupByAdAndWeek(processedData);
+    
+    // Step 4: Write to advertData
+    console.log('💾 Writing data to advertData collection...');
+    const writeStats = await writeToAdvertData(adWeekMap);
+    
+    res.json({
+      success: true,
+      message: 'GHL data synced to advertData successfully',
+      stats: {
+        totalOpportunities: opportunities.length,
+        withHAdId: extractionStats.withHAdId,
+        withAllUTMParams: extractionStats.withAllUTMParams,
+        adsUpdated: writeStats.adsProcessed,
+        weeksWritten: writeStats.weeksWritten,
+        errors: writeStats.errors
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ GHL advertData sync failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ============================================================================
 // SCHEDULED FUNCTIONS - Automatic Background Sync
 // ============================================================================
 
@@ -1546,6 +1744,37 @@ exports.scheduleAppointmentReminders = functions.pubsub
       
     } catch (error) {
       console.error('❌ Error in scheduleAppointmentReminders:', error);
+      throw error;
+    }
+  });
+
+/**
+ * Scheduled Facebook 6-Month Sync
+ * Runs every hour to fetch Facebook ads and insights from the last 6 months
+ * Handles rate limits with automatic checkpoint/resume
+ */
+exports.scheduledFacebook6MonthSync = functions.pubsub
+  .schedule('every 1 hours')
+  .timeZone('Africa/Johannesburg')
+  .onRun(async (context) => {
+    try {
+      console.log('🚀 Starting scheduled Facebook 6-month sync...');
+      
+      const result = await sync6MonthsFacebookData();
+      
+      if (result.success) {
+        console.log('✅ Facebook 6-month sync completed successfully');
+        console.log('📊 Stats:', result.stats);
+      } else if (result.rateLimited) {
+        console.log('⚠️  Rate limit hit - will retry next hour');
+        console.log('📊 Progress:', result.progress);
+      } else {
+        console.log('❌ Sync failed:', result.message);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Error in scheduled Facebook 6-month sync:', error);
       throw error;
     }
   });

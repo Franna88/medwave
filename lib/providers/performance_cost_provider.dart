@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import '../models/performance/product.dart';
 import '../models/performance/ad_performance_data.dart';
 import '../models/performance/ad_performance_cost.dart';
 import '../models/performance/campaign_aggregate.dart';
 import '../models/performance/ad_set_aggregate.dart';
+import '../models/performance/advert_data_models.dart';
 import '../services/firebase/ad_performance_service.dart';
-import '../services/performance_cost_service.dart';
+import '../services/firebase/advert_data_service.dart';
 
 /// Provider for managing ad performance data (Facebook + GHL from Firebase)
 class PerformanceCostProvider extends ChangeNotifier {
   // Data
-  List<Product> _products = [];
   List<AdPerformanceData> _adPerformanceData = [];
   List<AdPerformanceWithProduct> _adPerformanceWithProducts = [];
+  
+  // Month management
+  List<String> _availableMonths = [];
+  List<String> _selectedMonths = [];
   
   // State
   bool _isLoading = false;
@@ -23,14 +26,19 @@ class PerformanceCostProvider extends ChangeNotifier {
   bool _isSyncing = false;
   
   // Getters
-  List<Product> get products => _products;
   List<AdPerformanceData> get adPerformanceData => _adPerformanceData;
   List<AdPerformanceWithProduct> get adPerformanceWithProducts => _adPerformanceWithProducts;
+  List<String> get availableMonths => _availableMonths;
+  List<String> get selectedMonths => _selectedMonths;
   bool get isLoading => _isLoading;
   bool get isInitialized => _isInitialized;
   String? get error => _error;
   DateTime? get lastSync => _lastSync;
   bool get isSyncing => _isSyncing;
+  
+  // Deprecated: Product functionality removed - returns empty list for backward compatibility
+  @Deprecated('Product functionality removed. Profit now comes from GHL opportunity values.')
+  List<dynamic> get products => [];
   
   // Quick stats
   int get totalAds => _adPerformanceData.length;
@@ -50,7 +58,10 @@ class PerformanceCostProvider extends ChangeNotifier {
     notifyListeners();
     
     try {
-      await loadProducts();
+      // Load available months first
+      await loadAvailableMonths();
+      
+      // Load data with default months (last 3 months)
       await loadAdPerformanceData();
       
       _isInitialized = true;
@@ -58,7 +69,8 @@ class PerformanceCostProvider extends ChangeNotifier {
       
       if (kDebugMode) {
         print('✅ Performance Cost Provider: Initialized successfully');
-        print('   - Products: ${_products.length}');
+        print('   - Available months: ${_availableMonths.length}');
+        print('   - Selected months: $_selectedMonths');
         print('   - Ads: ${_adPerformanceData.length} (Matched: $matchedAds, Unmatched: $unmatchedAds)');
       }
     } catch (e) {
@@ -73,68 +85,192 @@ class PerformanceCostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Load all products
-  Future<void> loadProducts() async {
+  /// Load available months from Firebase
+  Future<void> loadAvailableMonths() async {
     try {
-      if (kDebugMode) {
-        print('🔄 Loading products...');
+      _availableMonths = await AdvertDataService.getAvailableMonths();
+      
+      // Default to current month only (November 2025)
+      final now = DateTime.now();
+      final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+      
+      if (_availableMonths.contains(currentMonth)) {
+        _selectedMonths = [currentMonth];
+      } else if (_availableMonths.isNotEmpty) {
+        // Fallback to most recent month if current month not available
+        _selectedMonths = [_availableMonths.first];
+      } else {
+        _selectedMonths = [];
       }
       
-      _products = await PerformanceCostService.getProducts();
-      
       if (kDebugMode) {
-        print('✅ Loaded ${_products.length} products');
+        print('✅ Loaded ${_availableMonths.length} available months');
+        print('   - Current month: $currentMonth');
+        print('   - Default selection: $_selectedMonths');
       }
-      
-      notifyListeners();
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error loading products: $e');
+        print('❌ Error loading available months: $e');
       }
-      _error = 'Failed to load products: ${e.toString()}';
-      notifyListeners();
-      rethrow;
+      // Set empty lists on error
+      _availableMonths = [];
+      _selectedMonths = [];
     }
   }
 
-  /// Load all ad performance data from Firebase
-  Future<void> loadAdPerformanceData() async {
+  /// Set selected months and reload data
+  Future<void> setSelectedMonths(List<String> months, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    _selectedMonths = months;
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      await loadAdPerformanceData(
+        months: months,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      
+      _isLoading = false;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      
+      if (kDebugMode) {
+        print('❌ Error setting selected months: $e');
+      }
+    }
+    
+    notifyListeners();
+  }
+
+  /// Load all ad performance data from Firebase (using advertData collection)
+  /// Uses month-first structure with optional date filtering
+  Future<void> loadAdPerformanceData({
+    List<String>? months,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
       if (kDebugMode) {
-        print('🔄 Loading ad performance data from Firebase...');
+        print('🔄 Loading ad performance data from advertData collection...');
       }
       
-      _adPerformanceData = await AdPerformanceService.getAllAdPerformance();
+      // Use provided months or default to selected months
+      final effectiveMonths = months ?? _selectedMonths;
       
-      // Combine with products
-      _adPerformanceWithProducts = _adPerformanceData.map((ad) {
-        Product? product;
-        if (ad.adminConfig?.linkedProductId != null) {
-          product = _products.firstWhere(
-            (p) => p.id == ad.adminConfig!.linkedProductId,
-            orElse: () => Product(
-              id: '',
-              name: 'Unknown',
-              depositAmount: 0,
-              expenseCost: 0,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-            ),
-          );
+      // If no months selected, default to last 3 available months
+      if (effectiveMonths.isEmpty && _availableMonths.isNotEmpty) {
+        effectiveMonths.addAll(_availableMonths.take(3));
+      }
+      
+      if (effectiveMonths.isEmpty) {
+        if (kDebugMode) {
+          print('⚠️ No months available to query');
         }
-        
+        _adPerformanceData = [];
+        _adPerformanceWithProducts = [];
+        notifyListeners();
+        return;
+      }
+      
+      // Fetch from advertData collection with aggregated totals
+      final advertsWithTotals = await AdvertDataService.getAllAdvertsWithTotals(
+        months: effectiveMonths,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      
+      // Convert AdvertDataWithTotals to AdPerformanceData format for backward compatibility
+      _adPerformanceData = advertsWithTotals.map((advertWithTotals) {
+        return _convertToAdPerformanceData(advertWithTotals);
+      }).toList();
+      
+      // Wrap ad performance data (no product linking)
+      _adPerformanceWithProducts = _adPerformanceData.map((ad) {
         return AdPerformanceWithProduct(
           data: ad,
-          product: product,
         );
       }).toList();
       
       _lastSync = DateTime.now();
       
       if (kDebugMode) {
-        print('✅ Loaded ${_adPerformanceData.length} ad performance records');
+        print('✅ Loaded ${_adPerformanceData.length} ad performance records from advertData');
+        print('   - Months queried: $effectiveMonths');
         print('   - Matched (FB + GHL): $matchedAds');
         print('   - Unmatched (FB only): $unmatchedAds');
+        if (startDate != null || endDate != null) {
+          print('   - Date filter: ${startDate?.toIso8601String() ?? "any"} to ${endDate?.toIso8601String() ?? "any"}');
+        }
+        
+        // Print detailed stats for each ad
+        print('\n📊 DETAILED AD STATS FOR SELECTED MONTHS:');
+        print('═' * 80);
+        for (var ad in _adPerformanceData) {
+          print('🎯 ${ad.adName} (ID: ${ad.adId})');
+          print('   Campaign: ${ad.campaignName}');
+          print('   Ad Set: ${ad.adSetName}');
+          print('   📱 Facebook Stats:');
+          print('      Spend: \$${ad.facebookStats.spend.toStringAsFixed(2)}');
+          print('      Impressions: ${ad.facebookStats.impressions}');
+          print('      Clicks: ${ad.facebookStats.clicks}');
+          print('      Reach: ${ad.facebookStats.reach}');
+          print('      CPM: \$${ad.facebookStats.cpm.toStringAsFixed(2)}');
+          print('      CPC: \$${ad.facebookStats.cpc.toStringAsFixed(2)}');
+          print('      CTR: ${ad.facebookStats.ctr.toStringAsFixed(2)}%');
+          if (ad.ghlStats != null) {
+            print('   💰 GHL Stats:');
+            print('      Leads: ${ad.ghlStats!.leads}');
+            print('      Cash Amount: \$${ad.ghlStats!.cashAmount.toStringAsFixed(2)}');
+            print('      Bookings: ${ad.ghlStats!.bookings}');
+            print('      Deposits: ${ad.ghlStats!.deposits}');
+            print('   📈 PROFIT: \$${(ad.ghlStats!.cashAmount - ad.facebookStats.spend).toStringAsFixed(2)}');
+          } else {
+            print('   💰 GHL Stats: No data');
+            print('   📈 PROFIT: -\$${ad.facebookStats.spend.toStringAsFixed(2)} (loss)');
+          }
+          print('   ' + '─' * 76);
+        }
+        print('═' * 80);
+        
+        // Print aggregated totals
+        double totalSpend = _adPerformanceData.fold(0.0, (sum, ad) => sum + ad.facebookStats.spend);
+        int totalImpressions = _adPerformanceData.fold(0, (sum, ad) => sum + ad.facebookStats.impressions);
+        int totalClicks = _adPerformanceData.fold(0, (sum, ad) => sum + ad.facebookStats.clicks);
+        int totalReach = _adPerformanceData.fold(0, (sum, ad) => sum + ad.facebookStats.reach);
+        int totalGHLLeads = _adPerformanceData.fold(0, (sum, ad) => sum + (ad.ghlStats?.leads ?? 0));
+        double totalCash = _adPerformanceData.fold(0.0, (sum, ad) => sum + (ad.ghlStats?.cashAmount ?? 0));
+        double totalProfit = totalCash - totalSpend;
+        
+        print('📊 AGGREGATED TOTALS:');
+        print('   Total Ads: ${_adPerformanceData.length}');
+        print('   Total Spend: \$${totalSpend.toStringAsFixed(2)}');
+        print('   Total Impressions: $totalImpressions');
+        print('   Total Clicks: $totalClicks');
+        print('   Total Reach: $totalReach');
+        print('   Total GHL Leads: $totalGHLLeads');
+        print('   Total Cash (GHL): \$${totalCash.toStringAsFixed(2)}');
+        print('   TOTAL PROFIT: \$${totalProfit.toStringAsFixed(2)}');
+        
+        // Check if GHL data is missing
+        int adsWithGHL = _adPerformanceData.where((ad) => ad.ghlStats != null).length;
+        if (adsWithGHL == 0) {
+          print('');
+          print('⚠️  WARNING: NO GHL DATA FOUND!');
+          print('   This month may not have GHL data populated yet.');
+          print('   Check Firebase: advertData/$effectiveMonths/ads/{adId}/ghlWeekly/');
+          print('   Run populate_ghl_data.py to add GHL data for this month.');
+        } else {
+          print('   Ads with GHL data: $adsWithGHL / ${_adPerformanceData.length}');
+        }
+        
+        print('═' * 80);
+        print('');
       }
       
       notifyListeners();
@@ -148,15 +284,75 @@ class PerformanceCostProvider extends ChangeNotifier {
     }
   }
 
-  /// Refresh all data
-  Future<void> refreshData() async {
+  /// Convert AdvertDataWithTotals to AdPerformanceData format
+  AdPerformanceData _convertToAdPerformanceData(AdvertDataWithTotals advertWithTotals) {
+    final advert = advertWithTotals.advert;
+    final fbTotals = advertWithTotals.facebookTotals;
+    final ghlTotals = advertWithTotals.ghlTotals;
+    
+    // Create FacebookStats from aggregated totals
+    final facebookStats = FacebookStats(
+      spend: fbTotals.totalSpend,
+      impressions: fbTotals.totalImpressions,
+      reach: fbTotals.totalReach,
+      clicks: fbTotals.totalClicks,
+      cpm: fbTotals.avgCPM,
+      cpc: fbTotals.avgCPC,
+      ctr: fbTotals.avgCTR,
+      dateStart: fbTotals.dateStart,
+      dateStop: fbTotals.dateStop,
+      lastSync: advert.lastFacebookSync ?? DateTime.now(),
+    );
+    
+    // Create GHLStats from aggregated totals (using actual opportunity values)
+    GHLStats? ghlStats;
+    if (ghlTotals.totalLeads > 0) {
+      ghlStats = GHLStats(
+        campaignKey: advert.campaignId,
+        leads: ghlTotals.totalLeads,
+        bookings: ghlTotals.totalBookedAppointments,
+        deposits: ghlTotals.totalDeposits,
+        cashCollected: ghlTotals.totalCashCollected,
+        cashAmount: ghlTotals.totalCashAmount, // CRITICAL: Using actual opportunity values
+        lastSync: advert.lastGHLSync ?? DateTime.now(),
+      );
+    }
+    
+    // Determine matching status
+    final matchingStatus = ghlStats != null 
+        ? MatchingStatus.matched 
+        : MatchingStatus.unmatched;
+    
+    return AdPerformanceData(
+      adId: advert.adId,
+      adName: advert.adName,
+      campaignId: advert.campaignId,
+      campaignName: advert.campaignName,
+      adSetId: advert.adSetId,
+      adSetName: advert.adSetName,
+      matchingStatus: matchingStatus,
+      lastUpdated: advert.lastUpdated ?? DateTime.now(),
+      facebookStats: facebookStats,
+      ghlStats: ghlStats,
+    );
+  }
+
+  /// Refresh all data with optional months and date range
+  Future<void> refreshData({
+    List<String>? months,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
     
     try {
-      await loadProducts();
-      await loadAdPerformanceData();
+      await loadAdPerformanceData(
+        months: months,
+        startDate: startDate,
+        endDate: endDate,
+      );
       
       _isLoading = false;
       
@@ -257,199 +453,7 @@ class PerformanceCostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ========== PRODUCT CRUD OPERATIONS ==========
-
-  /// Create a new product
-  Future<Product> createProduct({
-    required String name,
-    required double depositAmount,
-    required double expenseCost,
-    String? createdBy,
-  }) async {
-    try {
-      if (kDebugMode) {
-        print('📝 Creating product: $name');
-      }
-
-      final product = Product(
-        id: '', // Will be set by Firestore
-        name: name,
-        depositAmount: depositAmount,
-        expenseCost: expenseCost,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        createdBy: createdBy,
-      );
-
-      final createdProduct = await PerformanceCostService.createProduct(product);
-      _products.add(createdProduct);
-      _products.sort((a, b) => a.name.compareTo(b.name));
-      
-      notifyListeners();
-      
-      if (kDebugMode) {
-        print('✅ Product created: ${createdProduct.id}');
-      }
-      
-      return createdProduct;
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error creating product: $e');
-      }
-      _error = 'Failed to create product: ${e.toString()}';
-      notifyListeners();
-      rethrow;
-    }
-  }
-
-  /// Update an existing product
-  Future<void> updateProduct(Product product) async {
-    try {
-      if (kDebugMode) {
-        print('📝 Updating product: ${product.id}');
-      }
-
-      await PerformanceCostService.updateProduct(product);
-      
-      final index = _products.indexWhere((p) => p.id == product.id);
-      if (index != -1) {
-        _products[index] = product;
-        _products.sort((a, b) => a.name.compareTo(b.name));
-      }
-      
-      notifyListeners();
-      
-      if (kDebugMode) {
-        print('✅ Product updated: ${product.id}');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error updating product: $e');
-      }
-      _error = 'Failed to update product: ${e.toString()}';
-      notifyListeners();
-      rethrow;
-    }
-  }
-
-  /// Delete a product
-  Future<void> deleteProduct(String productId) async {
-    try {
-      if (kDebugMode) {
-        print('🗑️ Deleting product: $productId');
-      }
-
-      await PerformanceCostService.deleteProduct(productId);
-      _products.removeWhere((p) => p.id == productId);
-      
-      notifyListeners();
-      
-      if (kDebugMode) {
-        print('✅ Product deleted: $productId');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error deleting product: $e');
-      }
-      _error = 'Failed to delete product: ${e.toString()}';
-      notifyListeners();
-      rethrow;
-    }
-  }
-
   // ========== AD PERFORMANCE OPERATIONS ==========
-
-  /// Update budget for an ad
-  Future<void> updateAdBudget(String adId, double budget) async {
-    try {
-      if (kDebugMode) {
-        print('📝 Updating budget for ad: $adId to R$budget');
-      }
-
-      await AdPerformanceService.updateBudget(adId, budget);
-      
-      // Update local data
-      final index = _adPerformanceData.indexWhere((ad) => ad.adId == adId);
-      if (index != -1) {
-        final ad = _adPerformanceData[index];
-        final updatedConfig = ad.adminConfig?.copyWith(
-          budget: budget,
-          updatedAt: DateTime.now(),
-        ) ?? AdminConfig(
-          budget: budget,
-          createdBy: 'system',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-        
-        _adPerformanceData[index] = ad.copyWith(
-          adminConfig: updatedConfig,
-          lastUpdated: DateTime.now(),
-        );
-      }
-      
-      notifyListeners();
-      
-      if (kDebugMode) {
-        print('✅ Budget updated for ad: $adId');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error updating budget: $e');
-      }
-      _error = 'Failed to update budget: ${e.toString()}';
-      notifyListeners();
-      rethrow;
-    }
-  }
-
-  /// Update linked product for an ad
-  Future<void> updateAdLinkedProduct(String adId, String? productId) async {
-    try {
-      if (kDebugMode) {
-        print('📝 Updating linked product for ad: $adId to $productId');
-      }
-
-      await AdPerformanceService.updateLinkedProduct(adId, productId);
-      
-      // Update local data
-      final index = _adPerformanceData.indexWhere((ad) => ad.adId == adId);
-      if (index != -1) {
-        final ad = _adPerformanceData[index];
-        final updatedConfig = ad.adminConfig?.copyWith(
-          linkedProductId: productId,
-          updatedAt: DateTime.now(),
-        ) ?? AdminConfig(
-          budget: 0,
-          linkedProductId: productId,
-          createdBy: 'system',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-        
-        _adPerformanceData[index] = ad.copyWith(
-          adminConfig: updatedConfig,
-          lastUpdated: DateTime.now(),
-        );
-      }
-      
-      // Rebuild with products list
-      await loadAdPerformanceData();
-      
-      notifyListeners();
-      
-      if (kDebugMode) {
-        print('✅ Linked product updated for ad: $adId');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error updating linked product: $e');
-      }
-      _error = 'Failed to update linked product: ${e.toString()}';
-      notifyListeners();
-      rethrow;
-    }
-  }
 
   /// Clear error state
   void clearError() {
@@ -457,13 +461,31 @@ class PerformanceCostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Get product by ID
-  Product? getProductById(String productId) {
-    try {
-      return _products.firstWhere((p) => p.id == productId);
-    } catch (e) {
-      return null;
-    }
+  // ========== DEPRECATED PRODUCT METHODS (for backward compatibility) ==========
+  
+  @Deprecated('Product functionality removed. Profit now comes from GHL opportunity values.')
+  Future<dynamic> createProduct({
+    required String name,
+    required double depositAmount,
+    required double expenseCost,
+    String? createdBy,
+  }) async {
+    throw UnimplementedError('Product functionality has been removed. Profit now comes directly from GHL opportunity values.');
+  }
+
+  @Deprecated('Product functionality removed. Profit now comes from GHL opportunity values.')
+  Future<void> updateProduct(dynamic product) async {
+    throw UnimplementedError('Product functionality has been removed. Profit now comes directly from GHL opportunity values.');
+  }
+
+  @Deprecated('Product functionality removed. Profit now comes from GHL opportunity values.')
+  Future<void> deleteProduct(String productId) async {
+    throw UnimplementedError('Product functionality has been removed. Profit now comes directly from GHL opportunity values.');
+  }
+
+  @Deprecated('Product functionality removed. Profit now comes from GHL opportunity values.')
+  dynamic getProductById(String productId) {
+    return null;
   }
 
   // ========== BACKWARD COMPATIBILITY METHODS ==========
@@ -475,10 +497,14 @@ class PerformanceCostProvider extends ChangeNotifier {
   }
 
   /// Merge with cumulative data (compatibility method - now handled by Cloud Functions)
-  Future<void> mergeWithCumulativeData(dynamic ghlProvider) async {
+  Future<void> mergeWithCumulativeData(dynamic ghlProvider, {
+    List<String>? months,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     // Data is already merged in Firebase by Cloud Functions
-    // Just refresh to get latest
-    await refreshData();
+    // Just refresh to get latest with months and date range
+    await refreshData(months: months, startDate: startDate, endDate: endDate);
   }
 
   /// Refresh Facebook data (compatibility method)
@@ -528,7 +554,6 @@ class PerformanceCostProvider extends ChangeNotifier {
     required String adId,
     required String adName,
     required double budget,
-    String? linkedProductId,
     String? facebookCampaignId,
   }) async {
     // In the new system, ads come from Facebook API
@@ -540,17 +565,10 @@ class PerformanceCostProvider extends ChangeNotifier {
   Future<void> updateAdPerformanceCost(
     AdPerformanceCost cost, {
     double? budget,
-    String? linkedProductId,
   }) async {
-    // Update budget if provided
-    if (budget != null) {
-      await updateAdBudget(cost.id, budget);
-    }
-    
-    // Update linked product if provided
-    if (linkedProductId != null) {
-      await updateAdLinkedProduct(cost.id, linkedProductId);
-    }
+    // In the new system, budget and product linking are not used
+    // Profit comes directly from GHL opportunity values
+    throw UnimplementedError('Budget and product configuration removed - profit comes from GHL');
   }
 
   /// Delete ad performance cost (compatibility method - not used in new system)
@@ -616,9 +634,7 @@ class PerformanceCostProvider extends ChangeNotifier {
           totalCashAmount += ad.ghlStats!.cashAmount;
         }
         
-        if (ad.adminConfig != null) {
-          totalBudget += ad.adminConfig!.budget;
-        }
+        // Budget field removed - no longer used
         
         if (latestUpdate == null || ad.lastUpdated.isAfter(latestUpdate)) {
           latestUpdate = ad.lastUpdated;
@@ -698,9 +714,7 @@ class PerformanceCostProvider extends ChangeNotifier {
           totalCashAmount += ad.ghlStats!.cashAmount;
         }
         
-        if (ad.adminConfig != null) {
-          totalBudget += ad.adminConfig!.budget;
-        }
+        // Budget field removed - no longer used
         
         if (latestUpdate == null || ad.lastUpdated.isAfter(latestUpdate)) {
           latestUpdate = ad.lastUpdated;

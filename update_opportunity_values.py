@@ -31,9 +31,17 @@ db = firestore.client()
 # GHL API Configuration
 GHL_API_BASE_URL = "https://services.leadconnectorhq.com"
 GHL_API_VERSION = "2021-07-28"
-GHL_ACCESS_TOKEN = os.getenv('GHL_API_KEY', 'pit-e305020a-9a42-4290-a052-daf828c3978e')
+GHL_ACCESS_TOKEN = os.getenv('GHL_API_KEY', 'pit-22f8af95-3244-41e7-9a52-22c87b166f5a')
 GHL_LOCATION_ID = "QdLXaFEqrdF0JbVbpKLw"
-DAVIDE_PIPELINE_ID = "AUduOJBB2lxlsEaNmlJz"
+
+# Pipeline IDs
+ANDRIES_PIPELINE_ID = "XeAGJWRnUGJ5tuhXam2g"  # Andries Pipeline - DDM
+DAVIDE_PIPELINE_ID = "AUduOJBB2lxlsEaNmlJz"   # Davide's Pipeline - DDM (also called Altus)
+
+PIPELINES = {
+    ANDRIES_PIPELINE_ID: "Andries Pipeline - DDM",
+    DAVIDE_PIPELINE_ID: "Davide's Pipeline - DDM"
+}
 
 def get_ghl_headers():
     return {
@@ -42,14 +50,14 @@ def get_ghl_headers():
         "Content-Type": "application/json"
     }
 
-def fetch_opportunities_from_ghl(pipeline_id: str) -> List[Dict]:
+def fetch_opportunities_from_ghl(pipeline_id: str, pipeline_name: str = "") -> List[Dict]:
     """Fetch all opportunities from GHL"""
     url = f"{GHL_API_BASE_URL}/opportunities/search"
     
     all_opportunities = []
     next_cursor = None
     
-    print(f"📊 Fetching opportunities from GHL API...")
+    print(f"📊 Fetching opportunities from {pipeline_name or 'pipeline'}...")
     
     while True:
         params = {
@@ -353,7 +361,7 @@ def main():
     print("\n" + "=" * 100)
     print("🚀 UPDATE OPPORTUNITY VALUES AND RE-AGGREGATE TO AD PERFORMANCE")
     print("=" * 100)
-    print(f"\nPipeline ID: {DAVIDE_PIPELINE_ID}")
+    print(f"\nPipelines: Andries & Davide")
     print(f"Execution Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     if dry_run:
@@ -363,15 +371,30 @@ def main():
     
     print()
     
-    # Step 1: Fetch opportunities from GHL
-    opportunities = fetch_opportunities_from_ghl(DAVIDE_PIPELINE_ID)
+    # Step 1: Fetch opportunities from both pipelines
+    all_opportunities = []
+    for pipeline_id, pipeline_name in PIPELINES.items():
+        print(f"\n{'='*80}")
+        print(f"Processing: {pipeline_name}")
+        print(f"{'='*80}\n")
+        
+        opportunities = fetch_opportunities_from_ghl(pipeline_id, pipeline_name)
+        
+        if opportunities:
+            all_opportunities.extend(opportunities)
+        else:
+            print(f"⚠️  No opportunities found for {pipeline_name}")
     
-    if not opportunities:
-        print("\n⚠️  No opportunities found")
+    if not all_opportunities:
+        print("\n⚠️  No opportunities found in any pipeline")
         return
     
+    print(f"\n{'='*80}")
+    print(f"📊 Total opportunities fetched: {len(all_opportunities)}")
+    print(f"{'='*80}\n")
+    
     # Step 2: Update Firebase opportunityStageHistory with correct monetary values
-    update_stats = update_firebase_opportunity_values(opportunities, dry_run=dry_run)
+    update_stats = update_firebase_opportunity_values(all_opportunities, dry_run=dry_run)
     
     # Step 3: Re-aggregate GHL data into adPerformance collection
     if update_stats['updated'] > 0 or not dry_run:
@@ -394,8 +417,8 @@ def main():
         print("✅ All changes have been applied to Firebase")
         print()
         print("Next steps:")
-        print("  1. Check the Overview dashboard to see updated profit calculations")
-        print("  2. Verify that Aayesha and Jenny's values are reflected (if matched to ads)")
+        print("  1. Check the Campaign Performance page to see updated profit calculations")
+        print("  2. Verify that opportunity values from GHL are reflected correctly")
         print("  3. The adPerformance collection now has updated ghlStats with correct cashAmount")
     
     print()

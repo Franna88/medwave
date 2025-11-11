@@ -16,7 +16,7 @@ GHL_API_BASE_URL = "https://services.leadconnectorhq.com"
 GHL_API_VERSION = "2021-07-28"
 
 # GHL API Configuration (from codebase)
-GHL_ACCESS_TOKEN = "pit-e305020a-9a42-4290-a052-daf828c3978e"  # Updated API token
+GHL_ACCESS_TOKEN = "pit-22f8af95-3244-41e7-9a52-22c87b166f5a"  # Updated API token
 GHL_LOCATION_ID = "QdLXaFEqrdF0JbVbpKLw"  # Correct location ID from functions/fullGHLSync.py
 DAVIDE_PIPELINE_ID = "AUduOJBB2lxlsEaNmlJz"  # Davide's pipeline ID
 

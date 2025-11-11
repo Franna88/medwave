@@ -30,7 +30,7 @@ db = firestore.client()
 # GHL API Configuration
 GHL_BASE_URL = 'https://services.leadconnectorhq.com'
 # Use the same API key as Cloud Functions
-GHL_API_KEY = os.getenv('GHL_API_KEY', 'pit-4cbdedd8-41c4-4528-b9f7-172c4757824c')
+GHL_API_KEY = os.getenv('GHL_API_KEY', 'pit-22f8af95-3244-41e7-9a52-22c87b166f5a')
 GHL_LOCATION_ID = 'QdLXaFEqrdF0JbVbpKLw'
 
 # Pipeline IDs

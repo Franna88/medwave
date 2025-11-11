@@ -1,0 +1,42 @@
+{
+  "id": "120235560268260335",
+  "name": "B2B October 2025",
+  "status": "ACTIVE",
+  "creative": {
+    "id": "1388189162705668",
+    "name": "The Plug-and-Play System Clients Love 2025-11-05-c6fdfd4d889b19d6981a5d498434029e",
+    "object_story_spec": {
+      "page_id": "100391263069899",
+      "instagram_user_id": "17841458823670579",
+      "video_data": {
+        "video_id": "758624823862702",
+        "call_to_action": {
+          "type": "LEARN_MORE",
+          "value": {
+            "lead_gen_form_id": "1168700714593335",
+            "link": "http://fb.me/"
+          }
+        },
+        "image_url": "https://www.facebook.com/ads/image/?d=AQLbrJL8j6KQPYN_EjdfwR0tHhGlem40eVdP0jxU0VIelOHlp54YDjvDjli5x4DFLrlWkPdC1tY_ts99cIUc0ZgNV1lssZ5244yVd8R4BokBo_Az90abGlFs7QNTgxcKy8eWzsiravn0cuiDFyxZoXU1",
+        "image_hash": "bf6f7f25753c255a5bce7642ad6411d3"
+      }
+    },
+    "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+    "call_to_action": {
+      "type": "LEARN_MORE",
+      "value": {
+        "lead_gen_form_id": "1168700714593335",
+        "link": "http://fb.me/"
+      }
+    }
+  },
+  "effective_status": "ACTIVE",
+  "campaign": {
+    "id": "120235556205010335",
+    "name": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences"
+  },
+  "adset": {
+    "id": "120235556204830335",
+    "name": "Interests - Healthcare and medical services (DDM)"
+  }
+}

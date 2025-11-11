@@ -1,0 +1,400 @@
+================================================================================
+GOHIGHLEVEL (GHL) OPPORTUNITY API - COMPLETE REFERENCE
+================================================================================
+Date Created: November 10, 2025
+Purpose: Reference for accessing opportunity data and attributes from GHL API
+
+================================================================================
+API CREDENTIALS & CONFIGURATION
+================================================================================
+
+API Key: pit-22f8af95-3244-41e7-9a52-22c87b166f5a
+Location ID: QdLXaFEqrdF0JbVbpKLw
+Base URL: https://services.leadconnectorhq.com
+API Version Header: 2021-07-28
+
+PIPELINE IDs:
+- Andries Pipeline: XeAGJWRnUGJ5tuhXam2g
+- Davide Pipeline: pTbNvnrXqJc9u1oxir3q
+
+================================================================================
+API ENDPOINTS
+================================================================================
+
+1. SEARCH OPPORTUNITIES (Primary endpoint for fetching opportunities)
+   
+   Endpoint: GET /opportunities/search
+   
+   Request Headers:
+   {
+       "Authorization": "Bearer pit-22f8af95-3244-41e7-9a52-22c87b166f5a",
+       "Version": "2021-07-28",
+       "Content-Type": "application/json"
+   }
+   
+   Query Parameters:
+   - location_id: QdLXaFEqrdF0JbVbpKLw (REQUIRED)
+   - limit: 100 (max per page)
+   - page: 1, 2, 3... (for pagination)
+   
+   Example Request:
+   ```
+   GET https://services.leadconnectorhq.com/opportunities/search?location_id=QdLXaFEqrdF0JbVbpKLw&limit=100&page=1
+   ```
+
+2. GET SINGLE OPPORTUNITY (For detailed data including custom fields)
+   
+   Endpoint: GET /opportunities/{opportunityId}
+   
+   Request Headers: Same as above
+   
+   Example Request:
+   ```
+   GET https://services.leadconnectorhq.com/opportunities/0EF4I4Lovl4v4f1sMhG7
+   ```
+
+================================================================================
+OPPORTUNITY DATA STRUCTURE
+================================================================================
+
+Response Format:
+{
+    "opportunities": [
+        {
+            // BASIC FIELDS
+            "id": "0EF4I4Lovl4v4f1sMhG7",
+            "name": "NADIA HARRIS",
+            "contactId": "contact_abc123",
+            
+            // PIPELINE & STAGE
+            "pipelineId": "XeAGJWRnUGJ5tuhXam2g",  // Andries Pipeline
+            "pipelineStageId": "stage_def456",
+            "pipelineStageName": "Deposit Received",  // ⭐ EXACT STAGE NAME
+            "status": "Deposit Received",
+            
+            // MONETARY VALUE ⭐ KEY FIELD
+            "monetaryValue": 300000,  // R 300,000 (in cents or full amount)
+            
+            // TIMESTAMPS
+            "createdAt": "2025-10-28T10:54:00.000Z",
+            "dateAdded": "2025-10-28T10:54:00.000Z",
+            
+            // ASSIGNMENT
+            "assignedTo": "user_123",
+            
+            // ATTRIBUTIONS ⭐ FACEBOOK AD TRACKING
+            "attributions": [
+                {
+                    "isLast": true,
+                    "utmSource": "Campaign Name",      // {{campaign.name}}
+                    "utmMedium": "AdSet Name",         // {{adset.name}}
+                    "utmCampaign": "Ad Name",          // {{ad.name}}
+                    "h_ad_id": "120234487479400335",   // ⭐ Facebook Ad ID
+                    "adId": "120234487479400335",
+                    "utmAdId": "120234487479400335",
+                    "fbc_id": "120234487479400123"     // {{adset.id}}
+                }
+            ],
+            
+            // CUSTOM FIELDS (may be empty via API)
+            "customFields": []
+        }
+    ]
+}
+
+================================================================================
+KEY FIELDS FOR MEDWAVE SYSTEM
+================================================================================
+
+1. OPPORTUNITY IDENTIFICATION:
+   - id: Unique opportunity ID
+   - name: Contact/opportunity name
+   - contactId: Associated contact ID
+
+2. PIPELINE TRACKING:
+   - pipelineId: Which pipeline (Andries/Davide)
+   - pipelineStageName: Current stage (e.g., "Deposit Received", "Cash Collected")
+   - status: Stage status
+
+3. MONETARY DATA:
+   ⭐ monetaryValue: THE PRIMARY SOURCE FOR CASH AMOUNTS
+   - This is the "Opportunity Value" field in GHL UI
+   - Examples: 300000 (R 300,000), 125000 (R 125,000)
+   - If this is 0, check custom fields (but API often returns empty)
+
+4. FACEBOOK AD ATTRIBUTION:
+   - attributions[].h_ad_id: Facebook Ad ID for matching
+   - attributions[].utmSource: Campaign name
+   - attributions[].utmMedium: Ad Set name
+   - attributions[].utmCampaign: Ad name
+   - attributions[].fbc_id: Ad Set ID
+
+5. TIMESTAMPS:
+   - createdAt: When opportunity was created
+   - dateAdded: Alternative timestamp field
+
+================================================================================
+STAGE NAMES IN ANDRIES PIPELINE
+================================================================================
+
+✅ CONFIRMED STAGE NAMES (from GHL API):
+- "Booked Appointments"
+- "Call Completed"
+- "No Show"
+- "Reschedule"
+- "Follow Up Day 1" through "Follow Up Day 20"
+- "Deposit Received"  ⭐ Stage ID: 52a076ca-851f-43fc-a57d-309403a4b208
+- "Cash Collected"    ⭐ Stage ID: 3a8ead84-92b0-4796-aaf8-6594c3217a2c
+- "Long Term Leads"
+- "Andries Upfront Disqualified"
+- "DND Leads"
+- "USA Sales Calls Completed"
+
+✅ CONFIRMED STAGE NAMES IN DAVIDE PIPELINE:
+- "Booked Appointments"
+- "Call Completed"
+- "No Show/Cancelled/Disqualified"
+- "Follow Up Day 1" through "Follow Up Day 7"
+- "Deposit Received"  ⭐ Stage ID: 13d54d18-d1e7-476b-aad8-cb4767b8b979
+- "Cash Collected"    ⭐ Stage ID: 3c89afba-9797-4b0f-947c-ba00b60468c6
+- "FU - Long Term"
+- "Leads"
+- "Lost"
+
+⚠️ CRITICAL DISCOVERY:
+The GHL API does NOT return pipelineStageName in the /opportunities/search endpoint.
+Instead, you must:
+1. Fetch pipeline stages using /opportunities/pipelines endpoint
+2. Map pipelineStageId to stage names
+3. Use the mapping when processing opportunities
+
+✅ SOLUTION IMPLEMENTED:
+- Stage mappings saved in: /Users/mac/dev/medwave/ghl_info/pipeline_stage_mappings.json
+- populate_ghl_data.py now uses stage ID lookup for both Andries and Davide pipelines
+
+================================================================================
+PYTHON CODE EXAMPLES
+================================================================================
+
+1. FETCH ALL OPPORTUNITIES WITH PAGINATION:
+
+```python
+import requests
+
+GHL_API_KEY = 'pit-22f8af95-3244-41e7-9a52-22c87b166f5a'
+GHL_LOCATION_ID = 'QdLXaFEqrdF0JbVbpKLw'
+ANDRIES_PIPELINE_ID = 'XeAGJWRnUGJ5tuhXam2g'
+
+def get_ghl_headers():
+    return {
+        'Authorization': f'Bearer {GHL_API_KEY}',
+        'Version': '2021-07-28',
+        'Content-Type': 'application/json'
+    }
+
+def fetch_opportunities():
+    url = 'https://services.leadconnectorhq.com/opportunities/search'
+    all_opportunities = []
+    page = 1
+    
+    while True:
+        response = requests.get(
+            url,
+            headers=get_ghl_headers(),
+            params={
+                'location_id': GHL_LOCATION_ID,
+                'limit': 100,
+                'page': page
+            }
+        )
+        
+        data = response.json()
+        opportunities = data.get('opportunities', [])
+        
+        if not opportunities:
+            break
+        
+        all_opportunities.extend(opportunities)
+        
+        if len(opportunities) < 100:
+            break
+        
+        page += 1
+    
+    return all_opportunities
+```
+
+2. FILTER TO ANDRIES PIPELINE:
+
+```python
+andries_opps = [
+    opp for opp in all_opportunities 
+    if opp.get('pipelineId') == ANDRIES_PIPELINE_ID
+]
+```
+
+3. FILTER TO DEPOSIT RECEIVED STAGE:
+
+```python
+deposit_opps = [
+    opp for opp in andries_opps 
+    if opp.get('pipelineStageName') == 'Deposit Received'
+]
+```
+
+4. EXTRACT MONETARY VALUE:
+
+```python
+for opp in deposit_opps:
+    name = opp.get('name')
+    amount = opp.get('monetaryValue', 0)
+    print(f"{name}: R {amount:,.2f}")
+```
+
+5. EXTRACT FACEBOOK AD ID (h_ad_id):
+
+```python
+def extract_h_ad_id(opportunity):
+    attributions = opportunity.get('attributions', [])
+    
+    # Look for last attribution
+    for attr in reversed(attributions):
+        h_ad_id = (
+            attr.get('h_ad_id') or 
+            attr.get('utmAdId') or 
+            attr.get('adId')
+        )
+        if h_ad_id:
+            return h_ad_id
+    
+    return None
+```
+
+6. GET SINGLE OPPORTUNITY DETAILS:
+
+```python
+def get_opportunity_details(opp_id):
+    url = f'https://services.leadconnectorhq.com/opportunities/{opp_id}'
+    response = requests.get(url, headers=get_ghl_headers())
+    data = response.json()
+    return data.get('opportunity', {})
+```
+
+================================================================================
+STAGE CATEGORIZATION FOR MEDWAVE
+================================================================================
+
+Correct stage categories for populate_ghl_data.py:
+
+STAGE_CATEGORIES = {
+    'bookedAppointments': ['Appointment Booked', 'Booked'],
+    'deposits': ['Deposit Received', 'Deposit Paid', 'Deposit'],  # ⭐ ADD "Deposit Received"
+    'cashCollected': ['Cash Collected', 'Paid', 'Completed']
+}
+
+================================================================================
+COMMON ISSUES & SOLUTIONS
+================================================================================
+
+ISSUE 1: monetaryValue is 0 or null
+SOLUTION: 
+- Check if "Opportunity Value" field is populated in GHL UI
+- Custom fields may not be accessible via standard API
+- Use monetaryValue field (not custom fields)
+
+ISSUE 2: No opportunities found in "Deposit" stage
+SOLUTION:
+- Stage name is "Deposit Received" not "Deposit Paid"
+- Update STAGE_CATEGORIES to include "Deposit Received"
+
+ISSUE 3: No h_ad_id in attributions
+SOLUTION:
+- Opportunity was not created via Facebook ad
+- Check if UTM parameters were properly set
+- Verify UTM structure: h_ad_id={{ad.id}}
+
+ISSUE 4: Custom fields are empty
+SOLUTION:
+- Standard API may not return custom fields
+- Use monetaryValue field instead
+- Contact GHL support for custom field API access
+
+================================================================================
+RATE LIMITING
+================================================================================
+
+Development Tier Limits:
+- 200 calls per hour per user
+- 200 calls per hour per app
+
+Best Practices:
+- Add time.sleep(0.5) between API calls
+- Use pagination efficiently
+- Process in batches
+- Cache results when possible
+
+================================================================================
+TESTING & VERIFICATION
+================================================================================
+
+Test Script Location:
+/Users/mac/dev/medwave/verify_deposit_opportunities.py
+
+This script will:
+1. Fetch all opportunities from GHL API
+2. Filter to Andries Pipeline
+3. Show all stage names
+4. Find opportunities in Deposit stages
+5. Search for specific opportunities (NADIA HARRIS, Sashnie Naicker)
+6. Display complete JSON structure
+
+Run with:
+```bash
+cd /Users/mac/dev/medwave
+python3 verify_deposit_opportunities.py
+```
+
+================================================================================
+RELATED FILES IN CODEBASE
+================================================================================
+
+1. populate_ghl_data.py
+   - Fetches GHL opportunities and matches to Facebook ads
+   - Writes to advertData/{month}/ads/{adId}/ghlWeekly/{weekId}
+   - ⚠️ NEEDS UPDATE: Add "Deposit Received" to stage categories
+
+2. functions/lib/opportunityHistoryService.js
+   - Real-time webhook handler for opportunity updates
+   - Stores stage transitions in Firebase
+
+3. functions/syncGHLToAdvertData.py
+   - Syncs GHL data to advertData collection
+   - Processes monetary values and attributions
+
+4. check_october_ghl_api.py
+   - Diagnostic script for checking October opportunities
+   - Shows deposits and cash collected
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Run verify_deposit_opportunities.py to confirm:
+   ✅ Monetary values are in API (R 300,000, R 125,000)
+   ✅ Stage name is "Deposit Received"
+   ✅ h_ad_id exists for Facebook matching
+
+2. Update populate_ghl_data.py:
+   ✅ Add "Deposit Received" to STAGE_CATEGORIES
+
+3. Re-run populate_ghl_data.py:
+   ✅ Should now capture deposit opportunities correctly
+
+4. Verify in Firebase:
+   ✅ Check advertData/{month}/ads/{adId}/ghlWeekly/{weekId}
+   ✅ Confirm cashAmount values are populated
+
+================================================================================
+END OF REFERENCE DOCUMENT
+================================================================================
+

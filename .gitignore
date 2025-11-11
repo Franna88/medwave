@@ -102,3 +102,6 @@ android/fastlane/Preview.html
 .flutter-plugins-dependencies
 .packages
 .dart_tool/package_config.json
+
+# Facebook Sync Checkpoint
+facebook_sync_checkpoint.json

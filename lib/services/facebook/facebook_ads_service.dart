@@ -498,6 +498,126 @@ class FacebookAdsService {
   static bool isAccessTokenConfigured() {
     return _accessToken.isNotEmpty && _accessToken != 'YOUR_ACCESS_TOKEN_HERE';
   }
+
+  /// Fetch weekly insights for a specific ad
+  /// Returns a list of weekly data points for timeline analysis
+  static Future<List<FacebookWeeklyInsight>> fetchWeeklyInsightsForAd(
+    String adId, {
+    DateTime? startDate,
+    DateTime? endDate,
+    bool forceRefresh = false,
+  }) async {
+    // Default to 6 months if not specified
+    final end = endDate ?? DateTime.now();
+    final start = startDate ?? DateTime.now().subtract(const Duration(days: 180));
+
+    final startDateStr = '${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}';
+    final endDateStr = '${end.year}-${end.month.toString().padLeft(2, '0')}-${end.day.toString().padLeft(2, '0')}';
+    
+    final cacheKey = 'weekly_${adId}_${startDateStr}_$endDateStr';
+    
+    // Check cache first
+    if (!forceRefresh && _cache.containsKey(cacheKey)) {
+      final cached = _cache[cacheKey]!;
+      if (DateTime.now().difference(cached.timestamp) < _cacheExpiry) {
+        if (kDebugMode) {
+          print('📦 Using cached weekly insights for ad $adId');
+        }
+        return cached.data as List<FacebookWeeklyInsight>;
+      }
+    }
+    
+    try {
+      if (kDebugMode) {
+        print('🌐 Fetching weekly insights for ad $adId ($startDateStr to $endDateStr)...');
+      }
+      
+      // Build API URL with time_increment for weekly breakdown
+      final url = Uri.parse(
+        '$_baseUrl/$adId/insights?'
+        'fields=impressions,reach,spend,clicks,cpm,cpc,ctr&'
+        'time_range=${json.encode({'since': startDateStr, 'until': endDateStr})}&'
+        'time_increment=7&'
+        'access_token=$_accessToken'
+      );
+      
+      // Make API request
+      final response = await http.get(url);
+      
+      if (response.statusCode != 200) {
+        throw FacebookAdsApiException(
+          'Failed to fetch weekly insights for ad $adId: ${response.statusCode} ${response.body}',
+        );
+      }
+      
+      final jsonData = json.decode(response.body);
+      final weeklyJson = jsonData['data'] as List<dynamic>? ?? [];
+      
+      // Parse weekly insights
+      final weeklyInsights = weeklyJson.asMap().entries.map((entry) {
+        return FacebookWeeklyInsight.fromJson(
+          entry.value as Map<String, dynamic>,
+          adId,
+          entry.key + 1, // Week number starts at 1
+        );
+      }).toList();
+      
+      // Cache the results
+      _cache[cacheKey] = _CachedData(
+        data: weeklyInsights,
+        timestamp: DateTime.now(),
+      );
+      
+      if (kDebugMode) {
+        print('✅ Fetched ${weeklyInsights.length} weeks of data for ad $adId');
+      }
+      
+      return weeklyInsights;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error fetching weekly insights for ad $adId: $e');
+      }
+      
+      // Return cached data if available, even if expired
+      if (_cache.containsKey(cacheKey)) {
+        if (kDebugMode) {
+          print('⚠️ Returning stale cached data due to error');
+        }
+        return _cache[cacheKey]!.data as List<FacebookWeeklyInsight>;
+      }
+      
+      rethrow;
+    }
+  }
+
+  /// Fetch weekly insights for multiple ads in batch
+  static Future<Map<String, List<FacebookWeeklyInsight>>> fetchWeeklyInsightsForAds(
+    List<String> adIds, {
+    DateTime? startDate,
+    DateTime? endDate,
+    bool forceRefresh = false,
+  }) async {
+    final results = <String, List<FacebookWeeklyInsight>>{};
+    
+    for (final adId in adIds) {
+      try {
+        final weeklyData = await fetchWeeklyInsightsForAd(
+          adId,
+          startDate: startDate,
+          endDate: endDate,
+          forceRefresh: forceRefresh,
+        );
+        results[adId] = weeklyData;
+      } catch (e) {
+        if (kDebugMode) {
+          print('⚠️ Failed to fetch weekly insights for ad $adId: $e');
+        }
+        results[adId] = [];
+      }
+    }
+    
+    return results;
+  }
 }
 
 /// Internal class for caching data

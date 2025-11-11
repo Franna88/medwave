@@ -1,0 +1,331 @@
+================================================================================
+ADVERTDATA COLLECTION - MONITORING GUIDE
+================================================================================
+
+This guide explains how to monitor the automated Facebook 6-month sync system.
+
+================================================================================
+OVERVIEW
+================================================================================
+
+The system runs automatically every hour via Cloud Function:
+- Function Name: scheduledFacebook6MonthSync
+- Schedule: Every 1 hour
+- Timezone: Africa/Johannesburg
+- Purpose: Fetch 6 months of Facebook ads with weekly insights
+
+================================================================================
+1. CHECK CLOUD FUNCTION LOGS
+================================================================================
+
+View Real-Time Logs (Terminal):
+-------------------------------
+cd /Users/mac/dev/medwave
+firebase functions:log --only scheduledFacebook6MonthSync
+
+View Recent Logs (Last 100 lines):
+----------------------------------
+firebase functions:log --only scheduledFacebook6MonthSync --limit 100
+
+View Logs in Firebase Console:
+------------------------------
+1. Go to: https://console.firebase.google.com/project/medx-ai/functions
+2. Click on "scheduledFacebook6MonthSync"
+3. Click "Logs" tab
+4. Filter by severity: Info, Warning, Error
+
+View Logs in Google Cloud Console:
+----------------------------------
+1. Go to: https://console.cloud.google.com/logs/query
+2. Query:
+   resource.type="cloud_function"
+   resource.labels.function_name="scheduledFacebook6MonthSync"
+
+================================================================================
+2. CHECK CHECKPOINT PROGRESS (FIRESTORE)
+================================================================================
+
+Firebase Console:
+----------------
+1. Go to: https://console.firebase.google.com/project/medx-ai/firestore
+2. Navigate to: system/facebook6MonthSyncCheckpoint
+3. View fields:
+   - lastCampaignIndex: Current campaign being processed
+   - lastAdIndex: Current ad within campaign
+   - totalAdsProcessed: Total ads synced so far
+   - totalCampaigns: Total campaigns (should be ~100)
+   - rateLimitHit: true/false
+   - timestamp: Last run time
+
+Using Firebase CLI:
+------------------
+firebase firestore:get system/facebook6MonthSyncCheckpoint
+
+Using Python Script:
+-------------------
+cd /Users/mac/dev/medwave
+python3 -c "
+import firebase_admin
+from firebase_admin import credentials, firestore
+cred = credentials.Certificate('medx-ai-firebase-adminsdk-fbsvc-a86e7bd050.json')
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+doc = db.document('system/facebook6MonthSyncCheckpoint').get()
+if doc.exists:
+    print('Checkpoint:', doc.to_dict())
+else:
+    print('No checkpoint found (sync may be complete)')
+"
+
+================================================================================
+3. CHECK ADVERTDATA COLLECTION
+================================================================================
+
+View in Firebase Console:
+-------------------------
+1. Go to: https://console.firebase.google.com/project/medx-ai/firestore
+2. Navigate to: advertData
+3. Count documents (total ads synced)
+4. Click any ad to see:
+   - Main document: campaignId, adName, lastFacebookSync
+   - insights subcollection: Weekly Facebook metrics
+   - ghlWeekly subcollection: Weekly GHL data
+
+Count Total Ads (Python):
+-------------------------
+cd /Users/mac/dev/medwave
+python3 -c "
+import firebase_admin
+from firebase_admin import credentials, firestore
+cred = credentials.Certificate('medx-ai-firebase-adminsdk-fbsvc-a86e7bd050.json')
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+ads = db.collection('advertData').get()
+print(f'Total ads in advertData: {len(ads)}')
+"
+
+Check Specific Ad:
+-----------------
+1. Go to Firebase Console > Firestore > advertData
+2. Find ad by ID (e.g., 120235556204840335)
+3. Check subcollections:
+   - insights: Should have weekly documents (format: 2025-11-03_2025-11-09)
+   - ghlWeekly: Should have weekly GHL data
+
+================================================================================
+4. MONITOR SYNC PROGRESS
+================================================================================
+
+Quick Status Check:
+------------------
+cd /Users/mac/dev/medwave
+python3 advertdata_final_status.py
+
+This shows:
+- Total ads in collection
+- Ads with Facebook insights
+- Ads with GHL data
+- Ads with both
+- Data completeness percentage
+
+Manual Progress Calculation:
+---------------------------
+1. Check checkpoint: totalAdsProcessed / estimated total (~500-800 ads)
+2. Check checkpoint: lastCampaignIndex / totalCampaigns (e.g., 25/100 = 25%)
+3. Estimated completion: (100 - lastCampaignIndex) hours remaining
+
+================================================================================
+5. CHECK FOR ERRORS
+================================================================================
+
+Common Issues to Look For:
+--------------------------
+
+1. Rate Limit Hit:
+   - Log message: "⛔ RATE LIMIT HIT"
+   - Checkpoint field: rateLimitHit = true
+   - Solution: Wait 1 hour, function will auto-resume
+
+2. Invalid Access Token:
+   - Log message: "Error 400" or "Invalid OAuth access token"
+   - Solution: Update token in functions/lib/facebook6MonthSync.js
+   - Redeploy: firebase deploy --only functions:scheduledFacebook6MonthSync
+
+3. Function Timeout:
+   - Log message: "Function execution took too long"
+   - Solution: Already handled by checkpoint system, will resume next hour
+
+4. Firestore Write Errors:
+   - Log message: "Error storing ad" or "Firestore error"
+   - Check: Firestore rules and permissions
+
+Filter Error Logs:
+-----------------
+firebase functions:log --only scheduledFacebook6MonthSync | grep "❌"
+firebase functions:log --only scheduledFacebook6MonthSync | grep "Error"
+
+================================================================================
+6. VERIFY DATA QUALITY
+================================================================================
+
+Check Ad Has Both Facebook + GHL Data:
+--------------------------------------
+cd /Users/mac/dev/medwave
+python3 verify_backfill_results.py
+
+This shows:
+- Specific ad details
+- Facebook insights weeks
+- GHL weekly data
+- Overall statistics
+
+Check for Missing Insights:
+---------------------------
+cd /Users/mac/dev/medwave
+python3 -c "
+import firebase_admin
+from firebase_admin import credentials, firestore
+cred = credentials.Certificate('medx-ai-firebase-adminsdk-fbsvc-a86e7bd050.json')
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+ads = db.collection('advertData').get()
+missing = []
+for ad in ads:
+    insights = db.collection('advertData').document(ad.id).collection('insights').limit(1).get()
+    if len(insights) == 0:
+        missing.append(ad.id)
+
+print(f'Ads without insights: {len(missing)}')
+if missing:
+    print('Missing ad IDs:', missing[:10])
+"
+
+================================================================================
+7. ESTIMATED COMPLETION TIME
+================================================================================
+
+Calculate Remaining Time:
+------------------------
+1. Check checkpoint: totalAdsProcessed (e.g., 90)
+2. Estimate total ads: ~500-800 ads
+3. Rate limit allows: ~20-30 ads per hour
+4. Remaining ads: 500 - 90 = 410 ads
+5. Hours remaining: 410 / 25 = ~16 hours
+
+Check Last Run Time:
+-------------------
+Look at checkpoint timestamp field
+Next run will be ~1 hour after timestamp
+
+================================================================================
+8. MANUAL INTERVENTION (IF NEEDED)
+================================================================================
+
+Manually Trigger Function:
+--------------------------
+You cannot manually trigger scheduled functions, but you can:
+
+1. Run Python script manually:
+   cd /Users/mac/dev/medwave
+   python3 fetch_facebook_6_months.py --resume
+
+2. Or wait for next scheduled run (every hour)
+
+Reset Checkpoint (Start Fresh):
+-------------------------------
+WARNING: This will restart sync from beginning
+
+Firebase Console:
+1. Go to Firestore > system/facebook6MonthSyncCheckpoint
+2. Delete the document
+
+Or via CLI:
+firebase firestore:delete system/facebook6MonthSyncCheckpoint
+
+Force Immediate Sync (Workaround):
+----------------------------------
+1. Temporarily change schedule to "every 5 minutes"
+2. Redeploy function
+3. Wait for sync to complete
+4. Change back to "every 1 hours"
+5. Redeploy again
+
+================================================================================
+9. COMPLETION INDICATORS
+================================================================================
+
+Sync is Complete When:
+---------------------
+1. ✅ Checkpoint document deleted from Firestore
+2. ✅ Logs show: "✅ SYNC COMPLETE!"
+3. ✅ Logs show: "✅ Checkpoint deleted (sync completed)"
+4. ✅ All 100 campaigns processed (lastCampaignIndex = 99)
+
+After Completion:
+----------------
+- Function continues to run every hour
+- Updates existing ads with latest data
+- Adds new ads if any are created
+- Keeps data fresh automatically
+
+================================================================================
+10. USEFUL COMMANDS SUMMARY
+================================================================================
+
+View Logs:
+----------
+firebase functions:log --only scheduledFacebook6MonthSync
+
+Check Checkpoint:
+----------------
+firebase firestore:get system/facebook6MonthSyncCheckpoint
+
+Count Ads:
+----------
+cd /Users/mac/dev/medwave && python3 advertdata_final_status.py
+
+Manual Run:
+-----------
+cd /Users/mac/dev/medwave && python3 fetch_facebook_6_months.py --resume
+
+Deploy Function:
+---------------
+firebase deploy --only functions:scheduledFacebook6MonthSync
+
+View Function Status:
+--------------------
+firebase functions:list | grep scheduledFacebook6MonthSync
+
+================================================================================
+11. SUPPORT & TROUBLESHOOTING
+================================================================================
+
+If Sync Appears Stuck:
+---------------------
+1. Check logs for errors
+2. Verify checkpoint timestamp is updating every hour
+3. Check if rate limit is being hit repeatedly
+4. Verify Facebook access token is valid
+
+If No Progress After 24 Hours:
+------------------------------
+1. Check function is deployed: firebase functions:list
+2. Check function logs for errors
+3. Verify Cloud Scheduler is enabled
+4. Check billing is active (required for scheduled functions)
+
+Contact Information:
+-------------------
+- Firebase Console: https://console.firebase.google.com/project/medx-ai
+- Google Cloud Console: https://console.cloud.google.com
+- Function Logs: https://console.cloud.google.com/logs/query
+
+================================================================================
+END OF MONITORING GUIDE
+================================================================================
+
+Last Updated: November 9, 2025
+System: MedWave - advertData Collection Sync
+Function: scheduledFacebook6MonthSync
+

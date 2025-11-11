@@ -1,0 +1,52 @@
+================================================================================
+ADVERTDATA SYNC - QUICK REFERENCE
+================================================================================
+
+QUICK STATUS CHECK
+==================
+cd /Users/mac/dev/medwave && python3 advertdata_final_status.py
+
+VIEW LOGS
+=========
+firebase functions:log --only scheduledFacebook6MonthSync
+
+CHECK PROGRESS (FIRESTORE)
+==========================
+https://console.firebase.google.com/project/medx-ai/firestore/data/~2Fsystem~2Ffacebook6MonthSyncCheckpoint
+
+VIEW ADVERTDATA
+===============
+https://console.firebase.google.com/project/medx-ai/firestore/data/~2FadvertData
+
+MANUAL RUN (IF NEEDED)
+======================
+cd /Users/mac/dev/medwave && python3 fetch_facebook_6_months.py --resume
+
+REDEPLOY FUNCTION
+=================
+firebase deploy --only functions:scheduledFacebook6MonthSync
+
+CHECKPOINT FIELDS
+=================
+- totalAdsProcessed: Current progress
+- lastCampaignIndex: Current campaign (out of 100)
+- rateLimitHit: true = waiting for next hour
+- timestamp: Last run time
+
+COMPLETION INDICATORS
+=====================
+✅ Checkpoint deleted from Firestore
+✅ Logs show "SYNC COMPLETE"
+✅ All 100 campaigns processed
+
+ESTIMATED TIME
+==============
+~500-800 total ads
+~20-30 ads per hour (rate limit)
+~15-25 hours total (1-2 days)
+
+SUPPORT
+=======
+Firebase Console: https://console.firebase.google.com/project/medx-ai
+Cloud Logs: https://console.cloud.google.com/logs/query
+

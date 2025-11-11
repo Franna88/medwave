@@ -1,0 +1,457 @@
+/Users/mac/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+
+🔍 Analyzing Unassigned Opportunities...
+📦 Initializing Firebase...
+✅ Firebase initialized
+
+================================================================================
+ANALYZING UNASSIGNED OPPORTUNITIES
+================================================================================
+
+📊 Fetching opportunities from GHL API...
+   Page 1: 100 opportunities (Total: 100)
+   Page 2: 100 opportunities (Total: 200)
+   Page 3: 100 opportunities (Total: 300)
+   Page 4: 100 opportunities (Total: 400)
+   Page 5: 100 opportunities (Total: 500)
+   Page 6: 100 opportunities (Total: 600)
+   Page 7: 100 opportunities (Total: 700)
+   Page 8: 100 opportunities (Total: 800)
+   Page 9: 100 opportunities (Total: 900)
+   Page 10: 100 opportunities (Total: 1000)
+   Page 11: 100 opportunities (Total: 1100)
+   Page 12: 100 opportunities (Total: 1200)
+   Page 13: 100 opportunities (Total: 1300)
+   Page 14: 100 opportunities (Total: 1400)
+   Page 15: 100 opportunities (Total: 1500)
+   Page 16: 100 opportunities (Total: 1600)
+   Page 17: 100 opportunities (Total: 1700)
+   Page 18: 100 opportunities (Total: 1800)
+   Page 19: 100 opportunities (Total: 1900)
+   Page 20: 100 opportunities (Total: 2000)
+   Page 21: 100 opportunities (Total: 2100)
+   Page 22: 100 opportunities (Total: 2200)
+   Page 23: 100 opportunities (Total: 2300)
+   Page 24: 100 opportunities (Total: 2400)
+   Page 25: 100 opportunities (Total: 2500)
+   Page 26: 100 opportunities (Total: 2600)
+   Page 27: 100 opportunities (Total: 2700)
+   Page 28: 100 opportunities (Total: 2800)
+   Page 29: 100 opportunities (Total: 2900)
+   Page 30: 100 opportunities (Total: 3000)
+   Page 31: 100 opportunities (Total: 3100)
+   Page 32: 100 opportunities (Total: 3200)
+   Page 33: 100 opportunities (Total: 3300)
+   Page 34: 100 opportunities (Total: 3400)
+   Page 35: 100 opportunities (Total: 3500)
+   Page 36: 100 opportunities (Total: 3600)
+   Page 37: 100 opportunities (Total: 3700)
+   Page 38: 100 opportunities (Total: 3800)
+   Page 39: 100 opportunities (Total: 3900)
+   Page 40: 100 opportunities (Total: 4000)
+   Page 41: 100 opportunities (Total: 4100)
+   Page 42: 100 opportunities (Total: 4200)
+   Page 43: 100 opportunities (Total: 4300)
+   Page 44: 100 opportunities (Total: 4400)
+   Page 45: 100 opportunities (Total: 4500)
+   Page 46: 100 opportunities (Total: 4600)
+   Page 47: 100 opportunities (Total: 4700)
+   Page 48: 100 opportunities (Total: 4800)
+   Page 49: 100 opportunities (Total: 4900)
+   Page 50: 100 opportunities (Total: 5000)
+   Page 51: 100 opportunities (Total: 5100)
+   Page 52: 100 opportunities (Total: 5200)
+   Page 53: 100 opportunities (Total: 5300)
+   Page 54: 100 opportunities (Total: 5400)
+   Page 55: 100 opportunities (Total: 5500)
+   Page 56: 100 opportunities (Total: 5600)
+   Page 57: 100 opportunities (Total: 5700)
+   Page 58: 100 opportunities (Total: 5800)
+   Page 59: 100 opportunities (Total: 5900)
+   Page 60: 100 opportunities (Total: 6000)
+   Page 61: 100 opportunities (Total: 6100)
+   Page 62: 100 opportunities (Total: 6200)
+   Page 63: 100 opportunities (Total: 6300)
+   Page 64: 100 opportunities (Total: 6400)
+   Page 65: 100 opportunities (Total: 6500)
+   Page 66: 100 opportunities (Total: 6600)
+   Page 67: 100 opportunities (Total: 6700)
+   Page 68: 20 opportunities (Total: 6720)
+   ✅ Total opportunities: 6720
+   ✅ Andries & Davide: 943
+
+📊 Loading existing assignments from Firebase...
+   ✅ Found 456 assigned opportunities
+
+📊 Total Opportunities: 943
+   ✅ Assigned: 456 (48.4%)
+   ❌ Unassigned: 487 (51.6%)
+
+================================================================================
+UNASSIGNED OPPORTUNITIES BY DATE
+================================================================================
+
+📅 BY YEAR:
+   2025: 487 (100.0%)
+
+📅 BY MONTH:
+   2025-11: 28 (5.7%)
+   2025-10: 91 (18.7%)
+   2025-09: 85 (17.5%)
+   2025-08: 137 (28.1%)
+   2025-07: 144 (29.6%)
+   2025-02: 2 (0.4%)
+
+🔀 BY PIPELINE:
+   Andries: 302 (62.0%)
+   Davide: 185 (38.0%)
+
+📊 BY STAGE (Top 10):
+   Unknown: 487 (100.0%)
+
+❓ WHY COULDN'T BE ASSIGNED:
+   No Ad ID, No Campaign ID, No Ad Name, No AdSet Name: 283 (58.1%)
+   No Ad ID, No Campaign ID: 163 (33.5%)
+   No Ad ID: 41 (8.4%)
+
+================================================================================
+RECENT UNASSIGNED (Last 30 Days)
+================================================================================
+
+1. Karin Duranti
+   Date: 2025-11-11
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+2. Lehlogonolo George Mokubedi
+   Date: 2025-11-10
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: Practitioners Image
+      AdSet: Interests - Healthcare and medical services (DDM)
+
+3. Arleen Coetzee Healing Hands
+   Date: 2025-11-10
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+4. Kerry Meyerson
+   Date: 2025-11-10
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+5. Nadia Searle
+   Date: 2025-11-10
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+6. Tasfiyah Rasool
+   Date: 2025-11-10
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+7. Grant MacFarlane
+   Date: 2025-11-10
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+8. Sunet Lombars
+   Date: 2025-11-10
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+9. Lwandlekazi Mbadamana
+   Date: 2025-11-10
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+10. Zahraa Kazee
+   Date: 2025-11-08
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: 120220678927050335
+      Ad Name: Matthys - 04042025 - ABOLEADFORMZA (DDM) - with Davide Cal Added (Colin Lagrange Only)
+      AdSet: ZACA | LLA 2-4% (DDM) – Davide cal
+
+11. Gladys  Witbooi 
+   Date: 2025-11-08
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+12. Azwitamisi Mavhungu
+   Date: 2025-11-07
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: Weight-loss Demo
+      AdSet: LLA 2-4% (ZA) | All Doctors (DDM)
+
+13. Ashwin Kassan
+   Date: 2025-11-07
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+14. Candice Van Eck
+   Date: 2025-11-06
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+15. Satchie Pillay (Ramanee Pillay)
+   Date: 2025-11-06
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+16. Zandre Roos
+   Date: 2025-11-06
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+17. Carlien Kapp
+   Date: 2025-11-06
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: B2B October 2025
+      AdSet: Interests - Everything Doctor (DDM)
+
+18. Christien Van Den Hoeck
+   Date: 2025-11-05
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: B2B October 2025
+      AdSet: Interests - Everything Doctor (DDM)
+
+19. Linda Mgweba
+   Date: 2025-11-05
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: 120220678927050335
+      Ad Name: Matthys - 04042025 - ABOLEADFORMZA (DDM)
+      AdSet: ZACA | LLA 4-6% (DDM)
+
+20. Onica Molwele
+   Date: 2025-11-05
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: Medwave Image Ads
+      AdSet: LLA 1% (ZA) | Grouped
+
+21. Bianca Vermaak 
+   Date: 2025-11-05
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: MedWave Image Ads
+      AdSet: LLA 1% (ZA) | Grouped
+
+22. Kobus Theron
+   Date: 2025-11-04
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+23. Gerald Fourie
+   Date: 2025-11-04
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: MedWave Image Ads
+      AdSet: LLA 1% (ZA) | Grouped
+
+24. Arinda Botha
+   Date: 2025-11-04
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: AI Proof - DDM
+      AdSet: Interests - Everything Doctor (DDM)
+
+25. Lynita Greyling
+   Date: 2025-11-03
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+26. Greshan Padiachy
+   Date: 2025-11-03
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: Medwave Image Ads
+      AdSet: LLA 1% (ZA) | Grouped
+
+27. Pritesh Modi
+   Date: 2025-11-02
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: MedWave Image Ads
+      AdSet: LLA 1% (ZA) | Grouped
+
+28. Hanlie De Wet
+   Date: 2025-11-01
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: Obesity - Andries - DDM
+      AdSet: LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)
+
+29. Bev Gradidge
+   Date: 2025-10-31
+   Pipeline: Andries | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID, No Ad Name, No AdSet Name
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: None
+      AdSet: None
+
+30. Dr. Marita Boshoff
+   Date: 2025-10-31
+   Pipeline: Davide | Stage: Unknown
+   Monetary Value: R0.00
+   Reason: No Ad ID, No Campaign ID
+   UTM Data:
+      Ad ID: None
+      Campaign ID: None
+      Ad Name: MedWave Image Ads
+      AdSet: LLA 1% (ZA) | Grouped
+
+================================================================================
+ANALYSIS COMPLETE
+================================================================================
+
+📄 Detailed report saved to: unassigned_analysis_20251111_125844.json
+

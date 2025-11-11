@@ -132,7 +132,197 @@ function parseInsights(insights) {
 }
 
 /**
+ * Parse weekly insights from Facebook API response
+ * Returns an array of weekly data points
+ */
+function parseWeeklyInsights(insights) {
+  if (!insights || !insights.data || insights.data.length === 0) {
+    return [];
+  }
+
+  return insights.data.map((insight, index) => ({
+    weekNumber: index + 1,
+    spend: parseFloat(insight.spend || '0'),
+    impressions: parseInt(insight.impressions || '0', 10),
+    reach: parseInt(insight.reach || '0', 10),
+    clicks: parseInt(insight.clicks || '0', 10),
+    cpm: parseFloat(insight.cpm || '0'),
+    cpc: parseFloat(insight.cpc || '0'),
+    ctr: parseFloat(insight.ctr || '0'),
+    dateStart: insight.date_start || '',
+    dateStop: insight.date_stop || ''
+  }));
+}
+
+/**
+ * Fetch weekly insights for a specific ad
+ * @param {string} adId - Facebook Ad ID
+ * @param {string} startDate - Start date in YYYY-MM-DD format
+ * @param {string} endDate - End date in YYYY-MM-DD format
+ * @returns {Promise<Array>} Array of weekly insights
+ */
+async function fetchWeeklyInsights(adId, startDate, endDate) {
+  try {
+    console.log(`📊 Fetching weekly insights for ad ${adId} (${startDate} to ${endDate})...`);
+    
+    const url = `${FACEBOOK_BASE_URL}/${adId}/insights`;
+    const response = await axios.get(url, {
+      params: {
+        fields: 'impressions,reach,spend,clicks,cpm,cpc,ctr',
+        time_range: JSON.stringify({ since: startDate, until: endDate }),
+        time_increment: 7, // Weekly breakdown
+        access_token: FACEBOOK_ACCESS_TOKEN,
+        limit: 100
+      }
+    });
+
+    const weeklyData = parseWeeklyInsights(response.data);
+    console.log(`   ✅ Fetched ${weeklyData.length} weeks of data`);
+    
+    return weeklyData;
+  } catch (error) {
+    console.error(`❌ Error fetching weekly insights for ad ${adId}:`, error.response?.data || error.message);
+    return [];
+  }
+}
+
+/**
+ * Store weekly insights in Firestore subcollection
+ * @param {string} adId - Facebook Ad ID
+ * @param {Array} weeklyData - Array of weekly insights
+ * @returns {Promise<Object>} Result with success status and stats
+ */
+async function storeWeeklyInsightsInFirestore(adId, weeklyData) {
+  const db = admin.firestore();
+  const weeklyInsightsRef = db.collection('adPerformance').doc(adId).collection('weeklyInsights');
+
+  try {
+    let stored = 0;
+    let errors = 0;
+    let createdMonth = null;
+
+    // Determine month from first week's data
+    if (weeklyData.length > 0) {
+      createdMonth = weeklyData[0].dateStart.substring(0, 7); // "2025-10"
+    }
+
+    for (const week of weeklyData) {
+      try {
+        // Use date range as document ID for easy querying
+        const weekId = `${week.dateStart}_${week.dateStop}`;
+        
+        // Store in OLD structure (for backward compatibility)
+        await weeklyInsightsRef.doc(weekId).set({
+          adId: adId,
+          weekNumber: week.weekNumber,
+          dateStart: admin.firestore.Timestamp.fromDate(new Date(week.dateStart)),
+          dateStop: admin.firestore.Timestamp.fromDate(new Date(week.dateStop)),
+          spend: week.spend,
+          impressions: week.impressions,
+          reach: week.reach,
+          clicks: week.clicks,
+          cpm: week.cpm,
+          cpc: week.cpc,
+          ctr: week.ctr,
+          fetchedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        // ALSO store in NEW month-first structure
+        if (createdMonth) {
+          const newInsightsRef = db.collection('advertData')
+            .doc(createdMonth)
+            .collection('ads')
+            .doc(adId)
+            .collection('insights')
+            .doc(weekId);
+          
+          await newInsightsRef.set({
+            dateStart: week.dateStart,
+            dateStop: week.dateStop,
+            spend: week.spend,
+            impressions: week.impressions,
+            reach: week.reach,
+            clicks: week.clicks,
+            cpm: week.cpm,
+            cpc: week.cpc,
+            ctr: week.ctr,
+            fetchedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        }
+
+        stored++;
+      } catch (error) {
+        console.error(`   ⚠️ Error storing week ${week.weekNumber}:`, error.message);
+        errors++;
+      }
+    }
+
+    return {
+      success: true,
+      adId: adId,
+      stored: stored,
+      errors: errors
+    };
+  } catch (error) {
+    console.error(`❌ Error storing weekly insights for ad ${adId}:`, error.message);
+    return {
+      success: false,
+      adId: adId,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Sync weekly insights for a single ad
+ * @param {string} adId - Facebook Ad ID
+ * @param {number} monthsBack - Number of months to fetch (default: 6)
+ * @returns {Promise<Object>} Result with success status
+ */
+async function syncWeeklyInsightsForAd(adId, monthsBack = 6) {
+  try {
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - monthsBack);
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+
+    // Fetch weekly data from Facebook API
+    const weeklyData = await fetchWeeklyInsights(adId, startDateStr, endDateStr);
+
+    if (weeklyData.length === 0) {
+      return {
+        success: true,
+        adId: adId,
+        message: 'No weekly data available',
+        weeksStored: 0
+      };
+    }
+
+    // Store in Firestore
+    const result = await storeWeeklyInsightsInFirestore(adId, weeklyData);
+
+    return {
+      success: result.success,
+      adId: adId,
+      weeksStored: result.stored || 0,
+      errors: result.errors || 0
+    };
+  } catch (error) {
+    console.error(`❌ Error syncing weekly insights for ad ${adId}:`, error.message);
+    return {
+      success: false,
+      adId: adId,
+      error: error.message
+    };
+  }
+}
+
+/**
  * Update or create ad performance record in Firestore
+ * Also writes to new advertData collection
  */
 async function updateAdPerformanceInFirestore(adData) {
   const db = admin.firestore();
@@ -184,8 +374,41 @@ async function updateAdPerformanceInFirestore(adData) {
       docData.adminConfig = existingData.adminConfig;
     }
 
-    // Update or create document
+    // Update or create document (OLD collection - for backward compatibility)
     await adRef.set(docData, { merge: true });
+
+    // ALSO write to NEW month-first advertData collection
+    // Determine month from dateStart
+    let createdMonth = null;
+    if (adData.dateStart) {
+      createdMonth = adData.dateStart.substring(0, 7); // "2025-10"
+    }
+    
+    if (createdMonth) {
+      const monthRef = db.collection('advertData').doc(createdMonth);
+      const adRef = monthRef.collection('ads').doc(adData.adId);
+      
+      await adRef.set({
+        campaignId: adData.campaignId,
+        campaignName: adData.campaignName,
+        adSetId: adData.adSetId || '',
+        adSetName: adData.adSetName || '',
+        adId: adData.adId,
+        adName: adData.adName,
+        createdMonth: createdMonth,
+        hasInsights: true,
+        hasGHLData: false, // Will be set by GHL sync
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        lastFacebookSync: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      // Update month summary
+      await monthRef.set({
+        totalAds: admin.firestore.FieldValue.increment(1),
+        adsWithInsights: admin.firestore.FieldValue.increment(1),
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
 
     return {
       success: true,
@@ -261,6 +484,13 @@ async function syncFacebookAdsToFirebase(datePreset = DEFAULT_DATE_PRESET) {
               
               if (result.success) {
                 stats.synced++;
+                
+                // Also sync recent weekly data (last 4 weeks) for this ad
+                try {
+                  await syncWeeklyInsightsForAd(ad.id, 1); // 1 month = ~4 weeks
+                } catch (weeklyError) {
+                  console.error(`   ⚠️ Failed to sync weekly data for ad ${ad.id}:`, weeklyError.message);
+                }
               } else {
                 stats.errors++;
                 stats.errorDetails.push({
@@ -301,6 +531,9 @@ async function syncFacebookAdsToFirebase(datePreset = DEFAULT_DATE_PRESET) {
 
 module.exports = {
   syncFacebookAdsToFirebase,
-  normalizeAdName
+  normalizeAdName,
+  fetchWeeklyInsights,
+  storeWeeklyInsightsInFirestore,
+  syncWeeklyInsightsForAd
 };
 

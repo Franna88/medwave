@@ -1,0 +1,775 @@
+{
+  "summary": {
+    "total_ads_checked": 227,
+    "ads_with_deposits": 38,
+    "total_deposits": 43,
+    "total_deposit_amount": 3430000.0,
+    "total_cash_collected": 0,
+    "total_cash_amount": 0.0,
+    "combined_total": 3430000.0
+  },
+  "ads": [
+    {
+      "ad_id": "120234319737640335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Medical Doctor",
+      "deposits": 2,
+      "cash_collected": 0,
+      "deposit_amount": 425000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-13_2025-10-19",
+          "leads": 3,
+          "booked": 1,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 300000.0
+        },
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319560020335",
+      "ad_name": "Metabolic Weight Loss (2) | DDM",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - All Doctors",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 300000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-13_2025-10-19",
+          "leads": 2,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 300000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319834320335",
+      "ad_name": "MedWave Image Ads",
+      "campaign_name": "Matthys - 13102025 - ABOLANDERZA - Grouped",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 300000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 7,
+          "booked": 3,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 300000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497185560335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 2,
+      "cash_collected": 0,
+      "deposit_amount": 126500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 4,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        },
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 5,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497254020335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 2,
+      "cash_collected": 0,
+      "deposit_amount": 126500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 4,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        },
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497314780335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 2,
+      "cash_collected": 0,
+      "deposit_amount": 126500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 6,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        },
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 5,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497491420335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 2,
+      "cash_collected": 0,
+      "deposit_amount": 126500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 4,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        },
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319080620335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Chiro",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319081200335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Chiro",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319081340335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Chiro",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319081580335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Chiro",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319405310335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Doctor",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319405330335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Doctor",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319405370335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Doctor",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319405410335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Doctor",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319560040335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - All Doctors",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319560060335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - All Doctors",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319560080335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - All Doctors",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319560110335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - All Doctors",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319737630335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Medical Doctor",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319737680335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Medical Doctor",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234319737700335",
+      "ad_name": "COLIN LAGRANGE (DDM)",
+      "campaign_name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Medical Doctor",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 125000.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-20_2025-10-26",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 125000.0
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497185390335",
+      "ad_name": "Obesity - Andries - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 5,
+          "booked": 1,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497185550335",
+      "ad_name": "AI Proof - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 4,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497185570335",
+      "ad_name": "AI Jab - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497185580335",
+      "ad_name": "Obesity - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 4,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497254010335",
+      "ad_name": "AI Jab - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497254040335",
+      "ad_name": "Obesity - Andries - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 5,
+          "booked": 1,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497254050335",
+      "ad_name": "Obesity - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497254060335",
+      "ad_name": "AI Proof - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497314770335",
+      "ad_name": "Obesity - Andries - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 9,
+          "booked": 1,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497314800335",
+      "ad_name": "Obesity - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497314820335",
+      "ad_name": "AI Proof - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497314830335",
+      "ad_name": "AI Jab - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497491400335",
+      "ad_name": "AI Jab - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497491410335",
+      "ad_name": "AI Proof - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 3,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497491440335",
+      "ad_name": "Obesity - Andries - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 5,
+          "booked": 1,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    },
+    {
+      "ad_id": "120234497491450335",
+      "ad_name": "Obesity - DDM",
+      "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "deposits": 1,
+      "cash_collected": 0,
+      "deposit_amount": 1500.0,
+      "cash_amount": 0.0,
+      "weeks": [
+        {
+          "week_id": "2025-10-27_2025-11-02",
+          "leads": 5,
+          "booked": 0,
+          "deposits": 1,
+          "cash_collected": 0,
+          "cash_amount": 1500
+        }
+      ]
+    }
+  ]
+}

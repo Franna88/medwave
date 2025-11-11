@@ -8,7 +8,7 @@ Quick reference for maintaining and troubleshooting the GoHighLevel integration.
 
 ### Check Current Pipeline Counts
 ```bash
-export GHL_API_KEY='pit-4cbdedd8-41c4-4528-b9f7-172c4757824c'
+export GHL_API_KEY='pit-22f8af95-3244-41e7-9a52-22c87b166f5a'
 python3 scripts/diagnose_ghl_deposits.py
 ```
 
@@ -128,7 +128,7 @@ python3 scripts/verify_fix.py
 
 ### GHL API Key
 ```bash
-export GHL_API_KEY='pit-4cbdedd8-41c4-4528-b9f7-172c4757824c'
+export GHL_API_KEY='pit-22f8af95-3244-41e7-9a52-22c87b166f5a'
 ```
 
 Location: Firebase Functions config

@@ -1,0 +1,4389 @@
+{
+  "timestamp": "2025-11-11T12:31:06.340774",
+  "count": 487,
+  "opportunities": [
+    {
+      "opportunity_id": "akG01b1eadPEY2rCPHlF",
+      "utm_campaign_id": null,
+      "utm_campaign": null,
+      "utm_medium": null,
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-11T07:39:44.292Z"
+    },
+    {
+      "opportunity_id": "hbMSzADSewxSKojZq9B0",
+      "utm_campaign_id": "",
+      "utm_campaign": "Practitioners Image",
+      "utm_medium": "Interests - Healthcare and medical services (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-10T19:30:10.471Z"
+    },
+    {
+      "opportunity_id": "ZmNkIa1S8U0BzVyReVQq",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-10T16:56:55.852Z"
+    },
+    {
+      "opportunity_id": "ELClXmcIT8ZexqRnCimJ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-10T16:22:59.815Z"
+    },
+    {
+      "opportunity_id": "SDiC4hoM4uNPeA7ekm6A",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-10T14:34:44.833Z"
+    },
+    {
+      "opportunity_id": "DN256DIdP1ysMfayceCS",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-10T14:15:26.451Z"
+    },
+    {
+      "opportunity_id": "EivgiyfzilkSy4rKqapf",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-10T13:48:29.605Z"
+    },
+    {
+      "opportunity_id": "fDnU58hiB4BV2oZk5fBx",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-10T07:15:47.742Z"
+    },
+    {
+      "opportunity_id": "HLdCylcb9uV4cNaQgGC7",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-10T05:34:52.593Z"
+    },
+    {
+      "opportunity_id": "JM5vlYHFnqSZpf2nmzhg",
+      "utm_campaign_id": "120220678927050335",
+      "utm_campaign": "Matthys - 04042025 - ABOLEADFORMZA (DDM) - with Davide Cal Added (Colin Lagrange Only)",
+      "utm_medium": "ZACA | LLA 2-4% (DDM) \u2013 Davide cal",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-08T14:32:07.798Z"
+    },
+    {
+      "opportunity_id": "WEWLMrMqEnFCDsRD0Otz",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-08T06:41:19.593Z"
+    },
+    {
+      "opportunity_id": "nmJ3dJSfLCXHbbsb8YAT",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-loss Demo",
+      "utm_medium": "LLA 2-4% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-07T20:45:58.469Z"
+    },
+    {
+      "opportunity_id": "8llPB4xFKj7YMsy9PTnC",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-07T20:33:37.945Z"
+    },
+    {
+      "opportunity_id": "9erDmSZYzxtTXGETrZ08",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-06T13:19:30.737Z"
+    },
+    {
+      "opportunity_id": "mMBIlHsQsLbPAVwXpAFl",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-06T12:51:28.624Z"
+    },
+    {
+      "opportunity_id": "lQgnIajkPE9XKdNTuK9v",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-06T06:48:05.049Z"
+    },
+    {
+      "opportunity_id": "w8ITDhNt7x10qWYf6QYB",
+      "utm_campaign_id": "",
+      "utm_campaign": "B2B October 2025",
+      "utm_medium": "Interests - Everything Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-06T04:21:53.919Z"
+    },
+    {
+      "opportunity_id": "4WmqeInGeT7x2jNTht40",
+      "utm_campaign_id": "",
+      "utm_campaign": "B2B October 2025",
+      "utm_medium": "Interests - Everything Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-05T22:55:38.459Z"
+    },
+    {
+      "opportunity_id": "rHYc3jSjqImEaLTeevHx",
+      "utm_campaign_id": "120220678927050335",
+      "utm_campaign": "Matthys - 04042025 - ABOLEADFORMZA (DDM)",
+      "utm_medium": "ZACA | LLA 4-6% (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-05T10:54:20.050Z"
+    },
+    {
+      "opportunity_id": "ZWWIBmsm6FzG8gNNMtHA",
+      "utm_campaign_id": "",
+      "utm_campaign": "Medwave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-05T09:04:40.406Z"
+    },
+    {
+      "opportunity_id": "sZeEuNabHoIuszmBBNJc",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-05T07:48:31.082Z"
+    },
+    {
+      "opportunity_id": "pI0NOGrz4b7vsbwm0f1B",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-04T15:05:52.159Z"
+    },
+    {
+      "opportunity_id": "S9d3d9FFRAOycQJyXbgs",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-04T10:41:15.390Z"
+    },
+    {
+      "opportunity_id": "AJMEqo394QLxwnt1e82l",
+      "utm_campaign_id": "",
+      "utm_campaign": "AI Proof - DDM",
+      "utm_medium": "Interests - Everything Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-04T09:46:36.344Z"
+    },
+    {
+      "opportunity_id": "gorsSpa36y9H4eD1rHOU",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-03T16:30:19.949Z"
+    },
+    {
+      "opportunity_id": "27WqRm3fZjIZqsBRVi2W",
+      "utm_campaign_id": "",
+      "utm_campaign": "Medwave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-03T11:37:04.187Z"
+    },
+    {
+      "opportunity_id": "DvOFyEARXsgBKBsbG63G",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-02T10:07:05.065Z"
+    },
+    {
+      "opportunity_id": "lEGvlCN6ryTGtwjs1MDu",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-11-01T09:59:00.139Z"
+    },
+    {
+      "opportunity_id": "rW0Yt8MYuDfVEwXPxtC3",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-31T12:47:39.324Z"
+    },
+    {
+      "opportunity_id": "KDxdx338vflZwlcEhA2p",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-31T08:15:47.191Z"
+    },
+    {
+      "opportunity_id": "UCqwwfaT71TkUhIPePjN",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-31T08:09:44.346Z"
+    },
+    {
+      "opportunity_id": "REBzinFH6z0MzwhjmyoU",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-30T11:53:53.026Z"
+    },
+    {
+      "opportunity_id": "rFMGczVTvV2T7bt0VFic",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-30T08:31:02.844Z"
+    },
+    {
+      "opportunity_id": "6PGPtCWIPG96tjyshcJq",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-30T06:27:53.249Z"
+    },
+    {
+      "opportunity_id": "jjfVj6x6vdiHvyJXcnI3",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-29T13:53:07.875Z"
+    },
+    {
+      "opportunity_id": "EsTK4zjQSU8kkKyiUxsA",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | DDM",
+      "utm_medium": "LLA 1% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-29T07:58:53.760Z"
+    },
+    {
+      "opportunity_id": "znCqsTfqnfub6JbuEZcT",
+      "utm_campaign_id": "120215987151590335",
+      "utm_campaign": "MedWave South Africa (B2B) - Andries - Retargeting Davide Ads",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-28T13:44:10.444Z"
+    },
+    {
+      "opportunity_id": "GvUrrzJQQ0485C4vWeUg",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-28T11:32:25.456Z"
+    },
+    {
+      "opportunity_id": "VuKg1WZ0RN6r6Gq9eSdU",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-28T11:23:16.555Z"
+    },
+    {
+      "opportunity_id": "vcZsbs6wCstNhQgkFPj7",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-28T11:22:24.473Z"
+    },
+    {
+      "opportunity_id": "8mVPUTaIxaDbDEqB2Xns",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-28T09:41:17.562Z"
+    },
+    {
+      "opportunity_id": "tq1rzWkgZ3DhufRKyRfi",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-28T09:16:31.053Z"
+    },
+    {
+      "opportunity_id": "y0EF4l4LovI4v4f1sMhG",
+      "utm_campaign_id": "",
+      "utm_campaign": "Medwave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 300000,
+      "created_at": "2025-10-28T08:54:47.955Z"
+    },
+    {
+      "opportunity_id": "JDynGtHVkkKWH4XuJ5NF",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-27T21:02:34.231Z"
+    },
+    {
+      "opportunity_id": "URCIEwK4zsRPl5v9felL",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-27T18:25:35.305Z"
+    },
+    {
+      "opportunity_id": "D2HBqsjtg3BLYSI3jO7g",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 200000,
+      "created_at": "2025-10-27T07:51:45.305Z"
+    },
+    {
+      "opportunity_id": "bXlhmQinabM2W9GGEQp4",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-27T07:15:44.693Z"
+    },
+    {
+      "opportunity_id": "8ELixdmGMncQXd3Tc8CA",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-25T16:18:31.932Z"
+    },
+    {
+      "opportunity_id": "yruaku0qkjoQXZrC6A6S",
+      "utm_campaign_id": "",
+      "utm_campaign": "COLIN LAGRANGE (DDM)",
+      "utm_medium": "Interests - Everything Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-25T05:47:41.049Z"
+    },
+    {
+      "opportunity_id": "eiCuo8OexQbhQJpO9hka",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-24T13:52:46.087Z"
+    },
+    {
+      "opportunity_id": "YjlnZvURD92b0u2aDAHp",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-24T11:53:29.790Z"
+    },
+    {
+      "opportunity_id": "tBhp6kwAndBZLTPA72Lp",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-24T09:02:35.756Z"
+    },
+    {
+      "opportunity_id": "C9B9qtWnVb5PVzhyUwBC",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-24T06:31:26.409Z"
+    },
+    {
+      "opportunity_id": "10fkrX2fy3zPRiPBPXgn",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 2-4% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-24T06:16:27.380Z"
+    },
+    {
+      "opportunity_id": "rLJ7hMIZoUImDyqxuB7J",
+      "utm_campaign_id": "",
+      "utm_campaign": "COLIN LAGRANGE (DDM)",
+      "utm_medium": "Interests - Everything Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-23T19:06:03.265Z"
+    },
+    {
+      "opportunity_id": "5gi2md9WBxQHfyClsnc4",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-23T18:20:59.473Z"
+    },
+    {
+      "opportunity_id": "DRu98r89061eiuGOurNp",
+      "utm_campaign_id": "",
+      "utm_campaign": "COLIN LAGRANGE (DDM)",
+      "utm_medium": "Interests - Healthcare and medical services (DDM)",
+      "stage": null,
+      "monetary_value": 125000,
+      "created_at": "2025-10-23T03:37:36.190Z"
+    },
+    {
+      "opportunity_id": "HxCV41LzrMHsQ81HLtjR",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-23T03:14:04.526Z"
+    },
+    {
+      "opportunity_id": "JszAypfAWGg3iOtwJten",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "Interests - General Hospital (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-23T00:21:13.130Z"
+    },
+    {
+      "opportunity_id": "UnszEsitbNy82iXCUtN1",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "Interests - Healthcare and medical services (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-22T18:16:46.820Z"
+    },
+    {
+      "opportunity_id": "cLyqcsdwcZ9wSjZ0jbCz",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-22T09:17:16.247Z"
+    },
+    {
+      "opportunity_id": "smOQILSvrTXqo0uIAVdk",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-22T04:04:07.871Z"
+    },
+    {
+      "opportunity_id": "pAQP1bblkHfgkBOApOdI",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-22T04:03:11.853Z"
+    },
+    {
+      "opportunity_id": "8nw1I6CZdaPYQBE5b0j1",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "Interests - Everything Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-21T21:48:07.385Z"
+    },
+    {
+      "opportunity_id": "of10wMD86hnLMBCrUc6V",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 143750,
+      "created_at": "2025-10-21T09:41:17.368Z"
+    },
+    {
+      "opportunity_id": "W6g7sC3pG3wqPq5dBr4e",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-21T08:43:30.391Z"
+    },
+    {
+      "opportunity_id": "razab0Qn3rEbwQJO327S",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-20T22:13:27.682Z"
+    },
+    {
+      "opportunity_id": "tZ7XR1zIljzaBtNyRbj8",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-20T14:17:45.554Z"
+    },
+    {
+      "opportunity_id": "YEuNzB3xz5ZQjUBEmtK5",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-20T12:48:19.347Z"
+    },
+    {
+      "opportunity_id": "yq8YXnMv2ev5rlT6kkly",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-20T11:07:29.253Z"
+    },
+    {
+      "opportunity_id": "OO5WL4Ca4p0g71gnXIk6",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-20T07:46:17.021Z"
+    },
+    {
+      "opportunity_id": "ugjUsQdOpNRfMDiaRQar",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-20T04:39:00.687Z"
+    },
+    {
+      "opportunity_id": "MPzvPADXWQeVadypEmnt",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-19T19:06:40.702Z"
+    },
+    {
+      "opportunity_id": "jK83qjLkvwkiIueh5t74",
+      "utm_campaign_id": "",
+      "utm_campaign": "COLIN LAGRANGE (DDM)",
+      "utm_medium": "Interests - Healthcare and medical services (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-18T18:41:53.966Z"
+    },
+    {
+      "opportunity_id": "z09rZaUrIu0ebI6khN2U",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-17T19:55:18.570Z"
+    },
+    {
+      "opportunity_id": "NA4NkrUkydgX29UdHhKR",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "Interests - Everything Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-17T16:57:53.453Z"
+    },
+    {
+      "opportunity_id": "YBEPJGs6TMiAtxWQUhLX",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-17T16:51:14.913Z"
+    },
+    {
+      "opportunity_id": "kCLyjFNS33KNDceIvwB2",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-17T12:24:25.017Z"
+    },
+    {
+      "opportunity_id": "0kWpCmMwgC7WZiLatfGN",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-17T12:23:25.148Z"
+    },
+    {
+      "opportunity_id": "szF9SiBVZP9QSMlQIkBG",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 130000,
+      "created_at": "2025-10-17T09:54:33.855Z"
+    },
+    {
+      "opportunity_id": "FAuZEeSrxMwHUWP14dVr",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-17T00:26:16.853Z"
+    },
+    {
+      "opportunity_id": "4gKSbtJ3XTZNACldGewk",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-16T13:53:00.327Z"
+    },
+    {
+      "opportunity_id": "tw26CqYO48p4MPLoYU2x",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-16T13:45:36.284Z"
+    },
+    {
+      "opportunity_id": "DJpeemCS1JwHGbCcYFuN",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-16T12:11:56.250Z"
+    },
+    {
+      "opportunity_id": "JVRdvmMR8lp9T5QMQ2aj",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - DDM",
+      "utm_medium": "LLA 4-6% (ZA) | Chiro (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-16T12:04:43.495Z"
+    },
+    {
+      "opportunity_id": "3uLycUSFNRkJVroI6OPd",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-16T10:29:54.743Z"
+    },
+    {
+      "opportunity_id": "IJV2Id4QAUWPaIikAgp1",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-16T06:53:06.529Z"
+    },
+    {
+      "opportunity_id": "OowKzNl5J1yYtH1NtPxn",
+      "utm_campaign_id": "",
+      "utm_campaign": "COLIN LAGRANGE (DDM)",
+      "utm_medium": "LLA 2-4% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-15T19:58:18.086Z"
+    },
+    {
+      "opportunity_id": "aznw14Z1ktP2NX971eFA",
+      "utm_campaign_id": "",
+      "utm_campaign": "Obesity - Andries - DDM",
+      "utm_medium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-15T17:48:58.109Z"
+    },
+    {
+      "opportunity_id": "pyCHSDyFFYKtQGvce8TG",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-15T12:44:59.250Z"
+    },
+    {
+      "opportunity_id": "82sn9KqENYH7EcYszqnG",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-15T05:14:38.195Z"
+    },
+    {
+      "opportunity_id": "WJ4UHEbDizxFucqW3JzK",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-14T11:39:02.296Z"
+    },
+    {
+      "opportunity_id": "TqukxfpFG5vLFveudmEn",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-14T11:23:23.921Z"
+    },
+    {
+      "opportunity_id": "QwlX36zyOyExGSHMn2ZN",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 300000,
+      "created_at": "2025-10-14T11:06:46.487Z"
+    },
+    {
+      "opportunity_id": "CzQ43mbmM2ZGh96COEW3",
+      "utm_campaign_id": "",
+      "utm_campaign": "Metabolic Weight Loss (2) | DDM",
+      "utm_medium": "LLA 1-2% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-14T11:00:59.245Z"
+    },
+    {
+      "opportunity_id": "Zymb7mSMzjjFie7ReiL4",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-10T13:10:27.128Z"
+    },
+    {
+      "opportunity_id": "S7EIEHgGOXveSOc6oI6J",
+      "utm_campaign_id": "",
+      "utm_campaign": "Dr. Loren Hilton (Testimonial ) - DDM",
+      "utm_medium": "Retargeting - ZA (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-10T09:29:37.995Z"
+    },
+    {
+      "opportunity_id": "56kSjZdJCBuLkN1HDtOR",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-09T19:01:54.054Z"
+    },
+    {
+      "opportunity_id": "oqRnfK6BwKluYg4mrsaa",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-09T13:08:00.348Z"
+    },
+    {
+      "opportunity_id": "kmKVSSaHb5HvHIvOWdJS",
+      "utm_campaign_id": "120216480637160335",
+      "utm_campaign": "MedWave South Africa (B2B) - Davide - Retargeting 18 Feb 2025",
+      "utm_medium": "Retargeting \u2013 New Dwayne Creative",
+      "stage": null,
+      "monetary_value": 150000,
+      "created_at": "2025-10-09T13:01:54.116Z"
+    },
+    {
+      "opportunity_id": "CN4PAH3RXcXdvQhbgxhr",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-09T10:41:36.106Z"
+    },
+    {
+      "opportunity_id": "pEfP4xTdqVdui7PIFWGa",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-08T14:42:46.388Z"
+    },
+    {
+      "opportunity_id": "THIAah3WSFCkfuXssTZh",
+      "utm_campaign_id": "120221556531500335",
+      "utm_campaign": "MedWave South Africa (B2B) - Davide - ?el=davide_za",
+      "utm_medium": "Retargeting \u2013 New Davide Ad - AdCopy 2",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-08T14:38:58.269Z"
+    },
+    {
+      "opportunity_id": "aQAVtPoyonZ3LDP813hg",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 2-4% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-08T14:31:51.415Z"
+    },
+    {
+      "opportunity_id": "HF3rMefMBimwUAqQgtXK",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-08T11:16:23.988Z"
+    },
+    {
+      "opportunity_id": "Xm93Y1gz3lAnSAQ1Wp61",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-08T08:33:55.610Z"
+    },
+    {
+      "opportunity_id": "HOda2NI7zSnpm7qh7gO1",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-07T19:07:07.564Z"
+    },
+    {
+      "opportunity_id": "nbzjCBb6P5yWpMf0bTzh",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-06T16:51:50.349Z"
+    },
+    {
+      "opportunity_id": "dMA8Y9kCpfyqIs0wokEA",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | DDM",
+      "utm_medium": "LLA 1% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-06T12:58:39.359Z"
+    },
+    {
+      "opportunity_id": "k47UgOqSabRZmj9R6Rdj",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-06T09:33:16.416Z"
+    },
+    {
+      "opportunity_id": "LTKeGy8FpWCJGvPj7WsM",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-03T13:25:18.998Z"
+    },
+    {
+      "opportunity_id": "go5zalldwIt1kh2ttNhi",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-03T13:23:31.543Z"
+    },
+    {
+      "opportunity_id": "1vghhX17ReKsiplsNKC9",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-03T12:30:14.825Z"
+    },
+    {
+      "opportunity_id": "nmn9We1chMXHDKpP7RPh",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-03T10:47:23.956Z"
+    },
+    {
+      "opportunity_id": "BQOTyupwHuCPQ3fvrOHy",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Swiss Army",
+      "utm_medium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-03T09:52:39.733Z"
+    },
+    {
+      "opportunity_id": "AFlJizhec8GLKs4uiFSr",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-02T18:37:12.234Z"
+    },
+    {
+      "opportunity_id": "hkDLuzVBrtWvg8k6llPu",
+      "utm_campaign_id": "",
+      "utm_campaign": "Dr. Loren Hilton (Testimonial ) - DDM",
+      "utm_medium": "Retargeting - ZA (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-02T10:35:49.949Z"
+    },
+    {
+      "opportunity_id": "HsTx8cyHAgckNM63aKQA",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-10-02T06:33:54.955Z"
+    },
+    {
+      "opportunity_id": "NJ25StqVmnJhwPG5OQPc",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-10-01T14:34:36.461Z"
+    },
+    {
+      "opportunity_id": "OEMSlJYwJqEwrEKhAy4U",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-30T16:35:47.558Z"
+    },
+    {
+      "opportunity_id": "5Bez8CaeOdsefn7fsrqI",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-30T07:38:50.180Z"
+    },
+    {
+      "opportunity_id": "36YxrmWMl23ewIbVD7iN",
+      "utm_campaign_id": null,
+      "utm_campaign": null,
+      "utm_medium": null,
+      "stage": null,
+      "monetary_value": 220000,
+      "created_at": "2025-09-29T14:36:26.587Z"
+    },
+    {
+      "opportunity_id": "3KeWTv4j5IuoVMECIcuF",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-29T13:32:22.226Z"
+    },
+    {
+      "opportunity_id": "T8MIlt3sNIuNMV8cxtZQ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-29T11:46:16.735Z"
+    },
+    {
+      "opportunity_id": "3iiTz3OzoF1D4kWPYxxj",
+      "utm_campaign_id": "",
+      "utm_campaign": "Dr. Loren Hilton (Testimonial ) - DDM",
+      "utm_medium": "Retargeting - ZA (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-29T11:21:29.087Z"
+    },
+    {
+      "opportunity_id": "70fAPccPEMYz573hjpI2",
+      "utm_campaign_id": "",
+      "utm_campaign": "Dr. Loren Hilton (Testimonial ) - DDM",
+      "utm_medium": "Retargeting - ZA (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-29T11:08:19.012Z"
+    },
+    {
+      "opportunity_id": "rMGd9gequclKag2Wr09t",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 125000,
+      "created_at": "2025-09-29T09:25:19.255Z"
+    },
+    {
+      "opportunity_id": "obzRNAf5zRBue0oQvMmk",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-29T06:48:14.115Z"
+    },
+    {
+      "opportunity_id": "mNMSnNqRYTNzu3Occvu6",
+      "utm_campaign_id": "120221556531500335",
+      "utm_campaign": "Andries (Sun)",
+      "utm_medium": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-29T04:46:55.444Z"
+    },
+    {
+      "opportunity_id": "AjxgztSrRfBhkQUrJYkO",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-29T02:20:24.447Z"
+    },
+    {
+      "opportunity_id": "NObNpLx3LydadK5dp9mt",
+      "utm_campaign_id": "",
+      "utm_campaign": "Dr. Loren Hilton (Testimonial ) - DDM",
+      "utm_medium": "Retargeting - ZA (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-28T13:46:55.532Z"
+    },
+    {
+      "opportunity_id": "mki1XpusWeqpMeK9HYeH",
+      "utm_campaign_id": "120222249675000335",
+      "utm_campaign": "1. MW - B2B - ZA - Aesthetic & Healthcare - 1% LAL $50 -> Andries Calendar",
+      "utm_medium": "Retargeting \u2013 New 3 creatives by the team",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-26T15:43:40.015Z"
+    },
+    {
+      "opportunity_id": "5nP73dCeN1rnGTPRycbi",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-26T15:00:25.787Z"
+    },
+    {
+      "opportunity_id": "r92DWOVOdmoHHdlcsHSc",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-26T13:45:33.898Z"
+    },
+    {
+      "opportunity_id": "45cjeNFkmKKkaEBcLLjl",
+      "utm_campaign_id": "120216480637160335",
+      "utm_campaign": "MedWave South Africa (B2B) - Davide - Retargeting 18 Feb 2025",
+      "utm_medium": "Retargeting \u2013 New Dwayne Creative",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-26T10:16:05.798Z"
+    },
+    {
+      "opportunity_id": "nvahuPqdYgvRX9ZYoxFD",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-26T10:00:35.958Z"
+    },
+    {
+      "opportunity_id": "V1rTT8c4ZovkuQdiUH8X",
+      "utm_campaign_id": "",
+      "utm_campaign": "Andries (Sun)",
+      "utm_medium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-25T18:58:37.519Z"
+    },
+    {
+      "opportunity_id": "xSYrEjwDwYIzbXseY1Uz",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-25T14:43:36.387Z"
+    },
+    {
+      "opportunity_id": "thvyFa9SqrkbvUlASCJQ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-25T12:34:52.243Z"
+    },
+    {
+      "opportunity_id": "GcUDwkbQQyVvcfs5Z6FA",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-25T12:04:57.938Z"
+    },
+    {
+      "opportunity_id": "VkDNQ5zDNv5QFUqX4ZNF",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-25T11:59:43.522Z"
+    },
+    {
+      "opportunity_id": "LMvj2PEcS5ojLQLrkDkK",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-25T11:47:16.225Z"
+    },
+    {
+      "opportunity_id": "p9SHmoD5obhT2wgjn4Vp",
+      "utm_campaign_id": null,
+      "utm_campaign": null,
+      "utm_medium": null,
+      "stage": null,
+      "monetary_value": 125000,
+      "created_at": "2025-09-25T09:39:07.954Z"
+    },
+    {
+      "opportunity_id": "zJ1yxUmSKwM709VtJEoY",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-25T03:41:42.385Z"
+    },
+    {
+      "opportunity_id": "tXDpjz17dl4bRRJKNpbV",
+      "utm_campaign_id": "",
+      "utm_campaign": "Dr. Loren Hilton (Testimonial ) - DDM",
+      "utm_medium": "Retargeting - ZA (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-24T19:20:37.096Z"
+    },
+    {
+      "opportunity_id": "2tXN4yDIgX606o8gYQFo",
+      "utm_campaign_id": "",
+      "utm_campaign": "Nurses - Urgent Call",
+      "utm_medium": "LLA 1-2% (ZA) | Nurses (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-24T18:34:41.423Z"
+    },
+    {
+      "opportunity_id": "Vez7HGHDMKTzIbotoa4v",
+      "utm_campaign_id": "",
+      "utm_campaign": "Testimonial - Margot de Kooker",
+      "utm_medium": "LLA 4-6% (ZA) | Chiro's over 30 (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-24T10:32:44.052Z"
+    },
+    {
+      "opportunity_id": "TMXu2z8sYiAiMRplOG3T",
+      "utm_campaign_id": "",
+      "utm_campaign": "Andries (Sun)",
+      "utm_medium": "LLA 2-4% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-24T07:05:58.312Z"
+    },
+    {
+      "opportunity_id": "XluUR14RStve0OLuIGSo",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-23T14:35:06.970Z"
+    },
+    {
+      "opportunity_id": "LB9puAPNVB0crdu4P2SB",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-23T13:53:04.261Z"
+    },
+    {
+      "opportunity_id": "kiKy4Rc0FDN3uECK0h9r",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-22T22:39:24.716Z"
+    },
+    {
+      "opportunity_id": "tbTAKHAllIFxZI3ZKWQg",
+      "utm_campaign_id": "",
+      "utm_campaign": "Nurses - Urgent Call",
+      "utm_medium": "LLA 1% (ZA) | HCP Treating Chronic Wounds (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-22T18:32:24.513Z"
+    },
+    {
+      "opportunity_id": "O7yWJ08cgUdOILNHiEeE",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-22T17:05:43.284Z"
+    },
+    {
+      "opportunity_id": "7AgQ302VRVAQV339XxpI",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-22T11:52:45.197Z"
+    },
+    {
+      "opportunity_id": "7FUET9cKQjiJRV8Lkmww",
+      "utm_campaign_id": "120222249143130335",
+      "utm_campaign": "Health Providers",
+      "utm_medium": "LLA 2-4% (ZA) | Chiro's over 30 (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-22T09:37:05.057Z"
+    },
+    {
+      "opportunity_id": "DUXxZ8nfzyFocJlYxY8w",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-21T22:28:58.123Z"
+    },
+    {
+      "opportunity_id": "BI4GYzcMaaY32d74T0E3",
+      "utm_campaign_id": "",
+      "utm_campaign": "Andries (Sun)",
+      "utm_medium": "LLA 4-6% (ZA) | HCP Treating Weight Loss (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-21T21:09:11.300Z"
+    },
+    {
+      "opportunity_id": "EJs67AoZTGkCOvEWTjM1",
+      "utm_campaign_id": "",
+      "utm_campaign": "Nurses - Urgent Call",
+      "utm_medium": "LLA 4-6% (ZA) | HCP Treating Chronic Wounds (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-21T19:21:16.485Z"
+    },
+    {
+      "opportunity_id": "m704HtDMHsqPjGC6IEST",
+      "utm_campaign_id": "",
+      "utm_campaign": "Andries (Sun)",
+      "utm_medium": "LLA 4-6% (ZA) | HCP Treating Weight Loss (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-21T14:41:32.457Z"
+    },
+    {
+      "opportunity_id": "L4mLOqCjqcRDh21Kz5Sc",
+      "utm_campaign_id": "",
+      "utm_campaign": "Nurses - Urgent Call",
+      "utm_medium": "LLA 1% (ZA) | Nurses (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-21T09:39:37.189Z"
+    },
+    {
+      "opportunity_id": "uCVB1rQRdBQVXr9ACfbL",
+      "utm_campaign_id": "",
+      "utm_campaign": "Nurses - Urgent Call",
+      "utm_medium": "LLA 4-6% (ZA) | Nurses (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-21T03:58:59.141Z"
+    },
+    {
+      "opportunity_id": "RRkBI4gS2mPuk3refrCb",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-loss Demo",
+      "utm_medium": "LLA 2-4% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-20T16:51:37.417Z"
+    },
+    {
+      "opportunity_id": "AnKGnEQy16iuWADbtIr6",
+      "utm_campaign_id": "",
+      "utm_campaign": "Nurses - Urgent Call",
+      "utm_medium": "LLA 1-2% (ZA) | HCP Treating Chronic Wounds (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-20T16:06:25.424Z"
+    },
+    {
+      "opportunity_id": "yJb6wV0Hv3TbLZl7gdjq",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-20T10:56:03.032Z"
+    },
+    {
+      "opportunity_id": "J6ocJLHk6FMYylUM0dld",
+      "utm_campaign_id": "",
+      "utm_campaign": "Nurses - Urgent Call",
+      "utm_medium": "LLA 4-6% (ZA) | Nurses (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-19T17:49:33.403Z"
+    },
+    {
+      "opportunity_id": "lgTYsus8uSA0ExkeVdjB",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-19T10:11:11.519Z"
+    },
+    {
+      "opportunity_id": "R2da24gpz9C3bVHuWu5z",
+      "utm_campaign_id": "",
+      "utm_campaign": "MedWave Image Ads",
+      "utm_medium": "LLA 1% (ZA) | Grouped",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-18T19:50:39.925Z"
+    },
+    {
+      "opportunity_id": "GQEDHjWanNOcw5iGyE1x",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP & Nurses",
+      "utm_medium": "LLA 2-4% (ZA) | HCP Treating Weight Loss (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-17T17:07:19.445Z"
+    },
+    {
+      "opportunity_id": "CTTnNruHUhAzKOtj2agI",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Swiss Army",
+      "utm_medium": "LLA 4-6% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 300000,
+      "created_at": "2025-09-17T14:39:12.693Z"
+    },
+    {
+      "opportunity_id": "WYd6UN8iGCrHxRekSmGN",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Swiss Army",
+      "utm_medium": "LLA 1% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-16T20:14:50.859Z"
+    },
+    {
+      "opportunity_id": "rnH8tpMk1kWpSFobu2fW",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 290000,
+      "created_at": "2025-09-15T19:07:15.101Z"
+    },
+    {
+      "opportunity_id": "PPuv2u1Z0euyUo5QeUNC",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-15T17:21:03.494Z"
+    },
+    {
+      "opportunity_id": "2VA0TTcDRpqUxU4UpjY2",
+      "utm_campaign_id": "120222249143130335",
+      "utm_campaign": "*New* MedWave South Africa (B2B) - Andries - April Launch",
+      "utm_medium": "Retargeting \u2013 New 3 creatives by the team",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-15T09:14:49.953Z"
+    },
+    {
+      "opportunity_id": "l7c5B1WGnOdR4aY0AhZ7",
+      "utm_campaign_id": "",
+      "utm_campaign": "Margo Testimonial - DDM Form",
+      "utm_medium": "LLA 2-4% (ZA) | Chiro (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-15T05:34:17.864Z"
+    },
+    {
+      "opportunity_id": "tt60Q1PDXDwb7S2Dhbbq",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-12T22:52:42.690Z"
+    },
+    {
+      "opportunity_id": "y9RqU0qQAmhvI9lcieRs",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-12T18:37:14.732Z"
+    },
+    {
+      "opportunity_id": "fYBD2aW8MKPMkA39DGJS",
+      "utm_campaign_id": "",
+      "utm_campaign": "Margo Testimonial - DDM Form",
+      "utm_medium": "LLA 4-6% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 300000,
+      "created_at": "2025-09-12T17:52:21.490Z"
+    },
+    {
+      "opportunity_id": "8kILASRCxzOOcBz3jMJv",
+      "utm_campaign_id": "",
+      "utm_campaign": "Margo Testimonial - DDM Form",
+      "utm_medium": "LLA 1% (ZA) | Chiro (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-11T20:25:33.494Z"
+    },
+    {
+      "opportunity_id": "izP9xfdrXvVlI4fRhT1q",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-11T19:51:45.905Z"
+    },
+    {
+      "opportunity_id": "FpC06XpdpWsWVBapYzBJ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-11T12:38:06.481Z"
+    },
+    {
+      "opportunity_id": "w7Htulpy2adUQUQwwXeB",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-11T06:57:12.550Z"
+    },
+    {
+      "opportunity_id": "1fDlwVCyk5Qayc8ud2Rq",
+      "utm_campaign_id": "",
+      "utm_campaign": "Margo Testimonial - DDM Form",
+      "utm_medium": "LLA 1% (ZA) | Chiro (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-11T03:35:11.650Z"
+    },
+    {
+      "opportunity_id": "7tXz3q47qcovKWj0N0hV",
+      "utm_campaign_id": "120215746862190335",
+      "utm_campaign": "Wound Care | DDM",
+      "utm_medium": "PNP Contact List [Custom Audience] (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-10T17:39:03.314Z"
+    },
+    {
+      "opportunity_id": "rXZXHwIEw7sIsGY6tynM",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-09T16:02:49.609Z"
+    },
+    {
+      "opportunity_id": "wVGz4lmBitlouS1MngbO",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-09T13:21:23.467Z"
+    },
+    {
+      "opportunity_id": "EKI5EmMlQu49uhqfelvR",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-09T12:57:50.691Z"
+    },
+    {
+      "opportunity_id": "o9DCVzIQN0gmNSuvHF6v",
+      "utm_campaign_id": null,
+      "utm_campaign": null,
+      "utm_medium": null,
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-08T20:26:49.180Z"
+    },
+    {
+      "opportunity_id": "sjvOrPAuhBvhWqWzDFJE",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-08T14:14:42.772Z"
+    },
+    {
+      "opportunity_id": "l5UPFLToJb5jpW0x20Jp",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss Demo",
+      "utm_medium": "LLA 2-4% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-08T10:39:33.878Z"
+    },
+    {
+      "opportunity_id": "m6cAgGPJZ1KmbgLsIUhs",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-08T10:21:01.673Z"
+    },
+    {
+      "opportunity_id": "Um8ou5HnzeaifkbWlIzL",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss Demo",
+      "utm_medium": "LLA 4-6% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-07T20:01:41.509Z"
+    },
+    {
+      "opportunity_id": "3brwjA4cxocRN8Sw8wse",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-06T14:38:09.604Z"
+    },
+    {
+      "opportunity_id": "Pqd30VhjcZunHf9ZeuG7",
+      "utm_campaign_id": null,
+      "utm_campaign": null,
+      "utm_medium": null,
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-06T09:12:44.794Z"
+    },
+    {
+      "opportunity_id": "fn3cW0K1edGLKDUpMH2k",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 4-6% (ZA) | Nurse (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-06T03:33:22.997Z"
+    },
+    {
+      "opportunity_id": "371JcOfDWFDr2OrIlVWv",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-05T08:44:55.839Z"
+    },
+    {
+      "opportunity_id": "wk1q23isz9C53HJKWWX0",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-05T07:56:12.981Z"
+    },
+    {
+      "opportunity_id": "v0mGL3CkLM2jJKhsyapL",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-04T08:14:27.352Z"
+    },
+    {
+      "opportunity_id": "kEPNvDrzvtueCKepDQUw",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 240000,
+      "created_at": "2025-09-03T07:45:19.323Z"
+    },
+    {
+      "opportunity_id": "qvW734W7lOInas0sF385",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Swiss Army",
+      "utm_medium": "LLA 2-4% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-03T02:18:50.253Z"
+    },
+    {
+      "opportunity_id": "EWkj03XUsx98xeyoTu9x",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-02T13:07:23.824Z"
+    },
+    {
+      "opportunity_id": "oXRx2XQ9SvdcnKPqrW1n",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-02T12:06:52.759Z"
+    },
+    {
+      "opportunity_id": "L9bqbD047JYbgd46gfnH",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-02T11:19:56.751Z"
+    },
+    {
+      "opportunity_id": "7fZsDcHM1f7FPv9q4Oki",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-01T14:37:37.161Z"
+    },
+    {
+      "opportunity_id": "KYi6liu7yEBMOXhGEMt8",
+      "utm_campaign_id": "120221556531500335",
+      "utm_campaign": "1. MW - B2B - ZA - Physical Therapy & Practitioner retargeting with Margo - 1% LAL $80 CBO -> Davide Calendar",
+      "utm_medium": "Physical Therapist Only",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-09-01T12:43:10.416Z"
+    },
+    {
+      "opportunity_id": "Il3hSiRJL5hu6i9pC6qu",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss Demo",
+      "utm_medium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-31T21:11:25.049Z"
+    },
+    {
+      "opportunity_id": "1lCjEknWdGcE7WtoCCe8",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-31T14:52:28.305Z"
+    },
+    {
+      "opportunity_id": "fetqSojr5pCKBkpMCDBs",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Swiss Army",
+      "utm_medium": "LLA 1% (ZA) | Nurse (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-31T03:09:09.007Z"
+    },
+    {
+      "opportunity_id": "r3yMZzOrsavRfhCmjjZm",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-30T20:05:39.330Z"
+    },
+    {
+      "opportunity_id": "o23UnwYZuepBGhmYqRoK",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-30T20:03:09.146Z"
+    },
+    {
+      "opportunity_id": "9zDksNiOZh6Ou7llj4qu",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Swiss Army",
+      "utm_medium": "LLA 4-6% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-29T20:34:53.056Z"
+    },
+    {
+      "opportunity_id": "p3d1KFKfcT4fmkOy4TFw",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-29T14:13:14.714Z"
+    },
+    {
+      "opportunity_id": "uQ25BarFF8mfEq9hRw9R",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-29T13:01:43.624Z"
+    },
+    {
+      "opportunity_id": "0W8V2yXEzjBX47BpOSqK",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-29T11:11:15.582Z"
+    },
+    {
+      "opportunity_id": "p1ZFsdFUjuQHg0DrvChi",
+      "utm_campaign_id": "120215987151590335",
+      "utm_campaign": "MedWave South Africa (B2B) - Andries - Retargeting Davide Ads",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-29T07:56:20.328Z"
+    },
+    {
+      "opportunity_id": "n13ExiKTflIQcntsTwBS",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-28T22:29:12.702Z"
+    },
+    {
+      "opportunity_id": "HEpmlmF9HEZ6G6jJmfO5",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-28T09:36:40.245Z"
+    },
+    {
+      "opportunity_id": "RziBZASU4ICDon3dkxBU",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss Demo",
+      "utm_medium": "LLA 1% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 290000,
+      "created_at": "2025-08-27T14:15:53.035Z"
+    },
+    {
+      "opportunity_id": "3cNJcZSdFdYhMVpw3XNX",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-27T12:26:58.355Z"
+    },
+    {
+      "opportunity_id": "cagn6fhx6F4a2A62bvWp",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | DDM",
+      "utm_medium": "PNP Contact List [Custom Audience] (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-27T09:18:31.390Z"
+    },
+    {
+      "opportunity_id": "Y793S6xKpjJf4FJXTSpr",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-27T08:20:28.364Z"
+    },
+    {
+      "opportunity_id": "yJ061s8pNqhOvoJ1bnEp",
+      "utm_campaign_id": "120221556531500335",
+      "utm_campaign": "MedWave South Africa (B2B) - Davide - ?el=davide_za",
+      "utm_medium": "Doctors and Physical Therapist Interests \u2013 New Davide Ad copy 2 \u2013 Copy",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-27T08:19:16.133Z"
+    },
+    {
+      "opportunity_id": "iP00wFxPSZ43Kj3BbzbN",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-26T15:57:19.028Z"
+    },
+    {
+      "opportunity_id": "iXAutVxKbt7UmDPz9nNh",
+      "utm_campaign_id": null,
+      "utm_campaign": null,
+      "utm_medium": null,
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-26T13:56:31.893Z"
+    },
+    {
+      "opportunity_id": "ZOrCuiW2bNDYE3bQErKp",
+      "utm_campaign_id": "",
+      "utm_campaign": "Gp - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-26T08:27:17.721Z"
+    },
+    {
+      "opportunity_id": "nroypIMomfqAMEryzmug",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-26T08:11:27.179Z"
+    },
+    {
+      "opportunity_id": "kv66NrR7mDAcOQr1FBb1",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-25T13:46:48.939Z"
+    },
+    {
+      "opportunity_id": "urLWj0CNeQDsVZpYDRwd",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 2-4% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-25T12:41:07.498Z"
+    },
+    {
+      "opportunity_id": "CGFt11TbEeI6WYR8hB85",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-25T08:39:24.481Z"
+    },
+    {
+      "opportunity_id": "YlY4QJakDB1nGzXMDCdg",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss HQ",
+      "utm_medium": "LLA 4-6% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-25T05:23:37.830Z"
+    },
+    {
+      "opportunity_id": "eOXzgTIV3CfwqHuRALVh",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Swiss Army",
+      "utm_medium": "LLA 1-2% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-23T16:17:23.501Z"
+    },
+    {
+      "opportunity_id": "n1kqSy2gryE1zIYhcVck",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-22T14:38:28.837Z"
+    },
+    {
+      "opportunity_id": "iKQQfKaYR4RK8oacsFEn",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-22T13:50:27.724Z"
+    },
+    {
+      "opportunity_id": "EgGTL0L65EDdwz682xj1",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-loss Demo",
+      "utm_medium": "LLA 1% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-22T09:56:47.398Z"
+    },
+    {
+      "opportunity_id": "N6nFLgswY5vdbYSG2Ril",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-22T09:32:51.103Z"
+    },
+    {
+      "opportunity_id": "gvqGCIpWpeZEFL7CZmAY",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-22T08:51:44.408Z"
+    },
+    {
+      "opportunity_id": "P7N4IYLZfQPx1iR32RXd",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-22T08:41:57.145Z"
+    },
+    {
+      "opportunity_id": "c3m81yf5As3fB6KQl66L",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-22T08:41:33.345Z"
+    },
+    {
+      "opportunity_id": "Hq8h3yFEBUjIDGM4zQPb",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-22T08:41:06.366Z"
+    },
+    {
+      "opportunity_id": "DiCA65MupVumuYK4zpmN",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 200000,
+      "created_at": "2025-08-21T15:09:58.990Z"
+    },
+    {
+      "opportunity_id": "QIJUx1twXLvHlKAo0pli",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 2-4% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-21T12:37:16.492Z"
+    },
+    {
+      "opportunity_id": "SCeYz4AgbLj14bb72poa",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Swiss Army",
+      "utm_medium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-21T11:18:00.082Z"
+    },
+    {
+      "opportunity_id": "3JH9JzujG0QQjJYBKJSJ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-21T08:47:10.701Z"
+    },
+    {
+      "opportunity_id": "VJgV6BDTT4sZVfcqww3D",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-loss Hq",
+      "utm_medium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-20T14:08:39.967Z"
+    },
+    {
+      "opportunity_id": "zugqKDwHvoyTVAaZTBw5",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | DDM",
+      "utm_medium": "LLA 2-4% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-20T13:41:26.670Z"
+    },
+    {
+      "opportunity_id": "KaBloOJM9eOouyN9J1KI",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-20T12:28:27.435Z"
+    },
+    {
+      "opportunity_id": "YDOj47uUSjwzqfU1FhWR",
+      "utm_campaign_id": "",
+      "utm_campaign": "Dynamic Ad | All Medical Lander (ddm)",
+      "utm_medium": "LLA 2-4% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-20T12:19:27.683Z"
+    },
+    {
+      "opportunity_id": "zOsCFHNUtm4O1JWkICZZ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-20T11:12:24.400Z"
+    },
+    {
+      "opportunity_id": "DKUy0NlspgrEhOAQvrSG",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-20T10:38:15.221Z"
+    },
+    {
+      "opportunity_id": "EmTJVnap64FFk2UOXfPk",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-20T08:59:26.743Z"
+    },
+    {
+      "opportunity_id": "yunk4fXkD9G4Azt24pA5",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-20T08:18:25.131Z"
+    },
+    {
+      "opportunity_id": "7XQX6CKV2yxvrQMQt5bp",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | Nurse (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-19T13:57:00.833Z"
+    },
+    {
+      "opportunity_id": "h24EzA6rPEc5zn2SISh3",
+      "utm_campaign_id": "",
+      "utm_campaign": "Gp - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-19T11:40:16.028Z"
+    },
+    {
+      "opportunity_id": "Bo2inGrqdSR2qwUY280q",
+      "utm_campaign_id": null,
+      "utm_campaign": null,
+      "utm_medium": null,
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-19T09:28:20.131Z"
+    },
+    {
+      "opportunity_id": "1No8GTbyCbHdmBcGbaCg",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss HQ",
+      "utm_medium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-19T07:39:28.284Z"
+    },
+    {
+      "opportunity_id": "JUXXb1f07IFknCYyzswE",
+      "utm_campaign_id": null,
+      "utm_campaign": null,
+      "utm_medium": null,
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-18T15:47:10.942Z"
+    },
+    {
+      "opportunity_id": "IzEKW9kuEbu8WctEaIPD",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-18T12:48:19.534Z"
+    },
+    {
+      "opportunity_id": "iQ8xMruzfG7QKQ0QQCz1",
+      "utm_campaign_id": "",
+      "utm_campaign": "Gp - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-18T10:33:32.302Z"
+    },
+    {
+      "opportunity_id": "bEjgewlcY3umCNOcJSYf",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-18T09:01:02.094Z"
+    },
+    {
+      "opportunity_id": "ZAeXnTxaeBV4Hx83OlhZ",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Swiss Army",
+      "utm_medium": "LLA 4-6% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-17T05:32:53.853Z"
+    },
+    {
+      "opportunity_id": "qq1L1tp6lNJ1WbmBFA0M",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss HQ",
+      "utm_medium": "LLA 4-6% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-15T22:02:37.056Z"
+    },
+    {
+      "opportunity_id": "7lKNFJY7gGzAbtsxgKwZ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-15T21:48:39.213Z"
+    },
+    {
+      "opportunity_id": "S4evYgzrx0fUGjfQ35ZW",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-15T13:05:00.733Z"
+    },
+    {
+      "opportunity_id": "wq2yS4mJZK0P776b4KwY",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-15T11:54:53.315Z"
+    },
+    {
+      "opportunity_id": "9XocvWQHBNYhWcogrwlA",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-15T09:33:54.666Z"
+    },
+    {
+      "opportunity_id": "MEdenA6PocMnXodUxvQj",
+      "utm_campaign_id": "",
+      "utm_campaign": "Gp - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-15T09:10:37.393Z"
+    },
+    {
+      "opportunity_id": "uXRki3MosLopDxgFPQFy",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-15T09:06:45.973Z"
+    },
+    {
+      "opportunity_id": "s5QCB9ZflyAbkmqs20ad",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-15T08:25:40.664Z"
+    },
+    {
+      "opportunity_id": "Ya7wFMYUUmOd3Y9DgyCF",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-15T08:03:38.425Z"
+    },
+    {
+      "opportunity_id": "LmUOvEp4EirT4PUzmvk0",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-15T07:50:18.708Z"
+    },
+    {
+      "opportunity_id": "zEy2uR7wgDWa2f4QWA3p",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss Demo",
+      "utm_medium": "LLA 2-4% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-14T11:20:40.626Z"
+    },
+    {
+      "opportunity_id": "e2ooiMxVNTSN9kNlECav",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-14T08:28:09.509Z"
+    },
+    {
+      "opportunity_id": "jTVMMxtZdVRAxtYLdgSZ",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss Demo",
+      "utm_medium": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-14T00:42:38.535Z"
+    },
+    {
+      "opportunity_id": "N4gu3CZkgqzzwJviSmfy",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-13T13:00:55.529Z"
+    },
+    {
+      "opportunity_id": "3tkvtJYjbWFFEQCm8nrT",
+      "utm_campaign_id": "",
+      "utm_campaign": "Gp - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-13T12:33:37.456Z"
+    },
+    {
+      "opportunity_id": "JcvnmkHRmF3QdgyNTyJX",
+      "utm_campaign_id": "120215153586640335",
+      "utm_campaign": "MedWave South Africa (B2B) - Andries - Part Guarantee",
+      "utm_medium": "General Campaign - Retargeting",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-13T11:48:35.807Z"
+    },
+    {
+      "opportunity_id": "NshQTPfbwEoDQicNxxSF",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-13T11:40:05.737Z"
+    },
+    {
+      "opportunity_id": "TvInovw8FzzPr0synW6m",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-loss Hq",
+      "utm_medium": "LLA 2-4% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-13T09:18:17.275Z"
+    },
+    {
+      "opportunity_id": "MC97cQAM739yZuNwol6f",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-13T08:38:02.214Z"
+    },
+    {
+      "opportunity_id": "wZYIyjI4jiYaJlF5s6Zt",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-13T08:16:11.874Z"
+    },
+    {
+      "opportunity_id": "X2fU9wotzDcIXSziZy2u",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-13T07:44:31.167Z"
+    },
+    {
+      "opportunity_id": "PJV8xcKpeMb7yWjILuoV",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T16:52:58.200Z"
+    },
+    {
+      "opportunity_id": "kba27FJgg9Pj3inGoRjl",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T16:51:39.519Z"
+    },
+    {
+      "opportunity_id": "s0Q5zJgmBY57M8Px6cD6",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T16:48:57.706Z"
+    },
+    {
+      "opportunity_id": "TADhWXqanpocPcrnyYYC",
+      "utm_campaign_id": "120215746862190335",
+      "utm_campaign": "MedWave South Africa (B2B) - Llewellyn Guarantee",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T16:47:01.086Z"
+    },
+    {
+      "opportunity_id": "8TDyt0WJkJ6JsTg1tgDN",
+      "utm_campaign_id": "120215987151590335",
+      "utm_campaign": "MedWave South Africa (B2B) - Andries - Retargeting Davide Ads",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T16:36:10.126Z"
+    },
+    {
+      "opportunity_id": "7QF7O7FWzcKWTgUc04mM",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Swiss Army",
+      "utm_medium": "LLA 2-4% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T13:23:13.608Z"
+    },
+    {
+      "opportunity_id": "XeGss4CMMW6wSkBfbIox",
+      "utm_campaign_id": "",
+      "utm_campaign": "Gp - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T13:04:05.838Z"
+    },
+    {
+      "opportunity_id": "gPR7iZ9Ch9fs1B8kzk4x",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | Ddm",
+      "utm_medium": "PNP Contact List [Custom Audience] (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T12:38:18.299Z"
+    },
+    {
+      "opportunity_id": "vB74kJeKopjhJSEu78qb",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T11:49:26.649Z"
+    },
+    {
+      "opportunity_id": "MVwiNEMJh7GQTd3cFYzx",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T10:05:43.075Z"
+    },
+    {
+      "opportunity_id": "j6xf3FV1nlJlZd4Fb5ti",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T09:32:49.580Z"
+    },
+    {
+      "opportunity_id": "7meZIqCWsZ5wf81I38ZL",
+      "utm_campaign_id": "",
+      "utm_campaign": "Gp - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T08:49:00.806Z"
+    },
+    {
+      "opportunity_id": "755uh6674toUrQGnf7wr",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T08:00:43.013Z"
+    },
+    {
+      "opportunity_id": "hFzZ7pV3T0ZQxo74NQtK",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | DDM",
+      "utm_medium": "LLA 1% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-12T03:48:48.688Z"
+    },
+    {
+      "opportunity_id": "yHJA54UAOuuHMxM09BEo",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-11T15:00:04.773Z"
+    },
+    {
+      "opportunity_id": "5VaWKIPvTP9445rbGlBf",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-11T13:36:03.025Z"
+    },
+    {
+      "opportunity_id": "WiJfckS0HYTS6jXLDqlV",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-11T12:49:25.007Z"
+    },
+    {
+      "opportunity_id": "GCKYci8hbz1dzADAkm1c",
+      "utm_campaign_id": "120221556531500335",
+      "utm_campaign": "MedWave South Africa (B2B) - Davide - ?el=davide_za",
+      "utm_medium": "Retargeting \u2013 New Davide Ad - AdCopy 2",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-11T09:55:43.259Z"
+    },
+    {
+      "opportunity_id": "Nt9w7WygULDVPMklocEa",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-11T09:23:18.846Z"
+    },
+    {
+      "opportunity_id": "jtnsTGErntqDF6SVYKrZ",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 1-2% (ZA) | Nurse (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-11T03:42:44.443Z"
+    },
+    {
+      "opportunity_id": "heLym9p3zbuuYc1y65Yv",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 2-4% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-11T02:38:39.881Z"
+    },
+    {
+      "opportunity_id": "efeIzjf4ZxRIeTdTcsed",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | Nurse (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-10T05:59:54.818Z"
+    },
+    {
+      "opportunity_id": "1k16zsDhIWva7lQM82mc",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Pain & Wounds",
+      "utm_medium": "LLA 1-2% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-09T10:21:40.120Z"
+    },
+    {
+      "opportunity_id": "4jFmyTsfXj30UfGxzGt2",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss Demo",
+      "utm_medium": "LLA 2-4% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-09T08:38:05.616Z"
+    },
+    {
+      "opportunity_id": "tAzfymp07lNeGhOydwTN",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss Demo",
+      "utm_medium": "LLA 2-4% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-09T08:34:53.325Z"
+    },
+    {
+      "opportunity_id": "ipNU7KJlEAJ5AV0JvEp4",
+      "utm_campaign_id": "",
+      "utm_campaign": "Gp - Pain & Wounds",
+      "utm_medium": "LLA 1% (ZA) | Nurse (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-08T11:51:59.529Z"
+    },
+    {
+      "opportunity_id": "v4nanoOPepwkwbQS7m9r",
+      "utm_campaign_id": "120215987151590335",
+      "utm_campaign": "MedWave South Africa (B2B) - Andries - Retargeting Davide Ads",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-08T08:45:59.677Z"
+    },
+    {
+      "opportunity_id": "9aBTccELkGTHB9i5N2og",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-07T14:41:15.432Z"
+    },
+    {
+      "opportunity_id": "0sPYYmhMEgRKufutSWxk",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-07T13:43:57.193Z"
+    },
+    {
+      "opportunity_id": "LhrVS0xIV7rB66C5QcYB",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-loss Demo",
+      "utm_medium": "LLA 2-4% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-07T13:34:31.933Z"
+    },
+    {
+      "opportunity_id": "6BlgXmDqGi6g1ZYugOtp",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-07T12:58:47.562Z"
+    },
+    {
+      "opportunity_id": "bhdQaZ1ekul6hppmMijm",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-07T12:37:04.664Z"
+    },
+    {
+      "opportunity_id": "kPKrzdhJKVSUvpqmWxUA",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-07T12:25:30.393Z"
+    },
+    {
+      "opportunity_id": "9No2UGrmUROF7q5vb7hB",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-07T11:39:14.234Z"
+    },
+    {
+      "opportunity_id": "TyngFfZDKXfORp2u27GC",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-07T04:01:46.938Z"
+    },
+    {
+      "opportunity_id": "u99Qj0CVofovmnJPZ0z3",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss HQ",
+      "utm_medium": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-06T09:05:11.729Z"
+    },
+    {
+      "opportunity_id": "orYJdn47DvsqjJhLoPJW",
+      "utm_campaign_id": "",
+      "utm_campaign": "Gp - Pain & Wounds",
+      "utm_medium": "LLA 2-4% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-06T09:03:58.227Z"
+    },
+    {
+      "opportunity_id": "mJFYCLniOJlGSguNydhp",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-06T08:37:04.852Z"
+    },
+    {
+      "opportunity_id": "Pr3SI5Xhof5RGnV5NPGJ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-06T07:59:42.464Z"
+    },
+    {
+      "opportunity_id": "Rybt7eVLIzVQlOeDFlZi",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-05T16:46:15.749Z"
+    },
+    {
+      "opportunity_id": "OvAv5VjK184XQgytB0dR",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-05T12:27:25.439Z"
+    },
+    {
+      "opportunity_id": "7AyyAemM79CAnV6vwPzr",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-05T12:13:47.949Z"
+    },
+    {
+      "opportunity_id": "ft7wllE0UP16mrQI7ePZ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-05T09:47:11.865Z"
+    },
+    {
+      "opportunity_id": "YVUNgEs8B7NbgE8CSY8D",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-05T09:14:43.120Z"
+    },
+    {
+      "opportunity_id": "RWVOAFgNDggoXg4jGS3Q",
+      "utm_campaign_id": "120215987151590335",
+      "utm_campaign": "MedWave South Africa (B2B) - Andries - Retargeting Davide Ads",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-05T08:28:43.925Z"
+    },
+    {
+      "opportunity_id": "WT6AqcBuhaVsG0NGcpze",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-loss Hq",
+      "utm_medium": "LLA 2-4% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T12:26:05.257Z"
+    },
+    {
+      "opportunity_id": "zC55aHs8BWwZVL3bz0Dy",
+      "utm_campaign_id": "120222249143130335",
+      "utm_campaign": "*New* MedWave South Africa (B2B) - Andries - April Launch",
+      "utm_medium": "Retargeting \u2013 New 3 creatives by the team",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T12:24:20.025Z"
+    },
+    {
+      "opportunity_id": "hdKLDbjLeltHb90XQoWf",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T12:14:57.602Z"
+    },
+    {
+      "opportunity_id": "prJNNCn10BCVekSZ2iTW",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T11:56:15.055Z"
+    },
+    {
+      "opportunity_id": "Hmf7ne3GkGCJb5NAx3G0",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | Ddm",
+      "utm_medium": "LLA 2-4% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T10:34:20.265Z"
+    },
+    {
+      "opportunity_id": "1z2T8wEpclDpwEfb7OK4",
+      "utm_campaign_id": "",
+      "utm_campaign": "Gp - Pain & Wounds",
+      "utm_medium": "LLA 2-4% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T09:12:08.200Z"
+    },
+    {
+      "opportunity_id": "0l6OORd1KXdrgtLbQyND",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | DDM",
+      "utm_medium": "LLA 2-4% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T08:57:04.853Z"
+    },
+    {
+      "opportunity_id": "TzVq97qDBYyZzgXUbEqv",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss Demo",
+      "utm_medium": "LLA 1-2% (ZA) | Nurse (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T08:55:32.081Z"
+    },
+    {
+      "opportunity_id": "UavRgzYCYkXdff8TsH8x",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss HQ",
+      "utm_medium": "LLA 1-2% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T08:53:32.331Z"
+    },
+    {
+      "opportunity_id": "LDuaZQJGJ46B9Sh3qmY7",
+      "utm_campaign_id": "",
+      "utm_campaign": "Weight-Loss Demo",
+      "utm_medium": "LLA 4-6% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T08:52:33.085Z"
+    },
+    {
+      "opportunity_id": "Mn3pXDR1SnFLntQyhbg6",
+      "utm_campaign_id": "",
+      "utm_campaign": "GP - Swiss Army",
+      "utm_medium": "LLA 1% (ZA) | Medical Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T08:46:45.771Z"
+    },
+    {
+      "opportunity_id": "9YSWLqnhZcmRT8Lc8ssT",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T07:47:37.955Z"
+    },
+    {
+      "opportunity_id": "dTpZMJCrpWTQbzcjzST6",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-04T06:03:52.011Z"
+    },
+    {
+      "opportunity_id": "Z5T2UvuNUn1xgDvoOKjy",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | Ddm",
+      "utm_medium": "LLA 2-4% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-01T08:10:10.373Z"
+    },
+    {
+      "opportunity_id": "Z60Qfve8AJsgsN4f2n7f",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-01T07:46:54.127Z"
+    },
+    {
+      "opportunity_id": "NX7W94YzPtTY6VqMTTFX",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | DDM",
+      "utm_medium": "LLA 2-4% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-08-01T07:25:57.347Z"
+    },
+    {
+      "opportunity_id": "HEWtMvbatn5tNJSg16oJ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-31T16:34:51.321Z"
+    },
+    {
+      "opportunity_id": "5bLqWodYEA4HT5amBc4p",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | Ddm",
+      "utm_medium": "LLA 1% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-31T14:19:31.572Z"
+    },
+    {
+      "opportunity_id": "2VPl2Xf8LxDfSR5v0pcX",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-31T14:10:21.791Z"
+    },
+    {
+      "opportunity_id": "cEsBIAvHiTbCKERi0wzs",
+      "utm_campaign_id": "120220678927050335",
+      "utm_campaign": "Matthys - 04042025 - ABOLEADFORMZA (DDM)",
+      "utm_medium": "ZACA | LLA 4-6% (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-31T13:47:25.725Z"
+    },
+    {
+      "opportunity_id": "UusGV6Cx5MtHvArPKJ6x",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-31T12:56:19.977Z"
+    },
+    {
+      "opportunity_id": "iZ3zra9NhO8J6BYkwrmQ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-31T12:31:56.375Z"
+    },
+    {
+      "opportunity_id": "xkwoVCtyUurEyN5ab73N",
+      "utm_campaign_id": "120215153586640335",
+      "utm_campaign": "MedWave South Africa (B2B) - Beauty Businesses",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-31T10:43:46.766Z"
+    },
+    {
+      "opportunity_id": "i9kCNvTgKhvqfEe21T5H",
+      "utm_campaign_id": "",
+      "utm_campaign": "Dynamic Ad | All Medical Lander (DDM)",
+      "utm_medium": "LLA 2-4% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-30T14:00:09.844Z"
+    },
+    {
+      "opportunity_id": "dCi34WNKlny2kkPYdDqW",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 300000,
+      "created_at": "2025-07-30T13:49:28.091Z"
+    },
+    {
+      "opportunity_id": "8QjbtOtJwJwo9PTGKAUJ",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | Ddm",
+      "utm_medium": "LLA 1% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-30T13:07:16.735Z"
+    },
+    {
+      "opportunity_id": "IM2lYQ6upcnBUybHwciz",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-30T12:32:33.439Z"
+    },
+    {
+      "opportunity_id": "dwPmh58KHOTJ3QhX938J",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-30T11:32:04.504Z"
+    },
+    {
+      "opportunity_id": "nKanVddLf83GqVTTvSxA",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | Ddm",
+      "utm_medium": "LLA 1% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-30T10:59:37.563Z"
+    },
+    {
+      "opportunity_id": "OFSbQGM7EhvhG0guMAN4",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-30T10:01:37.667Z"
+    },
+    {
+      "opportunity_id": "czEmXKkJF7yeziC0oJVZ",
+      "utm_campaign_id": "",
+      "utm_campaign": "Dynamic Ad | All Medical Lander (ddm)",
+      "utm_medium": "LLA 2-4% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-30T08:51:35.692Z"
+    },
+    {
+      "opportunity_id": "JPoDIImbi9yPOp5pWjrK",
+      "utm_campaign_id": "",
+      "utm_campaign": "Dynamic Ad | All Medical Lander (DDM)",
+      "utm_medium": "LLA 4-6% (ZA) | Nurse (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-30T08:07:45.954Z"
+    },
+    {
+      "opportunity_id": "07xjM7aSL4CrTFzZNThj",
+      "utm_campaign_id": "",
+      "utm_campaign": "Dynamic Ad | All Medical Lander (DDM)",
+      "utm_medium": "LLA 1-2% (ZA) | All Chiropractic (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-29T20:03:55.669Z"
+    },
+    {
+      "opportunity_id": "E9wgELcxKat0JWhT2mp9",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-29T14:21:05.718Z"
+    },
+    {
+      "opportunity_id": "VD2yzflqcZY9xaVQzGa4",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-29T09:42:23.791Z"
+    },
+    {
+      "opportunity_id": "954RX2f4A2i1tf0wWiIV",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | DDM",
+      "utm_medium": "LLA 1% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-29T07:47:12.091Z"
+    },
+    {
+      "opportunity_id": "1JZNesjMjwsv0h2t4lEa",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-28T14:30:44.869Z"
+    },
+    {
+      "opportunity_id": "vKyUWJwxkU807PhjTn8v",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-28T14:06:34.816Z"
+    },
+    {
+      "opportunity_id": "InFapRf9wd5rlAX50cVl",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | Ddm",
+      "utm_medium": "LLA 2-4% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-28T11:55:23.590Z"
+    },
+    {
+      "opportunity_id": "pjcmPnAuKbdXVn8yZH7F",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-28T11:41:50.761Z"
+    },
+    {
+      "opportunity_id": "hxswuj3oyAkKQLGhJn7S",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | Ddm",
+      "utm_medium": "LLA 1% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-28T08:49:29.921Z"
+    },
+    {
+      "opportunity_id": "q7R6XTWz2mgGkzBUvsS9",
+      "utm_campaign_id": "",
+      "utm_campaign": "Treating Diabetes | Davide",
+      "utm_medium": "LLA 1-2% (ZA) | Nurse \u2013 DD",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-28T08:21:56.498Z"
+    },
+    {
+      "opportunity_id": "rkDHASeIcq0LZ9GVFg7I",
+      "utm_campaign_id": "",
+      "utm_campaign": "Treating Diabetes | Davide",
+      "utm_medium": "LLA 4-6% (ZA) | Nurse \u2013 DD",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-28T08:20:02.443Z"
+    },
+    {
+      "opportunity_id": "5MwsnQNWu8AP4BXw3UH6",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | DDM",
+      "utm_medium": "LLA 2-4% (ZA) | Doctor (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-28T08:16:33.913Z"
+    },
+    {
+      "opportunity_id": "Q9TSBYUCzpdQ1PlSKqaD",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-25T13:07:06.956Z"
+    },
+    {
+      "opportunity_id": "4XTEOaS4beLJJrYAZauM",
+      "utm_campaign_id": "120215746862190335",
+      "utm_campaign": "MedWave South Africa (B2B) - Llewellyn Guarantee",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 300000,
+      "created_at": "2025-07-25T13:00:53.905Z"
+    },
+    {
+      "opportunity_id": "dwyJdTWMO8Px6pmohYt2",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-25T12:29:37.129Z"
+    },
+    {
+      "opportunity_id": "kZ9VQlaQgrWJTiDL4bNu",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-25T12:22:57.017Z"
+    },
+    {
+      "opportunity_id": "HmshY1RXwTAbtHf67fcQ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-25T11:45:53.467Z"
+    },
+    {
+      "opportunity_id": "Deb5AcBgvhZsSVKKlbO6",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-25T11:42:45.753Z"
+    },
+    {
+      "opportunity_id": "kpjlVH2Y7ldP7KIiaeec",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | Ddm",
+      "utm_medium": "LLA 2-4% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-25T11:37:24.149Z"
+    },
+    {
+      "opportunity_id": "ubmmPrhtrDGCCZ5IfwOA",
+      "utm_campaign_id": "",
+      "utm_campaign": "Wound Care | Ddm",
+      "utm_medium": "LLA 1% (ZA) | All Doctors (DDM)",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-25T11:32:13.814Z"
+    },
+    {
+      "opportunity_id": "GxI89H03ZDpxZDQI8EHc",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 280000,
+      "created_at": "2025-07-25T06:29:04.062Z"
+    },
+    {
+      "opportunity_id": "H40pcDilmH3tatA9CT0Q",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-24T14:46:49.325Z"
+    },
+    {
+      "opportunity_id": "KNNEZcLm9fvAUkx9SqDY",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-24T14:43:32.565Z"
+    },
+    {
+      "opportunity_id": "hrYbaiWR30UIzZDcMLcA",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-24T14:39:35.525Z"
+    },
+    {
+      "opportunity_id": "O647q4RJyN4mNvj6OI7Q",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-24T14:26:51.991Z"
+    },
+    {
+      "opportunity_id": "2zHr4NwuPGOYea4cybkr",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 200000,
+      "created_at": "2025-07-24T14:14:02.712Z"
+    },
+    {
+      "opportunity_id": "S50hMMGkmtggPMqG6s7I",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-24T12:45:51.091Z"
+    },
+    {
+      "opportunity_id": "1R5o6pRgREYak8haoc8K",
+      "utm_campaign_id": "",
+      "utm_campaign": "Treating Diabetes | Davide",
+      "utm_medium": "LLA 4-6% (ZA) | Nurse \u2013 DD",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-24T07:46:59.400Z"
+    },
+    {
+      "opportunity_id": "gPt80IfBf30XH32cyL8Z",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-23T14:17:13.821Z"
+    },
+    {
+      "opportunity_id": "ro0vRZbOImYwCnQsGNIH",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-23T14:05:07.714Z"
+    },
+    {
+      "opportunity_id": "5Jgmla8anJnTK7AaSlFe",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-23T13:58:21.596Z"
+    },
+    {
+      "opportunity_id": "26fypPRWHJfF83eKYTpu",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-22T14:26:27.581Z"
+    },
+    {
+      "opportunity_id": "sjJUuS29eZ5fcGSIGg6Q",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-22T14:21:52.626Z"
+    },
+    {
+      "opportunity_id": "Ex0MXsp7K0jO7E62FESv",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-22T14:18:02.669Z"
+    },
+    {
+      "opportunity_id": "yunUQ2RkxuCECo27fSsE",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-22T14:09:15.192Z"
+    },
+    {
+      "opportunity_id": "AdJE7kQypmiQvsGys598",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-22T14:05:19.688Z"
+    },
+    {
+      "opportunity_id": "kd5ctGdcNm1cVsPlw4cZ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-22T14:02:38.402Z"
+    },
+    {
+      "opportunity_id": "hCPmLbJPQonSM4zGrbGo",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-22T13:55:58.370Z"
+    },
+    {
+      "opportunity_id": "SQKthO00Iv3sto8R7mJU",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-22T10:49:18.658Z"
+    },
+    {
+      "opportunity_id": "gaHfXmqhbg5HuBWRHcdV",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-22T10:48:23.034Z"
+    },
+    {
+      "opportunity_id": "j2PKlkXLMWhp42BULLJc",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-22T09:57:51.783Z"
+    },
+    {
+      "opportunity_id": "hNK8lLhZT5WfPlQ9ntY2",
+      "utm_campaign_id": "",
+      "utm_campaign": "Treating Diabetes | Davide",
+      "utm_medium": "LLA 2-4% (ZA) | Nurse \u2013 DD",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T14:37:39.885Z"
+    },
+    {
+      "opportunity_id": "eQvtvx1ajYe0p2YJp6eZ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T14:36:20.107Z"
+    },
+    {
+      "opportunity_id": "zbA9faDLEZEZpBnWmlw6",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T14:35:38.808Z"
+    },
+    {
+      "opportunity_id": "6rFMueYhi7sPwFW2cJNq",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T14:28:16.598Z"
+    },
+    {
+      "opportunity_id": "M20zeUvYfiLwzvgdFBtC",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T14:23:39.976Z"
+    },
+    {
+      "opportunity_id": "dGgOR8PSgEUteIjT6yc9",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T14:19:01.166Z"
+    },
+    {
+      "opportunity_id": "20APZqz9C6zSaW8yRRvB",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T14:15:30.176Z"
+    },
+    {
+      "opportunity_id": "p6l5DaysIquIiZuTS6k7",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T14:06:41.141Z"
+    },
+    {
+      "opportunity_id": "6Aq1z9qJohtOVdFhsldJ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T14:02:23.984Z"
+    },
+    {
+      "opportunity_id": "aElWqjvEeYlJf0Jh58Ht",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T13:47:42.945Z"
+    },
+    {
+      "opportunity_id": "S6yjPO4jKHzi3kY9pZmW",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T13:45:21.735Z"
+    },
+    {
+      "opportunity_id": "qrDGN6qpGbOYKmFr3oqf",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T13:39:21.505Z"
+    },
+    {
+      "opportunity_id": "BKyuBt9KlbkGBb1vs2MP",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-21T13:34:15.681Z"
+    },
+    {
+      "opportunity_id": "7me7Vc1HnzX2U2btK4k4",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T17:05:25.885Z"
+    },
+    {
+      "opportunity_id": "PvrHr0qisQ02d5ssx7I9",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T14:37:42.722Z"
+    },
+    {
+      "opportunity_id": "vMrxkEw1bdb05bx9AcRc",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T14:19:38.061Z"
+    },
+    {
+      "opportunity_id": "d88NOW1Ptx2Cd0mmWunm",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T14:15:28.768Z"
+    },
+    {
+      "opportunity_id": "x2dFK7e5Y01oG3ZguhEb",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T14:08:17.845Z"
+    },
+    {
+      "opportunity_id": "oHLT4IOJ0vw9T7oJ02qC",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T13:59:45.912Z"
+    },
+    {
+      "opportunity_id": "L2OtSE0bYSAGoFVxKMoy",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T13:56:06.291Z"
+    },
+    {
+      "opportunity_id": "t7AL1qU8JKEdjAkzppAy",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T13:50:39.125Z"
+    },
+    {
+      "opportunity_id": "Y8uQCe6pCtWXBX92yM1r",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T13:49:58.457Z"
+    },
+    {
+      "opportunity_id": "6C1GGx6Bz8SeOzrnPFdV",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T13:43:01.022Z"
+    },
+    {
+      "opportunity_id": "DKLTSsIRxC5zG3HgCXCB",
+      "utm_campaign_id": "",
+      "utm_campaign": "Treating Diabetes | Davide",
+      "utm_medium": "LLA 4-6% (ZA) | Nurse \u2013 DD",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T07:39:39.395Z"
+    },
+    {
+      "opportunity_id": "UqAgfQdyLTYcdDzLmVWS",
+      "utm_campaign_id": "",
+      "utm_campaign": "Treating Diabetes | Davide",
+      "utm_medium": "LLA 4-6% (ZA) | Nurse \u2013 DD",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T07:37:24.898Z"
+    },
+    {
+      "opportunity_id": "C5Bc5ptjEUdshGtxVXVm",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 300000,
+      "created_at": "2025-07-18T07:33:30.700Z"
+    },
+    {
+      "opportunity_id": "Z6GuU09ssHKEGD26T2SB",
+      "utm_campaign_id": "",
+      "utm_campaign": "Treating Diabetes | Davide",
+      "utm_medium": "LLA 4-6% (ZA) | Nurse \u2013 DD",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T07:30:08.377Z"
+    },
+    {
+      "opportunity_id": "pEv3JRK3zb7hTLAK2LQk",
+      "utm_campaign_id": "",
+      "utm_campaign": "Treating Diabetes | Davide",
+      "utm_medium": "LLA 1-2% (ZA) | Nurse \u2013 DD",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-18T07:26:36.146Z"
+    },
+    {
+      "opportunity_id": "Z8FJq0oCrHiOZlFemBFI",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-17T17:26:57.925Z"
+    },
+    {
+      "opportunity_id": "N5jeuglrkqW7jaPDrz7u",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-17T12:56:48.818Z"
+    },
+    {
+      "opportunity_id": "oUMBeRdFMTXh6W8dWny3",
+      "utm_campaign_id": "120220678927050335",
+      "utm_campaign": "Matthys - 04042025 - ABOLEADFORMZA (DDM)",
+      "utm_medium": "ZACA | LLA 1% (DDM)",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-17T12:33:26.393Z"
+    },
+    {
+      "opportunity_id": "2vR8duIH8uGUiuIv7xM4",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-17T12:29:56.841Z"
+    },
+    {
+      "opportunity_id": "LGlQEeUkTlkwnLdTQehC",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-17T12:21:15.342Z"
+    },
+    {
+      "opportunity_id": "godp1k1arFj61WcBPHeo",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-17T12:17:38.617Z"
+    },
+    {
+      "opportunity_id": "8dcChR9CAP1QcsZtHsXr",
+      "utm_campaign_id": "120216480637160335",
+      "utm_campaign": "MedWave South Africa (B2B) - Davide - Retargeting 18 Feb 2025",
+      "utm_medium": "Retargeting \u2013 New Dwayne Creative",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-16T11:30:10.322Z"
+    },
+    {
+      "opportunity_id": "xN0RLarWUp8AKW3i6Jjy",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-15T13:28:22.528Z"
+    },
+    {
+      "opportunity_id": "jPe6hLsdgkE6RXSox7iQ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-15T13:25:53.401Z"
+    },
+    {
+      "opportunity_id": "7YZiRVeyet3g20hjzDYk",
+      "utm_campaign_id": null,
+      "utm_campaign": null,
+      "utm_medium": null,
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-14T17:39:44.865Z"
+    },
+    {
+      "opportunity_id": "YCci7bAVhPwVaIKlDsV3",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-14T09:16:16.815Z"
+    },
+    {
+      "opportunity_id": "XUtlpjdyovkyq8zKixle",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-14T02:50:21.224Z"
+    },
+    {
+      "opportunity_id": "5Eo4ulfB6T2TGb6UBAxo",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-13T05:59:37.454Z"
+    },
+    {
+      "opportunity_id": "7HSWyMsUuGTf3RNHHpiU",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-10T14:16:34.406Z"
+    },
+    {
+      "opportunity_id": "AZY0J4U3aShxOtgyjEv8",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-10T10:21:52.055Z"
+    },
+    {
+      "opportunity_id": "OK9YKAnAvaFQc1DIvXke",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-09T14:39:56.866Z"
+    },
+    {
+      "opportunity_id": "Zq5XdAd64a2o3Cd7s3vb",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-09T12:42:41.621Z"
+    },
+    {
+      "opportunity_id": "2iaugjf4VFWADIKhMbe1",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-09T09:46:30.798Z"
+    },
+    {
+      "opportunity_id": "rz5KUWfMFTeHZedVjFAr",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-08T14:58:39.279Z"
+    },
+    {
+      "opportunity_id": "J8FS1j91dosAsgoGkh2t",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-08T14:31:25.894Z"
+    },
+    {
+      "opportunity_id": "rPvFCKJaz9MmQcNuRZka",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-08T12:16:18.826Z"
+    },
+    {
+      "opportunity_id": "mwVWigvnBGg3GZIDFK1m",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-08T11:38:20.173Z"
+    },
+    {
+      "opportunity_id": "9jqmo7phYwP8QrFJ29pW",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-08T09:04:58.062Z"
+    },
+    {
+      "opportunity_id": "1g6t3P0QspDuRdj6kY5O",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-08T08:45:13.406Z"
+    },
+    {
+      "opportunity_id": "tp6j3tcYXQj827HexNQn",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-07T11:23:55.112Z"
+    },
+    {
+      "opportunity_id": "OCWyxoqbOebNpt1AGZPC",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-07T11:17:21.340Z"
+    },
+    {
+      "opportunity_id": "JRdzCqfDapk1hS4QgIXP",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-07T09:27:09.814Z"
+    },
+    {
+      "opportunity_id": "x9CPvXtc7gbDWYakpUub",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-07T09:21:58.807Z"
+    },
+    {
+      "opportunity_id": "gJuk1D0E3gEQjLp0fgM0",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-07T09:15:38.177Z"
+    },
+    {
+      "opportunity_id": "QERE0esSOlIWbvH39GFs",
+      "utm_campaign_id": "120222249675000335",
+      "utm_campaign": "1. MW - B2B - ZA - Aesthetic & Healthcare - 1% LAL $50 -> Andries Calendar",
+      "utm_medium": "Retargeting \u2013 New 3 creatives by the team",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-05T14:50:10.685Z"
+    },
+    {
+      "opportunity_id": "eY3ByVH20ADdkqdDh0Lx",
+      "utm_campaign_id": "120221556531500335",
+      "utm_campaign": "1. MW - B2B - ZA - Physical Therapy & Practitioner retargeting with Margo - 1% LAL $80 CBO -> Davide Calendar",
+      "utm_medium": "Doctors and Physical Therapist Interests \u2013 New Davide Ad copy 2 \u2013 Copy",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-05T14:48:51.326Z"
+    },
+    {
+      "opportunity_id": "mPRy98o9Ca9XXbWqfBQj",
+      "utm_campaign_id": "120215153586640335",
+      "utm_campaign": "MedWave South Africa (B2B) - Andries - Part Guarantee",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-05T14:45:25.211Z"
+    },
+    {
+      "opportunity_id": "NXjNBw32aInUoqR5STiv",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T14:44:21.794Z"
+    },
+    {
+      "opportunity_id": "9KsPEifUeXqzsfCuI9GT",
+      "utm_campaign_id": "120221556531500335",
+      "utm_campaign": "MedWave South Africa (B2B) - Davide - ?el=davide_za",
+      "utm_medium": "Retargeting \u2013 New Davide Ad - AdCopy 2",
+      "stage": null,
+      "monetary_value": 300000,
+      "created_at": "2025-07-05T14:43:15.102Z"
+    },
+    {
+      "opportunity_id": "FyEnICt4llpH65MW4GGV",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-05T14:39:23.050Z"
+    },
+    {
+      "opportunity_id": "QCoZbQvaYWNKXpfS06Ce",
+      "utm_campaign_id": "120216480637160335",
+      "utm_campaign": "MedWave South Africa (B2B) - Davide - Retargeting 18 Feb 2025",
+      "utm_medium": "Retargeting \u2013 New Dwayne Creative",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-05T14:38:05.236Z"
+    },
+    {
+      "opportunity_id": "64Umq9E8lSuaCEYlKn3v",
+      "utm_campaign_id": "120220678927050335",
+      "utm_campaign": "Matthys - 04042025 - ABOLEADFORMZA (DDM) - with Davide Cal Added (Colin Lagrange Only)",
+      "utm_medium": "ZACA | LLA 4-6% (DDM)",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-05T14:36:59.612Z"
+    },
+    {
+      "opportunity_id": "scQmR3nFmcUVsZkejFTg",
+      "utm_campaign_id": "120221556531500335",
+      "utm_campaign": "MedWave South Africa (B2B) - Davide - Medical Business Owners",
+      "utm_medium": "Retargeting \u2013 New Davide Ad - AdCopy 2",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-05T14:36:17.297Z"
+    },
+    {
+      "opportunity_id": "vNrrZczZhceHTOmhkp2w",
+      "utm_campaign_id": "120222249675000335",
+      "utm_campaign": "1. MW - B2B - ZA - Aesthetic & Healthcare - 1% LAL $50 -> Andries Calendar",
+      "utm_medium": "Retargeting \u2013 New 3 creatives by the team",
+      "stage": null,
+      "monetary_value": 200000,
+      "created_at": "2025-07-05T14:35:29.784Z"
+    },
+    {
+      "opportunity_id": "WMk5g7hTZbc1zMtPAKWU",
+      "utm_campaign_id": "120215746862190335",
+      "utm_campaign": "MedWave South Africa (B2B) - Llewellyn Guarantee",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 250000,
+      "created_at": "2025-07-05T14:34:43.092Z"
+    },
+    {
+      "opportunity_id": "BId8btxBM68JtqbcQvlU",
+      "utm_campaign_id": "120220678927050335",
+      "utm_campaign": "Matthys - 04042025 - ABOLEADFORMZA (DDM) - with Davide Cal Added (Colin Lagrange Only)",
+      "utm_medium": "ZACA | LLA 4-6% (DDM)",
+      "stage": null,
+      "monetary_value": 200000,
+      "created_at": "2025-07-05T14:32:15.354Z"
+    },
+    {
+      "opportunity_id": "B3taZfkRH1rKEsER495b",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 275000,
+      "created_at": "2025-07-05T14:28:45.108Z"
+    },
+    {
+      "opportunity_id": "vrmUWTMpyBl05jvjB3hl",
+      "utm_campaign_id": "120222249675000335",
+      "utm_campaign": "1. MW - B2B - ZA - Aesthetic & Healthcare - 1% LAL $50 -> Andries Calendar",
+      "utm_medium": "Retargeting \u2013 New 3 creatives by the team",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T14:17:52.029Z"
+    },
+    {
+      "opportunity_id": "uUaqjrhbMqtm9O1l2h7O",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T14:15:18.563Z"
+    },
+    {
+      "opportunity_id": "OsmlUFtkya7S173yynNd",
+      "utm_campaign_id": "120222249143130335",
+      "utm_campaign": "*New* MedWave South Africa (B2B) - Andries - April Launch",
+      "utm_medium": "Retargeting \u2013 New 3 creatives by the team",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T14:13:59.474Z"
+    },
+    {
+      "opportunity_id": "WeFD9Ey48rM6STvI6tDh",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T14:13:22.482Z"
+    },
+    {
+      "opportunity_id": "aw8NMXDHT8eaQb6P8NWZ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T14:09:52.287Z"
+    },
+    {
+      "opportunity_id": "bylXxSXTN67Fbz7K4gR7",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T14:08:43.375Z"
+    },
+    {
+      "opportunity_id": "ayv51bRmXg6sYHY8tlAV",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 112500,
+      "created_at": "2025-07-05T14:07:24.350Z"
+    },
+    {
+      "opportunity_id": "lxYGZiL6X8m6E2VSmBoS",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T14:04:16.130Z"
+    },
+    {
+      "opportunity_id": "Ex0Id5lqz7MYEXVFrRkA",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T14:03:32.375Z"
+    },
+    {
+      "opportunity_id": "oBS2Lzqs2q26Z6X1cAVY",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T13:56:35.383Z"
+    },
+    {
+      "opportunity_id": "073BBTu7w7gPBqLcoZyg",
+      "utm_campaign_id": "120215746862190335",
+      "utm_campaign": "MedWave South Africa (B2B) - Llewellyn Guarantee",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T13:55:38.740Z"
+    },
+    {
+      "opportunity_id": "vrSKg6qU68QsaEGwxiV0",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T07:01:15.342Z"
+    },
+    {
+      "opportunity_id": "BvEcoDDsuilRtMKEPHnu",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-05T06:56:40.027Z"
+    },
+    {
+      "opportunity_id": "s1YARvwo0XGkRL1ovPmt",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-04T14:55:57.755Z"
+    },
+    {
+      "opportunity_id": "Isu6bkDb81CT9BbKxSyY",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-04T10:57:52.068Z"
+    },
+    {
+      "opportunity_id": "nv3HqBgbjGv1y4KIp1iZ",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-04T10:53:27.836Z"
+    },
+    {
+      "opportunity_id": "EgHqaWgdupLoWLWwhYEH",
+      "utm_campaign_id": "",
+      "utm_campaign": "",
+      "utm_medium": "",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-07-04T10:24:52.743Z"
+    },
+    {
+      "opportunity_id": "ut4aITiRHNeRh1JuB3Kb",
+      "utm_campaign_id": "120215987151590335",
+      "utm_campaign": "MedWave South Africa (B2B) - Andries - Retargeting Davide Ads",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-02-16T12:44:38.026Z"
+    },
+    {
+      "opportunity_id": "D7lTZTtJfkXMNcDV7UzQ",
+      "utm_campaign_id": "120215153586640335",
+      "utm_campaign": "MedWave South Africa (B2B) - Andries - Part Guarantee",
+      "utm_medium": "General Campaign - Retargeting \u2013 New spa walkthrough",
+      "stage": null,
+      "monetary_value": 0,
+      "created_at": "2025-02-14T06:22:52.716Z"
+    }
+  ]
+}

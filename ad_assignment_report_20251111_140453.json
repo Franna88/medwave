@@ -1,0 +1,666 @@
+{
+  "summary": {
+    "total": 943,
+    "with_h_ad_id": 231,
+    "assigned_exact": 0,
+    "assigned_fuzzy": 6,
+    "assigned_campaign_only": 0,
+    "assigned_name_only": 0,
+    "unassigned": 517,
+    "unassigned_reasons": {
+      "no_utm_data": 340,
+      "no_campaign_id": 141,
+      "no_matching_ad_found": 36
+    }
+  },
+  "total_assigned": 237,
+  "mappings_count": 426,
+  "unmatched_count": 517,
+  "unmatched_sample": [
+    {
+      "opportunity_id": "akG01b1eadPEY2rCPHlF",
+      "opportunity_name": "Karin Duranti",
+      "reason": "no_utm_data",
+      "utm_data": {},
+      "created_at": "2025-11-11T07:39:44.292Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "hbMSzADSewxSKojZq9B0",
+      "opportunity_name": "Lehlogonolo George Mokubedi",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "ad_name": "Practitioners Image",
+        "adset_name": "Interests - Healthcare and medical services (DDM)"
+      },
+      "created_at": "2025-11-10T19:30:10.471Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "ZmNkIa1S8U0BzVyReVQq",
+      "opportunity_name": "Arleen Healing Hands",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-10T16:56:55.852Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "ELClXmcIT8ZexqRnCimJ",
+      "opportunity_name": "Kerry Meyerson",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-10T16:22:59.815Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "SDiC4hoM4uNPeA7ekm6A",
+      "opportunity_name": "Nadia Searle",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-10T14:34:44.833Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "DN256DIdP1ysMfayceCS",
+      "opportunity_name": "Tasfiyah Rasool",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-10T14:15:26.451Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "EivgiyfzilkSy4rKqapf",
+      "opportunity_name": "Grant MacFarlane",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-10T13:48:29.605Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "fDnU58hiB4BV2oZk5fBx",
+      "opportunity_name": "Sunet Lombard",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-10T07:15:47.742Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "HLdCylcb9uV4cNaQgGC7",
+      "opportunity_name": "Lwandlekazi Mbadamana",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-10T05:34:52.593Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "JM5vlYHFnqSZpf2nmzhg",
+      "opportunity_name": "Zahraa Kazee",
+      "reason": "no_matching_ad_found",
+      "utm_data": {
+        "campaign_id": "120220678927050335",
+        "campaign_name": "facebook",
+        "ad_name": "Matthys - 04042025 - ABOLEADFORMZA (DDM) - with Davide Cal Added (Colin Lagrange Only)",
+        "adset_name": "ZACA | LLA 2-4% (DDM) \u2013 Davide cal"
+      },
+      "created_at": "2025-11-08T14:32:07.798Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "WEWLMrMqEnFCDsRD0Otz",
+      "opportunity_name": "Gladys Witbooi",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-08T06:41:19.593Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "nmJ3dJSfLCXHbbsb8YAT",
+      "opportunity_name": "Azwitamisi Mavhungu",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-07T20:45:58.469Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "8llPB4xFKj7YMsy9PTnC",
+      "opportunity_name": "Ashwin Kassan",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-07T20:33:37.945Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "9erDmSZYzxtTXGETrZ08",
+      "opportunity_name": "Candice Van Eck",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-06T13:19:30.737Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "mMBIlHsQsLbPAVwXpAFl",
+      "opportunity_name": "Satchie Pillay (Ramanee Pillay)",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-06T12:51:28.624Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "lQgnIajkPE9XKdNTuK9v",
+      "opportunity_name": "Zandre Roos",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-06T06:48:05.049Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "w8ITDhNt7x10qWYf6QYB",
+      "opportunity_name": "Carlien Kapp",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "ad_name": "B2B October 2025",
+        "adset_name": "Interests - Everything Doctor (DDM)"
+      },
+      "created_at": "2025-11-06T04:21:53.919Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "4WmqeInGeT7x2jNTht40",
+      "opportunity_name": "Christien van den Hoeck",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "ad_name": "B2B October 2025",
+        "adset_name": "Interests - Everything Doctor (DDM)"
+      },
+      "created_at": "2025-11-05T22:55:38.459Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "rHYc3jSjqImEaLTeevHx",
+      "opportunity_name": "Linda Mgweba",
+      "reason": "no_matching_ad_found",
+      "utm_data": {
+        "campaign_id": "120220678927050335",
+        "campaign_name": "facebook",
+        "ad_name": "Matthys - 04042025 - ABOLEADFORMZA (DDM)",
+        "adset_name": "ZACA | LLA 4-6% (DDM)"
+      },
+      "created_at": "2025-11-05T10:54:20.050Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "ZWWIBmsm6FzG8gNNMtHA",
+      "opportunity_name": "Onica Molwele",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-05T09:04:40.406Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "sZeEuNabHoIuszmBBNJc",
+      "opportunity_name": "Bianca Vermaak",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 13102025 - ABOLANDER - Varied",
+        "ad_name": "MedWave Image Ads",
+        "adset_name": "LLA 1% (ZA) | Grouped"
+      },
+      "created_at": "2025-11-05T07:48:31.082Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "pI0NOGrz4b7vsbwm0f1B",
+      "opportunity_name": "Kobus Theron",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-04T15:05:52.159Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "S9d3d9FFRAOycQJyXbgs",
+      "opportunity_name": "Gerald Fourie",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 17092025 - ABOLANDER - Varied",
+        "ad_name": "MedWave Image Ads",
+        "adset_name": "LLA 1% (ZA) | Grouped"
+      },
+      "created_at": "2025-11-04T10:41:15.390Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "AJMEqo394QLxwnt1e82l",
+      "opportunity_name": "Arinda Botha",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "ad_name": "AI Proof - DDM",
+        "adset_name": "Interests - Everything Doctor (DDM)"
+      },
+      "created_at": "2025-11-04T09:46:36.344Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "gorsSpa36y9H4eD1rHOU",
+      "opportunity_name": "Lynita Greyling",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-03T16:30:19.949Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "27WqRm3fZjIZqsBRVi2W",
+      "opportunity_name": "Greshan Padiachy",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-11-03T11:37:04.187Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "DvOFyEARXsgBKBsbG63G",
+      "opportunity_name": "Pritesh Modi",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 13102025 - ABOLANDER - Varied",
+        "ad_name": "MedWave Image Ads",
+        "adset_name": "LLA 1% (ZA) | Grouped"
+      },
+      "created_at": "2025-11-02T10:07:05.065Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "lEGvlCN6ryTGtwjs1MDu",
+      "opportunity_name": "Hanlie de Wet",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "ad_name": "Obesity - Andries - DDM",
+        "adset_name": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)"
+      },
+      "created_at": "2025-11-01T09:59:00.139Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "rW0Yt8MYuDfVEwXPxtC3",
+      "opportunity_name": "Bev Gradidge",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-10-31T12:47:39.324Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "KDxdx338vflZwlcEhA2p",
+      "opportunity_name": "Dr. Marita Boshoff",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 13102025 - ABOLANDER - Varied",
+        "ad_name": "MedWave Image Ads",
+        "adset_name": "LLA 1% (ZA) | Grouped"
+      },
+      "created_at": "2025-10-31T08:15:47.191Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "UCqwwfaT71TkUhIPePjN",
+      "opportunity_name": "Johannamarie Beyers",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 13102025 - ABOLANDER - Varied",
+        "ad_name": "MedWave Image Ads",
+        "adset_name": "LLA 1% (ZA) | Grouped"
+      },
+      "created_at": "2025-10-31T08:09:44.346Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "REBzinFH6z0MzwhjmyoU",
+      "opportunity_name": "Sydney Hall",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-10-30T11:53:53.026Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "rFMGczVTvV2T7bt0VFic",
+      "opportunity_name": "Daniela Dos Santos",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-10-30T08:31:02.844Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "6PGPtCWIPG96tjyshcJq",
+      "opportunity_name": "Tracey Stewart\u2019",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "ad_name": "Obesity - Andries - DDM",
+        "adset_name": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)"
+      },
+      "created_at": "2025-10-30T06:27:53.249Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "jjfVj6x6vdiHvyJXcnI3",
+      "opportunity_name": "Fiona Francis",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-10-29T13:53:07.875Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "EsTK4zjQSU8kkKyiUxsA",
+      "opportunity_name": "Retha Du Toit",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 24072025 ABOLEAD [Wounds] (DDM)",
+        "ad_name": "Wound Care | DDM",
+        "adset_name": "LLA 1% (ZA) | All Doctors (DDM)"
+      },
+      "created_at": "2025-10-29T07:58:53.760Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "znCqsTfqnfub6JbuEZcT",
+      "opportunity_name": "Safiyya Bhyat",
+      "reason": "no_matching_ad_found",
+      "utm_data": {
+        "campaign_id": "120215987151590335",
+        "campaign_name": "facebook",
+        "ad_name": "MedWave South Africa (B2B) - Andries - Retargeting Davide Ads",
+        "adset_name": "General Campaign - Retargeting \u2013 New spa walkthrough"
+      },
+      "created_at": "2025-10-28T13:44:10.444Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "GvUrrzJQQ0485C4vWeUg",
+      "opportunity_name": "Jack Jack",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-10-28T11:32:25.456Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "VuKg1WZ0RN6r6Gq9eSdU",
+      "opportunity_name": "Tandeka Jack",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 17092025 - ABOLANDER - Varied",
+        "ad_name": "MedWave Image Ads",
+        "adset_name": "LLA 1% (ZA) | Grouped"
+      },
+      "created_at": "2025-10-28T11:23:16.555Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "vcZsbs6wCstNhQgkFPj7",
+      "opportunity_name": "Sashni Ramjee",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-10-28T11:22:24.473Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "8mVPUTaIxaDbDEqB2Xns",
+      "opportunity_name": "Tasleen Dawood",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 13102025 - ABOLANDER - Varied",
+        "ad_name": "MedWave Image Ads",
+        "adset_name": "LLA 1% (ZA) | Grouped"
+      },
+      "created_at": "2025-10-28T09:41:17.562Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "tq1rzWkgZ3DhufRKyRfi",
+      "opportunity_name": "Lizelle Bresler",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 13102025 - ABOLANDER - Varied",
+        "ad_name": "MedWave Image Ads",
+        "adset_name": "LLA 1% (ZA) | Grouped"
+      },
+      "created_at": "2025-10-28T09:16:31.053Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "y0EF4l4LovI4v4f1sMhG",
+      "opportunity_name": "Nadia Harris",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-10-28T08:54:47.955Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "JDynGtHVkkKWH4XuJ5NF",
+      "opportunity_name": "Andries Maritz",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-10-27T21:02:34.231Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "URCIEwK4zsRPl5v9felL",
+      "opportunity_name": "Elemer Veres",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-10-27T18:25:35.305Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "D2HBqsjtg3BLYSI3jO7g",
+      "opportunity_name": "Terri Pickels",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-10-27T07:51:45.305Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "bXlhmQinabM2W9GGEQp4",
+      "opportunity_name": "Janine Taljaard",
+      "reason": "no_utm_data",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "",
+        "ad_name": "",
+        "adset_name": ""
+      },
+      "created_at": "2025-10-27T07:15:44.693Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "8ELixdmGMncQXd3Tc8CA",
+      "opportunity_name": "Anita Griesel",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "ad_name": "Obesity - Andries - DDM",
+        "adset_name": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)"
+      },
+      "created_at": "2025-10-25T16:18:31.932Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    },
+    {
+      "opportunity_id": "yruaku0qkjoQXZrC6A6S",
+      "opportunity_name": "Chantell Du Plessis",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "ad_name": "COLIN LAGRANGE (DDM)",
+        "adset_name": "Interests - Everything Doctor (DDM)"
+      },
+      "created_at": "2025-10-25T05:47:41.049Z",
+      "pipeline_id": "XeAGJWRnUGJ5tuhXam2g"
+    },
+    {
+      "opportunity_id": "eiCuo8OexQbhQJpO9hka",
+      "opportunity_name": "Nafeesa Bhamjee",
+      "reason": "no_campaign_id",
+      "utm_data": {
+        "campaign_id": "",
+        "campaign_name": "Matthys - 13102025 - ABOLANDER - Varied",
+        "ad_name": "MedWave Image Ads",
+        "adset_name": "LLA 1% (ZA) | Grouped"
+      },
+      "created_at": "2025-10-24T13:52:46.087Z",
+      "pipeline_id": "AUduOJBB2lxlsEaNmlJz"
+    }
+  ]
+}

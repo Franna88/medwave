@@ -45,11 +45,12 @@ import 'screens/admin/admin_provider_approvals_screen.dart';
 import 'screens/admin/admin_sales_performance_screen.dart';
 import 'screens/admin/admin_analytics_screen.dart';
 import 'screens/admin/admin_patient_management_screen.dart';
-import 'screens/admin/admin_advert_performance_screen.dart';
 import 'screens/admin/adverts/admin_adverts_overview_screen.dart';
 import 'screens/admin/adverts/admin_adverts_campaigns_screen.dart';
+import 'screens/admin/adverts/admin_adverts_campaigns_old_screen.dart';
 import 'screens/admin/adverts/admin_adverts_ads_screen.dart';
 import 'screens/admin/adverts/admin_adverts_products_screen.dart';
+import 'screens/admin/adverts/admin_adverts_timeline_screen.dart';
 import 'screens/admin/admin_user_management_screen.dart';
 import 'screens/admin/admin_report_builder_screen.dart';
 import 'providers/auth_provider.dart';
@@ -342,7 +343,13 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         GoRoute(
           path: '/admin/adverts',
           name: 'admin-adverts',
-          builder: (context, state) => const AdminAdvertPerformanceScreen(),
+          redirect: (context, state) {
+            // Redirect base route to overview
+            if (state.uri.path == '/admin/adverts') {
+              return '/admin/adverts/overview';
+            }
+            return null; // Allow sub-routes to proceed
+          },
           routes: [
             // Sub-routes for Advertisement Performance
             GoRoute(
@@ -356,9 +363,19 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
               builder: (context, state) => const AdminAdvertsCampaignsScreen(),
             ),
             GoRoute(
+              path: 'campaigns-old',
+              name: 'admin-adverts-campaigns-old',
+              builder: (context, state) => const AdminAdvertsCampaignsOldScreen(),
+            ),
+            GoRoute(
               path: 'ads',
               name: 'admin-adverts-ads',
               builder: (context, state) => const AdminAdvertsAdsScreen(),
+            ),
+            GoRoute(
+              path: 'timeline',
+              name: 'admin-adverts-timeline',
+              builder: (context, state) => const AdminAdvertsTimelineScreen(),
             ),
             GoRoute(
               path: 'products',

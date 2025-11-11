@@ -1,0 +1,102 @@
+================================================================================
+GHL OPPORTUNITY API - QUICK REFERENCE
+================================================================================
+
+📍 API ENDPOINT:
+GET https://services.leadconnectorhq.com/opportunities/search
+
+🔑 HEADERS:
+Authorization: Bearer pit-22f8af95-3244-41e7-9a52-22c87b166f5a
+Version: 2021-07-28
+
+📊 PARAMETERS:
+location_id: QdLXaFEqrdF0JbVbpKLw
+limit: 100
+page: 1, 2, 3...
+
+🎯 PIPELINE IDS:
+Andries: XeAGJWRnUGJ5tuhXam2g
+Davide: AUduOJBB2lxlsEaNmlJz
+
+⚠️  IMPORTANT: Use PAGE-BASED pagination, NOT cursor-based!
+Correct: params = {'page': 1, 'limit': 100}
+Wrong: params = {'startAfterId': cursor}
+
+================================================================================
+KEY OPPORTUNITY FIELDS
+================================================================================
+
+opportunity.id                         → Opportunity ID
+opportunity.name                       → Contact name (e.g., "NADIA HARRIS")
+opportunity.pipelineId                 → Pipeline ID
+opportunity.pipelineStageName          → Stage name (e.g., "Deposit Received")
+opportunity.monetaryValue              → ⭐ CASH AMOUNT (e.g., 300000 = R 300,000)
+opportunity.createdAt                  → Timestamp
+
+⭐ ATTRIBUTION FIELDS (for matching to Facebook ads):
+opportunity.attributions[].utmAdId     → Ad ID (TIER 1 - best, only 24%)
+opportunity.attributions[].utmCampaignId → Campaign ID (TIER 2 - good, 24%)
+opportunity.attributions[].utmCampaign → Ad Name (TIER 3 - ok, 18%)
+opportunity.attributions[].utmMedium   → AdSet Name (TIER 4 - last resort)
+
+📖 See MULTI_LEVEL_MATCHING_STRATEGY.md for complete matching guide
+
+================================================================================
+STAGE NAMES (Andries Pipeline)
+================================================================================
+
+✅ "Deposit Received"  ← Use this, NOT "Deposit Paid"
+✅ "Cash Collected"
+✅ "Appointment Booked"
+✅ "New Lead"
+✅ "Paid"
+✅ "Completed"
+
+================================================================================
+PYTHON QUICK START
+================================================================================
+
+import requests
+
+headers = {
+    'Authorization': 'Bearer pit-22f8af95-3244-41e7-9a52-22c87b166f5a',
+    'Version': '2021-07-28'
+}
+
+params = {
+    'location_id': 'QdLXaFEqrdF0JbVbpKLw',
+    'limit': 100,
+    'page': 1
+}
+
+response = requests.get(
+    'https://services.leadconnectorhq.com/opportunities/search',
+    headers=headers,
+    params=params
+)
+
+opportunities = response.json()['opportunities']
+
+# Filter to Andries Pipeline
+andries_opps = [
+    o for o in opportunities 
+    if o['pipelineId'] == 'XeAGJWRnUGJ5tuhXam2g'
+]
+
+# Get deposits
+deposits = [
+    o for o in andries_opps 
+    if 'Deposit Received' in o['pipelineStageName']
+]
+
+# Extract data
+for opp in deposits:
+    print(f"{opp['name']}: R {opp['monetaryValue']:,.2f}")
+    
+    # Get Facebook Ad ID
+    for attr in opp.get('attributions', []):
+        if attr.get('h_ad_id'):
+            print(f"  Ad ID: {attr['h_ad_id']}")
+
+================================================================================
+

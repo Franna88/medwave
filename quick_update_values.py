@@ -19,7 +19,7 @@ except:
 db = firestore.client()
 
 # GHL API Configuration
-GHL_API_KEY = os.getenv('GHL_API_KEY', 'pit-e305020a-9a42-4290-a052-daf828c3978e')
+GHL_API_KEY = os.getenv('GHL_API_KEY', 'pit-22f8af95-3244-41e7-9a52-22c87b166f5a')
 GHL_LOCATION_ID = "QdLXaFEqrdF0JbVbpKLw"
 DAVIDE_PIPELINE_ID = "AUduOJBB2lxlsEaNmlJz"
 

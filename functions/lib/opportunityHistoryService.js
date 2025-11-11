@@ -58,7 +58,168 @@ function matchStageCategory(stageName) {
 }
 
 /**
+ * Calculate week ID from timestamp for advertData weekly structure
+ */
+function calculateWeekId(timestamp) {
+  const date = new Date(timestamp);
+  
+  // Get start of week (Monday)
+  const dayOfWeek = date.getDay();
+  const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 0, need to go back 6 days
+  
+  const startOfWeek = new Date(date);
+  startOfWeek.setDate(date.getDate() - daysToMonday);
+  startOfWeek.setHours(0, 0, 0, 0);
+  
+  // Get end of week (Sunday)
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+  
+  const formatDate = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  return `${formatDate(startOfWeek)}_${formatDate(endOfWeek)}`;
+}
+
+/**
+ * Calculate month key from timestamp for month-first structure
+ */
+function calculateMonthKey(timestamp) {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+/**
+ * Get or create assigned Ad ID for an opportunity
+ * Checks ghlOpportunityMapping collection first, creates mapping if needed
+ */
+async function getAssignedAdId(opportunityId, utmData, db) {
+  try {
+    // Check if mapping already exists
+    const mappingRef = db.collection('ghlOpportunityMapping').doc(opportunityId);
+    const mappingDoc = await mappingRef.get();
+    
+    if (mappingDoc.exists) {
+      const data = mappingDoc.data();
+      console.log(`   ✅ Found existing mapping for opportunity ${opportunityId} → ${data.assigned_ad_id}`);
+      return data.assigned_ad_id;
+    }
+    
+    // No mapping exists - try to create one
+    console.log(`   🔍 No mapping found for opportunity ${opportunityId}, attempting to assign...`);
+    
+    const { facebookAdId, utmCampaignId, utmCampaign, utmMedium } = utmData;
+    
+    // Priority 1: Use facebookAdId if available
+    if (facebookAdId) {
+      console.log(`   ✅ Using original h_ad_id: ${facebookAdId}`);
+      
+      // Store mapping for future use
+      await mappingRef.set({
+        opportunity_id: opportunityId,
+        assigned_ad_id: facebookAdId,
+        assignment_method: 'original_h_ad_id',
+        assigned_at: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      return facebookAdId;
+    }
+    
+    // Priority 2: Match by Campaign ID + Ad Name
+    if (utmCampaignId && utmCampaign) {
+      // Query advertData to find ad with matching campaign and name
+      const monthsSnapshot = await db.collection('advertData').get();
+      
+      for (const monthDoc of monthsSnapshot.docs) {
+        const monthData = monthDoc.data();
+        
+        // Skip old structure documents
+        if (monthData.adId) continue;
+        
+        // Search ads in this month
+        const adsSnapshot = await monthDoc.ref.collection('ads')
+          .where('campaignId', '==', utmCampaignId)
+          .get();
+        
+        for (const adDoc of adsSnapshot.docs) {
+          const adData = adDoc.data();
+          const adName = (adData.adName || '').toLowerCase().trim();
+          const searchName = (utmCampaign || '').toLowerCase().trim();
+          
+          if (adName === searchName) {
+            console.log(`   ✅ Assigned by Campaign + Name: ${adDoc.id}`);
+            
+            // Store mapping
+            await mappingRef.set({
+              opportunity_id: opportunityId,
+              assigned_ad_id: adDoc.id,
+              assignment_method: 'campaign_id_and_ad_name',
+              campaign_id: utmCampaignId,
+              ad_name: utmCampaign,
+              assigned_at: admin.firestore.FieldValue.serverTimestamp()
+            });
+            
+            return adDoc.id;
+          }
+        }
+      }
+    }
+    
+    // Priority 3: Match by Campaign ID only (assign to first ad in campaign)
+    if (utmCampaignId) {
+      const monthsSnapshot = await db.collection('advertData').get();
+      
+      for (const monthDoc of monthsSnapshot.docs) {
+        const monthData = monthDoc.data();
+        
+        // Skip old structure documents
+        if (monthData.adId) continue;
+        
+        // Search ads in this month
+        const adsSnapshot = await monthDoc.ref.collection('ads')
+          .where('campaignId', '==', utmCampaignId)
+          .limit(1)
+          .get();
+        
+        if (!adsSnapshot.empty) {
+          const adDoc = adsSnapshot.docs[0];
+          console.log(`   ⚠️  Assigned by Campaign only: ${adDoc.id}`);
+          
+          // Store mapping
+          await mappingRef.set({
+            opportunity_id: opportunityId,
+            assigned_ad_id: adDoc.id,
+            assignment_method: 'campaign_id_only',
+            campaign_id: utmCampaignId,
+            assigned_at: admin.firestore.FieldValue.serverTimestamp(),
+            note: 'Assigned to first ad in campaign (no ad name match)'
+          });
+          
+          return adDoc.id;
+        }
+      }
+    }
+    
+    // Could not assign
+    console.log(`   ❌ Could not assign Ad ID for opportunity ${opportunityId}`);
+    return null;
+    
+  } catch (error) {
+    console.error(`   ⚠️  Error getting assigned Ad ID for opportunity ${opportunityId}:`, error.message);
+    return null;
+  }
+}
+
+/**
  * Store a stage transition in Firestore
+ * Also updates advertData collection weekly metrics if facebookAdId exists
  */
 async function storeStageTransition(data) {
   const {
@@ -80,7 +241,8 @@ async function storeStageTransition(data) {
     assignedTo = 'unassigned',
     assignedToName = 'Unassigned',
     monetaryValue = 0,
-    isBackfilled = false
+    isBackfilled = false,
+    facebookAdId = '' // h_ad_id parameter
   } = data;
 
   const timestamp = admin.firestore.Timestamp.now();
@@ -105,8 +267,8 @@ async function storeStageTransition(data) {
     adId,
     adName,
     adSetName,
-    // These fields will be populated by the matching function during sync
-    facebookAdId: '',
+    // Store Facebook Ad ID for matching
+    facebookAdId: facebookAdId,
     matchedAdSetId: '',
     matchedAdSetName: '',
     assignedTo,
@@ -127,6 +289,65 @@ async function storeStageTransition(data) {
   await db.collection('opportunityStageHistory').doc(docId).set(historyDoc);
   
   console.log(`✅ Stored stage transition: ${opportunityName} → ${newStageName} (${stageCategory})`);
+  
+  // Also update advertData collection using ghlOpportunityMapping
+  try {
+    // Get assigned Ad ID from mapping (or create new mapping)
+    const utmData = {
+      facebookAdId: facebookAdId || '',
+      utmCampaignId: adId || '', // adId parameter contains utmCampaignId
+      utmCampaign: adName || '', // adName parameter contains utmCampaign (ad name)
+      utmMedium: adSetName || '' // adSetName parameter contains utmMedium
+    };
+    
+    const assignedAdId = await getAssignedAdId(opportunityId, utmData, db);
+    
+    if (assignedAdId) {
+      const weekId = calculateWeekId(timestamp.toDate());
+      const monthKey = calculateMonthKey(timestamp.toDate());
+      
+      // Write to month-first structure: advertData/{month}/ads/{adId}/ghlWeekly/{weekId}
+      const weeklyRef = db.collection('advertData').doc(monthKey)
+        .collection('ads').doc(assignedAdId)
+        .collection('ghlWeekly').doc(weekId);
+      
+      const increments = {
+        leads: admin.firestore.FieldValue.increment(1),
+        bookedAppointments: admin.firestore.FieldValue.increment(stageCategory === 'bookedAppointments' ? 1 : 0),
+        deposits: admin.firestore.FieldValue.increment(stageCategory === 'deposits' ? 1 : 0),
+        cashCollected: admin.firestore.FieldValue.increment(stageCategory === 'cashCollected' ? 1 : 0),
+        cashAmount: admin.firestore.FieldValue.increment(
+          (stageCategory === 'deposits' || stageCategory === 'cashCollected') ? (monetaryValue || 0) : 0
+        ),
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      await weeklyRef.set(increments, { merge: true });
+      
+      // Also update hasGHLData and lastGHLSync in ad document
+      const adRef = db.collection('advertData').doc(monthKey)
+        .collection('ads').doc(assignedAdId);
+      
+      await adRef.update({
+        hasGHLData: true,
+        lastGHLSync: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      // Update month summary
+      const monthRef = db.collection('advertData').doc(monthKey);
+      await monthRef.set({
+        adsWithGHLData: admin.firestore.FieldValue.increment(1),
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      console.log(`   ✅ Updated advertData/${monthKey}/ads/${assignedAdId}/ghlWeekly/${weekId}`);
+    } else {
+      console.log(`   ⚠️  No Ad ID assigned for opportunity ${opportunityId}, skipping advertData update`);
+    }
+  } catch (error) {
+    console.error(`   ⚠️ Error updating advertData for opportunity ${opportunityId}:`, error.message);
+    // Don't fail the whole transaction if advertData update fails
+  }
   
   return docId;
 }
@@ -580,6 +801,9 @@ async function syncOpportunitiesFromAPI(opportunities, pipelineStages, users) {
         const adName = lastAttribution?.utmContent || adId;
         const adSetName = lastAttribution?.utmAdset || lastAttribution?.adset || '';
         
+        // Extract Facebook Ad ID from h_ad_id parameter
+        const facebookAdId = lastAttribution?.h_ad_id || lastAttribution?.hAdId || '';
+        
         const assignedTo = opportunity.assignedTo || 'unassigned';
         const assignedToName = users[assignedTo]?.name || users[assignedTo]?.email || assignedTo;
 
@@ -602,7 +826,8 @@ async function syncOpportunitiesFromAPI(opportunities, pipelineStages, users) {
           assignedTo,
           assignedToName,
           monetaryValue: opportunity.monetaryValue || 0,
-          isBackfilled: false
+          isBackfilled: false,
+          facebookAdId // Pass the Facebook Ad ID
         });
 
         stats.synced++;

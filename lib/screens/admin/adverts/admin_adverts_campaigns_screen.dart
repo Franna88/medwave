@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/performance_cost_provider.dart';
@@ -14,26 +15,117 @@ class AdminAdvertsCampaignsScreen extends StatefulWidget {
 }
 
 class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScreen> {
-  String _dateFilter = 'all';
+  String _monthFilter = 'thismonth'; // Primary filter: default to current month
+  String _dateFilter = 'all'; // Secondary filter: date range within selected months
 
   @override
   void initState() {
     super.initState();
-    // Initialize providers
+    // Load available months only (don't load data yet - let user select month first)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final perfProvider = context.read<PerformanceCostProvider>();
-      final ghlProvider = context.read<GoHighLevelProvider>();
-      
-      if (!perfProvider.isInitialized) {
-        perfProvider.initialize().then((_) {
-          perfProvider.mergeWithCumulativeData(ghlProvider);
-        });
-      }
-      
-      if (!ghlProvider.isInitialized) {
-        ghlProvider.initialize();
-      }
+      _loadAvailableMonthsOnly();
     });
+  }
+  
+  /// Load only the available months list without loading ad data
+  Future<void> _loadAvailableMonthsOnly() async {
+    final perfProvider = context.read<PerformanceCostProvider>();
+    
+    if (!perfProvider.isInitialized) {
+      // Only load months, don't fetch ad data yet
+      await perfProvider.loadAvailableMonths();
+    }
+  }
+
+  /// Load data with current month and date filters
+  Future<void> _loadDataWithFilters() async {
+    final perfProvider = context.read<PerformanceCostProvider>();
+    final ghlProvider = context.read<GoHighLevelProvider>();
+    
+    if (!perfProvider.isInitialized) {
+      await perfProvider.initialize();
+    }
+    
+    // Calculate months to query based on month filter
+    final months = _calculateMonthsToQuery(_monthFilter, perfProvider.availableMonths);
+    
+    // Calculate date range based on date filter (for client-side filtering)
+    final dateRange = _calculateDateRange(_dateFilter);
+    
+    if (kDebugMode) {
+      print('🔄 LOADING DATA WITH FILTERS:');
+      print('   Month Filter: $_monthFilter');
+      print('   Months to Query: $months');
+      print('   Date Filter: $_dateFilter');
+      print('   Date Range: ${dateRange['start']?.toIso8601String() ?? "any"} to ${dateRange['end']?.toIso8601String() ?? "any"}');
+    }
+    
+    // Load data with months and optional date range
+    await perfProvider.setSelectedMonths(
+      months,
+      startDate: dateRange['start'],
+      endDate: dateRange['end'],
+    );
+    
+    if (!ghlProvider.isInitialized) {
+      await ghlProvider.initialize();
+    }
+  }
+
+  /// Calculate which months to query based on month filter selection
+  List<String> _calculateMonthsToQuery(String filter, List<String> availableMonths) {
+    if (availableMonths.isEmpty) return [];
+    
+    final now = DateTime.now();
+    final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    final lastMonth = DateTime(now.year, now.month - 1);
+    final lastMonthStr = '${lastMonth.year}-${lastMonth.month.toString().padLeft(2, '0')}';
+    
+    switch (filter) {
+      case 'thismonth':
+        return availableMonths.where((m) => m == currentMonth).toList();
+      case 'lastmonth':
+        return availableMonths.where((m) => m == lastMonthStr).toList();
+      case 'last3months':
+        return availableMonths.take(3).toList();
+      case 'last6months':
+        return availableMonths.take(6).toList();
+      case 'allmonths':
+        return availableMonths;
+      default:
+        // Check if it's a specific month (e.g., "2025-10")
+        if (availableMonths.contains(filter)) {
+          return [filter];
+        }
+        // Default to last 3 months
+        return availableMonths.take(3).toList();
+    }
+  }
+
+  /// Calculate date range based on date filter selection (secondary filter)
+  Map<String, DateTime?> _calculateDateRange(String filter) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    switch (filter) {
+      case 'today':
+        return {'start': today, 'end': now};
+      case 'yesterday':
+        final yesterday = today.subtract(const Duration(days: 1));
+        return {'start': yesterday, 'end': today};
+      case 'last7days':
+        final last7Days = today.subtract(const Duration(days: 7));
+        return {'start': last7Days, 'end': now};
+      case 'last30days':
+        final last30Days = today.subtract(const Duration(days: 30));
+        return {'start': last30Days, 'end': now};
+      case 'all':
+        // No date filtering - show all data from selected months
+        return {'start': null, 'end': null};
+      default:
+        // Default to no date filtering
+        return {'start': null, 'end': null};
+    }
   }
 
   @override
@@ -42,16 +134,36 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
       backgroundColor: Colors.grey[50],
       body: Consumer2<PerformanceCostProvider, GoHighLevelProvider>(
         builder: (context, perfProvider, ghlProvider, child) {
-          if (perfProvider.isLoading || ghlProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+          // Show loading spinner only when actually loading data (not just months)
+          if (perfProvider.isLoading) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: _buildHeader(perfProvider, ghlProvider, 0),
+                ),
+                const Expanded(
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ],
+            );
           }
 
           if (perfProvider.error != null) {
-            return _buildErrorState(perfProvider.error!);
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: _buildHeader(perfProvider, ghlProvider, 0),
+                ),
+                Expanded(child: _buildErrorState(perfProvider.error!)),
+              ],
+            );
           }
 
           final allAds = perfProvider.getMergedData(ghlProvider);
-          final filteredAds = _filterAdsByDate(allAds);
+          // No need to filter by date here - filtering happens at Firebase query level
+          final filteredAds = allAds.where((ad) => ad.facebookStats.spend > 0).toList();
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -62,9 +174,9 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
                 _buildHeader(perfProvider, ghlProvider, filteredAds.length),
                 const SizedBox(height: 32),
                 
-                // Three-Column Campaign View
-                if (filteredAds.isEmpty)
-                  _buildEmptyState()
+                // Three-Column Campaign View or Empty State
+                if (!perfProvider.isInitialized || filteredAds.isEmpty)
+                  _buildEmptyOrInstructionState(perfProvider.isInitialized, filteredAds.isEmpty)
                 else
                   SizedBox(
                     height: 600, // Fixed height for scrollable columns
@@ -137,7 +249,46 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
           ),
           const SizedBox(width: 8),
         ],
-        // Date filter
+        // Month filter (primary)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButton<String>(
+            value: _monthFilter,
+            underline: const SizedBox(),
+            icon: const Icon(Icons.arrow_drop_down, size: 20),
+            style: TextStyle(fontSize: 13, color: Colors.grey[800]),
+            items: [
+              const DropdownMenuItem(value: 'thismonth', child: Text('📅 This Month')),
+              const DropdownMenuItem(value: 'lastmonth', child: Text('📅 Last Month')),
+              const DropdownMenuItem(value: 'last3months', child: Text('📅 Last 3 Months')),
+              const DropdownMenuItem(value: 'last6months', child: Text('📅 Last 6 Months')),
+              const DropdownMenuItem(value: 'allmonths', child: Text('📅 All Months')),
+              // Add individual months dynamically
+              ...perfProvider.availableMonths.take(6).map((month) {
+                return DropdownMenuItem(
+                  value: month,
+                  child: Text('📅 ${_formatMonthLabel(month)}'),
+                );
+              }),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                if (kDebugMode) {
+                  print('🔄 MONTH FILTER CHANGED: $_monthFilter → $value');
+                }
+                setState(() => _monthFilter = value);
+                // Reload data with new month filter
+                _loadDataWithFilters();
+              }
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Date filter (secondary - filters within selected months)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
@@ -150,15 +301,17 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
             icon: const Icon(Icons.arrow_drop_down, size: 20),
             style: TextStyle(fontSize: 13, color: Colors.grey[800]),
             items: const [
-              DropdownMenuItem(value: 'today', child: Text('📅 Today')),
-              DropdownMenuItem(value: 'yesterday', child: Text('📅 Yesterday')),
-              DropdownMenuItem(value: 'last7days', child: Text('📅 Last 7 Days')),
-              DropdownMenuItem(value: 'last30days', child: Text('📅 Last 30 Days')),
-              DropdownMenuItem(value: 'all', child: Text('📅 All Time')),
+              DropdownMenuItem(value: 'all', child: Text('🔍 All Dates')),
+              DropdownMenuItem(value: 'today', child: Text('🔍 Today')),
+              DropdownMenuItem(value: 'yesterday', child: Text('🔍 Yesterday')),
+              DropdownMenuItem(value: 'last7days', child: Text('🔍 Last 7 Days')),
+              DropdownMenuItem(value: 'last30days', child: Text('🔍 Last 30 Days')),
             ],
             onChanged: (value) {
               if (value != null) {
                 setState(() => _dateFilter = value);
+                // Reload data with new date filter
+                _loadDataWithFilters();
               }
             },
           ),
@@ -179,10 +332,8 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
           onPressed: perfProvider.isFacebookDataLoading
               ? null
               : () async {
-                  await perfProvider.refreshFacebookData();
-                  if (context.mounted) {
-                    await perfProvider.mergeWithCumulativeData(ghlProvider);
-                  }
+                  // Reload data with current filters
+                  await _loadDataWithFilters();
                 },
           icon: const Icon(Icons.refresh),
           tooltip: 'Refresh Data',
@@ -197,35 +348,74 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
     );
   }
 
-  Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.all(60),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(Icons.campaign_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'No campaigns available',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Campaigns with Facebook spend will appear here',
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-            ),
-          ],
+  Widget _buildEmptyOrInstructionState(bool isInitialized, bool hasNoAds) {
+    if (!isInitialized) {
+      // Show instruction to select a month
+      return Container(
+        padding: const EdgeInsets.all(60),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
         ),
-      ),
-    );
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.calendar_month, size: 64, color: AppTheme.primaryColor.withOpacity(0.5)),
+              const SizedBox(height: 16),
+              Text(
+                'Select a Month to View Campaigns',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Choose a month from the dropdown above to load campaign data',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Icon(Icons.arrow_upward, size: 32, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      );
+    } else if (hasNoAds) {
+      // Show empty state when initialized but no ads found
+      return Container(
+        padding: const EdgeInsets.all(60),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.campaign_outlined, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'No campaigns available',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Try selecting a different month or adjusting your filters',
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
+    return const SizedBox.shrink();
   }
 
   Widget _buildErrorState(String error) {
@@ -259,55 +449,6 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
     );
   }
 
-  List<dynamic> _filterAdsByDate(List<dynamic> ads) {
-    // Filter by FB Spend > 0 first
-    final adsWithSpend = ads.where((ad) {
-      return ad.facebookStats.spend > 0;
-    }).toList();
-    
-    if (_dateFilter == 'all') return adsWithSpend;
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final last7Days = today.subtract(const Duration(days: 7));
-    final last30Days = today.subtract(const Duration(days: 30));
-
-    return adsWithSpend.where((ad) {
-      // Use Facebook's dateStop (end date of ad run) for filtering
-      // This shows ads that were running during the selected time period
-      try {
-        if (ad.facebookStats.dateStop.isEmpty) {
-          // If no date info, include the ad
-          return true;
-        }
-        
-        final adStopDate = DateTime.parse(ad.facebookStats.dateStop);
-        final adStopDay = DateTime(adStopDate.year, adStopDate.month, adStopDate.day);
-
-        switch (_dateFilter) {
-          case 'today':
-            // Show ads that are still running or ended today
-            return adStopDay.isAtSameMomentAs(today) || adStopDay.isAfter(today);
-          case 'yesterday':
-            // Show ads that ended yesterday or are still running
-            return adStopDay.isAtSameMomentAs(yesterday) || adStopDay.isAfter(yesterday);
-          case 'last7days':
-            // Show ads that were active in the last 7 days
-            return adStopDay.isAfter(last7Days) || adStopDay.isAtSameMomentAs(last7Days);
-          case 'last30days':
-            // Show ads that were active in the last 30 days
-            return adStopDay.isAfter(last30Days) || adStopDay.isAtSameMomentAs(last30Days);
-          default:
-            return true;
-        }
-      } catch (e) {
-        // If date parsing fails, include the ad
-        return true;
-      }
-    }).toList();
-  }
-
   String _getTimeAgo(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
@@ -321,6 +462,27 @@ class _AdminAdvertsCampaignsScreenState extends State<AdminAdvertsCampaignsScree
     } else {
       return '${difference.inDays}d ago';
     }
+  }
+
+  /// Format month string for display (e.g., "2025-10" -> "October 2025")
+  String _formatMonthLabel(String month) {
+    try {
+      final parts = month.split('-');
+      if (parts.length == 2) {
+        final year = parts[0];
+        final monthNum = int.parse(parts[1]);
+        const monthNames = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        if (monthNum >= 1 && monthNum <= 12) {
+          return '${monthNames[monthNum - 1]} $year';
+        }
+      }
+    } catch (e) {
+      // Return original if parsing fails
+    }
+    return month;
   }
 }
 

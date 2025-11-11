@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 /// Legacy screen - redirects to new Overview page
 /// Kept for backward compatibility with existing routes
@@ -13,10 +14,14 @@ class _AdminAdvertPerformanceScreenState extends State<AdminAdvertPerformanceScr
   @override
   void initState() {
     super.initState();
-    // Redirect to new Overview page
+    // Redirect to new Overview page only if we're at the base route
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/admin/adverts/overview');
+        final currentUri = GoRouterState.of(context).uri;
+        // Only redirect if we're at exactly /admin/adverts (not a sub-route)
+        if (currentUri.path == '/admin/adverts') {
+          context.go('/admin/adverts/overview');
+        }
       }
     });
   }

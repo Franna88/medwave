@@ -1,0 +1,85 @@
+{
+  "andries": {
+    "pipeline_id": "XeAGJWRnUGJ5tuhXam2g",
+    "pipeline_name": "Andries Pipeline - DDM",
+    "stages": {
+      "9861ef30-81b6-49dc-ba4b-061ef194dcf9": "Booked Appointments",
+      "00567f7d-293b-4438-8172-76531a225b76": "Call Completed",
+      "0c0295b4-de16-41c1-94a2-e10ba396b55f": "No Show",
+      "e1fc9820-f8b2-47b2-94d1-e245735cb2af": "Reschedule",
+      "4bb7f632-aafc-4583-acd1-4e2875b590e3": "Follow Up Day 1",
+      "a948f859-581e-48cf-b4d1-9ddd153bcdb5": "Follow Up Day 2",
+      "dfa4be3d-d313-40b5-9ce9-6fac713d75c0": "Follow Up Day 3",
+      "c2c86962-4d3e-42de-892e-b413e32f4f81": "Follow Up Day 4",
+      "895d3cdd-b7a3-489d-9431-cc2b3d96b3fa": "Follow Up Day 5",
+      "7b5cbe61-76ff-4776-9144-c71942daeaed": "Follow Up Day 6",
+      "22c12a3a-a131-458c-b5a4-132ce568e105": "Follow Up Day 7",
+      "b008f699-0ebf-43f6-9dc4-14efd430be48": "Follow Up Day 8",
+      "e73275e7-7527-497e-b449-91ee245b5bf9": "Follow Up Day 9",
+      "3eae3984-2343-43d8-96a4-6502e7f37af7": "Follow Up Day 10",
+      "6e763bab-3ffb-4f5b-902f-a3dba5cc39c8": "Follow Up Day 11",
+      "98afdd3c-2865-4015-a24c-692ac7daa220": "Follow Up Day 12",
+      "0aa7f895-557d-4f53-a3d8-29b4f9805238": "Follow Up Day 13",
+      "77c46b81-5a95-40ee-a7a9-36a5d5fdf7ae": "Follow Up Day 14",
+      "190ec8c7-7673-4d8d-8ab4-b4cd6952f926": "Follow Up Day 15",
+      "c861b50f-b0cc-4ee2-b8e7-03d81b32f53b": "Follow Up Day 16",
+      "b4dbc120-12e2-4215-b4fa-3f51be8591cb": "Follow Up Day 17",
+      "405640a0-2ba6-4025-828d-212347aede66": "Follow Up Day 18",
+      "0700f5c9-0b70-420c-b52b-4107e30a850c": "Follow Up Day 19",
+      "8ff3ec64-2058-422a-a52f-8a1ce9451a8f": "Follow Up Day 20",
+      "4df5b2d3-b6fb-478c-96b4-a8c565c69940": "9. Long Term Leads (Twice Per Week)",
+      "f82c7a4f-aceb-4657-9007-76c1c92641d2": "10. Andries Upfront Disqualified",
+      "52a076ca-851f-43fc-a57d-309403a4b208": "Deposit Received",
+      "3a8ead84-92b0-4796-aaf8-6594c3217a2c": "Cash Collected",
+      "0b3e496e-cb24-4fdb-8d4f-7c5c84e94aae": "12. DND Leads👎",
+      "89c988f9-f8af-4b3d-8109-66984a81d1f7": "13. USA Sales Calls Completed"
+    }
+  },
+  "davide": {
+    "pipeline_id": "AUduOJBB2lxlsEaNmlJz",
+    "pipeline_name": "Davide's Pipeline - DDM",
+    "stages": {
+      "003d5559-d057-4e9b-8a77-525acecfb6c8": "Booked Appointments",
+      "f38bbbc9-93e2-4e74-8238-f8bb456aaa92": "Call Completed",
+      "90057d46-3e3a-4e6a-8134-e823c2a9cbea": "No Show/Cancelled/Disqualified",
+      "246be3bc-ecc8-4981-ab33-d08842b5fdf9": "Follow Up Day 1",
+      "6765b763-f44b-4f20-bb19-7df3b22dbf3f": "Follow Up Day 2",
+      "099fa206-a8a1-4a1b-96bb-d03779846148": "Follow Up Day 3",
+      "11876e11-62c6-4b3c-bc24-042515209273": "Follow Up Day 4",
+      "3d5e8c67-c469-404c-adf5-dce22cc09dba": "Follow Up Day 5",
+      "d30da05d-995d-406f-8ccc-974290eb4aa8": "Follow Up Day 6",
+      "b545d3e1-8a20-4f1d-98b7-d1d58d7a4aaf": "Follow Up Day 7",
+      "4048b4c4-91c4-49e0-9238-e39963739b38": "(DD) FU - Long Term",
+      "13d54d18-d1e7-476b-aad8-cb4767b8b979": "Deposit Received",
+      "3c89afba-9797-4b0f-947c-ba00b60468c6": "Cash Collected",
+      "bf84e424-6e90-46a7-886f-a90eed27bbe6": "(DD) Leads",
+      "c9c5cdfb-23c4-45d1-bd66-b11cbe33b449": "Lost"
+    }
+  },
+  "erich": {
+    "pipeline_id": "pTbNvnrXqJc9u1oxir3q",
+    "pipeline_name": "Erich Pipeline -DDM",
+    "note": "This pipeline does NOT have Deposit Received or Cash Collected stages",
+    "stages": {
+      "31d61440-34e0-40f2-b20b-70013990504e": "(E) New Leads",
+      "c90ce3d1-4991-4f7b-b093-7ea9d1e2382f": "Sterrenberg leads",
+      "a7dc3005-499b-4faa-aac1-a52893481661": "(E) High Quality (Contacted)",
+      "bc306cb3-3254-4179-b38c-5e91d77f6435": "(E) High Quality (Responded)",
+      "155055b0-6631-4ab8-9ecd-7d9ccdb903c2": "(E) High Quality (Qualified)",
+      "db96a1ec-e8b9-4c86-8d2d-065528ccf7e4": "(E) High Interest Follow-Up",
+      "745e760d-b058-406e-85ee-013ec7a83607": "(E) Client Contacted",
+      "aba2c1ed-9354-44f9-a39a-4290ce5934da": "(E) Lead Responded",
+      "3d37fda2-536c-4a69-91b4-06bef51fb627": "(E) Follow-Up",
+      "b28f4789-ef6b-45ff-955a-fec85530ece5": "(E) Andries Booked",
+      "149f0364-dad3-47f3-9f8c-bf05efa01cff": "(E) Andries Reschedule",
+      "92cfdd60-e8cd-4774-a647-18c5dac48a8a": "(E) Andries NS/Schedule Again",
+      "10c26bf0-72ac-4e17-87d5-3056f1de7e2d": "(E) Davide Booked",
+      "ed1ec4cb-98ff-449b-bff4-809c00dc7997": "(E) Davide Reschedule",
+      "bc9ad460-944c-440c-87e9-359676218684": "(E) Margo Booked",
+      "c0b4eadc-cead-40ce-9567-b96a5eaddb5b": "(E) Lost",
+      "496d99ad-672b-4551-9b9e-d81679c4735f": "Ruwayne Purchased",
+      "e55fa00e-5461-4914-9cbe-6f76d8b66c56": "NEW NEURO PORTABLE"
+    }
+  }
+}
+

@@ -29,7 +29,7 @@ if (!admin.apps.length) {
 
 // GoHighLevel configuration
 const GHL_BASE_URL = 'https://services.leadconnectorhq.com';
-const GHL_API_KEY = process.env.GHL_API_KEY || 'pit-009fb0b0-1799-4773-82d2-a58cefcd9c6a';
+const GHL_API_KEY = process.env.GHL_API_KEY || 'pit-22f8af95-3244-41e7-9a52-22c87b166f5a';
 
 const getGHLHeaders = () => ({
   'Authorization': `Bearer ${GHL_API_KEY}`,

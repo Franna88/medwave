@@ -1,0 +1,86 @@
+{
+  "id": "s0N8j0yMhMomAEcz80Rc",
+  "name": "Danielle Du Toit",
+  "monetaryValue": 0,
+  "pipelineId": "XeAGJWRnUGJ5tuhXam2g",
+  "pipelineStageId": "52a076ca-851f-43fc-a57d-309403a4b208",
+  "pipelineStageUId": "52a076ca-851f-43fc-a57d-309403a4b208",
+  "assignedTo": null,
+  "status": "open",
+  "source": "Erich Pipeline -DDM",
+  "lastStatusChangeAt": "2025-10-29T14:53:36.353Z",
+  "lastStageChangeAt": "2025-11-06T04:40:08.803Z",
+  "createdAt": "2025-10-29T14:53:36.353Z",
+  "updatedAt": "2025-11-06T04:40:09.389Z",
+  "indexVersion": 2,
+  "contactId": "t0AIHKZ4ZVtkzIdmSEr4",
+  "locationId": "QdLXaFEqrdF0JbVbpKLw",
+  "customFields": [],
+  "lostReasonId": null,
+  "followers": [
+    "Yj7mjEZBYBC5CqF1dNL2",
+    "06QeKYnSfUBnRuD0tTGp"
+  ],
+  "relations": [
+    {
+      "associationId": "OPPORTUNITIES_CONTACTS_ASSOCIATION",
+      "relationId": "s0N8j0yMhMomAEcz80Rc",
+      "primary": true,
+      "objectKey": "contact",
+      "recordId": "t0AIHKZ4ZVtkzIdmSEr4",
+      "fullName": "Danielle Du Toit",
+      "contactName": "Danielle Du Toit",
+      "companyName": null,
+      "email": "didi512@gmail.com",
+      "phone": "+27798827742",
+      "tags": [
+        "a-h-q-l",
+        "andries leads booked - e",
+        "andries booked appointments",
+        "andries-call-completed",
+        "roundtable_6nov2025",
+        "andries dealz"
+      ],
+      "attributed": true
+    }
+  ],
+  "contact": {
+    "id": "t0AIHKZ4ZVtkzIdmSEr4",
+    "name": "Danielle Du Toit",
+    "companyName": null,
+    "email": "didi512@gmail.com",
+    "phone": "+27798827742",
+    "tags": [
+      "a-h-q-l",
+      "andries leads booked - e",
+      "andries booked appointments",
+      "andries-call-completed",
+      "roundtable_6nov2025",
+      "andries dealz"
+    ],
+    "score": []
+  },
+  "sort": [
+    1761749616353,
+    "t0AIHKZ4ZVtkzIdmSEr4"
+  ],
+  "attributions": [
+    {
+      "utmSessionSource": "Social media",
+      "isFirst": true,
+      "medium": "facebook",
+      "mediumId": "24937804245905770"
+    },
+    {
+      "utmSessionSource": "Social media",
+      "isLast": true,
+      "adSource": "facebook",
+      "utmCampaign": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "utmMedium": "Interests - Business (DDM)",
+      "utmCampaignId": "120234497185340335",
+      "medium": "facebook",
+      "mediumId": "24937804245905770",
+      "utmSource": "facebook"
+    }
+  ]
+}

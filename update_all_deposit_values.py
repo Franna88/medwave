@@ -11,7 +11,7 @@ from datetime import datetime
 import time
 
 # GHL API Configuration
-GHL_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6IlFkTFhhRkVxcmRGMEpiVmJwS0x3Iiwib3JnX2lkIjoiQzFyMWo1VzNPWGdXcFl6OGJIRGUiLCJ2ZXJzaW9uIjoxLCJpYXQiOjE3Mjg5MTM1NDQ1NzYsInN1YiI6Im5vbm8xMjM0NTYifQ.cE0xLlXRwmxE5qqUEwYCvXFiXQcQqKTZjYDNVh2Rz1M"
+GHL_API_KEY = "pit-22f8af95-3244-41e7-9a52-22c87b166f5a"
 GHL_BASE_URL = "https://services.leadconnectorhq.com"
 LOCATION_ID = "QdLXaFEqrdF0JbVbpKLw"
 

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'product.dart';
 
 /// Model representing ad performance cost tracking with budget and metrics
 class AdPerformanceCost {
@@ -9,7 +8,6 @@ class AdPerformanceCost {
   final String adId;
   final String adName;
   final double budget; // Legacy field - kept for backward compatibility
-  final String? linkedProductId;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? createdBy;
@@ -32,7 +30,6 @@ class AdPerformanceCost {
     required this.adId,
     required this.adName,
     required this.budget,
-    this.linkedProductId,
     required this.createdAt,
     required this.updatedAt,
     this.createdBy,
@@ -57,7 +54,6 @@ class AdPerformanceCost {
       adId: data['adId'] ?? '',
       adName: data['adName'] ?? '',
       budget: (data['budget'] ?? 0).toDouble(),
-      linkedProductId: data['linkedProductId'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdBy: data['createdBy'],
@@ -84,7 +80,6 @@ class AdPerformanceCost {
       adId: json['adId'] ?? '',
       adName: json['adName'] ?? '',
       budget: (json['budget'] ?? 0).toDouble(),
-      linkedProductId: json['linkedProductId'],
       createdAt: json['createdAt'] is Timestamp
           ? (json['createdAt'] as Timestamp).toDate()
           : DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
@@ -116,7 +111,6 @@ class AdPerformanceCost {
       'adId': adId,
       'adName': adName,
       'budget': budget,
-      if (linkedProductId != null) 'linkedProductId': linkedProductId,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       if (createdBy != null) 'createdBy': createdBy,
@@ -141,7 +135,6 @@ class AdPerformanceCost {
       'adId': adId,
       'adName': adName,
       'budget': budget,
-      if (linkedProductId != null) 'linkedProductId': linkedProductId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       if (createdBy != null) 'createdBy': createdBy,
@@ -165,7 +158,6 @@ class AdPerformanceCost {
     String? adId,
     String? adName,
     double? budget,
-    String? linkedProductId,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? createdBy,
@@ -186,7 +178,6 @@ class AdPerformanceCost {
       adId: adId ?? this.adId,
       adName: adName ?? this.adName,
       budget: budget ?? this.budget,
-      linkedProductId: linkedProductId ?? this.linkedProductId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
@@ -215,7 +206,6 @@ class AdPerformanceCostWithMetrics {
   final int bookings;
   final int deposits;
   final double cashDepositAmount;
-  final Product? linkedProduct;
 
   AdPerformanceCostWithMetrics({
     required this.cost,
@@ -223,7 +213,6 @@ class AdPerformanceCostWithMetrics {
     required this.bookings,
     required this.deposits,
     required this.cashDepositAmount,
-    this.linkedProduct,
   });
 
   // Computed metrics - use Facebook spend if available, fallback to budget

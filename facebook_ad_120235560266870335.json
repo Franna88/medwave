@@ -1,0 +1,42 @@
+{
+  "id": "120235560266870335",
+  "name": "Why Choose MedWave?",
+  "status": "ACTIVE",
+  "creative": {
+    "id": "1581554333260043",
+    "name": "Transform Your Business 2025-11-05-3f1233ba5eabe68a806d45138b263e45",
+    "object_story_spec": {
+      "page_id": "100391263069899",
+      "instagram_user_id": "17841458823670579",
+      "video_data": {
+        "video_id": "801715532863225",
+        "call_to_action": {
+          "type": "LEARN_MORE",
+          "value": {
+            "lead_gen_form_id": "1168700714593335",
+            "link": "http://fb.me/"
+          }
+        },
+        "image_url": "https://www.facebook.com/ads/image/?d=AQIAQ_I_NxxrD8OR7JmmnvHQZwWwKfLhD1a8pYmwVNJlMt1y3pEkrhSM6PapinomIJfBUk2BME7Xpn98HObgugCMcdUYCKpjrRun5u5RIsV7L6Sey6dpUp8OAaTFAL6AK9XnnRi0BS7Wb4nv5AYV5uRE",
+        "image_hash": "f9a382a16fefd84ba38081526dd99365"
+      }
+    },
+    "url_tags": "utm_source={{campaign.name}}&utm_medium={{adset.name}}&utm_campaign={{ad.name}}&fbc_id={{adset.id}}&h_ad_id={{ad.id}}",
+    "call_to_action": {
+      "type": "LEARN_MORE",
+      "value": {
+        "lead_gen_form_id": "1168700714593335",
+        "link": "http://fb.me/"
+      }
+    }
+  },
+  "effective_status": "ACTIVE",
+  "campaign": {
+    "id": "120235556205010335",
+    "name": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences"
+  },
+  "adset": {
+    "id": "120235556204820335",
+    "name": "Interests - Business (DDM)"
+  }
+}

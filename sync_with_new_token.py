@@ -10,7 +10,7 @@ import time
 from collections import defaultdict
 
 # New GHL API token
-GHL_API_KEY = "pit-88f4070f-e8ab-467a-a23b-e5bb12c5831e"
+GHL_API_KEY = "pit-22f8af95-3244-41e7-9a52-22c87b166f5a"
 GHL_BASE_URL = "https://services.leadconnectorhq.com"
 LOCATION_ID = "QdLXaFEqrdF0JbVbpKLw"
 

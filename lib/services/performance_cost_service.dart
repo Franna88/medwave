@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import '../models/performance/product.dart';
 import '../models/performance/ad_performance_cost.dart';
 
 /// Service for managing performance cost data in Firestore
@@ -8,143 +7,7 @@ class PerformanceCostService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
   // Collection references
-  static const String _productsCollection = 'products';
   static const String _adPerformanceCostsCollection = 'adPerformanceCosts';
-
-  // ========== PRODUCT OPERATIONS ==========
-
-  /// Get all products
-  static Future<List<Product>> getProducts() async {
-    try {
-      if (kDebugMode) {
-        print('🔍 Fetching all products...');
-      }
-
-      final snapshot = await _firestore
-          .collection(_productsCollection)
-          .orderBy('name')
-          .get();
-
-      final products = snapshot.docs
-          .map((doc) => Product.fromFirestore(doc))
-          .toList();
-
-      if (kDebugMode) {
-        print('✅ Fetched ${products.length} products');
-      }
-
-      return products;
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error fetching products: $e');
-      }
-      rethrow;
-    }
-  }
-
-  /// Get a single product by ID
-  static Future<Product?> getProduct(String productId) async {
-    try {
-      final doc = await _firestore
-          .collection(_productsCollection)
-          .doc(productId)
-          .get();
-
-      if (!doc.exists) return null;
-
-      return Product.fromFirestore(doc);
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error fetching product $productId: $e');
-      }
-      rethrow;
-    }
-  }
-
-  /// Create a new product
-  static Future<Product> createProduct(Product product) async {
-    try {
-      if (kDebugMode) {
-        print('📝 Creating product: ${product.name}');
-      }
-
-      final docRef = await _firestore
-          .collection(_productsCollection)
-          .add(product.toFirestore());
-
-      if (kDebugMode) {
-        print('✅ Product created with ID: ${docRef.id}');
-      }
-
-      return product.copyWith(id: docRef.id);
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error creating product: $e');
-      }
-      rethrow;
-    }
-  }
-
-  /// Update an existing product
-  static Future<void> updateProduct(Product product) async {
-    try {
-      if (kDebugMode) {
-        print('📝 Updating product: ${product.id}');
-      }
-
-      final updatedProduct = product.copyWith(
-        updatedAt: DateTime.now(),
-      );
-
-      await _firestore
-          .collection(_productsCollection)
-          .doc(product.id)
-          .update(updatedProduct.toFirestore());
-
-      if (kDebugMode) {
-        print('✅ Product updated: ${product.id}');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error updating product: $e');
-      }
-      rethrow;
-    }
-  }
-
-  /// Delete a product
-  static Future<void> deleteProduct(String productId) async {
-    try {
-      if (kDebugMode) {
-        print('🗑️ Deleting product: $productId');
-      }
-
-      await _firestore
-          .collection(_productsCollection)
-          .doc(productId)
-          .delete();
-
-      if (kDebugMode) {
-        print('✅ Product deleted: $productId');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error deleting product: $e');
-      }
-      rethrow;
-    }
-  }
-
-  /// Stream all products in real-time
-  static Stream<List<Product>> streamProducts() {
-    return _firestore
-        .collection(_productsCollection)
-        .orderBy('name')
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Product.fromFirestore(doc))
-            .toList());
-  }
 
   // ========== AD PERFORMANCE COST OPERATIONS ==========
 
@@ -306,7 +169,6 @@ class PerformanceCostService {
   static Future<List<AdPerformanceCostWithMetrics>> getMergedPerformanceData({
     required List<AdPerformanceCost> adCosts,
     required List<dynamic> cumulativeCampaigns,
-    required List<Product> products,
   }) async {
     try {
       if (kDebugMode) {
@@ -314,9 +176,6 @@ class PerformanceCostService {
       }
 
       final List<AdPerformanceCostWithMetrics> mergedData = [];
-
-      // Create a map of products for quick lookup
-      final productMap = {for (var p in products) p.id: p};
 
       // Process each ad cost entry
       for (final adCost in adCosts) {
@@ -353,20 +212,13 @@ class PerformanceCostService {
           print('📊 Ad: ${adCost.adName} | Leads: $leads | Bookings: $bookings | Deposits: $deposits | Cash: R$cashAmount | FB Spend: R${adCost.facebookSpend?.toStringAsFixed(2) ?? "null"} | Budget: R${adCost.budget}');
         }
 
-        // Get linked product if exists
-        Product? linkedProduct;
-        if (adCost.linkedProductId != null) {
-          linkedProduct = productMap[adCost.linkedProductId];
-        }
-
-        // Create merged data entry
+        // Create merged data entry (no product linking - using GHL values directly)
         final mergedEntry = AdPerformanceCostWithMetrics(
           cost: adCost,
           leads: leads,
           bookings: bookings,
           deposits: deposits,
           cashDepositAmount: cashAmount,
-          linkedProduct: linkedProduct,
         );
         
         if (kDebugMode) {
