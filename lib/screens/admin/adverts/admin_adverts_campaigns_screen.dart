@@ -24,19 +24,16 @@ class _AdminAdvertsCampaignsScreenState
   @override
   void initState() {
     super.initState();
-    // Load available months only (don't load data yet - let user select month first)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
-        // For split collections, just initialize - no month loading needed
         _initializeSplitCollections();
       } else {
-        // For old schema, load available months
         _loadAvailableMonthsOnly();
       }
     });
   }
 
-  /// Initialize for split collections (no auto-loading)
+  /// Initialize for split collections
   Future<void> _initializeSplitCollections() async {
     final perfProvider = context.read<PerformanceCostProvider>();
 
@@ -55,7 +52,7 @@ class _AdminAdvertsCampaignsScreenState
     }
   }
 
-  /// Load data with current month and date filters (OLD schema)
+  /// Load data with filters
   Future<void> _loadDataWithFilters() async {
     final perfProvider = context.read<PerformanceCostProvider>();
     final ghlProvider = context.read<GoHighLevelProvider>();
@@ -99,7 +96,7 @@ class _AdminAdvertsCampaignsScreenState
     }
   }
 
-  /// Load data with filters for NEW split collections schema
+  /// Load data with filters for split collections
   Future<void> _loadDataWithFiltersNew() async {
     final perfProvider = context.read<PerformanceCostProvider>();
     final ghlProvider = context.read<GoHighLevelProvider>();
@@ -135,7 +132,7 @@ class _AdminAdvertsCampaignsScreenState
     }
   }
 
-  /// Calculate date range for split collections based on filters
+  /// Calculate date range based on filters
   Map<String, DateTime?> _calculateDateRangeForSplitCollections(
     String monthFilter,
     String dateFilter,
@@ -360,11 +357,9 @@ class _AdminAdvertsCampaignsScreenState
           final int dataCount;
 
           if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
-            // NEW: Check campaigns from split collections
             hasData = perfProvider.campaigns.isNotEmpty;
             dataCount = perfProvider.campaigns.length;
           } else {
-            // OLD: Check ads from advertData
             final allAds = perfProvider.getMergedData(ghlProvider);
             final filteredAds = allAds
                 .where((ad) => ad.facebookStats.spend > 0)
@@ -502,7 +497,6 @@ class _AdminAdvertsCampaignsScreenState
                   );
                 })
               else
-                // For split collections, show last 12 months
                 ...List.generate(12, (index) {
                   final date = DateTime.now().subtract(
                     Duration(days: 30 * index),

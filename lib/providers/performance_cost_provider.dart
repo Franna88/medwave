@@ -37,7 +37,6 @@ class PerformanceCostProvider extends ChangeNotifier {
   List<String> _availableMonths = [];
   List<String> _selectedMonths = [];
 
-  // Date filtering for split collections
   DateTime? _filterStartDate;
   DateTime? _filterEndDate;
 
@@ -62,7 +61,7 @@ class PerformanceCostProvider extends ChangeNotifier {
   DateTime? get lastSync => _lastSync;
   bool get isSyncing => _isSyncing;
 
-  // Deprecated: Product functionality removed - returns empty list for backward compatibility
+  // Deprecated: Product functionality removed
   @Deprecated(
     'Product functionality removed. Profit now comes from GHL opportunity values.',
   )
@@ -91,7 +90,7 @@ class PerformanceCostProvider extends ChangeNotifier {
             )
             .length;
 
-  /// Filter campaigns by date range (client-side filtering for split collections)
+  /// Filter campaigns by date range
   List<Campaign> getFilteredCampaigns({
     DateTime? startDate,
     DateTime? endDate,
@@ -104,39 +103,35 @@ class PerformanceCostProvider extends ChangeNotifier {
       final campaignStart = campaign.firstAdDateAsDateTime;
       final campaignEnd = campaign.lastAdDateAsDateTime;
 
-      if (campaignStart == null && campaignEnd == null) {
-        return true; // Include campaigns without dates
-      }
+      if (campaignStart == null && campaignEnd == null) return true;
 
       if (campaignStart != null &&
           endDate != null &&
           campaignStart.isAfter(endDate)) {
-        return false; // Campaign starts after filter ends
+        return false;
       }
 
       if (campaignEnd != null &&
           startDate != null &&
           campaignEnd.isBefore(startDate)) {
-        return false; // Campaign ends before filter starts
+        return false;
       }
 
       return true;
     }).toList();
   }
 
-  /// Filter ad sets by date range (client-side filtering for split collections)
+  /// Filter ad sets by date range
   List<AdSet> getFilteredAdSets({DateTime? startDate, DateTime? endDate}) {
     if (!USE_SPLIT_COLLECTIONS || (startDate == null && endDate == null)) {
       return _adSets;
     }
 
     return _adSets.where((adSet) {
-      if (adSet.firstAdDate == null && adSet.lastAdDate == null) {
-        return true;
-      }
+      final adSetStart = adSet.firstAdDateAsDateTime;
+      final adSetEnd = adSet.lastAdDateAsDateTime;
 
-      final adSetStart = adSet.firstAdDate;
-      final adSetEnd = adSet.lastAdDate;
+      if (adSetStart == null && adSetEnd == null) return true;
 
       if (adSetStart != null &&
           endDate != null &&
@@ -154,7 +149,7 @@ class PerformanceCostProvider extends ChangeNotifier {
     }).toList();
   }
 
-  /// Filter ads by date range (client-side filtering for split collections)
+  /// Filter ads by date range
   List<split_ad.Ad> getFilteredAds({DateTime? startDate, DateTime? endDate}) {
     if (!USE_SPLIT_COLLECTIONS || (startDate == null && endDate == null)) {
       return _ads;
@@ -330,7 +325,6 @@ class PerformanceCostProvider extends ChangeNotifier {
       return;
     }
 
-    // OLD: Load from advertData with month filtering
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -392,7 +386,6 @@ class PerformanceCostProvider extends ChangeNotifier {
         endDate: endDate,
       );
 
-      // Convert AdvertDataWithTotals to AdPerformanceData format for backward compatibility
       _adPerformanceData = advertsWithTotals.map((advertWithTotals) {
         return _convertToAdPerformanceData(advertWithTotals);
       }).toList();
@@ -703,7 +696,7 @@ class PerformanceCostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ========== DEPRECATED PRODUCT METHODS (for backward compatibility) ==========
+  // Deprecated product methods
 
   @Deprecated(
     'Product functionality removed. Profit now comes from GHL opportunity values.',
@@ -744,15 +737,14 @@ class PerformanceCostProvider extends ChangeNotifier {
     return null;
   }
 
-  // ========== BACKWARD COMPATIBILITY METHODS ==========
-  // These methods provide compatibility with old UI code
+  // Compatibility methods
 
-  /// Get merged data (compatibility method)
+  /// Get merged data
   List<perf_data.AdPerformanceWithProduct> getMergedData(dynamic ghlProvider) {
     return _adPerformanceWithProducts;
   }
 
-  /// Merge with cumulative data (compatibility method - now handled by Cloud Functions)
+  /// Merge with cumulative data
   Future<void> mergeWithCumulativeData(
     dynamic ghlProvider, {
     List<String>? months,
@@ -764,21 +756,21 @@ class PerformanceCostProvider extends ChangeNotifier {
     await refreshData(months: months, startDate: startDate, endDate: endDate);
   }
 
-  /// Refresh Facebook data (compatibility method)
+  /// Refresh Facebook data
   Future<void> refreshFacebookData() async {
     await syncFacebookData();
   }
 
-  /// Check if has Facebook data (compatibility getter)
+  /// Check if has Facebook data
   bool get hasFacebookData => _adPerformanceData.isNotEmpty;
 
-  /// Last Facebook sync time (compatibility getter)
+  /// Last Facebook sync time
   DateTime? get lastFacebookSync => _lastSync;
 
-  /// Is Facebook data loading (compatibility getter)
+  /// Is Facebook data loading
   bool get isFacebookDataLoading => _isSyncing;
 
-  /// Get Facebook campaigns (compatibility getter)
+  /// Get Facebook campaigns
   List<FacebookCampaignSummary> get facebookCampaigns {
     // Group ads by campaign
     final campaigns = <String, FacebookCampaignSummary>{};
@@ -801,10 +793,10 @@ class PerformanceCostProvider extends ChangeNotifier {
     return campaigns.values.toList();
   }
 
-  /// Get ad costs (compatibility getter) - returns empty list
+  /// Get ad costs
   List<dynamic> get adCosts => [];
 
-  /// Create ad performance cost (compatibility method - not used in new system)
+  /// Create ad performance cost
   Future<void> createAdPerformanceCost({
     required String campaignName,
     required String campaignKey,
@@ -813,14 +805,12 @@ class PerformanceCostProvider extends ChangeNotifier {
     required double budget,
     String? facebookCampaignId,
   }) async {
-    // In the new system, ads come from Facebook API
-    // This method is not used but kept for compatibility
     throw UnimplementedError(
       'Use syncFacebookData() to add ads from Facebook API',
     );
   }
 
-  /// Update ad performance cost (compatibility method)
+  /// Update ad performance cost
   Future<void> updateAdPerformanceCost(
     AdPerformanceCost cost, {
     double? budget,
@@ -832,10 +822,8 @@ class PerformanceCostProvider extends ChangeNotifier {
     );
   }
 
-  /// Delete ad performance cost (compatibility method - not used in new system)
+  /// Delete ad performance cost
   Future<void> deleteAdPerformanceCost(String id) async {
-    // In the new system, ads come from Facebook and shouldn't be manually deleted
-    // This method is not used but kept for compatibility
     throw UnimplementedError(
       'Ads are synced from Facebook API and should not be manually deleted',
     );
@@ -1052,7 +1040,7 @@ class PerformanceCostProvider extends ChangeNotifier {
   // SPLIT COLLECTIONS ADAPTER METHODS (Convert new models to UI models)
   // ============================================================================
 
-  /// Convert Campaign to CampaignAggregate for UI compatibility
+  /// Convert Campaign to CampaignAggregate
   CampaignAggregate campaignToCampaignAggregate(Campaign campaign) {
     return CampaignAggregate(
       campaignId: campaign.campaignId,
@@ -1074,7 +1062,7 @@ class PerformanceCostProvider extends ChangeNotifier {
     );
   }
 
-  /// Convert AdSet to AdSetAggregate for UI compatibility
+  /// Convert AdSet to AdSetAggregate
   AdSetAggregate adSetToAdSetAggregate(AdSet adSet) {
     return AdSetAggregate(
       adSetId: adSet.adSetId,
@@ -1097,7 +1085,7 @@ class PerformanceCostProvider extends ChangeNotifier {
     );
   }
 
-  /// Convert Ad to AdPerformanceWithProduct for UI compatibility
+  /// Convert Ad to AdPerformanceWithProduct
   perf_data.AdPerformanceWithProduct adToAdPerformanceWithProduct(
     split_ad.Ad ad,
   ) {
@@ -1181,7 +1169,7 @@ class PerformanceCostProvider extends ChangeNotifier {
     }
   }
 
-  /// Load campaigns with date range filter (server-side query)
+  /// Load campaigns with date range filter
   Future<void> loadCampaignsWithDateRange({
     DateTime? startDate,
     DateTime? endDate,
@@ -1209,11 +1197,9 @@ class PerformanceCostProvider extends ChangeNotifier {
         descending: descending,
       );
 
-      // Store filter dates
       _filterStartDate = startDate;
       _filterEndDate = endDate;
 
-      // Clear cached ad sets and ads (they'll reload on expand)
       _adSets = [];
       _ads = [];
 
@@ -1347,7 +1333,7 @@ class PerformanceCostProvider extends ChangeNotifier {
   }
 }
 
-/// Helper class for Facebook campaign summary (compatibility)
+/// Helper class for Facebook campaign summary
 class FacebookCampaignSummary {
   final String id;
   final String name;

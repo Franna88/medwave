@@ -75,9 +75,7 @@ class CampaignService {
     }
   }
 
-  /// Get campaigns within a date range with flexible filtering
-  /// Uses lastAdDate for server-side filtering (string comparison), then filters client-side
-  /// This avoids Firestore's "multiple range fields" limitation
+  /// Get campaigns within a date range using string date comparison
   Future<List<Campaign>> getCampaignsByDateRange({
     DateTime? startDate,
     DateTime? endDate,
@@ -90,43 +88,32 @@ class CampaignService {
 
       if (startDate != null) {
         final startDateStr = _dateTimeToString(startDate);
-        query = query.where(
-          'lastAdDate',
-          isGreaterThanOrEqualTo: startDateStr, // String comparison
-        );
+        query = query.where('lastAdDate', isGreaterThanOrEqualTo: startDateStr);
       }
 
-      // For orderBy to work with range filters, we need to order by the filtered field first
-      // Then we can order by other fields
       if (startDate != null) {
         query = query.orderBy('lastAdDate', descending: false);
       }
 
-      // Add secondary ordering
       query = query.orderBy(orderBy, descending: descending);
 
-      // Fetch more than limit to account for client-side filtering
       final fetchLimit = limit > 0 ? limit * 2 : 200;
       query = query.limit(fetchLimit);
 
       final snapshot = await query.get();
 
-      // Convert to Campaign objects
       List<Campaign> campaigns = snapshot.docs
           .map((doc) => Campaign.fromFirestore(doc))
           .toList();
 
-      // Client-side filter by firstAdDate if endDate is provided
       if (endDate != null) {
         final endDateStr = _dateTimeToString(endDate);
         campaigns = campaigns.where((campaign) {
           if (campaign.firstAdDate == null) return true;
-          // String comparison works for YYYY-MM-DD format (lexicographically ordered)
           return campaign.firstAdDate!.compareTo(endDateStr) <= 0;
         }).toList();
       }
 
-      // Apply limit after client-side filtering
       if (limit > 0 && campaigns.length > limit) {
         campaigns = campaigns.take(limit).toList();
       }
