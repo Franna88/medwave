@@ -4,7 +4,7 @@ import '../../models/performance/campaign.dart';
 /// Service for managing campaign data from the split collections schema
 class CampaignService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   /// Get all campaigns with cached totals
   /// Returns campaigns sorted by totalProfit (descending) by default
   Future<List<Campaign>> getAllCampaigns({
@@ -14,26 +14,24 @@ class CampaignService {
   }) async {
     try {
       Query query = _firestore.collection('campaigns');
-      
+
       if (orderBy != null) {
         query = query.orderBy(orderBy, descending: descending);
       }
-      
+
       if (limit > 0) {
         query = query.limit(limit);
       }
-      
+
       final snapshot = await query.get();
-      
-      return snapshot.docs
-          .map((doc) => Campaign.fromFirestore(doc))
-          .toList();
+
+      return snapshot.docs.map((doc) => Campaign.fromFirestore(doc)).toList();
     } catch (e) {
       print('Error getting all campaigns: $e');
       rethrow;
     }
   }
-  
+
   /// Get a single campaign by ID
   Future<Campaign?> getCampaign(String campaignId) async {
     try {
@@ -41,18 +39,18 @@ class CampaignService {
           .collection('campaigns')
           .doc(campaignId)
           .get();
-      
+
       if (!doc.exists) {
         return null;
       }
-      
+
       return Campaign.fromFirestore(doc);
     } catch (e) {
       print('Error getting campaign $campaignId: $e');
       rethrow;
     }
   }
-  
+
   /// Get campaigns filtered by status
   Future<List<Campaign>> getCampaignsByStatus(
     String status, {
@@ -63,50 +61,83 @@ class CampaignService {
           .collection('campaigns')
           .where('status', isEqualTo: status)
           .orderBy('lastUpdated', descending: true);
-      
+
       if (limit > 0) {
         query = query.limit(limit);
       }
-      
+
       final snapshot = await query.get();
-      
-      return snapshot.docs
-          .map((doc) => Campaign.fromFirestore(doc))
-          .toList();
+
+      return snapshot.docs.map((doc) => Campaign.fromFirestore(doc)).toList();
     } catch (e) {
       print('Error getting campaigns by status: $e');
       rethrow;
     }
   }
-  
-  /// Get campaigns within a date range
-  Future<List<Campaign>> getCampaignsByDateRange(
-    DateTime startDate,
-    DateTime endDate, {
+
+  /// Get campaigns within a date range with flexible filtering
+  /// Uses lastAdDate for server-side filtering, then filters client-side
+  /// This avoids Firestore's "multiple range fields" limitation
+  Future<List<Campaign>> getCampaignsByDateRange({
+    DateTime? startDate,
+    DateTime? endDate,
     int limit = 100,
+    String orderBy = 'totalProfit',
+    bool descending = true,
   }) async {
     try {
-      Query query = _firestore
-          .collection('campaigns')
-          .where('lastAdDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-          .where('lastAdDate', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
-          .orderBy('lastAdDate', descending: true);
-      
-      if (limit > 0) {
-        query = query.limit(limit);
+      Query query = _firestore.collection('campaigns');
+
+      // Apply date filter on lastAdDate only (Firestore allows only one range filter)
+      // We'll filter by firstAdDate client-side after fetching
+      if (startDate != null) {
+        query = query.where(
+          'lastAdDate',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+        );
       }
-      
+
+      // For orderBy to work with range filters, we need to order by the filtered field first
+      // Then we can order by other fields
+      if (startDate != null) {
+        query = query.orderBy('lastAdDate', descending: false);
+      }
+
+      // Add secondary ordering
+      query = query.orderBy(orderBy, descending: descending);
+
+      // Fetch more than limit to account for client-side filtering
+      final fetchLimit = limit > 0 ? limit * 2 : 200;
+      query = query.limit(fetchLimit);
+
       final snapshot = await query.get();
-      
-      return snapshot.docs
+
+      // Convert to Campaign objects
+      List<Campaign> campaigns = snapshot.docs
           .map((doc) => Campaign.fromFirestore(doc))
           .toList();
+
+      // Client-side filter by firstAdDate if endDate is provided
+      if (endDate != null) {
+        campaigns = campaigns.where((campaign) {
+          if (campaign.firstAdDate == null) return true;
+          return campaign.firstAdDate!.isBefore(endDate) ||
+              campaign.firstAdDate!.isAtSameMomentAs(endDate);
+        }).toList();
+      }
+
+      // Apply limit after client-side filtering
+      if (limit > 0 && campaigns.length > limit) {
+        campaigns = campaigns.take(limit).toList();
+      }
+
+      return campaigns;
     } catch (e) {
       print('Error getting campaigns by date range: $e');
       rethrow;
     }
   }
-  
+
   /// Stream campaigns for real-time updates
   Stream<List<Campaign>> streamCampaigns({
     int limit = 100,
@@ -115,45 +146,41 @@ class CampaignService {
   }) {
     try {
       Query query = _firestore.collection('campaigns');
-      
+
       if (orderBy != null) {
         query = query.orderBy(orderBy, descending: descending);
       }
-      
+
       if (limit > 0) {
         query = query.limit(limit);
       }
-      
+
       return query.snapshots().map((snapshot) {
-        return snapshot.docs
-            .map((doc) => Campaign.fromFirestore(doc))
-            .toList();
+        return snapshot.docs.map((doc) => Campaign.fromFirestore(doc)).toList();
       });
     } catch (e) {
       print('Error streaming campaigns: $e');
       rethrow;
     }
   }
-  
+
   /// Stream a single campaign for real-time updates
   Stream<Campaign?> streamCampaign(String campaignId) {
     try {
-      return _firestore
-          .collection('campaigns')
-          .doc(campaignId)
-          .snapshots()
-          .map((doc) {
-            if (!doc.exists) {
-              return null;
-            }
-            return Campaign.fromFirestore(doc);
-          });
+      return _firestore.collection('campaigns').doc(campaignId).snapshots().map(
+        (doc) {
+          if (!doc.exists) {
+            return null;
+          }
+          return Campaign.fromFirestore(doc);
+        },
+      );
     } catch (e) {
       print('Error streaming campaign $campaignId: $e');
       rethrow;
     }
   }
-  
+
   /// Get top campaigns by profit
   Future<List<Campaign>> getTopCampaignsByProfit(int limit) async {
     try {
@@ -162,16 +189,14 @@ class CampaignService {
           .orderBy('totalProfit', descending: true)
           .limit(limit)
           .get();
-      
-      return snapshot.docs
-          .map((doc) => Campaign.fromFirestore(doc))
-          .toList();
+
+      return snapshot.docs.map((doc) => Campaign.fromFirestore(doc)).toList();
     } catch (e) {
       print('Error getting top campaigns by profit: $e');
       rethrow;
     }
   }
-  
+
   /// Get top campaigns by spend
   Future<List<Campaign>> getTopCampaignsBySpend(int limit) async {
     try {
@@ -180,16 +205,14 @@ class CampaignService {
           .orderBy('totalSpend', descending: true)
           .limit(limit)
           .get();
-      
-      return snapshot.docs
-          .map((doc) => Campaign.fromFirestore(doc))
-          .toList();
+
+      return snapshot.docs.map((doc) => Campaign.fromFirestore(doc)).toList();
     } catch (e) {
       print('Error getting top campaigns by spend: $e');
       rethrow;
     }
   }
-  
+
   /// Get top campaigns by leads
   Future<List<Campaign>> getTopCampaignsByLeads(int limit) async {
     try {
@@ -198,16 +221,14 @@ class CampaignService {
           .orderBy('totalLeads', descending: true)
           .limit(limit)
           .get();
-      
-      return snapshot.docs
-          .map((doc) => Campaign.fromFirestore(doc))
-          .toList();
+
+      return snapshot.docs.map((doc) => Campaign.fromFirestore(doc)).toList();
     } catch (e) {
       print('Error getting top campaigns by leads: $e');
       rethrow;
     }
   }
-  
+
   /// Search campaigns by name
   Future<List<Campaign>> searchCampaignsByName(String searchTerm) async {
     try {
@@ -219,14 +240,11 @@ class CampaignService {
           .startAt([searchTerm])
           .endAt([searchTerm + '\uf8ff'])
           .get();
-      
-      return snapshot.docs
-          .map((doc) => Campaign.fromFirestore(doc))
-          .toList();
+
+      return snapshot.docs.map((doc) => Campaign.fromFirestore(doc)).toList();
     } catch (e) {
       print('Error searching campaigns: $e');
       rethrow;
     }
   }
 }
-
