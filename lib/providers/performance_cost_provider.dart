@@ -1189,7 +1189,10 @@ class PerformanceCostProvider extends ChangeNotifier {
         print('   - Order by: $orderBy (${descending ? "desc" : "asc"})');
       }
 
-      _campaigns = await _campaignService.getCampaignsByDateRange(
+      // Use dynamic calculation to get date-range-specific totals
+      // This calculates from ads collection filtered by date range
+      // Includes BOTH Facebook stats AND GHL stats for the date range
+      _campaigns = await _campaignService.getCampaignsWithDateRangeTotals(
         startDate: startDate,
         endDate: endDate,
         limit: limit,
@@ -1228,6 +1231,7 @@ class PerformanceCostProvider extends ChangeNotifier {
   }
 
   /// Load ad sets for a campaign from split collections
+  /// Uses date-range-specific totals when date filters are active
   Future<void> loadAdSetsForCampaign(
     String campaignId, {
     String orderBy = 'totalProfit',
@@ -1236,16 +1240,37 @@ class PerformanceCostProvider extends ChangeNotifier {
     try {
       if (kDebugMode) {
         print('🔄 Loading ad sets for campaign $campaignId...');
+        if (_filterStartDate != null || _filterEndDate != null) {
+          print('   📅 With date filtering: ${_filterStartDate?.toIso8601String() ?? "any"} to ${_filterEndDate?.toIso8601String() ?? "any"}');
+        }
       }
 
-      _adSets = await _adSetService.getAdSetsForCampaign(
-        campaignId,
-        orderBy: orderBy,
-        descending: descending,
-      );
+      // Use dynamic calculation if date filters are active
+      // This calculates from ads collection filtered by date range
+      // Includes BOTH Facebook stats AND GHL stats for the date range
+      if (_filterStartDate != null || _filterEndDate != null) {
+        _adSets = await _adSetService.getAdSetsWithDateRangeTotals(
+          campaignId: campaignId,
+          startDate: _filterStartDate,
+          endDate: _filterEndDate,
+          orderBy: orderBy,
+          descending: descending,
+        );
+      } else {
+        // Use pre-aggregated lifetime totals if no date filtering
+        _adSets = await _adSetService.getAdSetsForCampaign(
+          campaignId,
+          orderBy: orderBy,
+          descending: descending,
+        );
+      }
 
       if (kDebugMode) {
         print('✅ Loaded ${_adSets.length} ad sets');
+        if (_adSets.isNotEmpty) {
+          final totalSpend = _adSets.fold(0.0, (sum, adSet) => sum + adSet.totalSpend);
+          print('   💰 Total ad set spend: \$${totalSpend.toStringAsFixed(2)}');
+        }
       }
 
       notifyListeners();

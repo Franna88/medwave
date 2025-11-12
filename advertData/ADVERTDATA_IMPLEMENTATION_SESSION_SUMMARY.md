@@ -15,11 +15,30 @@ FACEBOOK API:
 GOHIGHLEVEL (GHL) API:
 - API Key: pit-22f8af95-3244-41e7-9a52-22c87b166f5a
 - Location ID: QdLXaFEqrdF0JbVbpKLw
-- Andries Pipeline ID: XeAGJWRnUGJ5tuhXam2g
-- Davide Pipeline ID: AUduOJBB2lxlsEaNmlJz (⭐ CORRECTED Nov 10, 2025)
+- Andries Pipeline ID: XeAGJWRnUGJ5tuhXam2g (30 stages)
+- Davide Pipeline ID: AUduOJBB2lxlsEaNmlJz (15 stages) ⭐ CORRECTED Nov 10, 2025
+- Erich Pipeline ID: pTbNvnrXqJc9u1oxir3q (18 stages) - NOT TRACKED (no deposit/cash stages)
 - Base URL: https://services.leadconnectorhq.com
 - API Version Header: 2021-07-28
 - Pagination: PAGE-BASED (use 'page' parameter, NOT 'startAfterId')
+- Rate Limit: 200 calls/hour (Development tier)
+
+⭐ GHL CRITICAL STAGE IDs (MUST USE THESE):
+-------------------------------------------
+ANDRIES PIPELINE (XeAGJWRnUGJ5tuhXam2g):
+- Deposit Received: 52a076ca-851f-43fc-a57d-309403a4b208
+- Cash Collected: 3a8ead84-92b0-4796-aaf8-6594c3217a2c
+- Booked Appointments: 9861ef30-81b6-49dc-ba4b-061ef194dcf9
+- Call Completed: 00567f7d-293b-4438-8172-76531a225b76
+
+DAVIDE PIPELINE (AUduOJBB2lxlsEaNmlJz):
+- Deposit Received: 13d54d18-d1e7-476b-aad8-cb4767b8b979
+- Cash Collected: 3c89afba-9797-4b0f-947c-ba00b60468c6
+- Booked Appointments: 003d5559-d057-4e9b-8a77-525acecfb6c8
+- Call Completed: f38bbbc9-93e2-4e74-8238-f8bb456aaa92
+
+⚠️  IMPORTANT: GHL API returns pipelineStageId, NOT pipelineStageName!
+   Load mappings from: ghl_info/pipeline_stage_mappings.json
 
 FIREBASE:
 - Project ID: medx-ai
@@ -500,16 +519,35 @@ NEXT AGENT INSTRUCTIONS:
 
 FILES TO REFERENCE:
 -------------------
+SPLIT COLLECTIONS:
 - /Users/mac/dev/medwave/split_collections_schema/NEW_DATA_STRUCTURE.txt
 - /Users/mac/dev/medwave/split_collections_schema/GHL_AD_MATCHING_SOLUTION.md
 - /Users/mac/dev/medwave/split_collections_schema/MIGRATION_READY.txt
-- /Users/mac/dev/medwave/update_date_ranges_from_insights.py (Date aggregation logic)
+
+SCRIPTS:
+- /Users/mac/dev/medwave/update_date_ranges_from_insights.py ⭐ Date aggregation logic
+- /Users/mac/dev/medwave/update_ghl_with_form_submissions.py (GHL Forms Submissions sync)
+- /Users/mac/dev/medwave/fetch_pipeline_stages.py (Update GHL stage mappings)
+- /Users/mac/dev/medwave/migrate_to_split_collections.py (Migration script)
+
+GHL INFO (CRITICAL REFERENCE):
+- /Users/mac/dev/medwave/ghl_info/QUICK_REFERENCE.txt ⭐ Quick API reference
+- /Users/mac/dev/medwave/ghl_info/GHL_OPPORTUNITY_API_REFERENCE.txt (Complete API docs)
+- /Users/mac/dev/medwave/ghl_info/pipeline_stage_mappings.json ⭐ Stage ID mappings
+- /Users/mac/dev/medwave/ghl_info/PIPELINE_ID_CORRECTION.txt (Davide pipeline fix)
+- /Users/mac/dev/medwave/ghl_info/STAGE_MAPPING_SOLUTION.txt (Stage mapping implementation)
+
+FLUTTER:
 - /Users/mac/dev/medwave/lib/providers/performance_cost_provider.dart
 - /Users/mac/dev/medwave/lib/widgets/admin/performance_tabs/three_column_campaign_view.dart
 - /Users/mac/dev/medwave/lib/screens/admin/adverts/admin_adverts_campaigns_screen.dart
+
+CLOUD FUNCTIONS:
 - /Users/mac/dev/medwave/functions/lib/facebookAdsSync.js
 - /Users/mac/dev/medwave/functions/lib/opportunityHistoryService.js
 - /Users/mac/dev/medwave/functions/index.js
+
+FIREBASE:
 - /Users/mac/dev/medwave/firestore.indexes.json
 
 VERIFICATION QUERIES:
@@ -679,6 +717,175 @@ The Forms Submissions API is the SOURCE OF TRUTH for Facebook Lead Form attribut
 It contains ad_id even when the Contacts API and Opportunities API don't.
 
 ================================================================================
+GHL PIPELINE STAGE MAPPING - CRITICAL IMPLEMENTATION
+================================================================================
+
+PROBLEM DISCOVERED (Nov 10, 2025):
+-----------------------------------
+The GHL Opportunities API (/opportunities/search) does NOT return pipelineStageName.
+It only returns:
+- pipelineStageId: "52a076ca-851f-43fc-a57d-309403a4b208"
+- status: "open"
+
+But NOT:
+- pipelineStageName: "Deposit Received" ❌
+
+This caused 0 deposits to be found even though opportunities with R 300,000 and
+R 125,000 existed in the system!
+
+SOLUTION IMPLEMENTED:
+---------------------
+1. Fetch pipeline stages using: GET /opportunities/pipelines?locationId={location_id}
+2. Create stage ID → stage name mapping for each pipeline
+3. Save to: /Users/mac/dev/medwave/ghl_info/pipeline_stage_mappings.json
+4. Load mappings at script startup
+5. Look up stage names using pipelineStageId
+
+CRITICAL DISCOVERY - DAVIDE PIPELINE ID:
+-----------------------------------------
+⚠️  The pipeline ID labeled "Davide" was actually "Erich Pipeline"!
+
+WRONG: pTbNvnrXqJc9u1oxir3q (Erich Pipeline - no deposit/cash stages)
+CORRECT: AUduOJBB2lxlsEaNmlJz (Davide's Pipeline - has deposit/cash stages)
+
+This was corrected on Nov 10, 2025.
+
+STAGE ID MAPPINGS:
+------------------
+Stage IDs are UNIQUE per pipeline, even for same-named stages:
+
+Stage Name           | Andries Stage ID                      | Davide Stage ID
+-------------------- | ------------------------------------- | -------------------------------------
+Deposit Received     | 52a076ca-851f-43fc-a57d-309403a4b208  | 13d54d18-d1e7-476b-aad8-cb4767b8b979
+Cash Collected       | 3a8ead84-92b0-4796-aaf8-6594c3217a2c  | 3c89afba-9797-4b0f-947c-ba00b60468c6
+Booked Appointments  | 9861ef30-81b6-49dc-ba4b-061ef194dcf9  | 003d5559-d057-4e9b-8a77-525acecfb6c8
+Call Completed       | 00567f7d-293b-4438-8172-76531a225b76  | f38bbbc9-93e2-4e74-8238-f8bb456aaa92
+
+PIPELINE COMPARISON:
+--------------------
+1. ANDRIES PIPELINE - DDM
+   ID: XeAGJWRnUGJ5tuhXam2g
+   Stages: 30
+   ✅ Has "Deposit Received" and "Cash Collected"
+   
+2. DAVIDE'S PIPELINE - DDM
+   ID: AUduOJBB2lxlsEaNmlJz
+   Stages: 15
+   ✅ Has "Deposit Received" and "Cash Collected"
+   
+3. ERICH PIPELINE -DDM (NOT TRACKED)
+   ID: pTbNvnrXqJc9u1oxir3q
+   Stages: 18
+   ❌ Does NOT have "Deposit Received" or "Cash Collected"
+   ❌ Used for lead qualification/booking only
+
+IMPLEMENTATION CODE:
+--------------------
+```python
+import json
+
+def load_stage_mappings():
+    """Load stage ID to stage name mappings"""
+    mapping_file = 'ghl_info/pipeline_stage_mappings.json'
+    with open(mapping_file, 'r') as f:
+        return json.load(f)
+
+# Load at startup
+STAGE_MAPPINGS = load_stage_mappings()
+
+# When processing opportunities:
+def get_stage_name(opportunity):
+    pipeline_id = opportunity.get('pipelineId')
+    stage_id = opportunity.get('pipelineStageId')
+    
+    if pipeline_id == ANDRIES_PIPELINE_ID:
+        return STAGE_MAPPINGS['andries']['stages'].get(stage_id, '')
+    elif pipeline_id == DAVIDE_PIPELINE_ID:
+        return STAGE_MAPPINGS['davide']['stages'].get(stage_id, '')
+    
+    return ''
+```
+
+STAGE CATEGORIES:
+-----------------
+```python
+STAGE_CATEGORIES = {
+    'bookedAppointments': [
+        'Appointment Booked', 
+        'Booked', 
+        'Booked Appointments'
+    ],
+    'deposits': [
+        'Deposit Paid', 
+        'Deposit', 
+        'Deposit Received'  # ⭐ CRITICAL - must include this
+    ],
+    'cashCollected': [
+        'Cash Collected', 
+        'Paid', 
+        'Completed'
+    ]
+}
+```
+
+GHL API ENDPOINTS:
+------------------
+1. Search Opportunities:
+   GET /opportunities/search?location_id={id}&limit=100&page={page}
+   
+2. Get Pipelines (for stage mappings):
+   GET /opportunities/pipelines?locationId={id}
+   
+3. Get Single Opportunity:
+   GET /opportunities/{opportunityId}
+
+KEY OPPORTUNITY FIELDS:
+-----------------------
+- id: Opportunity ID
+- name: Contact name (e.g., "NADIA HARRIS")
+- contactId: Contact ID for matching with Forms Submissions
+- pipelineId: Pipeline ID (Andries/Davide)
+- pipelineStageId: Stage ID (must be mapped to stage name)
+- monetaryValue: ⭐ Cash amount (e.g., 300000 = R 300,000)
+- createdAt: Timestamp
+- attributions[].h_ad_id: Facebook Ad ID (24% coverage)
+- attributions[].utmCampaignId: Campaign ID (24% coverage)
+- attributions[].utmCampaign: Ad Name (18% coverage)
+- attributions[].utmMedium: AdSet Name (fallback)
+
+VERIFIED EXAMPLES:
+------------------
+✅ NADIA HARRIS (Andries Pipeline):
+   - Opportunity ID: y0EF4l4LovI4v4f1sMhG
+   - Pipeline Stage ID: 52a076ca-851f-43fc-a57d-309403a4b208
+   - Stage Name: "Deposit Received"
+   - Monetary Value: R 300,000
+   - h_ad_id: 120234319834320335
+
+✅ Sashnie Naicker (Andries Pipeline):
+   - Opportunity ID: DRu98r89061eiuGOurNp
+   - Pipeline Stage ID: 52a076ca-851f-43fc-a57d-309403a4b208
+   - Stage Name: "Deposit Received"
+   - Monetary Value: R 125,000
+   - h_ad_id: 120234497185560335
+
+MAINTENANCE:
+------------
+If GHL adds new stages:
+1. Run: python3 fetch_pipeline_stages.py
+2. This updates: ghl_info/pipeline_stage_mappings.json
+3. No code changes needed
+
+REFERENCE FILES:
+----------------
+- /Users/mac/dev/medwave/ghl_info/pipeline_stage_mappings.json (Stage mappings)
+- /Users/mac/dev/medwave/ghl_info/QUICK_REFERENCE.txt (Quick API reference)
+- /Users/mac/dev/medwave/ghl_info/GHL_OPPORTUNITY_API_REFERENCE.txt (Complete API docs)
+- /Users/mac/dev/medwave/ghl_info/PIPELINE_ID_CORRECTION.txt (Pipeline ID fix details)
+- /Users/mac/dev/medwave/ghl_info/STAGE_MAPPING_SOLUTION.txt (Stage mapping implementation)
+- /Users/mac/dev/medwave/fetch_pipeline_stages.py (Script to update mappings)
+
+================================================================================
 DEPLOYMENT CHECKLIST
 ================================================================================
 
@@ -817,6 +1024,21 @@ CRITICAL DISCOVERIES:
    Loading only what the user needs (progressive disclosure) dramatically improves
    perceived performance and reduces Firebase read operations.
 
+5. GHL STAGE MAPPING (Nov 10, 2025):
+   The GHL Opportunities API does NOT return pipelineStageName, only pipelineStageId.
+   Must fetch pipeline stages separately and map stage IDs to stage names.
+   Stage IDs are UNIQUE per pipeline (same stage name = different IDs in different pipelines).
+
+6. DAVIDE PIPELINE ID CORRECTION (Nov 10, 2025):
+   The pipeline ID labeled "Davide" was actually "Erich Pipeline" (pTbNvnrXqJc9u1oxir3q).
+   Real Davide's Pipeline ID: AUduOJBB2lxlsEaNmlJz
+   Erich Pipeline has NO deposit/cash stages and should NOT be tracked.
+
+7. DATE RANGE AGGREGATION (Nov 12, 2025):
+   Ad sets and campaigns were showing deployment dates instead of actual ad activity dates.
+   Dates must be aggregated from ads' firstInsightDate/lastInsightDate fields.
+   This ensures date filtering reflects true campaign duration, not sync times.
+
 SOLUTION IMPLEMENTED:
 ---------------------
 1. Split collections architecture with 5 separate collections
@@ -837,13 +1059,27 @@ NEXT STEPS:
 
 KEY FILES TO REVIEW:
 --------------------
+ARCHITECTURE:
 - /Users/mac/dev/medwave/split_collections_schema/NEW_DATA_STRUCTURE.txt
 - /Users/mac/dev/medwave/split_collections_schema/GHL_AD_MATCHING_SOLUTION.md
 - /Users/mac/dev/medwave/split_collections_schema/MIGRATION_READY.txt
-- /Users/mac/dev/medwave/update_ghl_with_form_submissions.py
+
+CRITICAL SCRIPTS:
+- /Users/mac/dev/medwave/update_ghl_with_form_submissions.py (GHL ad_id matching)
 - /Users/mac/dev/medwave/update_date_ranges_from_insights.py ⭐ DATE AGGREGATION
+- /Users/mac/dev/medwave/fetch_pipeline_stages.py (GHL stage mappings)
+
+GHL REFERENCE (MUST READ):
+- /Users/mac/dev/medwave/ghl_info/QUICK_REFERENCE.txt ⭐ START HERE
+- /Users/mac/dev/medwave/ghl_info/pipeline_stage_mappings.json ⭐ STAGE IDs
+- /Users/mac/dev/medwave/ghl_info/GHL_OPPORTUNITY_API_REFERENCE.txt (Full docs)
+- /Users/mac/dev/medwave/ghl_info/PIPELINE_ID_CORRECTION.txt (Davide fix)
+
+FLUTTER:
 - /Users/mac/dev/medwave/lib/providers/performance_cost_provider.dart
 - /Users/mac/dev/medwave/lib/widgets/admin/performance_tabs/three_column_campaign_view.dart
+
+CLOUD FUNCTIONS:
 - /Users/mac/dev/medwave/functions/lib/opportunityHistoryService.js
 - /Users/mac/dev/medwave/firestore.indexes.json
 

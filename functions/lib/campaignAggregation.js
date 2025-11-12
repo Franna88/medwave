@@ -186,8 +186,156 @@ async function onAdUpdate(change, context) {
   }
 }
 
+/**
+ * Aggregate campaign metrics by month
+ * Creates a monthlyTotals map with month-specific totals
+ * @param {string} campaignId - The campaign ID to aggregate
+ * @returns {Promise<Object>} Monthly aggregated metrics
+ */
+async function aggregateCampaignMonthlyTotals(campaignId) {
+  if (!campaignId) {
+    throw new Error('Campaign ID is required');
+  }
+
+  const db = admin.firestore();
+  
+  try {
+    console.log(`📊 Aggregating monthly totals for campaign ${campaignId}...`);
+    
+    // Get all ads in this campaign
+    const adsSnapshot = await db.collection('ads')
+      .where('campaignId', '==', campaignId)
+      .get();
+    
+    if (adsSnapshot.empty) {
+      console.log(`No ads found for campaign ${campaignId}`);
+      return null;
+    }
+
+    // Group ads by month based on firstInsightDate
+    const monthlyData = {};
+    
+    adsSnapshot.forEach(adDoc => {
+      const ad = adDoc.data();
+      
+      // Get the month from firstInsightDate or lastInsightDate
+      let month = null;
+      if (ad.firstInsightDate) {
+        month = ad.firstInsightDate.substring(0, 7); // "2025-11"
+      } else if (ad.lastInsightDate) {
+        month = ad.lastInsightDate.substring(0, 7);
+      }
+      
+      if (!month) {
+        return; // Skip ads without dates
+      }
+      
+      // Initialize month if not exists
+      if (!monthlyData[month]) {
+        monthlyData[month] = {
+          spend: 0,
+          impressions: 0,
+          clicks: 0,
+          reach: 0,
+          leads: 0,
+          bookings: 0,
+          deposits: 0,
+          cashCollected: 0,
+          cashAmount: 0,
+          adCount: 0
+        };
+      }
+      
+      // Aggregate Facebook stats
+      const fbStats = ad.facebookStats || {};
+      monthlyData[month].spend += fbStats.spend || 0;
+      monthlyData[month].impressions += fbStats.impressions || 0;
+      monthlyData[month].clicks += fbStats.clicks || 0;
+      monthlyData[month].reach += fbStats.reach || 0;
+      
+      // Aggregate GHL stats
+      const ghlStats = ad.ghlStats || {};
+      monthlyData[month].leads += ghlStats.leads || 0;
+      monthlyData[month].bookings += ghlStats.bookings || 0;
+      monthlyData[month].deposits += ghlStats.deposits || 0;
+      monthlyData[month].cashCollected += ghlStats.cashCollected || 0;
+      monthlyData[month].cashAmount += ghlStats.cashAmount || 0;
+      
+      monthlyData[month].adCount++;
+    });
+    
+    // Calculate computed metrics for each month
+    const monthlyTotals = {};
+    
+    for (const [month, data] of Object.entries(monthlyData)) {
+      const profit = data.cashAmount - data.spend;
+      const cpl = data.leads > 0 ? data.spend / data.leads : 0;
+      const cpb = data.bookings > 0 ? data.spend / data.bookings : 0;
+      const cpa = data.deposits > 0 ? data.spend / data.deposits : 0;
+      const roi = data.spend > 0 ? ((data.cashAmount - data.spend) / data.spend) * 100 : 0;
+      const cpm = data.impressions > 0 ? (data.spend / data.impressions) * 1000 : 0;
+      const cpc = data.clicks > 0 ? data.spend / data.clicks : 0;
+      const ctr = data.impressions > 0 ? (data.clicks / data.impressions) * 100 : 0;
+      
+      monthlyTotals[month] = {
+        spend: data.spend,
+        impressions: data.impressions,
+        clicks: data.clicks,
+        reach: data.reach,
+        leads: data.leads,
+        bookings: data.bookings,
+        deposits: data.deposits,
+        cashCollected: data.cashCollected,
+        cashAmount: data.cashAmount,
+        profit: profit,
+        cpl: cpl,
+        cpb: cpb,
+        cpa: cpa,
+        roi: roi,
+        cpm: cpm,
+        cpc: cpc,
+        ctr: ctr,
+        adCount: data.adCount
+      };
+    }
+    
+    // Update campaign document with monthly totals
+    await db.collection('campaigns').doc(campaignId).update({
+      monthlyTotals: monthlyTotals,
+      lastMonthlyAggregation: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    const monthCount = Object.keys(monthlyTotals).length;
+    console.log(`✅ Aggregated ${monthCount} months for campaign ${campaignId}`);
+    
+    return monthlyTotals;
+    
+  } catch (error) {
+    console.error(`Error aggregating monthly totals for campaign ${campaignId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Aggregate campaign totals including monthly breakdown
+ * This combines lifetime totals with monthly totals
+ * @param {string} campaignId - The campaign ID to aggregate
+ * @returns {Promise<Object>} Aggregated metrics with monthly breakdown
+ */
+async function aggregateCampaignWithMonthly(campaignId) {
+  // First, aggregate lifetime totals
+  await aggregateCampaignTotals(campaignId);
+  
+  // Then, aggregate monthly totals
+  await aggregateCampaignMonthlyTotals(campaignId);
+  
+  return { success: true, campaignId };
+}
+
 module.exports = {
   aggregateCampaignTotals,
+  aggregateCampaignMonthlyTotals,
+  aggregateCampaignWithMonthly,
   onAdUpdate
 };
 
