@@ -1,0 +1,945 @@
+{
+  "date_generated": "2025-11-12T13:05:02.772852",
+  "date_range": {
+    "start": "2025-11-01",
+    "end": "2025-11-30"
+  },
+  "summary": {
+    "total_campaigns": 155,
+    "campaigns_with_spend": 17,
+    "campaigns_without_insights": 138,
+    "total_spend": 31629.190000000002
+  },
+  "campaigns_with_spend": [
+    {
+      "id": "120233712403260335",
+      "name": "Matthys | 03102025 ABOLEADFORM (DDM)",
+      "status": "ACTIVE",
+      "spend": 11960.35,
+      "insights": {
+        "spend": "11960.35",
+        "impressions": "81922",
+        "clicks": "4372",
+        "reach": "46069",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120226895526760335",
+      "name": "Matthys | 13062025ABO | Body Contouring \u2013 Bowers (DDM)",
+      "status": "ACTIVE",
+      "spend": 5991.9,
+      "insights": {
+        "spend": "5991.9",
+        "impressions": "41411",
+        "clicks": "2107",
+        "reach": "25958",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120234497185340335",
+      "name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "status": "PAUSED",
+      "spend": 3957.03,
+      "insights": {
+        "spend": "3957.03",
+        "impressions": "473494",
+        "clicks": "17362",
+        "reach": "184898",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120235189605420335",
+      "name": "USA 3",
+      "status": "PAUSED",
+      "spend": 2287.98,
+      "insights": {
+        "spend": "2287.98",
+        "impressions": "35072",
+        "clicks": "1137",
+        "reach": "24938",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120234435129520335",
+      "name": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+      "status": "PAUSED",
+      "spend": 1671.48,
+      "insights": {
+        "spend": "1671.48",
+        "impressions": "250006",
+        "clicks": "12108",
+        "reach": "92808",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120235556205010335",
+      "name": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "status": "ACTIVE",
+      "spend": 1328.71,
+      "insights": {
+        "spend": "1328.71",
+        "impressions": "192400",
+        "clicks": "6038",
+        "reach": "99624",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120234319834310335",
+      "name": "Matthys - 13102025 - ABOLANDERZA - Grouped",
+      "status": "PAUSED",
+      "spend": 1144.61,
+      "insights": {
+        "spend": "1144.61",
+        "impressions": "105231",
+        "clicks": "3700",
+        "reach": "39648",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120234487479280335",
+      "name": "Matthys - 16102025 - ABOLEADFORMZA (DDM) - Physiotherapist",
+      "status": "ACTIVE",
+      "spend": 790.13,
+      "insights": {
+        "spend": "790.13",
+        "impressions": "79753",
+        "clicks": "2257",
+        "reach": "35043",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120234485362420335",
+      "name": "Matthys - 16102025 - ABOLANDER (DDM) - Retargeting",
+      "status": "ACTIVE",
+      "spend": 540.74,
+      "insights": {
+        "spend": "540.74",
+        "impressions": "47177",
+        "clicks": "2477",
+        "reach": "17786",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120235702891100335",
+      "name": "07112025 - ABOLEADZA (DDM) - Targeted Audiences",
+      "status": "ACTIVE",
+      "spend": 373.13,
+      "insights": {
+        "spend": "373.13",
+        "impressions": "35581",
+        "clicks": "1161",
+        "reach": "23910",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120235560676170335",
+      "name": "05112025 - ABOLEADFORMZA (DDM) - Afrikaans",
+      "status": "ACTIVE",
+      "spend": 330.76,
+      "insights": {
+        "spend": "330.76",
+        "impressions": "41785",
+        "clicks": "1581",
+        "reach": "26777",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120234319560050335",
+      "name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - All Doctors",
+      "status": "PAUSED",
+      "spend": 245.07,
+      "insights": {
+        "spend": "245.07",
+        "impressions": "33153",
+        "clicks": "901",
+        "reach": "29923",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120234319080580335",
+      "name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Chiro",
+      "status": "PAUSED",
+      "spend": 244.12,
+      "insights": {
+        "spend": "244.12",
+        "impressions": "30583",
+        "clicks": "973",
+        "reach": "24520",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120234319737670335",
+      "name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Medical Doctor",
+      "status": "PAUSED",
+      "spend": 238.37,
+      "insights": {
+        "spend": "238.37",
+        "impressions": "30583",
+        "clicks": "928",
+        "reach": "26792",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120234319405300335",
+      "name": "Matthys - 13102025 - ABOLEADFORMZA (DDM) - Doctor",
+      "status": "PAUSED",
+      "spend": 237.2,
+      "insights": {
+        "spend": "237.2",
+        "impressions": "31752",
+        "clicks": "917",
+        "reach": "28236",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120234170329430335",
+      "name": "Matthys - 10102025 - ABOLANDERZA - Jeffrey's Bay",
+      "status": "PAUSED",
+      "spend": 212.9,
+      "insights": {
+        "spend": "212.9",
+        "impressions": "52661",
+        "clicks": "2590",
+        "reach": "15014",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    },
+    {
+      "id": "120219225917450335",
+      "name": "3. Lindiwe - Dr. Maphakisa Surgery",
+      "status": "PAUSED",
+      "spend": 74.71,
+      "insights": {
+        "spend": "74.71",
+        "impressions": "64684",
+        "clicks": "4721",
+        "reach": "31191",
+        "date_start": "2025-10-13",
+        "date_stop": "2025-11-11"
+      }
+    }
+  ],
+  "campaigns_no_insights": [
+    {
+      "id": "120234169644590335",
+      "name": "Matthys - 10102025 - ABOLEADFORM (DDM) - CXO Medical Practice",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120234168650330335",
+      "name": "Matthys - 10102025 - ABOLEADFORM (DDM) - Doctor",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120234168534080335",
+      "name": "Matthys - 10102025 - ABOLEADFORM (DDM) - Medical Doctor",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120234168403500335",
+      "name": "Matthys - 10102025 - ABOLEADFORM (DDM) - All Doctors",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120234168230370335",
+      "name": "Matthys - 10102025 - ABOLEADFORM (DDM) - Chiro's over 30",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120234167756030335",
+      "name": "Matthys - 10102025 - ABOLEADFORM (DDM) - Chiro's with a Shockwave",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120234167419990335",
+      "name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > DB",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120234166546100335",
+      "name": "Matthys - 10102025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120233259609540335",
+      "name": "Matthys - 25092025 - ABOLANDER - HCP > Chronic Wounds",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120233258888470335",
+      "name": "Matthys - 25092025 - ABOLANDER - Nurses",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120233165222550335",
+      "name": "Matthys - 23092025 - ABORETARGETING",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120232882927590335",
+      "name": "Matthys - 17092025 - ABOLANDER - Varied",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120232878547870335",
+      "name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Chiro's over 30",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120232878175540335",
+      "name": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Chronic Wounds",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120232877929020335",
+      "name": "Matthys - 17092025 - ABOLEADFORM (DDM) - HCP > Weight Loss",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120232877771840335",
+      "name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Nurses",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120232876432840335",
+      "name": "Matthys - 17092025 - ABOLEADFORM (DDM) - Medical Doctor",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120232541670780335",
+      "name": "Matthys - 10092025 - ABOLEADFORM (DDM) - Varied",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120231848330960335",
+      "name": "Matthys - 29082025 - ABOLEADFORM (DDM) - Nurse",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120231400378500335",
+      "name": "Matthys - 01082025 - ABOLANDER (DDM) - Retarget Nurses",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120231337384800335",
+      "name": "Matthys - 19082025 - ABOLEADFORM[USA] (DDM)",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230603049950335",
+      "name": "Matthys - 06082025 ABOLANDER [Wounds] (DDM) - Lead Ads",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230558300970335",
+      "name": "Matthys - 05082025 - ABOLEADFORM[USA] (DDM)",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230364929910335",
+      "name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Chiropractic - Lead Ads",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230364738140335",
+      "name": "Matthys - 01082025 - ABOLEADFORM (DDM) - Nurse - Lead Ads",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230364306850335",
+      "name": "Matthys - 01082025 - ABOLEADFORM (DDM) - Medical Doctor - Lead Ads",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230363884530335",
+      "name": "Matthys - 01082025 - ABOLEADFORM (DDM) - Doctor - Lead Ads",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230355930760335",
+      "name": "Matthys - 01082025 - ABOLEADFORM (DDM) - All Doctors - Lead Ads",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230355675020335",
+      "name": "Matthys - 01082025 - ABOLANDER (DDM) - All Chiropractic",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230355485120335",
+      "name": "Matthys - 01082025 - ABOLANDER (DDM) - Nurse",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230355249860335",
+      "name": "Matthys - 01082025 - ABOLANDER (DDM) - Medical Doctors",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230354594460335",
+      "name": "Matthys - 01082025 - ABOLANDER (DDM) - Doctor",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230352873610335",
+      "name": "Matthys - 01082025 - ABOLANDER (DDM) - All Doctors",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230144970880335",
+      "name": "Matthys - 29072025 - ABOLEAD (DDM) - All Chiropractic",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230144783140335",
+      "name": "Matthys - 29072025 - ABOLEAD (DDM) - Nurse [ZA]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230144514470335",
+      "name": "Matthys - 29072025 - ABOLEAD (DDM) - Medical Doctor",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230144310470335",
+      "name": "Matthys - 29072025 - ABOLEAD (DDM) - Doctors",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120230142994890335",
+      "name": "Matthys - 29072025 - ABOLEAD (DDM) - All Doctors",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120229788138110335",
+      "name": "Matthys - 24072025 ABOLEAD [Wounds] (DDM)",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120229646231630335",
+      "name": "Matthys - 23072025 [Nurse] Davide Wounds (DDM) - Audiences Cross over",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120229616268350335",
+      "name": "Davide | 23072025CBO | General",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120229323278950335",
+      "name": "Matthys - 18072025 - ABOLEADFORMZA (DDM) - Group D",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120229323049740335",
+      "name": "Matthys - 18072025 - ABOLEADFORMZA (DDM) - Group C",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120229322905180335",
+      "name": "Matthys - 18072025 - ABOLEADFORMZA (DDM) - Group A",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120229322699510335",
+      "name": "Matthys - 18072025 - ABOLEADFORMZA (DDM) - Group B",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120228686291820335",
+      "name": "Matthys - 01072025 - ABORETARGET (DDM) - US",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120228276789930335",
+      "name": "Matthys - 01072025 - ABORETARGET (DDM)",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120227248630670335",
+      "name": "Matthys - 23062025 - ABOLEADFORMZA (DDM) - [Medical Doctor]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120227248220670335",
+      "name": "Matthys - 23062025 - ABOLEADFORMZA (DDM) - [All Doctors]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120227247991860335",
+      "name": "Matthys - 23062025 - ABOLEADFORMZA (DDM) - [Doctor]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120227247002410335",
+      "name": "Matthys - 23062025 - ABOLEADFORMZA (DDM) - / 17072025 [Nurse] Davide Wounds DDM - Audiences",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120226895208990335",
+      "name": "Matthys - 13062025 - ABOLEADFORMZA (DDM) - [Chiro]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120226895151590335",
+      "name": "Matthys - 13062025 - ABOLEADFORMZA (DDM) - [CXO Medical Practice]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120226895069140335",
+      "name": "Matthys - 13062025 - ABOLEADFORMZA (DDM) - [Physician Partner]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120226894897840335",
+      "name": "Matthys - 13062025 - ABOLEADFORMZA (DDM) - [Doctor]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120226894854950335",
+      "name": "Matthys - 13062025 - ABOLEADFORMZA (DDM) - [Medical Doctor]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120226894762320335",
+      "name": "Matthys - 13062025 - ABOLEADFORMZA (DDM) - [All Chiropractic]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120226894564980335",
+      "name": "Matthys - 13062025 - ABOLEADFORMZA (DDM) - [Nurse]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120226714459050335",
+      "name": "Matthys - 11062025 - ABOLEADUSA (DDM) - [Superior Outcomes]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120226634724130335",
+      "name": "Matthys - 10062025 - SW | ABOLEADFORMUSA (DDM) - [Providers]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120226549811960335",
+      "name": "Matthys - 11062025 - ABOLEADUSA (DDM) - [ROI]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120226233571250335",
+      "name": "Matthys - 05062025 - ABOLEADFORMZA (DDM) - [All Doctors]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120225452333130335",
+      "name": "Matthys - 23052025 - ABOLEADFORMZA (DDM) - [MdK]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120224995606200335",
+      "name": "Matthys - 16052025 - ABOLEADFORMZA (DDM) - [HP]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120224993963300335",
+      "name": "Matthys - 16052025 - ABOLEADFORMZA (DDM) - [Physio]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120224991345310335",
+      "name": "Matthys - 16052025 - ABOLEADFORMZA (DDM) - [Chiro]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120224774891060335",
+      "name": "MedWave -> Cape Town -> Conference",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120224698423870335",
+      "name": "1. MW - B2B - ZA - Medical Professionals $80 -> Andries Calendar",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120224620709700335",
+      "name": "Matthys - 09052025 - ABOTRAFFIC [USA] - QUIZ (DDM)",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120224618349200335",
+      "name": "MedWave | Chiropractor | Body Contouring \u2013 Bowers | DDM [USA]",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120224349742460335",
+      "name": "MedWave South Africa (B2B) - Andries - April Launch - DDM Audiences",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120222877559030335",
+      "name": "Matthys - 24042025 - ABORETZA (DDM)",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120222874218260335",
+      "name": "Matthys - 24042025 - ABORETUSA (DDM)",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120222249675000335",
+      "name": "1. MW - B2B - ZA - Aesthetic & Healthcare - 1% LAL $50 -> Andries Calendar",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120222249143130335",
+      "name": "*New* MedWave South Africa (B2B) - Andries - April Launch",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120221556531500335",
+      "name": "1. MW - B2B - ZA - Physical Therapy & Practitioner retargeting with Margo - 1% LAL $80 CBO -> Davide Calendar",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120221549984640335",
+      "name": "2. Cretia - Mega Health Store - Lose or its free \u2013 White ladies only",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120221383422490335",
+      "name": "v2 MedWave | Chiropractor | Body Contouring \u2013 Rod",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120221379774620335",
+      "name": "v2 MedWave | Chiropractor | Body Contouring \u2013 Bowers",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120221116326260335",
+      "name": "Social Adjustment: USA Campaign 2",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120220678927050335",
+      "name": "Matthys - 04042025 - ABOLEADFORMZA (DDM) - with Davide Cal Added (Colin Lagrange Only)",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120220235696510335",
+      "name": "2. Cretia - Mega Health Store - Lose or its free",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120219705253620335",
+      "name": "Social Adjustment: USA Campaign 1",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120219181195660335",
+      "name": "MedWave | Chiropractor | Body Contouring \u2013 Bowers",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120219100170730335",
+      "name": "Matthys - 27032025 - ABOLEADFORM (DDM)",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120218892124410335",
+      "name": "1. Nyeleti - Ntsumi Health and Wellness v2 \u2013 List Upload",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120218835098480335",
+      "name": "24032025 - ABOLEADFORM (DDM)",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120218567640840335",
+      "name": "20032025 - ABOLEADFORM (DDM)",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120218499520250335",
+      "name": "19032025 - Master Creatives",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120218418767110335",
+      "name": "2. Cretia - Mega Health Store",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120218411273230335",
+      "name": "1. Nyeleti - Ntsumi Health and Wellness v2 \u2013 Copy",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120217712552590335",
+      "name": "1. Nyeleti - Ntsumi Health and Wellness v2",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120217652267590335",
+      "name": "1. Nyeleti - Ntsumi Health and Wellness",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120217499366790335",
+      "name": "MedWave Body Contouring",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120217320540620335",
+      "name": "MedWave | Chiropractor | Body Contouring \u2013 ROD",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120217291234600335",
+      "name": "MW RSA Doctor Conference",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120217137642520335",
+      "name": "MedWave RSA - Edge Fitness \u2013 Dynamic",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120216730584420335",
+      "name": "MedWave RSA - Edge Fitness",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120216576846770335",
+      "name": "MedWave South Africa (B2B) - Llewellyn - Retargeting 18 Feb 2025",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120216480637160335",
+      "name": "MedWave South Africa (B2B) - Andries - Feb Launch",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120216181922750335",
+      "name": "MedWave | Chiropractor | Body Contouring - Dr. Kyle",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120215987151590335",
+      "name": "MedWave South Africa (B2B) - Andries - Retargeting Davide Ads",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120215858523590335",
+      "name": "MedWave Lipedema Pain - Weight \u2013 Optimized campaign",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120215794446620335",
+      "name": "MedWave South Africa (B2B) - Llewellyn Guarantee \u2013 Customer list",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120215746862190335",
+      "name": "MedWave South Africa (B2B) - Llewellyn Guarantee",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120215529446590335",
+      "name": "MedWave - Nursing Campaign",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120215280246370335",
+      "name": "MedWave South Africa (B2B) \u2013 Gym Owners",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120215153586640335",
+      "name": "MedWave South Africa (B2B) - Andries - Part Guarantee",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120214998040030335",
+      "name": "MedWave Lipedema Pain - Best List",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120214997592580335",
+      "name": "MedWave Lipedema Pain - Weight",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120214819018670335",
+      "name": "New MedWave Creatives 2025",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120213625727630335",
+      "name": "Retargeting SoftWave Leads",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120213100270410335",
+      "name": "MedWave | Conversion | Retargeting",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120212809904150335",
+      "name": "Retargeting Campaign",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120212659173490335",
+      "name": "MedWave | Conversion | Chiropractors - Videos \u2013 CBO",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120212495329830335",
+      "name": "MedWave | Conversion | Chiropractors - Images",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120212377731470335",
+      "name": "MedWave | Conversion | Chiropractors - Videos",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120211668933050335",
+      "name": "MedWave | Conversion Campaign | Chiropractors V2",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120211601116810335",
+      "name": "MedWave | Conversion Campaign | Chiropractors",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120210524555410335",
+      "name": "MedWave Vertical Conversion Ads - v2 Scale budget",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120210524538280335",
+      "name": "MedWave Webinar Retargeting",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120209541230020335",
+      "name": "MedWave Vertical Conversion Ads",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120208927016880335",
+      "name": "AE - Audience Test #2",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120208380020860335",
+      "name": "AE - ISpa Event",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120208303983850335",
+      "name": "AE - Sandbox",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120207299617380335",
+      "name": "AE - Audience Test",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120204909845950335",
+      "name": "MedWave\u2122 Medical Business Owners",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120201299644290335",
+      "name": "MedWave Inch-Loss \u2013 Launch 2 - Davide Videos",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120200724985630335",
+      "name": "MedWave Inch-Loss \u2013 Launch 1",
+      "status": "PAUSED"
+    },
+    {
+      "id": "120200637584780335",
+      "name": "MedWave Inch-Loss",
+      "status": "PAUSED"
+    },
+    {
+      "id": "23857628525910334",
+      "name": "Ultraslim in Tigard- Conversion V4",
+      "status": "PAUSED"
+    },
+    {
+      "id": "23857425432110334",
+      "name": "UltraYou- Facials",
+      "status": "PAUSED"
+    },
+    {
+      "id": "23857270748350334",
+      "name": "Ultraslim in Tigard- Conversion V3",
+      "status": "PAUSED"
+    },
+    {
+      "id": "23856799720490334",
+      "name": "J.Case Medical- Conversion V2",
+      "status": "PAUSED"
+    },
+    {
+      "id": "23856640409450334",
+      "name": "UltraYou- Indialantic Conversion V3",
+      "status": "PAUSED"
+    },
+    {
+      "id": "23856638543550334",
+      "name": "Ultraslim in Tigard- Conversion V2",
+      "status": "PAUSED"
+    },
+    {
+      "id": "23856378787940334",
+      "name": "J.Case Medical- Conversion",
+      "status": "PAUSED"
+    },
+    {
+      "id": "23855992486530334",
+      "name": "UltraYou- Indialantic Conversion V2",
+      "status": "PAUSED"
+    }
+  ]
+}

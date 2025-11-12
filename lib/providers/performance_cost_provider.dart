@@ -1214,6 +1214,25 @@ class PerformanceCostProvider extends ChangeNotifier {
         final totalLeads = _campaigns.fold(0, (sum, c) => sum + c.totalLeads);
         print('   - Total spend: \$${totalSpend.toStringAsFixed(2)}');
         print('   - Total leads: $totalLeads');
+        
+        // Show top 3 campaigns by SPEND for verification
+        if (_campaigns.isNotEmpty) {
+          print('   📋 Top 3 campaigns by PROFIT (current sort):');
+          for (var i = 0; i < (_campaigns.length > 3 ? 3 : _campaigns.length); i++) {
+            final c = _campaigns[i];
+            print('      ${i + 1}. ${c.campaignName}');
+            print('          Spend: \$${c.totalSpend.toStringAsFixed(2)}, Profit: \$${c.totalProfit.toStringAsFixed(2)}');
+          }
+          
+          // Also show top 3 by SPEND
+          final bySpend = List<Campaign>.from(_campaigns)..sort((a, b) => b.totalSpend.compareTo(a.totalSpend));
+          print('   💰 Top 3 campaigns by SPEND:');
+          for (var i = 0; i < (bySpend.length > 3 ? 3 : bySpend.length); i++) {
+            final c = bySpend[i];
+            print('      ${i + 1}. ${c.campaignName}');
+            print('          Spend: \$${c.totalSpend.toStringAsFixed(2)}, Profit: \$${c.totalProfit.toStringAsFixed(2)}');
+          }
+        }
       }
 
       notifyListeners();

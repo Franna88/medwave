@@ -1,0 +1,189 @@
+{
+  "date_generated": "2025-11-12T13:08:24.519629",
+  "firebase_campaigns": 20,
+  "firebase_total_spend": 65388.500000000015,
+  "facebook_api_spend": 31629.19,
+  "discrepancy": 33759.31000000001,
+  "campaigns": [
+    {
+      "id": "120226895526760335",
+      "name": "Matthys | 13062025ABO | Body Contouring \u2013 Bowers (DDM)",
+      "totalSpend": 28591.36,
+      "totalLeads": 0,
+      "firstAdDate": "2025-06-07",
+      "lastAdDate": "2025-11-10",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "120233712403260335",
+      "name": "Matthys | 03102025 ABOLEADFORM (DDM)",
+      "totalSpend": 13795.130000000001,
+      "totalLeads": 0,
+      "firstAdDate": "2025-10-04",
+      "lastAdDate": "2025-11-10",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "120234497185340335",
+      "name": "Matthys - 17102025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "totalSpend": 7914.2300000000005,
+      "totalLeads": 169,
+      "firstAdDate": "2025-10-11",
+      "lastAdDate": "2025-11-10",
+      "status": "UNKNOWN"
+    },
+    {
+      "id": "120235189605420335",
+      "name": "USA 3",
+      "totalSpend": 4562.14,
+      "totalLeads": 0,
+      "firstAdDate": "2025-10-24",
+      "lastAdDate": "2025-11-11",
+      "status": "UNKNOWN"
+    },
+    {
+      "id": "120234435129520335",
+      "name": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+      "totalSpend": 3461.7999999999997,
+      "totalLeads": 101,
+      "firstAdDate": "2025-10-10",
+      "lastAdDate": "2025-11-09",
+      "status": "RECENT"
+    },
+    {
+      "id": "120234319834310335",
+      "name": "Matthys - 13102025 - ABOLANDERZA - Grouped",
+      "totalSpend": 2289.2200000000003,
+      "totalLeads": 0,
+      "firstAdDate": "2025-10-08",
+      "lastAdDate": "2025-11-09",
+      "status": "RECENT"
+    },
+    {
+      "id": "120234487479280335",
+      "name": "Matthys - 16102025 - ABOLEADFORMZA (DDM) - Physiotherapist",
+      "totalSpend": 1495.23,
+      "totalLeads": 65,
+      "firstAdDate": "2025-10-10",
+      "lastAdDate": "2025-11-11",
+      "status": "RECENT"
+    },
+    {
+      "id": "120235556205010335",
+      "name": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "totalSpend": 1204.0,
+      "totalLeads": 115,
+      "firstAdDate": "2025-10-31",
+      "lastAdDate": "2025-11-10",
+      "status": "UNKNOWN"
+    },
+    {
+      "id": "120234485362420335",
+      "name": "Matthys - 16102025 - ABOLANDER (DDM) - Retargeting",
+      "totalSpend": 1006.21,
+      "totalLeads": 0,
+      "firstAdDate": "2025-10-10",
+      "lastAdDate": "2025-11-11",
+      "status": "RECENT"
+    },
+    {
+      "id": "120235702891100335",
+      "name": "07112025 - ABOLEADZA (DDM) - Targeted Audiences",
+      "totalSpend": 537.1999999999999,
+      "totalLeads": 0,
+      "firstAdDate": "2025-11-01",
+      "lastAdDate": "2025-11-11",
+      "status": "UNKNOWN"
+    },
+    {
+      "id": "120235560676170335",
+      "name": "05112025 - ABOLEADFORMZA (DDM) - Afrikaans",
+      "totalSpend": 297.90999999999997,
+      "totalLeads": 6,
+      "firstAdDate": "2025-10-31",
+      "lastAdDate": "2025-11-10",
+      "status": "UNKNOWN"
+    },
+    {
+      "id": "120234170329430335",
+      "name": "Matthys - 10102025 - ABOLANDERZA - Jeffrey's Bay",
+      "totalSpend": 234.07000000000002,
+      "totalLeads": 0,
+      "firstAdDate": "2025-10-10",
+      "lastAdDate": "2025-11-06",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "120218835098480335",
+      "name": "24032025 - ABOLEADFORM (DDM)",
+      "totalSpend": 0,
+      "totalLeads": 0,
+      "firstAdDate": "2025-11-08",
+      "lastAdDate": "2025-11-08",
+      "status": "RECENT"
+    },
+    {
+      "id": "120226714459050335",
+      "name": "Matthys - 11062025 - ABOLEADUSA (DDM) - [Superior Outcomes]",
+      "totalSpend": 0,
+      "totalLeads": 0,
+      "firstAdDate": "2025-11-10",
+      "lastAdDate": "2025-11-10",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "120229322699510335",
+      "name": "Matthys - 18072025 - ABOLEADFORMZA (DDM) - Group B",
+      "totalSpend": 0,
+      "totalLeads": 0,
+      "firstAdDate": "2025-11-10",
+      "lastAdDate": "2025-11-10",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "120229322905180335",
+      "name": "Matthys - 18072025 - ABOLEADFORMZA (DDM) - Group A",
+      "totalSpend": 0,
+      "totalLeads": 0,
+      "firstAdDate": "2025-11-10",
+      "lastAdDate": "2025-11-10",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "120229323049740335",
+      "name": "Matthys - 18072025 - ABOLEADFORMZA (DDM) - Group C",
+      "totalSpend": 0,
+      "totalLeads": 0,
+      "firstAdDate": "2025-11-10",
+      "lastAdDate": "2025-11-10",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "120229323278950335",
+      "name": "Matthys - 18072025 - ABOLEADFORMZA (DDM) - Group D",
+      "totalSpend": 0,
+      "totalLeads": 0,
+      "firstAdDate": "2025-11-10",
+      "lastAdDate": "2025-11-10",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "120231337384800335",
+      "name": "Matthys - 19082025 - ABOLEADFORM[USA] (DDM)",
+      "totalSpend": 0,
+      "totalLeads": 0,
+      "firstAdDate": "2025-11-10",
+      "lastAdDate": "2025-11-10",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "120234167756030335",
+      "name": "Matthys - 10102025 - ABOLEADFORM (DDM) - Chiro's with a Shockwave",
+      "totalSpend": 0,
+      "totalLeads": 0,
+      "firstAdDate": "2025-11-09",
+      "lastAdDate": "2025-11-10",
+      "status": "ACTIVE"
+    }
+  ]
+}
