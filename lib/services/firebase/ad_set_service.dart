@@ -4,7 +4,7 @@ import '../../models/performance/ad_set.dart';
 /// Service for managing ad set data from the split collections schema
 class AdSetService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   /// Get all ad sets for a campaign
   Future<List<AdSet>> getAdSetsForCampaign(
     String campaignId, {
@@ -15,41 +15,36 @@ class AdSetService {
       Query query = _firestore
           .collection('adSets')
           .where('campaignId', isEqualTo: campaignId);
-      
+
       if (orderBy != null) {
         query = query.orderBy(orderBy, descending: descending);
       }
-      
+
       final snapshot = await query.get();
-      
-      return snapshot.docs
-          .map((doc) => AdSet.fromFirestore(doc))
-          .toList();
+
+      return snapshot.docs.map((doc) => AdSet.fromFirestore(doc)).toList();
     } catch (e) {
       print('Error getting ad sets for campaign: $e');
       rethrow;
     }
   }
-  
+
   /// Get a single ad set by ID
   Future<AdSet?> getAdSet(String adSetId) async {
     try {
-      final doc = await _firestore
-          .collection('adSets')
-          .doc(adSetId)
-          .get();
-      
+      final doc = await _firestore.collection('adSets').doc(adSetId).get();
+
       if (!doc.exists) {
         return null;
       }
-      
+
       return AdSet.fromFirestore(doc);
     } catch (e) {
       print('Error getting ad set $adSetId: $e');
       rethrow;
     }
   }
-  
+
   /// Stream ad sets for a campaign
   Stream<List<AdSet>> streamAdSetsForCampaign(
     String campaignId, {
@@ -60,35 +55,31 @@ class AdSetService {
       Query query = _firestore
           .collection('adSets')
           .where('campaignId', isEqualTo: campaignId);
-      
+
       if (orderBy != null) {
         query = query.orderBy(orderBy, descending: descending);
       }
-      
+
       return query.snapshots().map((snapshot) {
-        return snapshot.docs
-            .map((doc) => AdSet.fromFirestore(doc))
-            .toList();
+        return snapshot.docs.map((doc) => AdSet.fromFirestore(doc)).toList();
       });
     } catch (e) {
       print('Error streaming ad sets: $e');
       rethrow;
     }
   }
-  
+
   /// Stream a single ad set
   Stream<AdSet?> streamAdSet(String adSetId) {
     try {
-      return _firestore
-          .collection('adSets')
-          .doc(adSetId)
-          .snapshots()
-          .map((doc) {
-            if (!doc.exists) {
-              return null;
-            }
-            return AdSet.fromFirestore(doc);
-          });
+      return _firestore.collection('adSets').doc(adSetId).snapshots().map((
+        doc,
+      ) {
+        if (!doc.exists) {
+          return null;
+        }
+        return AdSet.fromFirestore(doc);
+      });
     } catch (e) {
       print('Error streaming ad set $adSetId: $e');
       rethrow;
@@ -126,12 +117,14 @@ class AdSetService {
       double totalCashAmount = 0;
       int adsInRange = 0;
 
-      final startDateStr = startDate != null ? _dateTimeToString(startDate) : null;
+      final startDateStr = startDate != null
+          ? _dateTimeToString(startDate)
+          : null;
       final endDateStr = endDate != null ? _dateTimeToString(endDate) : null;
 
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        
+
         // Get ad date range
         final firstInsightDate = data['firstInsightDate'] as String?;
         final lastInsightDate = data['lastInsightDate'] as String?;
@@ -157,7 +150,8 @@ class AdSetService {
         final facebookStats = data['facebookStats'] as Map<String, dynamic>?;
         if (facebookStats != null) {
           totalSpend += (facebookStats['spend'] as num?)?.toDouble() ?? 0;
-          totalImpressions += (facebookStats['impressions'] as num?)?.toInt() ?? 0;
+          totalImpressions +=
+              (facebookStats['impressions'] as num?)?.toInt() ?? 0;
           totalClicks += (facebookStats['clicks'] as num?)?.toInt() ?? 0;
           totalReach += (facebookStats['reach'] as num?)?.toInt() ?? 0;
         }
@@ -168,7 +162,8 @@ class AdSetService {
           totalLeads += (ghlStats['leads'] as num?)?.toInt() ?? 0;
           totalBookings += (ghlStats['bookings'] as num?)?.toInt() ?? 0;
           totalDeposits += (ghlStats['deposits'] as num?)?.toInt() ?? 0;
-          totalCashCollected += (ghlStats['cashCollected'] as num?)?.toInt() ?? 0;
+          totalCashCollected +=
+              (ghlStats['cashCollected'] as num?)?.toInt() ?? 0;
           totalCashAmount += (ghlStats['cashAmount'] as num?)?.toDouble() ?? 0;
         }
       }
@@ -178,8 +173,12 @@ class AdSetService {
       final cpl = totalLeads > 0 ? totalSpend / totalLeads : 0;
       final cpb = totalBookings > 0 ? totalSpend / totalBookings : 0;
       final cpa = totalDeposits > 0 ? totalSpend / totalDeposits : 0;
-      final ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
-      final cpm = totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
+      final ctr = totalImpressions > 0
+          ? (totalClicks / totalImpressions) * 100
+          : 0;
+      final cpm = totalImpressions > 0
+          ? (totalSpend / totalImpressions) * 1000
+          : 0;
       final cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
 
       return {
@@ -251,7 +250,8 @@ class AdSetService {
           totalLeads: (monthData['leads'] as num?)?.toInt() ?? 0,
           totalBookings: (monthData['bookings'] as num?)?.toInt() ?? 0,
           totalDeposits: (monthData['deposits'] as num?)?.toInt() ?? 0,
-          totalCashCollected: (monthData['cashCollected'] as num?)?.toInt() ?? 0,
+          totalCashCollected:
+              (monthData['cashCollected'] as num?)?.toInt() ?? 0,
           totalCashAmount: (monthData['cashAmount'] as num?)?.toDouble() ?? 0,
           totalProfit: (monthData['profit'] as num?)?.toDouble() ?? 0,
           cpl: (monthData['cpl'] as num?)?.toDouble() ?? 0,
@@ -260,8 +260,8 @@ class AdSetService {
           adCount: (monthData['adCount'] as num?)?.toInt() ?? 0,
           lastUpdated: (data['lastUpdated'] as Timestamp?)?.toDate(),
           createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-          firstAdDate: (data['firstAdDate'] as Timestamp?)?.toDate(),
-          lastAdDate: (data['lastAdDate'] as Timestamp?)?.toDate(),
+          firstAdDate: _parseDateField(data['firstAdDate']),
+          lastAdDate: _parseDateField(data['lastAdDate']),
         );
 
         adSetsWithMonthData.add(adSet);
@@ -322,7 +322,7 @@ class AdSetService {
 
       // Calculate date-range-specific totals for each ad set
       List<AdSet> adSetsWithTotals = [];
-      
+
       for (var adSet in adSets) {
         final totals = await calculateAdSetTotalsForDateRange(
           adSetId: adSet.adSetId,
@@ -386,7 +386,7 @@ class AdSetService {
               aValue = a.totalProfit;
               bValue = b.totalProfit;
           }
-          
+
           final comparison = (aValue as num).compareTo(bValue as num);
           return descending ? -comparison : comparison;
         });
@@ -398,5 +398,16 @@ class AdSetService {
       rethrow;
     }
   }
-}
 
+  static String? _parseDateField(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+
+    if (value is Timestamp) {
+      final date = value.toDate();
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    }
+
+    return null;
+  }
+}
