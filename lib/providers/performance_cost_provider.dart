@@ -17,13 +17,14 @@ import '../models/performance/ad.dart' as split_ad;
 /// Provider for managing ad performance data (Facebook + GHL from Firebase)
 class PerformanceCostProvider extends ChangeNotifier {
   // Feature flag for split collections
-  static const bool USE_SPLIT_COLLECTIONS = true; // Set to true to enable new schema
-  
+  static const bool USE_SPLIT_COLLECTIONS =
+      true; // Set to true to enable new schema
+
   // Services for split collections
   final CampaignService _campaignService = CampaignService();
   final AdSetService _adSetService = AdSetService();
   final AdService _adService = AdService();
-  
+
   // Data for split collections
   List<Campaign> _campaigns = [];
   List<AdSet> _adSets = [];
@@ -31,25 +32,26 @@ class PerformanceCostProvider extends ChangeNotifier {
   // Data
   List<perf_data.AdPerformanceData> _adPerformanceData = [];
   List<perf_data.AdPerformanceWithProduct> _adPerformanceWithProducts = [];
-  
+
   // Month management
   List<String> _availableMonths = [];
   List<String> _selectedMonths = [];
-  
+
   // Date filtering for split collections
   DateTime? _filterStartDate;
   DateTime? _filterEndDate;
-  
+
   // State
   bool _isLoading = false;
   bool _isInitialized = false;
   String? _error;
   DateTime? _lastSync;
   bool _isSyncing = false;
-  
+
   // Getters
   List<perf_data.AdPerformanceData> get adPerformanceData => _adPerformanceData;
-  List<perf_data.AdPerformanceWithProduct> get adPerformanceWithProducts => _adPerformanceWithProducts;
+  List<perf_data.AdPerformanceWithProduct> get adPerformanceWithProducts =>
+      _adPerformanceWithProducts;
   List<String> get availableMonths => _availableMonths;
   List<String> get selectedMonths => _selectedMonths;
   DateTime? get filterStartDate => _filterStartDate;
@@ -59,90 +61,112 @@ class PerformanceCostProvider extends ChangeNotifier {
   String? get error => _error;
   DateTime? get lastSync => _lastSync;
   bool get isSyncing => _isSyncing;
-  
+
   // Deprecated: Product functionality removed - returns empty list for backward compatibility
-  @Deprecated('Product functionality removed. Profit now comes from GHL opportunity values.')
+  @Deprecated(
+    'Product functionality removed. Profit now comes from GHL opportunity values.',
+  )
   List<dynamic> get products => [];
-  
+
   // Getters for split collections
   List<Campaign> get campaigns => _campaigns;
   List<AdSet> get adSets => _adSets;
   List<split_ad.Ad> get ads => _ads;
-  
+
   // Quick stats
-  int get totalAds => USE_SPLIT_COLLECTIONS ? _ads.length : _adPerformanceData.length;
-  int get matchedAds => USE_SPLIT_COLLECTIONS 
-      ? _ads.where((ad) => ad.ghlStats.leads > 0).length 
-      : _adPerformanceData.where((ad) => ad.matchingStatus == perf_data.MatchingStatus.matched).length;
-  int get unmatchedAds => USE_SPLIT_COLLECTIONS 
-      ? _ads.where((ad) => ad.ghlStats.leads == 0).length 
-      : _adPerformanceData.where((ad) => ad.matchingStatus == perf_data.MatchingStatus.unmatched).length;
-  
+  int get totalAds =>
+      USE_SPLIT_COLLECTIONS ? _ads.length : _adPerformanceData.length;
+  int get matchedAds => USE_SPLIT_COLLECTIONS
+      ? _ads.where((ad) => ad.ghlStats.leads > 0).length
+      : _adPerformanceData
+            .where(
+              (ad) => ad.matchingStatus == perf_data.MatchingStatus.matched,
+            )
+            .length;
+  int get unmatchedAds => USE_SPLIT_COLLECTIONS
+      ? _ads.where((ad) => ad.ghlStats.leads == 0).length
+      : _adPerformanceData
+            .where(
+              (ad) => ad.matchingStatus == perf_data.MatchingStatus.unmatched,
+            )
+            .length;
+
   /// Filter campaigns by date range (client-side filtering for split collections)
-  List<Campaign> getFilteredCampaigns({DateTime? startDate, DateTime? endDate}) {
+  List<Campaign> getFilteredCampaigns({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) {
     if (!USE_SPLIT_COLLECTIONS || (startDate == null && endDate == null)) {
       return _campaigns;
     }
-    
+
     return _campaigns.where((campaign) {
       // Check if campaign has any activity in the date range
       if (campaign.firstAdDate == null && campaign.lastAdDate == null) {
         return true; // Include campaigns without dates
       }
-      
+
       // Campaign is included if its date range overlaps with the filter range
       final campaignStart = campaign.firstAdDate;
       final campaignEnd = campaign.lastAdDate;
-      
-      if (campaignStart != null && endDate != null && campaignStart.isAfter(endDate)) {
+
+      if (campaignStart != null &&
+          endDate != null &&
+          campaignStart.isAfter(endDate)) {
         return false; // Campaign starts after filter ends
       }
-      
-      if (campaignEnd != null && startDate != null && campaignEnd.isBefore(startDate)) {
+
+      if (campaignEnd != null &&
+          startDate != null &&
+          campaignEnd.isBefore(startDate)) {
         return false; // Campaign ends before filter starts
       }
-      
+
       return true;
     }).toList();
   }
-  
+
   /// Filter ad sets by date range (client-side filtering for split collections)
   List<AdSet> getFilteredAdSets({DateTime? startDate, DateTime? endDate}) {
     if (!USE_SPLIT_COLLECTIONS || (startDate == null && endDate == null)) {
       return _adSets;
     }
-    
+
     return _adSets.where((adSet) {
       if (adSet.firstAdDate == null && adSet.lastAdDate == null) {
         return true;
       }
-      
+
       final adSetStart = adSet.firstAdDate;
       final adSetEnd = adSet.lastAdDate;
-      
-      if (adSetStart != null && endDate != null && adSetStart.isAfter(endDate)) {
+
+      if (adSetStart != null &&
+          endDate != null &&
+          adSetStart.isAfter(endDate)) {
         return false;
       }
-      
-      if (adSetEnd != null && startDate != null && adSetEnd.isBefore(startDate)) {
+
+      if (adSetEnd != null &&
+          startDate != null &&
+          adSetEnd.isBefore(startDate)) {
         return false;
       }
-      
+
       return true;
     }).toList();
   }
-  
+
   /// Filter ads by date range (client-side filtering for split collections)
   List<split_ad.Ad> getFilteredAds({DateTime? startDate, DateTime? endDate}) {
     if (!USE_SPLIT_COLLECTIONS || (startDate == null && endDate == null)) {
       return _ads;
     }
-    
+
     return _ads.where((ad) {
       // Try to parse the insight dates
       DateTime? adStart;
       DateTime? adEnd;
-      
+
       try {
         if (ad.firstInsightDate != null && ad.firstInsightDate!.isNotEmpty) {
           adStart = DateTime.parse(ad.firstInsightDate!);
@@ -154,93 +178,113 @@ class PerformanceCostProvider extends ChangeNotifier {
         // If parsing fails, include the ad
         return true;
       }
-      
+
       if (adStart == null && adEnd == null) {
         return true;
       }
-      
+
       if (adStart != null && endDate != null && adStart.isAfter(endDate)) {
         return false;
       }
-      
+
       if (adEnd != null && startDate != null && adEnd.isBefore(startDate)) {
         return false;
       }
-      
+
       return true;
     }).toList();
   }
-  
+
   /// Initialize the provider
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
+
     if (kDebugMode) {
       print('🔄 Performance Cost Provider: Initializing...');
     }
-    
+
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       if (USE_SPLIT_COLLECTIONS) {
-        // NEW: Load from split collections
         if (kDebugMode) {
           print('📊 Using SPLIT COLLECTIONS schema');
+          print(
+            '   ⏸️  Campaigns will load on filter selection (no auto-load)',
+          );
         }
-        
-        await loadCampaignsFromSplitCollections(limit: 100);
-        
+
+        _isInitialized = true;
+        _isLoading = false;
+
         if (kDebugMode) {
-          print('✅ Performance Cost Provider: Initialized successfully (Split Collections)');
-          print('   - Campaigns loaded: ${_campaigns.length}');
-          print('   - Total ads: ${_campaigns.fold(0, (sum, c) => sum + c.adCount)}');
-          print('   - Total spend: \$${_campaigns.fold(0.0, (sum, c) => sum + c.totalSpend).toStringAsFixed(2)}');
+          print(
+            '✅ Performance Cost Provider: Initialized successfully (Split Collections)',
+          );
+          print('   - Ready to load campaigns on demand');
         }
       } else {
         // OLD: Load from advertData
         if (kDebugMode) {
           print('📊 Using OLD advertData schema');
         }
-        
+
         // Load available months first
         await loadAvailableMonths();
-        
+
         // Load data with default months (last 3 months)
         await loadAdPerformanceData();
-        
+
         if (kDebugMode) {
-          print('✅ Performance Cost Provider: Initialized successfully (advertData)');
+          print(
+            '✅ Performance Cost Provider: Initialized successfully (advertData)',
+          );
           print('   - Available months: ${_availableMonths.length}');
           print('   - Selected months: $_selectedMonths');
-          print('   - Ads: ${_adPerformanceData.length} (Matched: $matchedAds, Unmatched: $unmatchedAds)');
+          print(
+            '   - Ads: ${_adPerformanceData.length} (Matched: $matchedAds, Unmatched: $unmatchedAds)',
+          );
         }
+
+        _isInitialized = true;
+        _isLoading = false;
       }
-      
-      _isInitialized = true;
-      _isLoading = false;
     } catch (e) {
       _error = e.toString();
       _isLoading = false;
-      
+
       if (kDebugMode) {
         print('❌ Performance Cost Provider ERROR: Initialization failed: $e');
       }
     }
-    
+
     notifyListeners();
   }
 
   /// Load available months from Firebase
   Future<void> loadAvailableMonths() async {
+    // Guard: Split collections don't use month-based structure
+    if (USE_SPLIT_COLLECTIONS) {
+      if (kDebugMode) {
+        print(
+          '⏭️  Skipping loadAvailableMonths() - Split collections don\'t use month structure',
+        );
+      }
+      _availableMonths = [];
+      _selectedMonths = [];
+      return;
+    }
+
     try {
       _availableMonths = await AdvertDataService.getAvailableMonths();
-      
+
       // Default to current month only (November 2025)
       final now = DateTime.now();
-      final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-      
+      final currentMonth =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}';
+
       if (_availableMonths.contains(currentMonth)) {
         _selectedMonths = [currentMonth];
       } else if (_availableMonths.isNotEmpty) {
@@ -249,7 +293,7 @@ class PerformanceCostProvider extends ChangeNotifier {
       } else {
         _selectedMonths = [];
       }
-      
+
       if (kDebugMode) {
         print('✅ Loaded ${_availableMonths.length} available months');
         print('   - Current month: $currentMonth');
@@ -266,51 +310,50 @@ class PerformanceCostProvider extends ChangeNotifier {
   }
 
   /// Set selected months and reload data
-  Future<void> setSelectedMonths(List<String> months, {
+  Future<void> setSelectedMonths(
+    List<String> months, {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
     _selectedMonths = months;
-    
+
     if (USE_SPLIT_COLLECTIONS) {
-      // NEW: Split collections - store filter dates for client-side filtering
-      _filterStartDate = startDate;
-      _filterEndDate = endDate;
-      
+      // NEW: Split collections - Load campaigns with date range query
       if (kDebugMode) {
-        print('📊 Split Collections: Applying client-side date filter');
-        print('   - Total campaigns: ${_campaigns.length}');
-        print('   - Date range filter: ${startDate?.toIso8601String() ?? "any"} to ${endDate?.toIso8601String() ?? "any"}');
-        print('   - Filtered campaigns: ${getFilteredCampaigns(startDate: startDate, endDate: endDate).length}');
+        print('🔄 Split Collections: Loading campaigns with date range');
+        print(
+          '   - Date range: ${startDate?.toIso8601String() ?? "any"} to ${endDate?.toIso8601String() ?? "any"}',
+        );
       }
-      
-      // Notify listeners so UI can update with filtered data
-      notifyListeners();
+
+      // Call the new loadCampaignsWithDateRange method
+      await loadCampaignsWithDateRange(startDate: startDate, endDate: endDate);
+
       return;
     }
-    
+
     // OLD: Load from advertData with month filtering
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await loadAdPerformanceData(
         months: months,
         startDate: startDate,
         endDate: endDate,
       );
-      
+
       _isLoading = false;
     } catch (e) {
       _error = e.toString();
       _isLoading = false;
-      
+
       if (kDebugMode) {
         print('❌ Error setting selected months: $e');
       }
     }
-    
+
     notifyListeners();
   }
 
@@ -325,15 +368,15 @@ class PerformanceCostProvider extends ChangeNotifier {
       if (kDebugMode) {
         print('🔄 Loading ad performance data from advertData collection...');
       }
-      
+
       // Use provided months or default to selected months
       final effectiveMonths = months ?? _selectedMonths;
-      
+
       // If no months selected, default to last 3 available months
       if (effectiveMonths.isEmpty && _availableMonths.isNotEmpty) {
         effectiveMonths.addAll(_availableMonths.take(3));
       }
-      
+
       if (effectiveMonths.isEmpty) {
         if (kDebugMode) {
           print('⚠️ No months available to query');
@@ -343,37 +386,39 @@ class PerformanceCostProvider extends ChangeNotifier {
         notifyListeners();
         return;
       }
-      
+
       // Fetch from advertData collection with aggregated totals
       final advertsWithTotals = await AdvertDataService.getAllAdvertsWithTotals(
         months: effectiveMonths,
         startDate: startDate,
         endDate: endDate,
       );
-      
+
       // Convert AdvertDataWithTotals to AdPerformanceData format for backward compatibility
       _adPerformanceData = advertsWithTotals.map((advertWithTotals) {
         return _convertToAdPerformanceData(advertWithTotals);
       }).toList();
-      
+
       // Wrap ad performance data (no product linking)
       _adPerformanceWithProducts = _adPerformanceData.map((ad) {
-        return perf_data.AdPerformanceWithProduct(
-          data: ad,
-        );
+        return perf_data.AdPerformanceWithProduct(data: ad);
       }).toList();
-      
+
       _lastSync = DateTime.now();
-      
+
       if (kDebugMode) {
-        print('✅ Loaded ${_adPerformanceData.length} ad performance records from advertData');
+        print(
+          '✅ Loaded ${_adPerformanceData.length} ad performance records from advertData',
+        );
         print('   - Months queried: $effectiveMonths');
         print('   - Matched (FB + GHL): $matchedAds');
         print('   - Unmatched (FB only): $unmatchedAds');
         if (startDate != null || endDate != null) {
-          print('   - Date filter: ${startDate?.toIso8601String() ?? "any"} to ${endDate?.toIso8601String() ?? "any"}');
+          print(
+            '   - Date filter: ${startDate?.toIso8601String() ?? "any"} to ${endDate?.toIso8601String() ?? "any"}',
+          );
         }
-        
+
         // Print detailed stats for each ad
         print('\n📊 DETAILED AD STATS FOR SELECTED MONTHS:');
         print('═' * 80);
@@ -392,27 +437,51 @@ class PerformanceCostProvider extends ChangeNotifier {
           if (ad.ghlStats != null) {
             print('   💰 GHL Stats:');
             print('      Leads: ${ad.ghlStats!.leads}');
-            print('      Cash Amount: \$${ad.ghlStats!.cashAmount.toStringAsFixed(2)}');
+            print(
+              '      Cash Amount: \$${ad.ghlStats!.cashAmount.toStringAsFixed(2)}',
+            );
             print('      Bookings: ${ad.ghlStats!.bookings}');
             print('      Deposits: ${ad.ghlStats!.deposits}');
-            print('   📈 PROFIT: \$${(ad.ghlStats!.cashAmount - ad.facebookStats.spend).toStringAsFixed(2)}');
+            print(
+              '   📈 PROFIT: \$${(ad.ghlStats!.cashAmount - ad.facebookStats.spend).toStringAsFixed(2)}',
+            );
           } else {
             print('   💰 GHL Stats: No data');
-            print('   📈 PROFIT: -\$${ad.facebookStats.spend.toStringAsFixed(2)} (loss)');
+            print(
+              '   📈 PROFIT: -\$${ad.facebookStats.spend.toStringAsFixed(2)} (loss)',
+            );
           }
           print('   ' + '─' * 76);
         }
         print('═' * 80);
-        
+
         // Print aggregated totals
-        double totalSpend = _adPerformanceData.fold(0.0, (sum, ad) => sum + ad.facebookStats.spend);
-        int totalImpressions = _adPerformanceData.fold(0, (sum, ad) => sum + ad.facebookStats.impressions);
-        int totalClicks = _adPerformanceData.fold(0, (sum, ad) => sum + ad.facebookStats.clicks);
-        int totalReach = _adPerformanceData.fold(0, (sum, ad) => sum + ad.facebookStats.reach);
-        int totalGHLLeads = _adPerformanceData.fold(0, (sum, ad) => sum + (ad.ghlStats?.leads ?? 0));
-        double totalCash = _adPerformanceData.fold(0.0, (sum, ad) => sum + (ad.ghlStats?.cashAmount ?? 0));
+        double totalSpend = _adPerformanceData.fold(
+          0.0,
+          (sum, ad) => sum + ad.facebookStats.spend,
+        );
+        int totalImpressions = _adPerformanceData.fold(
+          0,
+          (sum, ad) => sum + ad.facebookStats.impressions,
+        );
+        int totalClicks = _adPerformanceData.fold(
+          0,
+          (sum, ad) => sum + ad.facebookStats.clicks,
+        );
+        int totalReach = _adPerformanceData.fold(
+          0,
+          (sum, ad) => sum + ad.facebookStats.reach,
+        );
+        int totalGHLLeads = _adPerformanceData.fold(
+          0,
+          (sum, ad) => sum + (ad.ghlStats?.leads ?? 0),
+        );
+        double totalCash = _adPerformanceData.fold(
+          0.0,
+          (sum, ad) => sum + (ad.ghlStats?.cashAmount ?? 0),
+        );
         double totalProfit = totalCash - totalSpend;
-        
+
         print('📊 AGGREGATED TOTALS:');
         print('   Total Ads: ${_adPerformanceData.length}');
         print('   Total Spend: \$${totalSpend.toStringAsFixed(2)}');
@@ -422,23 +491,29 @@ class PerformanceCostProvider extends ChangeNotifier {
         print('   Total GHL Leads: $totalGHLLeads');
         print('   Total Cash (GHL): \$${totalCash.toStringAsFixed(2)}');
         print('   TOTAL PROFIT: \$${totalProfit.toStringAsFixed(2)}');
-        
+
         // Check if GHL data is missing
-        int adsWithGHL = _adPerformanceData.where((ad) => ad.ghlStats != null).length;
+        int adsWithGHL = _adPerformanceData
+            .where((ad) => ad.ghlStats != null)
+            .length;
         if (adsWithGHL == 0) {
           print('');
           print('⚠️  WARNING: NO GHL DATA FOUND!');
           print('   This month may not have GHL data populated yet.');
-          print('   Check Firebase: advertData/$effectiveMonths/ads/{adId}/ghlWeekly/');
+          print(
+            '   Check Firebase: advertData/$effectiveMonths/ads/{adId}/ghlWeekly/',
+          );
           print('   Run populate_ghl_data.py to add GHL data for this month.');
         } else {
-          print('   Ads with GHL data: $adsWithGHL / ${_adPerformanceData.length}');
+          print(
+            '   Ads with GHL data: $adsWithGHL / ${_adPerformanceData.length}',
+          );
         }
-        
+
         print('═' * 80);
         print('');
       }
-      
+
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
@@ -451,11 +526,13 @@ class PerformanceCostProvider extends ChangeNotifier {
   }
 
   /// Convert AdvertDataWithTotals to AdPerformanceData format
-  perf_data.AdPerformanceData _convertToAdPerformanceData(AdvertDataWithTotals advertWithTotals) {
+  perf_data.AdPerformanceData _convertToAdPerformanceData(
+    AdvertDataWithTotals advertWithTotals,
+  ) {
     final advert = advertWithTotals.advert;
     final fbTotals = advertWithTotals.facebookTotals;
     final ghlTotals = advertWithTotals.ghlTotals;
-    
+
     // Create FacebookStats from aggregated totals
     final facebookStats = perf_data.FacebookStats(
       spend: fbTotals.totalSpend,
@@ -469,7 +546,7 @@ class PerformanceCostProvider extends ChangeNotifier {
       dateStop: fbTotals.dateStop,
       lastSync: advert.lastFacebookSync ?? DateTime.now(),
     );
-    
+
     // Create GHLStats from aggregated totals (using actual opportunity values)
     perf_data.GHLStats? ghlStats;
     if (ghlTotals.totalLeads > 0) {
@@ -479,16 +556,17 @@ class PerformanceCostProvider extends ChangeNotifier {
         bookings: ghlTotals.totalBookedAppointments,
         deposits: ghlTotals.totalDeposits,
         cashCollected: ghlTotals.totalCashCollected,
-        cashAmount: ghlTotals.totalCashAmount, // CRITICAL: Using actual opportunity values
+        cashAmount: ghlTotals
+            .totalCashAmount, // CRITICAL: Using actual opportunity values
         lastSync: advert.lastGHLSync ?? DateTime.now(),
       );
     }
-    
+
     // Determine matching status
-    final matchingStatus = ghlStats != null 
-        ? perf_data.MatchingStatus.matched 
+    final matchingStatus = ghlStats != null
+        ? perf_data.MatchingStatus.matched
         : perf_data.MatchingStatus.unmatched;
-    
+
     return perf_data.AdPerformanceData(
       adId: advert.adId,
       adName: advert.adName,
@@ -512,28 +590,28 @@ class PerformanceCostProvider extends ChangeNotifier {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       await loadAdPerformanceData(
         months: months,
         startDate: startDate,
         endDate: endDate,
       );
-      
+
       _isLoading = false;
-      
+
       if (kDebugMode) {
         print('✅ Performance data refreshed');
       }
     } catch (e) {
       _error = e.toString();
       _isLoading = false;
-      
+
       if (kDebugMode) {
         print('❌ Error refreshing data: $e');
       }
     }
-    
+
     notifyListeners();
   }
 
@@ -547,35 +625,35 @@ class PerformanceCostProvider extends ChangeNotifier {
       }
       return;
     }
-    
+
     _isSyncing = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       if (kDebugMode) {
         print('🔄 Triggering Facebook sync...');
       }
-      
+
       final result = await AdPerformanceService.triggerFacebookSync();
-      
+
       if (kDebugMode) {
         print('✅ Facebook sync completed: ${result['message']}');
       }
-      
+
       // Reload data after sync
       await loadAdPerformanceData();
-      
+
       _isSyncing = false;
     } catch (e) {
       _error = 'Failed to sync Facebook data: ${e.toString()}';
       _isSyncing = false;
-      
+
       if (kDebugMode) {
         print('❌ Error syncing Facebook data: $e');
       }
     }
-    
+
     notifyListeners();
   }
 
@@ -587,35 +665,35 @@ class PerformanceCostProvider extends ChangeNotifier {
       }
       return;
     }
-    
+
     _isSyncing = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       if (kDebugMode) {
         print('🔄 Triggering GHL sync...');
       }
-      
+
       final result = await AdPerformanceService.triggerGHLSync();
-      
+
       if (kDebugMode) {
         print('✅ GHL sync completed: ${result['message']}');
       }
-      
+
       // Reload data after sync
       await loadAdPerformanceData();
-      
+
       _isSyncing = false;
     } catch (e) {
       _error = 'Failed to sync GHL data: ${e.toString()}';
       _isSyncing = false;
-      
+
       if (kDebugMode) {
         print('❌ Error syncing GHL data: $e');
       }
     }
-    
+
     notifyListeners();
   }
 
@@ -628,42 +706,57 @@ class PerformanceCostProvider extends ChangeNotifier {
   }
 
   // ========== DEPRECATED PRODUCT METHODS (for backward compatibility) ==========
-  
-  @Deprecated('Product functionality removed. Profit now comes from GHL opportunity values.')
+
+  @Deprecated(
+    'Product functionality removed. Profit now comes from GHL opportunity values.',
+  )
   Future<dynamic> createProduct({
     required String name,
     required double depositAmount,
     required double expenseCost,
     String? createdBy,
   }) async {
-    throw UnimplementedError('Product functionality has been removed. Profit now comes directly from GHL opportunity values.');
+    throw UnimplementedError(
+      'Product functionality has been removed. Profit now comes directly from GHL opportunity values.',
+    );
   }
 
-  @Deprecated('Product functionality removed. Profit now comes from GHL opportunity values.')
+  @Deprecated(
+    'Product functionality removed. Profit now comes from GHL opportunity values.',
+  )
   Future<void> updateProduct(dynamic product) async {
-    throw UnimplementedError('Product functionality has been removed. Profit now comes directly from GHL opportunity values.');
+    throw UnimplementedError(
+      'Product functionality has been removed. Profit now comes directly from GHL opportunity values.',
+    );
   }
 
-  @Deprecated('Product functionality removed. Profit now comes from GHL opportunity values.')
+  @Deprecated(
+    'Product functionality removed. Profit now comes from GHL opportunity values.',
+  )
   Future<void> deleteProduct(String productId) async {
-    throw UnimplementedError('Product functionality has been removed. Profit now comes directly from GHL opportunity values.');
+    throw UnimplementedError(
+      'Product functionality has been removed. Profit now comes directly from GHL opportunity values.',
+    );
   }
 
-  @Deprecated('Product functionality removed. Profit now comes from GHL opportunity values.')
+  @Deprecated(
+    'Product functionality removed. Profit now comes from GHL opportunity values.',
+  )
   dynamic getProductById(String productId) {
     return null;
   }
 
   // ========== BACKWARD COMPATIBILITY METHODS ==========
   // These methods provide compatibility with old UI code
-  
+
   /// Get merged data (compatibility method)
   List<perf_data.AdPerformanceWithProduct> getMergedData(dynamic ghlProvider) {
     return _adPerformanceWithProducts;
   }
 
   /// Merge with cumulative data (compatibility method - now handled by Cloud Functions)
-  Future<void> mergeWithCumulativeData(dynamic ghlProvider, {
+  Future<void> mergeWithCumulativeData(
+    dynamic ghlProvider, {
     List<String>? months,
     DateTime? startDate,
     DateTime? endDate,
@@ -691,14 +784,14 @@ class PerformanceCostProvider extends ChangeNotifier {
   List<FacebookCampaignSummary> get facebookCampaigns {
     // Group ads by campaign
     final campaigns = <String, FacebookCampaignSummary>{};
-    
+
     for (final ad in _adPerformanceData) {
       if (!campaigns.containsKey(ad.campaignId)) {
         // Calculate total spend for this campaign
         double campaignSpend = _adPerformanceData
             .where((a) => a.campaignId == ad.campaignId)
             .fold(0.0, (sum, a) => sum + a.facebookStats.spend);
-        
+
         campaigns[ad.campaignId] = FacebookCampaignSummary(
           id: ad.campaignId,
           name: ad.campaignName,
@@ -706,7 +799,7 @@ class PerformanceCostProvider extends ChangeNotifier {
         );
       }
     }
-    
+
     return campaigns.values.toList();
   }
 
@@ -724,7 +817,9 @@ class PerformanceCostProvider extends ChangeNotifier {
   }) async {
     // In the new system, ads come from Facebook API
     // This method is not used but kept for compatibility
-    throw UnimplementedError('Use syncFacebookData() to add ads from Facebook API');
+    throw UnimplementedError(
+      'Use syncFacebookData() to add ads from Facebook API',
+    );
   }
 
   /// Update ad performance cost (compatibility method)
@@ -734,22 +829,29 @@ class PerformanceCostProvider extends ChangeNotifier {
   }) async {
     // In the new system, budget and product linking are not used
     // Profit comes directly from GHL opportunity values
-    throw UnimplementedError('Budget and product configuration removed - profit comes from GHL');
+    throw UnimplementedError(
+      'Budget and product configuration removed - profit comes from GHL',
+    );
   }
 
   /// Delete ad performance cost (compatibility method - not used in new system)
   Future<void> deleteAdPerformanceCost(String id) async {
     // In the new system, ads come from Facebook and shouldn't be manually deleted
     // This method is not used but kept for compatibility
-    throw UnimplementedError('Ads are synced from Facebook API and should not be manually deleted');
+    throw UnimplementedError(
+      'Ads are synced from Facebook API and should not be manually deleted',
+    );
   }
 
   // ========== AGGREGATION METHODS ==========
 
   /// Get campaign-level aggregates from ad performance data
-  List<CampaignAggregate> getCampaignAggregates(List<perf_data.AdPerformanceWithProduct> ads) {
-    final Map<String, List<perf_data.AdPerformanceWithProduct>> campaignGroups = {};
-    
+  List<CampaignAggregate> getCampaignAggregates(
+    List<perf_data.AdPerformanceWithProduct> ads,
+  ) {
+    final Map<String, List<perf_data.AdPerformanceWithProduct>> campaignGroups =
+        {};
+
     // Group ads by campaign
     for (final ad in ads) {
       if (!campaignGroups.containsKey(ad.campaignId)) {
@@ -757,22 +859,22 @@ class PerformanceCostProvider extends ChangeNotifier {
       }
       campaignGroups[ad.campaignId]!.add(ad);
     }
-    
+
     // Create aggregates for each campaign
     final aggregates = <CampaignAggregate>[];
     for (final entry in campaignGroups.entries) {
       final campaignId = entry.key;
       final campaignAds = entry.value;
-      
+
       if (campaignAds.isEmpty) continue;
-      
+
       // Count unique ad sets
       final uniqueAdSets = campaignAds
           .where((ad) => ad.adSetId != null && ad.adSetId!.isNotEmpty)
           .map((ad) => ad.adSetId)
           .toSet()
           .length;
-      
+
       // Aggregate metrics
       double totalFbSpend = 0;
       int totalImpressions = 0;
@@ -785,13 +887,13 @@ class PerformanceCostProvider extends ChangeNotifier {
       double totalCashAmount = 0;
       double totalBudget = 0;
       DateTime? latestUpdate;
-      
+
       for (final ad in campaignAds) {
         totalFbSpend += ad.facebookStats.spend;
         totalImpressions += ad.facebookStats.impressions;
         totalReach += ad.facebookStats.reach;
         totalClicks += ad.facebookStats.clicks;
-        
+
         if (ad.ghlStats != null) {
           totalLeads += ad.ghlStats!.leads;
           totalBookings += ad.ghlStats!.bookings;
@@ -799,60 +901,65 @@ class PerformanceCostProvider extends ChangeNotifier {
           totalCashCollected += ad.ghlStats!.cashCollected;
           totalCashAmount += ad.ghlStats!.cashAmount;
         }
-        
+
         // Budget field removed - no longer used
-        
+
         if (latestUpdate == null || ad.lastUpdated.isAfter(latestUpdate)) {
           latestUpdate = ad.lastUpdated;
         }
       }
-      
-      aggregates.add(CampaignAggregate(
-        campaignId: campaignId,
-        campaignName: campaignAds.first.campaignName,
-        totalAds: campaignAds.length,
-        totalAdSets: uniqueAdSets,
-        totalFbSpend: totalFbSpend,
-        totalImpressions: totalImpressions,
-        totalReach: totalReach,
-        totalClicks: totalClicks,
-        totalLeads: totalLeads,
-        totalBookings: totalBookings,
-        totalDeposits: totalDeposits,
-        totalCashCollected: totalCashCollected,
-        totalCashAmount: totalCashAmount,
-        totalBudget: totalBudget,
-        lastUpdated: latestUpdate ?? DateTime.now(),
-        ads: campaignAds,
-      ));
+
+      aggregates.add(
+        CampaignAggregate(
+          campaignId: campaignId,
+          campaignName: campaignAds.first.campaignName,
+          totalAds: campaignAds.length,
+          totalAdSets: uniqueAdSets,
+          totalFbSpend: totalFbSpend,
+          totalImpressions: totalImpressions,
+          totalReach: totalReach,
+          totalClicks: totalClicks,
+          totalLeads: totalLeads,
+          totalBookings: totalBookings,
+          totalDeposits: totalDeposits,
+          totalCashCollected: totalCashCollected,
+          totalCashAmount: totalCashAmount,
+          totalBudget: totalBudget,
+          lastUpdated: latestUpdate ?? DateTime.now(),
+          ads: campaignAds,
+        ),
+      );
     }
-    
+
     return aggregates;
   }
 
   /// Get ad set-level aggregates from ad performance data
-  List<AdSetAggregate> getAdSetAggregates(List<perf_data.AdPerformanceWithProduct> ads) {
-    final Map<String, List<perf_data.AdPerformanceWithProduct>> adSetGroups = {};
-    
+  List<AdSetAggregate> getAdSetAggregates(
+    List<perf_data.AdPerformanceWithProduct> ads,
+  ) {
+    final Map<String, List<perf_data.AdPerformanceWithProduct>> adSetGroups =
+        {};
+
     // Group ads by ad set
     for (final ad in ads) {
       // Skip ads without ad set ID
       if (ad.adSetId == null || ad.adSetId!.isEmpty) continue;
-      
+
       if (!adSetGroups.containsKey(ad.adSetId)) {
         adSetGroups[ad.adSetId!] = [];
       }
       adSetGroups[ad.adSetId]!.add(ad);
     }
-    
+
     // Create aggregates for each ad set
     final aggregates = <AdSetAggregate>[];
     for (final entry in adSetGroups.entries) {
       final adSetId = entry.key;
       final adSetAds = entry.value;
-      
+
       if (adSetAds.isEmpty) continue;
-      
+
       // Aggregate metrics
       double totalFbSpend = 0;
       int totalImpressions = 0;
@@ -865,13 +972,13 @@ class PerformanceCostProvider extends ChangeNotifier {
       double totalCashAmount = 0;
       double totalBudget = 0;
       DateTime? latestUpdate;
-      
+
       for (final ad in adSetAds) {
         totalFbSpend += ad.facebookStats.spend;
         totalImpressions += ad.facebookStats.impressions;
         totalReach += ad.facebookStats.reach;
         totalClicks += ad.facebookStats.clicks;
-        
+
         if (ad.ghlStats != null) {
           totalLeads += ad.ghlStats!.leads;
           totalBookings += ad.ghlStats!.bookings;
@@ -879,63 +986,74 @@ class PerformanceCostProvider extends ChangeNotifier {
           totalCashCollected += ad.ghlStats!.cashCollected;
           totalCashAmount += ad.ghlStats!.cashAmount;
         }
-        
+
         // Budget field removed - no longer used
-        
+
         if (latestUpdate == null || ad.lastUpdated.isAfter(latestUpdate)) {
           latestUpdate = ad.lastUpdated;
         }
       }
-      
-      aggregates.add(AdSetAggregate(
-        adSetId: adSetId,
-        adSetName: adSetAds.first.adSetName ?? 'Unknown Ad Set',
-        campaignId: adSetAds.first.campaignId,
-        campaignName: adSetAds.first.campaignName,
-        totalAds: adSetAds.length,
-        totalFbSpend: totalFbSpend,
-        totalImpressions: totalImpressions,
-        totalReach: totalReach,
-        totalClicks: totalClicks,
-        totalLeads: totalLeads,
-        totalBookings: totalBookings,
-        totalDeposits: totalDeposits,
-        totalCashCollected: totalCashCollected,
-        totalCashAmount: totalCashAmount,
-        totalBudget: totalBudget,
-        lastUpdated: latestUpdate ?? DateTime.now(),
-        ads: adSetAds,
-      ));
+
+      aggregates.add(
+        AdSetAggregate(
+          adSetId: adSetId,
+          adSetName: adSetAds.first.adSetName ?? 'Unknown Ad Set',
+          campaignId: adSetAds.first.campaignId,
+          campaignName: adSetAds.first.campaignName,
+          totalAds: adSetAds.length,
+          totalFbSpend: totalFbSpend,
+          totalImpressions: totalImpressions,
+          totalReach: totalReach,
+          totalClicks: totalClicks,
+          totalLeads: totalLeads,
+          totalBookings: totalBookings,
+          totalDeposits: totalDeposits,
+          totalCashCollected: totalCashCollected,
+          totalCashAmount: totalCashAmount,
+          totalBudget: totalBudget,
+          lastUpdated: latestUpdate ?? DateTime.now(),
+          ads: adSetAds,
+        ),
+      );
     }
-    
+
     return aggregates;
   }
 
   /// Get top performing ads by profit
-  List<perf_data.AdPerformanceWithProduct> getTopAdsByProfit(List<perf_data.AdPerformanceWithProduct> ads, {int limit = 5}) {
+  List<perf_data.AdPerformanceWithProduct> getTopAdsByProfit(
+    List<perf_data.AdPerformanceWithProduct> ads, {
+    int limit = 5,
+  }) {
     final sortedAds = List<perf_data.AdPerformanceWithProduct>.from(ads)
       ..sort((a, b) => b.profit.compareTo(a.profit));
     return sortedAds.take(limit).toList();
   }
 
   /// Get top performing ad sets by profit
-  List<AdSetAggregate> getTopAdSetsByProfit(List<perf_data.AdPerformanceWithProduct> ads, {int limit = 5}) {
+  List<AdSetAggregate> getTopAdSetsByProfit(
+    List<perf_data.AdPerformanceWithProduct> ads, {
+    int limit = 5,
+  }) {
     final adSets = getAdSetAggregates(ads);
     adSets.sort((a, b) => b.totalProfit.compareTo(a.totalProfit));
     return adSets.take(limit).toList();
   }
 
   /// Get top performing campaigns by profit
-  List<CampaignAggregate> getTopCampaignsByProfit(List<perf_data.AdPerformanceWithProduct> ads, {int limit = 5}) {
+  List<CampaignAggregate> getTopCampaignsByProfit(
+    List<perf_data.AdPerformanceWithProduct> ads, {
+    int limit = 5,
+  }) {
     final campaigns = getCampaignAggregates(ads);
     campaigns.sort((a, b) => b.totalProfit.compareTo(a.totalProfit));
     return campaigns.take(limit).toList();
   }
-  
+
   // ============================================================================
   // SPLIT COLLECTIONS ADAPTER METHODS (Convert new models to UI models)
   // ============================================================================
-  
+
   /// Convert Campaign to CampaignAggregate for UI compatibility
   CampaignAggregate campaignToCampaignAggregate(Campaign campaign) {
     return CampaignAggregate(
@@ -957,7 +1075,7 @@ class PerformanceCostProvider extends ChangeNotifier {
       ads: [], // Loaded on-demand when campaign clicked
     );
   }
-  
+
   /// Convert AdSet to AdSetAggregate for UI compatibility
   AdSetAggregate adSetToAdSetAggregate(AdSet adSet) {
     return AdSetAggregate(
@@ -980,9 +1098,11 @@ class PerformanceCostProvider extends ChangeNotifier {
       ads: [], // Loaded on-demand when ad set clicked
     );
   }
-  
+
   /// Convert Ad to AdPerformanceWithProduct for UI compatibility
-  perf_data.AdPerformanceWithProduct adToAdPerformanceWithProduct(split_ad.Ad ad) {
+  perf_data.AdPerformanceWithProduct adToAdPerformanceWithProduct(
+    split_ad.Ad ad,
+  ) {
     // Convert FacebookStats from Ad model to AdPerformanceData model
     final fbStats = perf_data.FacebookStats(
       spend: ad.facebookStats.spend,
@@ -996,7 +1116,7 @@ class PerformanceCostProvider extends ChangeNotifier {
       dateStop: ad.facebookStats.dateStop,
       lastSync: ad.lastFacebookSync ?? DateTime.now(),
     );
-    
+
     // Convert GHLStats from Ad model to AdPerformanceData model (only if has leads)
     perf_data.GHLStats? ghlStats;
     if (ad.ghlStats.leads > 0) {
@@ -1010,7 +1130,7 @@ class PerformanceCostProvider extends ChangeNotifier {
         lastSync: ad.lastGHLSync ?? DateTime.now(),
       );
     }
-    
+
     return perf_data.AdPerformanceWithProduct(
       data: perf_data.AdPerformanceData(
         adId: ad.adId,
@@ -1019,8 +1139,8 @@ class PerformanceCostProvider extends ChangeNotifier {
         campaignName: ad.campaignName,
         adSetId: ad.adSetId,
         adSetName: ad.adSetName,
-        matchingStatus: ad.ghlStats.leads > 0 
-            ? perf_data.MatchingStatus.matched 
+        matchingStatus: ad.ghlStats.leads > 0
+            ? perf_data.MatchingStatus.matched
             : perf_data.MatchingStatus.unmatched,
         lastUpdated: ad.lastUpdated ?? DateTime.now(),
         facebookStats: fbStats,
@@ -1028,11 +1148,11 @@ class PerformanceCostProvider extends ChangeNotifier {
       ),
     );
   }
-  
+
   // ============================================================================
   // SPLIT COLLECTIONS METHODS (NEW SCHEMA)
   // ============================================================================
-  
+
   /// Load campaigns from split collections
   Future<void> loadCampaignsFromSplitCollections({
     int limit = 100,
@@ -1043,17 +1163,17 @@ class PerformanceCostProvider extends ChangeNotifier {
       if (kDebugMode) {
         print('🔄 Loading campaigns from split collections...');
       }
-      
+
       _campaigns = await _campaignService.getAllCampaigns(
         limit: limit,
         orderBy: orderBy,
         descending: descending,
       );
-      
+
       if (kDebugMode) {
         print('✅ Loaded ${_campaigns.length} campaigns from split collections');
       }
-      
+
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
@@ -1062,7 +1182,67 @@ class PerformanceCostProvider extends ChangeNotifier {
       rethrow;
     }
   }
-  
+
+  /// Load campaigns with date range filter (server-side query)
+  Future<void> loadCampaignsWithDateRange({
+    DateTime? startDate,
+    DateTime? endDate,
+    int limit = 100,
+    String orderBy = 'totalProfit',
+    bool descending = true,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      if (kDebugMode) {
+        print('🔄 Loading campaigns with date range from split collections...');
+        print('   - Start date: ${startDate?.toIso8601String() ?? "any"}');
+        print('   - End date: ${endDate?.toIso8601String() ?? "any"}');
+        print('   - Order by: $orderBy (${descending ? "desc" : "asc"})');
+      }
+
+      _campaigns = await _campaignService.getCampaignsByDateRange(
+        startDate: startDate,
+        endDate: endDate,
+        limit: limit,
+        orderBy: orderBy,
+        descending: descending,
+      );
+
+      // Store filter dates
+      _filterStartDate = startDate;
+      _filterEndDate = endDate;
+
+      // Clear cached ad sets and ads (they'll reload on expand)
+      _adSets = [];
+      _ads = [];
+
+      _isLoading = false;
+
+      if (kDebugMode) {
+        print('✅ Loaded ${_campaigns.length} campaigns from split collections');
+        final totalSpend = _campaigns.fold(0.0, (sum, c) => sum + c.totalSpend);
+        final totalLeads = _campaigns.fold(0, (sum, c) => sum + c.totalLeads);
+        print('   - Total spend: \$${totalSpend.toStringAsFixed(2)}');
+        print('   - Total leads: $totalLeads');
+      }
+
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+
+      if (kDebugMode) {
+        print('❌ Error loading campaigns with date range: $e');
+      }
+
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   /// Load ad sets for a campaign from split collections
   Future<void> loadAdSetsForCampaign(
     String campaignId, {
@@ -1073,17 +1253,17 @@ class PerformanceCostProvider extends ChangeNotifier {
       if (kDebugMode) {
         print('🔄 Loading ad sets for campaign $campaignId...');
       }
-      
+
       _adSets = await _adSetService.getAdSetsForCampaign(
         campaignId,
         orderBy: orderBy,
         descending: descending,
       );
-      
+
       if (kDebugMode) {
         print('✅ Loaded ${_adSets.length} ad sets');
       }
-      
+
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
@@ -1092,7 +1272,7 @@ class PerformanceCostProvider extends ChangeNotifier {
       rethrow;
     }
   }
-  
+
   /// Load ads for an ad set from split collections
   Future<void> loadAdsForAdSet(
     String adSetId, {
@@ -1103,17 +1283,17 @@ class PerformanceCostProvider extends ChangeNotifier {
       if (kDebugMode) {
         print('🔄 Loading ads for ad set $adSetId...');
       }
-      
+
       _ads = await _adService.getAdsForAdSet(
         adSetId,
         orderBy: orderBy,
         descending: descending,
       );
-      
+
       if (kDebugMode) {
         print('✅ Loaded ${_ads.length} ads');
       }
-      
+
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
@@ -1122,7 +1302,7 @@ class PerformanceCostProvider extends ChangeNotifier {
       rethrow;
     }
   }
-  
+
   /// Load ads for a campaign from split collections
   Future<void> loadAdsForCampaign(
     String campaignId, {
@@ -1133,17 +1313,17 @@ class PerformanceCostProvider extends ChangeNotifier {
       if (kDebugMode) {
         print('🔄 Loading ads for campaign $campaignId...');
       }
-      
+
       _ads = await _adService.getAdsForCampaign(
         campaignId,
         orderBy: orderBy,
         descending: descending,
       );
-      
+
       if (kDebugMode) {
         print('✅ Loaded ${_ads.length} ads');
       }
-      
+
       notifyListeners();
     } catch (e) {
       if (kDebugMode) {
@@ -1152,17 +1332,17 @@ class PerformanceCostProvider extends ChangeNotifier {
       rethrow;
     }
   }
-  
+
   /// Get ad sets for a specific campaign (from loaded data)
   List<AdSet> getAdSetsForCampaignLocal(String campaignId) {
     return _adSets.where((adSet) => adSet.campaignId == campaignId).toList();
   }
-  
+
   /// Get ads for a specific ad set (from loaded data)
   List<split_ad.Ad> getAdsForAdSetLocal(String adSetId) {
     return _ads.where((ad) => ad.adSetId == adSetId).toList();
   }
-  
+
   /// Get ads for a specific campaign (from loaded data)
   List<split_ad.Ad> getAdsForCampaignLocal(String campaignId) {
     return _ads.where((ad) => ad.campaignId == campaignId).toList();
@@ -1181,4 +1361,3 @@ class FacebookCampaignSummary {
     required this.spend,
   });
 }
-
