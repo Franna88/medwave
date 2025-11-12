@@ -214,9 +214,9 @@ class AdSetService {
 
         final adId = doc.id;
 
-        // Get ad date range
-        final firstInsightDate = data['firstInsightDate'] as String?;
-        final lastInsightDate = data['lastInsightDate'] as String?;
+        // Get ad date range - use _parseDateField for backward compatibility
+        final firstInsightDate = _parseDateField(data['firstInsightDate']);
+        final lastInsightDate = _parseDateField(data['lastInsightDate']);
 
         // Check if ad falls within the specified date range
         bool inRange = true;
@@ -302,7 +302,7 @@ class AdSetService {
 
           for (var oppDoc in opportunitiesQuery.docs) {
             final oppData = oppDoc.data();
-            final createdAt = (oppData['createdAt'] as Timestamp?)?.toDate();
+            final createdAt = _parseTimestampField(oppData['createdAt']);
 
             // Filter by date range
             if (createdAt != null) {
@@ -420,8 +420,8 @@ class AdSetService {
           cpb: (monthData['cpb'] as num?)?.toDouble() ?? 0,
           cpa: (monthData['cpa'] as num?)?.toDouble() ?? 0,
           adCount: (monthData['adCount'] as num?)?.toInt() ?? 0,
-          lastUpdated: (data['lastUpdated'] as Timestamp?)?.toDate(),
-          createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+          lastUpdated: _parseTimestampField(data['lastUpdated']),
+          createdAt: _parseTimestampField(data['createdAt']),
           firstAdDate: _parseDateField(data['firstAdDate']),
           lastAdDate: _parseDateField(data['lastAdDate']),
         );
@@ -571,6 +571,21 @@ class AdSetService {
       return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     }
 
+    return null;
+  }
+
+  /// Parse DateTime field from Firestore (handles both Timestamp and ISO String)
+  static DateTime? _parseTimestampField(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        print('Error parsing timestamp string: $e');
+        return null;
+      }
+    }
     return null;
   }
 }

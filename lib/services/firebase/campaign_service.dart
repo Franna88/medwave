@@ -146,27 +146,29 @@ class CampaignService {
       int clicks = 0;
       int reach = 0;
 
-      final startDateStr = startDate != null ? _dateTimeToString(startDate) : null;
+      final startDateStr = startDate != null
+          ? _dateTimeToString(startDate)
+          : null;
       final endDateStr = endDate != null ? _dateTimeToString(endDate) : null;
 
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        
+
         // Get week date range (stored as strings in format YYYY-MM-DD)
         final dateStart = data['dateStart'];
         final dateStop = data['dateStop'];
-        
+
         // Convert Timestamp to string if needed
         String? weekStartStr;
         String? weekStopStr;
-        
+
         if (dateStart is Timestamp) {
           final dt = dateStart.toDate();
           weekStartStr = _dateTimeToString(dt);
         } else if (dateStart is String) {
           weekStartStr = dateStart;
         }
-        
+
         if (dateStop is Timestamp) {
           final dt = dateStop.toDate();
           weekStopStr = _dateTimeToString(dt);
@@ -205,12 +207,7 @@ class CampaignService {
     } catch (e) {
       print('Error calculating weekly totals for ad $adId: $e');
       // Return zeros if there's an error or no weekly data
-      return {
-        'spend': 0.0,
-        'impressions': 0,
-        'clicks': 0,
-        'reach': 0,
-      };
+      return {'spend': 0.0, 'impressions': 0, 'clicks': 0, 'reach': 0};
     }
   }
 
@@ -356,16 +353,18 @@ class CampaignService {
       double totalCashAmount = 0;
       int adsInRange = 0;
 
-      final startDateStr = startDate != null ? _dateTimeToString(startDate) : null;
+      final startDateStr = startDate != null
+          ? _dateTimeToString(startDate)
+          : null;
       final endDateStr = endDate != null ? _dateTimeToString(endDate) : null;
 
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final adId = doc.id;
-        
-        // Get ad date range
-        final firstInsightDate = data['firstInsightDate'] as String?;
-        final lastInsightDate = data['lastInsightDate'] as String?;
+
+        // Get ad date range - use _parseDateField for backward compatibility
+        final firstInsightDate = _parseDateField(data['firstInsightDate']);
+        final lastInsightDate = _parseDateField(data['lastInsightDate']);
 
         // Check if ad falls within the specified date range
         bool inRange = true;
@@ -386,12 +385,14 @@ class CampaignService {
 
         // Check if ad spans multiple months (needs weekly insights for accuracy)
         bool spansMultipleMonths = false;
-        if (firstInsightDate != null && lastInsightDate != null && 
-            startDateStr != null && endDateStr != null) {
+        if (firstInsightDate != null &&
+            lastInsightDate != null &&
+            startDateStr != null &&
+            endDateStr != null) {
           // Extract month from dates (YYYY-MM format)
           final adStartMonth = firstInsightDate.substring(0, 7);
           final adEndMonth = lastInsightDate.substring(0, 7);
-          
+
           // If ad spans multiple months, we need weekly insights for accuracy
           spansMultipleMonths = adStartMonth != adEndMonth;
         }
@@ -404,9 +405,10 @@ class CampaignService {
             startDate: startDate,
             endDate: endDate,
           );
-          
+
           totalSpend += (weeklyTotals['spend'] as num?)?.toDouble() ?? 0;
-          totalImpressions += (weeklyTotals['impressions'] as num?)?.toInt() ?? 0;
+          totalImpressions +=
+              (weeklyTotals['impressions'] as num?)?.toInt() ?? 0;
           totalClicks += (weeklyTotals['clicks'] as num?)?.toInt() ?? 0;
           totalReach += (weeklyTotals['reach'] as num?)?.toInt() ?? 0;
         } else {
@@ -414,7 +416,8 @@ class CampaignService {
           final facebookStats = data['facebookStats'] as Map<String, dynamic>?;
           if (facebookStats != null) {
             totalSpend += (facebookStats['spend'] as num?)?.toDouble() ?? 0;
-            totalImpressions += (facebookStats['impressions'] as num?)?.toInt() ?? 0;
+            totalImpressions +=
+                (facebookStats['impressions'] as num?)?.toInt() ?? 0;
             totalClicks += (facebookStats['clicks'] as num?)?.toInt() ?? 0;
             totalReach += (facebookStats['reach'] as num?)?.toInt() ?? 0;
           }
@@ -426,21 +429,22 @@ class CampaignService {
             .collection('ghlOpportunities')
             .where('adId', isEqualTo: adId)
             .get();
-        
+
         for (var oppDoc in opportunitiesQuery.docs) {
           final oppData = oppDoc.data();
-          final createdAt = (oppData['createdAt'] as Timestamp?)?.toDate();
-          
+          final createdAt = _parseTimestampField(oppData['createdAt']);
+
           // Filter by date range
           if (createdAt != null) {
             if (startDate != null && createdAt.isBefore(startDate)) continue;
             if (endDate != null && createdAt.isAfter(endDate)) continue;
           }
-          
+
           // Count by stage category
           final stageCategory = oppData['stageCategory'] as String? ?? '';
-          final monetaryValue = (oppData['monetaryValue'] as num?)?.toDouble() ?? 0;
-          
+          final monetaryValue =
+              (oppData['monetaryValue'] as num?)?.toDouble() ?? 0;
+
           if (stageCategory == 'leads') {
             totalLeads++;
           } else if (stageCategory == 'bookedAppointments') {
@@ -461,8 +465,12 @@ class CampaignService {
       final cpb = totalBookings > 0 ? totalSpend / totalBookings : 0;
       final cpa = totalDeposits > 0 ? totalSpend / totalDeposits : 0;
       final roi = totalSpend > 0 ? (totalProfit / totalSpend) * 100 : 0;
-      final ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
-      final cpm = totalImpressions > 0 ? (totalSpend / totalImpressions) * 1000 : 0;
+      final ctr = totalImpressions > 0
+          ? (totalClicks / totalImpressions) * 100
+          : 0;
+      final cpm = totalImpressions > 0
+          ? (totalSpend / totalImpressions) * 1000
+          : 0;
       final cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
 
       return {
@@ -523,11 +531,16 @@ class CampaignService {
         final leads = (monthData['leads'] as num?)?.toInt() ?? 0;
         final bookings = (monthData['bookings'] as num?)?.toInt() ?? 0;
         final deposits = (monthData['deposits'] as num?)?.toInt() ?? 0;
-        final cashCollected = (monthData['cashCollected'] as num?)?.toInt() ?? 0;
+        final cashCollected =
+            (monthData['cashCollected'] as num?)?.toInt() ?? 0;
 
         final leadToBookingRate = leads > 0 ? (bookings / leads) * 100 : 0.0;
-        final bookingToDepositRate = bookings > 0 ? (deposits / bookings) * 100 : 0.0;
-        final depositToCashRate = deposits > 0 ? (cashCollected / deposits) * 100 : 0.0;
+        final bookingToDepositRate = bookings > 0
+            ? (deposits / bookings) * 100
+            : 0.0;
+        final depositToCashRate = deposits > 0
+            ? (cashCollected / deposits) * 100
+            : 0.0;
 
         // Create campaign with month-specific data
         final campaign = Campaign(
@@ -556,10 +569,14 @@ class CampaignService {
           depositToCashRate: depositToCashRate,
           adSetCount: data['adSetCount'] ?? 0,
           adCount: (monthData['adCount'] as num?)?.toInt() ?? 0,
-          firstAdDate: data['firstAdDate'] != null ? _parseDateField(data['firstAdDate']) : null,
-          lastAdDate: data['lastAdDate'] != null ? _parseDateField(data['lastAdDate']) : null,
-          lastUpdated: (data['lastUpdated'] as Timestamp?)?.toDate(),
-          createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+          firstAdDate: data['firstAdDate'] != null
+              ? _parseDateField(data['firstAdDate'])
+              : null,
+          lastAdDate: data['lastAdDate'] != null
+              ? _parseDateField(data['lastAdDate'])
+              : null,
+          lastUpdated: _parseTimestampField(data['lastUpdated']),
+          createdAt: _parseTimestampField(data['createdAt']),
         );
 
         campaignsWithMonthData.add(campaign);
@@ -616,6 +633,21 @@ class CampaignService {
     return null;
   }
 
+  /// Parse DateTime field from Firestore (handles both Timestamp and ISO String)
+  static DateTime? _parseTimestampField(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        print('Error parsing timestamp string: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
   /// DEPRECATED: Use getCampaignsWithMonthTotals instead for month filtering
   /// Get campaigns with date-range-specific totals (not lifetime totals)
   /// This is the correct method to use when filtering by month
@@ -639,7 +671,7 @@ class CampaignService {
 
       // Calculate date-range-specific totals for each campaign
       List<Campaign> campaignsWithTotals = [];
-      
+
       for (var campaign in campaigns) {
         final totals = await calculateCampaignTotalsForDateRange(
           campaignId: campaign.campaignId,
@@ -647,16 +679,15 @@ class CampaignService {
           endDate: endDate,
         );
 
-
         // Calculate conversion rates
-        final leadToBookingRate = totals['totalLeads'] > 0 
-            ? (totals['totalBookings'] / totals['totalLeads']) * 100 
+        final leadToBookingRate = totals['totalLeads'] > 0
+            ? (totals['totalBookings'] / totals['totalLeads']) * 100
             : 0.0;
-        final bookingToDepositRate = totals['totalBookings'] > 0 
-            ? (totals['totalDeposits'] / totals['totalBookings']) * 100 
+        final bookingToDepositRate = totals['totalBookings'] > 0
+            ? (totals['totalDeposits'] / totals['totalBookings']) * 100
             : 0.0;
-        final depositToCashRate = totals['totalDeposits'] > 0 
-            ? (totals['totalCashCollected'] / totals['totalDeposits']) * 100 
+        final depositToCashRate = totals['totalDeposits'] > 0
+            ? (totals['totalCashCollected'] / totals['totalDeposits']) * 100
             : 0.0;
 
         // Create a new campaign with updated totals
@@ -722,7 +753,7 @@ class CampaignService {
             aValue = a.totalProfit;
             bValue = b.totalProfit;
         }
-        
+
         final comparison = (aValue as num).compareTo(bValue as num);
         return descending ? -comparison : comparison;
       });
