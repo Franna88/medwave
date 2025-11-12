@@ -142,6 +142,7 @@ for opp in filtered_opportunities:
     opp_id = opp.get('id')
     stage_id = opp.get('pipelineStageId')  # This is the actual stage UUID!
     status = opp.get('status', 'open')
+    monetary_value = opp.get('monetaryValue', 0)  # Get monetary value from GHL API
     
     if not opp_id:
         continue
@@ -167,6 +168,7 @@ for opp in filtered_opportunities:
         'opportunityId': opp_id,
         'pipelineId': opp.get('pipelineId'),
         'pipelineName': 'Andries Pipeline' if opp.get('pipelineId') == ANDRIES_PIPELINE_ID else 'Davide Pipeline',
+        'monetaryValue': monetary_value,  # Store monetary value
         'lastUpdated': firestore.SERVER_TIMESTAMP
     }, merge=True)
     
