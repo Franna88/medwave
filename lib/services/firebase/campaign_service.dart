@@ -76,7 +76,7 @@ class CampaignService {
   }
 
   /// Get campaigns within a date range with flexible filtering
-  /// Uses lastAdDate for server-side filtering, then filters client-side
+  /// Uses lastAdDate for server-side filtering (string comparison), then filters client-side
   /// This avoids Firestore's "multiple range fields" limitation
   Future<List<Campaign>> getCampaignsByDateRange({
     DateTime? startDate,
@@ -88,12 +88,11 @@ class CampaignService {
     try {
       Query query = _firestore.collection('campaigns');
 
-      // Apply date filter on lastAdDate only (Firestore allows only one range filter)
-      // We'll filter by firstAdDate client-side after fetching
       if (startDate != null) {
+        final startDateStr = _dateTimeToString(startDate);
         query = query.where(
           'lastAdDate',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+          isGreaterThanOrEqualTo: startDateStr, // String comparison
         );
       }
 
@@ -119,10 +118,11 @@ class CampaignService {
 
       // Client-side filter by firstAdDate if endDate is provided
       if (endDate != null) {
+        final endDateStr = _dateTimeToString(endDate);
         campaigns = campaigns.where((campaign) {
           if (campaign.firstAdDate == null) return true;
-          return campaign.firstAdDate!.isBefore(endDate) ||
-              campaign.firstAdDate!.isAtSameMomentAs(endDate);
+          // String comparison works for YYYY-MM-DD format (lexicographically ordered)
+          return campaign.firstAdDate!.compareTo(endDateStr) <= 0;
         }).toList();
       }
 
@@ -136,6 +136,11 @@ class CampaignService {
       print('Error getting campaigns by date range: $e');
       rethrow;
     }
+  }
+
+  /// Helper method to convert DateTime to YYYY-MM-DD string
+  static String _dateTimeToString(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   /// Stream campaigns for real-time updates

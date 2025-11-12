@@ -5,7 +5,7 @@ class Campaign {
   final String campaignId;
   final String campaignName;
   final String status; // ACTIVE, RECENT, PAUSED, UNKNOWN
-  
+
   // Facebook Metrics
   final double totalSpend;
   final int totalImpressions;
@@ -14,38 +14,39 @@ class Campaign {
   final double avgCPM;
   final double avgCPC;
   final double avgCTR;
-  
+
   // GHL Metrics
   final int totalLeads;
   final int totalBookings;
   final int totalDeposits;
   final int totalCashCollected;
   final double totalCashAmount;
-  
+
   // Computed Metrics
   final double totalProfit;
   final double cpl; // Cost per lead
   final double cpb; // Cost per booking
   final double cpa; // Cost per acquisition (deposit)
   final double roi; // Return on investment
-  
+
   // Conversion Rates
   final double leadToBookingRate;
   final double bookingToDepositRate;
   final double depositToCashRate;
-  
+
   // Counts
   final int adSetCount;
   final int adCount;
-  
+
   // Timestamps
   final DateTime? lastUpdated;
   final DateTime? lastFacebookSync;
   final DateTime? lastGHLSync;
   final DateTime? createdAt;
-  final DateTime? firstAdDate;
-  final DateTime? lastAdDate;
-  
+
+  final String? firstAdDate;
+  final String? lastAdDate;
+
   Campaign({
     required this.campaignId,
     required this.campaignName,
@@ -79,11 +80,11 @@ class Campaign {
     this.firstAdDate,
     this.lastAdDate,
   });
-  
+
   /// Create Campaign from Firestore document
   factory Campaign.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     return Campaign(
       campaignId: doc.id,
       campaignName: data['campaignName'] ?? '',
@@ -114,12 +115,42 @@ class Campaign {
       lastFacebookSync: (data['lastFacebookSync'] as Timestamp?)?.toDate(),
       lastGHLSync: (data['lastGHLSync'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      firstAdDate: (data['firstAdDate'] as Timestamp?)?.toDate(),
-      lastAdDate: (data['lastAdDate'] as Timestamp?)?.toDate(),
+      firstAdDate: _parseDateField(data['firstAdDate']),
+      lastAdDate: _parseDateField(data['lastAdDate']),
     );
   }
-  
-  /// Convert Campaign to Map for Firestore
+
+  static String? _parseDateField(dynamic value) {
+    if (value == null) return null;
+
+    if (value is String) return value;
+
+    if (value is Timestamp) {
+      final date = value.toDate();
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    }
+
+    return null;
+  }
+
+  DateTime? get firstAdDateAsDateTime {
+    if (firstAdDate == null) return null;
+    try {
+      return DateTime.parse(firstAdDate!);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  DateTime? get lastAdDateAsDateTime {
+    if (lastAdDate == null) return null;
+    try {
+      return DateTime.parse(lastAdDate!);
+    } catch (e) {
+      return null;
+    }
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'campaignId': campaignId,
@@ -147,15 +178,21 @@ class Campaign {
       'depositToCashRate': depositToCashRate,
       'adSetCount': adSetCount,
       'adCount': adCount,
-      'lastUpdated': lastUpdated != null ? Timestamp.fromDate(lastUpdated!) : null,
-      'lastFacebookSync': lastFacebookSync != null ? Timestamp.fromDate(lastFacebookSync!) : null,
-      'lastGHLSync': lastGHLSync != null ? Timestamp.fromDate(lastGHLSync!) : null,
+      'lastUpdated': lastUpdated != null
+          ? Timestamp.fromDate(lastUpdated!)
+          : null,
+      'lastFacebookSync': lastFacebookSync != null
+          ? Timestamp.fromDate(lastFacebookSync!)
+          : null,
+      'lastGHLSync': lastGHLSync != null
+          ? Timestamp.fromDate(lastGHLSync!)
+          : null,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
-      'firstAdDate': firstAdDate != null ? Timestamp.fromDate(firstAdDate!) : null,
-      'lastAdDate': lastAdDate != null ? Timestamp.fromDate(lastAdDate!) : null,
+      'firstAdDate': firstAdDate,
+      'lastAdDate': lastAdDate,
     };
   }
-  
+
   /// Create a copy with modified fields
   Campaign copyWith({
     String? campaignId,
@@ -187,8 +224,8 @@ class Campaign {
     DateTime? lastFacebookSync,
     DateTime? lastGHLSync,
     DateTime? createdAt,
-    DateTime? firstAdDate,
-    DateTime? lastAdDate,
+    String? firstAdDate,
+    String? lastAdDate,
   }) {
     return Campaign(
       campaignId: campaignId ?? this.campaignId,
@@ -225,4 +262,3 @@ class Campaign {
     );
   }
 }
-
