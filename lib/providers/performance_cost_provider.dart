@@ -101,14 +101,12 @@ class PerformanceCostProvider extends ChangeNotifier {
     }
 
     return _campaigns.where((campaign) {
-      // Check if campaign has any activity in the date range
-      if (campaign.firstAdDate == null && campaign.lastAdDate == null) {
+      final campaignStart = campaign.firstAdDateAsDateTime;
+      final campaignEnd = campaign.lastAdDateAsDateTime;
+
+      if (campaignStart == null && campaignEnd == null) {
         return true; // Include campaigns without dates
       }
-
-      // Campaign is included if its date range overlaps with the filter range
-      final campaignStart = campaign.firstAdDate;
-      final campaignEnd = campaign.lastAdDate;
 
       if (campaignStart != null &&
           endDate != null &&
