@@ -1189,10 +1189,9 @@ class PerformanceCostProvider extends ChangeNotifier {
         print('   - Order by: $orderBy (${descending ? "desc" : "asc"})');
       }
 
-      // Use dynamic calculation to get date-range-specific totals
-      // This calculates from ads collection filtered by date range
-      // Includes BOTH Facebook stats AND GHL stats for the date range
-      _campaigns = await _campaignService.getCampaignsWithDateRangeTotals(
+      // Load campaigns using pre-aggregated totals from Firebase
+      // The totals were calculated by the Python script and stored in campaigns collection
+      _campaigns = await _campaignService.getCampaignsByDateRange(
         startDate: startDate,
         endDate: endDate,
         limit: limit,
@@ -1250,7 +1249,7 @@ class PerformanceCostProvider extends ChangeNotifier {
   }
 
   /// Load ad sets for a campaign from split collections
-  /// Uses date-range-specific totals when date filters are active
+  /// Uses pre-aggregated totals from Firebase
   Future<void> loadAdSetsForCampaign(
     String campaignId, {
     String orderBy = 'totalProfit',
@@ -1264,25 +1263,13 @@ class PerformanceCostProvider extends ChangeNotifier {
         }
       }
 
-      // Use dynamic calculation if date filters are active
-      // This calculates from ads collection filtered by date range
-      // Includes BOTH Facebook stats AND GHL stats for the date range
-      if (_filterStartDate != null || _filterEndDate != null) {
-        _adSets = await _adSetService.getAdSetsWithDateRangeTotals(
-          campaignId: campaignId,
-          startDate: _filterStartDate,
-          endDate: _filterEndDate,
-          orderBy: orderBy,
-          descending: descending,
-        );
-      } else {
-        // Use pre-aggregated lifetime totals if no date filtering
-        _adSets = await _adSetService.getAdSetsForCampaign(
-          campaignId,
-          orderBy: orderBy,
-          descending: descending,
-        );
-      }
+      // Load ad sets using pre-aggregated totals from Firebase
+      // The totals were calculated by the Python script and stored in adSets collection
+      _adSets = await _adSetService.getAdSetsForCampaign(
+        campaignId,
+        orderBy: orderBy,
+        descending: descending,
+      );
 
       if (kDebugMode) {
         print('✅ Loaded ${_adSets.length} ad sets');

@@ -284,48 +284,38 @@ class AdSetService {
           }
         }
 
-        // Aggregate GHL stats
-        final ghlStats = data['ghlStats'] as Map<String, dynamic>?;
-        if (ghlStats != null) {
-          totalLeads += (ghlStats['leads'] as num?)?.toInt() ?? 0;
-          totalBookings += (ghlStats['bookings'] as num?)?.toInt() ?? 0;
-          totalDeposits += (ghlStats['deposits'] as num?)?.toInt() ?? 0;
-          totalCashCollected +=
-              (ghlStats['cashCollected'] as num?)?.toInt() ?? 0;
-          totalCashAmount += (ghlStats['cashAmount'] as num?)?.toDouble() ?? 0;
-          // Aggregate GHL stats by querying opportunities for this ad and filtering by date
-          // NOTE: ghlStats in ads collection are LIFETIME stats, not month-specific!
-          final opportunitiesQuery = await _firestore
-              .collection('ghlOpportunities')
-              .where('adId', isEqualTo: adId)
-              .get();
+        // Aggregate GHL stats by querying opportunities for this ad and filtering by date
+        // NOTE: ghlStats in ads collection are LIFETIME stats, not month-specific!
+        final opportunitiesQuery = await _firestore
+            .collection('ghlOpportunities')
+            .where('adId', isEqualTo: adId)
+            .get();
 
-          for (var oppDoc in opportunitiesQuery.docs) {
-            final oppData = oppDoc.data();
-            final createdAt = _parseTimestampField(oppData['createdAt']);
+        for (var oppDoc in opportunitiesQuery.docs) {
+          final oppData = oppDoc.data();
+          final createdAt = _parseTimestampField(oppData['createdAt']);
 
-            // Filter by date range
-            if (createdAt != null) {
-              if (startDate != null && createdAt.isBefore(startDate)) continue;
-              if (endDate != null && createdAt.isAfter(endDate)) continue;
-            }
+          // Filter by date range
+          if (createdAt != null) {
+            if (startDate != null && createdAt.isBefore(startDate)) continue;
+            if (endDate != null && createdAt.isAfter(endDate)) continue;
+          }
 
-            // Count by stage category
-            final stageCategory = oppData['stageCategory'] as String? ?? '';
-            final monetaryValue =
-                (oppData['monetaryValue'] as num?)?.toDouble() ?? 0;
+          // Count by stage category
+          final stageCategory = oppData['stageCategory'] as String? ?? '';
+          final monetaryValue =
+              (oppData['monetaryValue'] as num?)?.toDouble() ?? 0;
 
-            if (stageCategory == 'leads') {
-              totalLeads++;
-            } else if (stageCategory == 'bookedAppointments') {
-              totalBookings++;
-            } else if (stageCategory == 'deposits') {
-              totalDeposits++;
-              totalCashAmount += monetaryValue;
-            } else if (stageCategory == 'cashCollected') {
-              totalCashCollected++;
-              totalCashAmount += monetaryValue;
-            }
+          if (stageCategory == 'leads') {
+            totalLeads++;
+          } else if (stageCategory == 'bookedAppointments') {
+            totalBookings++;
+          } else if (stageCategory == 'deposits') {
+            totalDeposits++;
+            totalCashAmount += monetaryValue;
+          } else if (stageCategory == 'cashCollected') {
+            totalCashCollected++;
+            totalCashAmount += monetaryValue;
           }
         }
       }
