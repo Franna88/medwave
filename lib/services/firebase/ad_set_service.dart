@@ -95,6 +95,95 @@ class AdSetService {
     }
   }
 
+  /// Calculate weekly totals for an ad within a specific date range
+  /// Reads from the ads/{adId}/weeklyInsights subcollection
+  Future<Map<String, dynamic>> _calculateWeeklyTotalsForDateRange({
+    required String adId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      // Query weekly insights for this ad
+      Query query = _firestore
+          .collection('ads')
+          .doc(adId)
+          .collection('weeklyInsights');
+
+      final snapshot = await query.get();
+
+      double spend = 0;
+      int impressions = 0;
+      int clicks = 0;
+      int reach = 0;
+
+      final startDateStr = startDate != null ? _dateTimeToString(startDate) : null;
+      final endDateStr = endDate != null ? _dateTimeToString(endDate) : null;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        
+        // Get week date range (stored as strings in format YYYY-MM-DD)
+        final dateStart = data['dateStart'];
+        final dateStop = data['dateStop'];
+        
+        // Convert Timestamp to string if needed
+        String? weekStartStr;
+        String? weekStopStr;
+        
+        if (dateStart is Timestamp) {
+          final dt = dateStart.toDate();
+          weekStartStr = _dateTimeToString(dt);
+        } else if (dateStart is String) {
+          weekStartStr = dateStart;
+        }
+        
+        if (dateStop is Timestamp) {
+          final dt = dateStop.toDate();
+          weekStopStr = _dateTimeToString(dt);
+        } else if (dateStop is String) {
+          weekStopStr = dateStop;
+        }
+
+        // Check if week overlaps with the specified date range
+        bool inRange = true;
+        if (startDateStr != null && weekStopStr != null) {
+          if (weekStopStr.compareTo(startDateStr) < 0) {
+            inRange = false; // Week ended before start date
+          }
+        }
+        if (endDateStr != null && weekStartStr != null) {
+          if (weekStartStr.compareTo(endDateStr) > 0) {
+            inRange = false; // Week started after end date
+          }
+        }
+
+        if (!inRange) continue;
+
+        // Aggregate this week's data
+        spend += (data['spend'] as num?)?.toDouble() ?? 0;
+        impressions += (data['impressions'] as num?)?.toInt() ?? 0;
+        clicks += (data['clicks'] as num?)?.toInt() ?? 0;
+        reach += (data['reach'] as num?)?.toInt() ?? 0;
+      }
+
+      return {
+        'spend': spend,
+        'impressions': impressions,
+        'clicks': clicks,
+        'reach': reach,
+      };
+    } catch (e) {
+      print('Error calculating weekly totals for ad $adId: $e');
+      // Return zeros if there's an error or no weekly data
+      return {
+        'spend': 0.0,
+        'impressions': 0,
+        'clicks': 0,
+        'reach': 0,
+      };
+    }
+  }
+
   /// Helper method to convert DateTime to YYYY-MM-DD string
   static String _dateTimeToString(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
@@ -102,6 +191,7 @@ class AdSetService {
 
   /// Calculate ad set totals for a specific date range by aggregating from ads
   /// This provides month-specific or date-range-specific totals instead of lifetime totals
+  /// Uses weekly insights to get accurate month-specific spend data
   Future<Map<String, dynamic>> calculateAdSetTotalsForDateRange({
     required String adSetId,
     DateTime? startDate,
@@ -131,6 +221,7 @@ class AdSetService {
 
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
+        final adId = doc.id;
         
         // Get ad date range
         final firstInsightDate = data['firstInsightDate'] as String?;
@@ -153,23 +244,74 @@ class AdSetService {
 
         adsInRange++;
 
-        // Aggregate Facebook stats
-        final facebookStats = data['facebookStats'] as Map<String, dynamic>?;
-        if (facebookStats != null) {
-          totalSpend += (facebookStats['spend'] as num?)?.toDouble() ?? 0;
-          totalImpressions += (facebookStats['impressions'] as num?)?.toInt() ?? 0;
-          totalClicks += (facebookStats['clicks'] as num?)?.toInt() ?? 0;
-          totalReach += (facebookStats['reach'] as num?)?.toInt() ?? 0;
+        // Check if ad spans multiple months (needs weekly insights for accuracy)
+        bool spansMultipleMonths = false;
+        if (firstInsightDate != null && lastInsightDate != null && 
+            startDateStr != null && endDateStr != null) {
+          // Extract month from dates (YYYY-MM format)
+          final adStartMonth = firstInsightDate.substring(0, 7);
+          final adEndMonth = lastInsightDate.substring(0, 7);
+          
+          // If ad spans multiple months, we need weekly insights for accuracy
+          spansMultipleMonths = adStartMonth != adEndMonth;
         }
 
-        // Aggregate GHL stats
-        final ghlStats = data['ghlStats'] as Map<String, dynamic>?;
-        if (ghlStats != null) {
-          totalLeads += (ghlStats['leads'] as num?)?.toInt() ?? 0;
-          totalBookings += (ghlStats['bookings'] as num?)?.toInt() ?? 0;
-          totalDeposits += (ghlStats['deposits'] as num?)?.toInt() ?? 0;
-          totalCashCollected += (ghlStats['cashCollected'] as num?)?.toInt() ?? 0;
-          totalCashAmount += (ghlStats['cashAmount'] as num?)?.toDouble() ?? 0;
+        // Use weekly insights ONLY if ad spans multiple months (for accuracy)
+        // Otherwise use the ad's aggregated facebookStats (much faster!)
+        if (spansMultipleMonths) {
+          final weeklyTotals = await _calculateWeeklyTotalsForDateRange(
+            adId: adId,
+            startDate: startDate,
+            endDate: endDate,
+          );
+          
+          totalSpend += (weeklyTotals['spend'] as num?)?.toDouble() ?? 0;
+          totalImpressions += (weeklyTotals['impressions'] as num?)?.toInt() ?? 0;
+          totalClicks += (weeklyTotals['clicks'] as num?)?.toInt() ?? 0;
+          totalReach += (weeklyTotals['reach'] as num?)?.toInt() ?? 0;
+        } else {
+          // Ad is within a single month - use aggregated stats (fast!)
+          final facebookStats = data['facebookStats'] as Map<String, dynamic>?;
+          if (facebookStats != null) {
+            totalSpend += (facebookStats['spend'] as num?)?.toDouble() ?? 0;
+            totalImpressions += (facebookStats['impressions'] as num?)?.toInt() ?? 0;
+            totalClicks += (facebookStats['clicks'] as num?)?.toInt() ?? 0;
+            totalReach += (facebookStats['reach'] as num?)?.toInt() ?? 0;
+          }
+        }
+
+        // Aggregate GHL stats by querying opportunities for this ad and filtering by date
+        // NOTE: ghlStats in ads collection are LIFETIME stats, not month-specific!
+        final opportunitiesQuery = await _firestore
+            .collection('ghlOpportunities')
+            .where('adId', isEqualTo: adId)
+            .get();
+        
+        for (var oppDoc in opportunitiesQuery.docs) {
+          final oppData = oppDoc.data();
+          final createdAt = (oppData['createdAt'] as Timestamp?)?.toDate();
+          
+          // Filter by date range
+          if (createdAt != null) {
+            if (startDate != null && createdAt.isBefore(startDate)) continue;
+            if (endDate != null && createdAt.isAfter(endDate)) continue;
+          }
+          
+          // Count by stage category
+          final stageCategory = oppData['stageCategory'] as String? ?? '';
+          final monetaryValue = (oppData['monetaryValue'] as num?)?.toDouble() ?? 0;
+          
+          if (stageCategory == 'leads') {
+            totalLeads++;
+          } else if (stageCategory == 'bookedAppointments') {
+            totalBookings++;
+          } else if (stageCategory == 'deposits') {
+            totalDeposits++;
+            totalCashAmount += monetaryValue;
+          } else if (stageCategory == 'cashCollected') {
+            totalCashCollected++;
+            totalCashAmount += monetaryValue;
+          }
         }
       }
 
@@ -260,8 +402,8 @@ class AdSetService {
           adCount: (monthData['adCount'] as num?)?.toInt() ?? 0,
           lastUpdated: (data['lastUpdated'] as Timestamp?)?.toDate(),
           createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-          firstAdDate: (data['firstAdDate'] as Timestamp?)?.toDate(),
-          lastAdDate: (data['lastAdDate'] as Timestamp?)?.toDate(),
+          firstAdDate: _parseDateField(data['firstAdDate']),
+          lastAdDate: _parseDateField(data['lastAdDate']),
         );
 
         adSetsWithMonthData.add(adSet);
@@ -397,6 +539,19 @@ class AdSetService {
       print('Error getting ad sets with date range totals: $e');
       rethrow;
     }
+  }
+
+  /// Parse date field from Firestore (handles both Timestamp and String)
+  static String? _parseDateField(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+
+    if (value is Timestamp) {
+      final date = value.toDate();
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    }
+
+    return null;
   }
 }
 

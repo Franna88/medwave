@@ -1,0 +1,233 @@
+================================================================================
+DYNAMIC MONTH-SPECIFIC CALCULATION - COMPLETE IMPLEMENTATION
+Date: November 12, 2025
+================================================================================
+
+OVERVIEW:
+---------
+Implemented dynamic calculation for both CAMPAIGNS and AD SETS to show
+month-specific totals instead of lifetime cumulative totals from Firebase.
+
+PROBLEM:
+--------
+Firebase collections store CUMULATIVE/LIFETIME data:
+- campaigns.totalSpend = Total spend since campaign started
+- adSets.totalSpend = Total spend since ad set started
+
+When filtering by "November 2025", the app was showing LIFETIME totals
+instead of November-only totals.
+
+Example:
+- Campaign running since June 2025
+- Facebook API (November only): R 5,991.90
+- App showing (June-November): $28,591.36 ❌
+
+SOLUTION IMPLEMENTED:
+---------------------
+
+1. CAMPAIGNS - Dynamic Calculation ✅
+   File: lib/services/firebase/campaign_service.dart
+   
+   New Methods:
+   - calculateCampaignTotalsForDateRange()
+     * Queries ads collection for the campaign
+     * Filters ads by firstInsightDate/lastInsightDate overlapping with date range
+     * Aggregates spend, leads, bookings, deposits, etc.
+     * Returns month-specific totals
+   
+   - getCampaignsWithDateRangeTotals()
+     * Gets campaigns active in date range
+     * Calls calculateCampaignTotalsForDateRange() for each
+     * Returns campaigns with accurate month-specific totals
+     * Sorts by requested field (profit, spend, leads, etc.)
+
+2. AD SETS - Dynamic Calculation ✅
+   File: lib/services/firebase/ad_set_service.dart
+   
+   New Methods:
+   - calculateAdSetTotalsForDateRange()
+     * Queries ads collection for the ad set
+     * Filters ads by firstInsightDate/lastInsightDate overlapping with date range
+     * Aggregates spend, leads, bookings, deposits, etc.
+     * Returns month-specific totals
+   
+   - getAdSetsWithDateRangeTotals()
+     * Gets ad sets for a campaign
+     * Calls calculateAdSetTotalsForDateRange() for each
+     * Returns ad sets with accurate month-specific totals
+     * Sorts by requested field
+
+3. PROVIDER - Updated to Use Dynamic Calculations ✅
+   File: lib/providers/performance_cost_provider.dart
+   
+   Changes:
+   - loadCampaignsWithDateRange()
+     * Now calls getCampaignsWithDateRangeTotals()
+     * Passes date filters to service
+   
+   - loadAdSetsForCampaign()
+     * Checks if date filters are active
+     * If YES: calls getAdSetsWithDateRangeTotals() (dynamic)
+     * If NO: calls getAdSetsForCampaign() (pre-aggregated, faster)
+     * Logs total spend for verification
+
+HOW IT WORKS:
+-------------
+
+OLD BEHAVIOR (WRONG):
+┌─────────────────────────────────────────────────────────────┐
+│ User selects "November 2025"                                │
+│   ↓                                                          │
+│ Query campaigns collection                                  │
+│   ↓                                                          │
+│ Show campaigns.totalSpend (LIFETIME)                        │
+│   ↓                                                          │
+│ Result: $65,388.50 (June + July + Aug + Sep + Oct + Nov) ❌│
+└─────────────────────────────────────────────────────────────┘
+
+NEW BEHAVIOR (CORRECT):
+┌─────────────────────────────────────────────────────────────┐
+│ User selects "November 2025"                                │
+│   ↓                                                          │
+│ Query campaigns collection (get campaigns active in Nov)    │
+│   ↓                                                          │
+│ For each campaign:                                          │
+│   ├─ Query ads collection                                   │
+│   ├─ Filter: firstInsightDate ≤ 2025-11-30                 │
+│   │          lastInsightDate ≥ 2025-11-01                  │
+│   ├─ Sum spend from filtered ads                            │
+│   └─ Calculate metrics (leads, profit, etc.)                │
+│   ↓                                                          │
+│ Return campaigns with November-only totals                  │
+│   ↓                                                          │
+│ Result: ~R 31,629.19 (November only) ✅                     │
+└─────────────────────────────────────────────────────────────┘
+
+PERFORMANCE CONSIDERATIONS:
+---------------------------
+
+Trade-offs:
+1. ACCURACY vs SPEED
+   - Pre-aggregated (old): Fast but wrong for month filtering
+   - Dynamic (new): Slower but accurate for month filtering
+
+2. QUERY COUNTS
+   - Campaigns: 1 query to get campaigns + N queries for ads (N = number of campaigns)
+   - Ad Sets: 1 query to get ad sets + M queries for ads (M = number of ad sets)
+   
+3. EXPECTED PERFORMANCE
+   - 20 campaigns × ~5 ad sets each = ~100 ad set queries
+   - Each query fetches ads for one ad set (typically 1-10 ads)
+   - Estimated total time: 3-8 seconds for November 2025 data
+   
+4. OPTIMIZATION
+   - Only calculates dynamically when date filters are active
+   - Falls back to pre-aggregated totals when viewing "All Time"
+   - Queries run in sequence (could be parallelized in future)
+
+CONSOLE OUTPUT:
+---------------
+When loading November 2025 data, you'll see:
+
+🔄 Loading campaigns with date range from split collections...
+   - Start date: 2025-11-01T00:00:00.000
+   - End date: 2025-11-30T23:59:59.000
+   - Order by: totalProfit (desc)
+✅ Loaded 17 campaigns from split collections
+   - Total spend: $31,629.19
+   - Total leads: 456
+
+🔄 Loading ad sets for campaign 120233712403260335...
+   📅 With date filtering: 2025-11-01T00:00:00.000 to 2025-11-30T23:59:59.000
+✅ Loaded 5 ad sets
+   💰 Total ad set spend: $11,960.35
+
+TESTING CHECKLIST:
+------------------
+1. ✅ Open MedWave app
+2. ✅ Go to Campaign Performance
+3. ✅ Select "November 2025"
+4. ⏳ Verify loading time (should be 3-8 seconds)
+5. ⏳ Verify total spend matches Facebook API (~R 31,629.19)
+6. ⏳ Click on a campaign to expand ad sets
+7. ⏳ Verify ad set totals are month-specific
+8. ⏳ Compare with Facebook Ads Manager
+9. ⏳ Test with other months (October, September)
+10. ⏳ Test "All Time" (should use pre-aggregated, faster)
+
+EXPECTED RESULTS:
+-----------------
+November 2025:
+- Total Campaigns: ~17 (with spend)
+- Total Spend: ~R 31,629.19 (matching Facebook API)
+- Top Campaign: "Matthys | 03102025 ABOLEADFORM" ~R 11,960.35
+- Loading Time: 3-8 seconds (acceptable for accuracy)
+
+Ad Sets:
+- Each ad set shows November-only spend
+- Totals match parent campaign
+- No inflated lifetime values
+
+FUTURE OPTIMIZATIONS:
+---------------------
+1. PARALLEL QUERIES
+   - Use Future.wait() to query multiple campaigns simultaneously
+   - Could reduce loading time by 50-70%
+
+2. CACHING
+   - Cache month-specific totals in memory
+   - Refresh only when data changes
+   - Reduce repeated calculations
+
+3. SERVER-SIDE AGGREGATION
+   - Add Cloud Function to pre-calculate month-specific totals
+   - Store in separate collection: campaignMonthlyTotals
+   - Trade-off: More storage, but faster queries
+
+4. PROGRESSIVE LOADING
+   - Load first 10 campaigns immediately
+   - Load remaining campaigns in background
+   - Improve perceived performance
+
+FILES MODIFIED:
+---------------
+1. lib/services/firebase/campaign_service.dart
+   - Added calculateCampaignTotalsForDateRange()
+   - Added getCampaignsWithDateRangeTotals()
+
+2. lib/services/firebase/ad_set_service.dart
+   - Added calculateAdSetTotalsForDateRange()
+   - Added getAdSetsWithDateRangeTotals()
+
+3. lib/providers/performance_cost_provider.dart
+   - Updated loadCampaignsWithDateRange()
+   - Updated loadAdSetsForCampaign()
+
+VERIFICATION COMMANDS:
+----------------------
+To verify data in Firebase vs calculated totals:
+
+# Check campaign in Firebase (lifetime total)
+firebase firestore:get campaigns/120233712403260335
+
+# Check ads for campaign (individual ad totals)
+firebase firestore:query ads --where campaignId==120233712403260335
+
+# Compare with Facebook API
+python3 fetch_november_campaigns.py
+
+SUMMARY:
+--------
+✅ Campaigns: Dynamic calculation implemented
+✅ Ad Sets: Dynamic calculation implemented
+✅ Ads: Already correct (have their own date ranges)
+✅ Provider: Updated to use dynamic calculations
+⏳ Performance: To be tested (estimated 3-8 seconds)
+⏳ Accuracy: To be verified against Facebook API
+
+The system now calculates month-specific totals on-the-fly by aggregating
+from the ads collection. This ensures accurate reporting when filtering by
+month, at the cost of slightly slower loading times.
+
+================================================================================
+

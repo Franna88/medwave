@@ -1,0 +1,106 @@
+================================================================================
+NOVEMBER 2025 SPEND DISCREPANCY - FIX APPLIED
+Date: November 12, 2025
+================================================================================
+
+PROBLEM IDENTIFIED:
+-------------------
+Your MedWave app was showing INCORRECT totals for November 2025:
+
+Facebook API (CORRECT):
+- Total Campaigns: 155
+- Campaigns with Spend: 17
+- Total Spend: R 31,629.19 (November only)
+
+MedWave App (WRONG):
+- Total Campaigns: 12
+- Total Spend: $65,388.50 (LIFETIME spend, not November only!)
+
+Example Campaign:
+- "Matthys | 13062025ABO | Body Contouring – Bowers"
+- Facebook API (November only): R 5,991.90
+- MedWave App (June-November total): $28,591.36
+- Campaign has been running since JUNE 2025!
+
+ROOT CAUSE:
+-----------
+The `campaigns` collection in Firebase stores LIFETIME totalSpend (aggregated
+from all months the campaign has been running). When you filter by "November 2025"
+in the app, it was:
+
+✅ Correctly filtering which campaigns to show (those active in November)
+❌ INCORRECTLY showing LIFETIME totalSpend instead of November-only spend
+
+SOLUTION IMPLEMENTED:
+---------------------
+Added new method to CampaignService:
+
+1. getCampaignsWithDateRangeTotals()
+   - Queries campaigns active in the date range
+   - For each campaign, calculates month-specific totals by aggregating from ads collection
+   - Filters ads by firstInsightDate and lastInsightDate
+   - Returns campaigns with CORRECT month-specific spend
+
+2. calculateCampaignTotalsForDateRange()
+   - Helper method that aggregates spend from ads collection
+   - Only includes ads with activity in the specified date range
+   - Recalculates all metrics (spend, leads, profit, etc.)
+
+FILES MODIFIED:
+---------------
+1. /Users/mac/dev/medwave/lib/services/firebase/campaign_service.dart
+   - Added calculateCampaignTotalsForDateRange() method
+   - Added getCampaignsWithDateRangeTotals() method
+
+2. /Users/mac/dev/medwave/lib/providers/performance_cost_provider.dart
+   - Changed loadCampaignsWithDateRange() to use getCampaignsWithDateRangeTotals()
+   - Now shows month-specific spend instead of lifetime spend
+
+HOW IT WORKS:
+-------------
+When you select "November 2025" in the app:
+
+OLD BEHAVIOR (WRONG):
+1. Query campaigns collection where lastAdDate >= 2025-11-01
+2. Show totalSpend from campaigns collection (LIFETIME spend)
+3. Result: $65,388.50 (includes June, July, August, September, October, November)
+
+NEW BEHAVIOR (CORRECT):
+1. Query campaigns collection where lastAdDate >= 2025-11-01
+2. For each campaign, query ads collection
+3. Filter ads where firstInsightDate to lastInsightDate overlaps with November 2025
+4. Sum spend from only those ads
+5. Result: Should match Facebook API (~R 31,629.19)
+
+WHAT TO TEST:
+-------------
+1. Open MedWave app
+2. Go to Campaign Performance screen
+3. Select "November 2025" from month filter
+4. Verify total spend matches Facebook API: ~R 31,629.19
+5. Check individual campaigns match Facebook data
+6. Test with other months (October, September, etc.)
+
+EXPECTED RESULTS:
+-----------------
+After this fix, when you select November 2025:
+- Total should be ~R 31,629.19 (matching Facebook API)
+- Individual campaign spends should match Facebook Ads Manager
+- No more inflated lifetime totals
+
+PERFORMANCE NOTE:
+-----------------
+This fix queries the ads collection for each campaign to calculate month-specific
+totals. This is slightly slower than using pre-aggregated totals, but provides
+ACCURATE month-specific data. The app fetches campaigns in batches and calculates
+totals on-demand, so performance should still be acceptable (<5 seconds for 20 campaigns).
+
+NEXT STEPS:
+-----------
+1. Test the app with November 2025 data
+2. Verify totals match Facebook API
+3. If working correctly, test with other months
+4. Consider adding month-specific pre-aggregation in Firebase Functions for better performance
+
+================================================================================
+
