@@ -289,7 +289,20 @@ class AdSetService {
         
         for (var oppDoc in opportunitiesQuery.docs) {
           final oppData = oppDoc.data();
-          final createdAt = (oppData['createdAt'] as Timestamp?)?.toDate();
+          
+          // Parse createdAt (can be either Timestamp or String)
+          DateTime? createdAt;
+          final createdAtField = oppData['createdAt'];
+          if (createdAtField is Timestamp) {
+            createdAt = createdAtField.toDate();
+          } else if (createdAtField is String) {
+            try {
+              createdAt = DateTime.parse(createdAtField);
+            } catch (e) {
+              // Skip if date parsing fails
+              continue;
+            }
+          }
           
           // Filter by date range
           if (createdAt != null) {
