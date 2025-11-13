@@ -17,9 +17,7 @@ class AdminAdvertsCampaignsScreen extends StatefulWidget {
 
 class _AdminAdvertsCampaignsScreenState
     extends State<AdminAdvertsCampaignsScreen> {
-  String _monthFilter = 'thismonth'; // Primary filter: default to current month
-  String _dateFilter =
-      'all'; // Secondary filter: date range within selected months
+  String _monthFilter = 'thismonth';
 
   @override
   void initState() {
@@ -67,18 +65,13 @@ class _AdminAdvertsCampaignsScreenState
       perfProvider.availableMonths,
     );
 
-    // Calculate date range based on BOTH month filter and date filter
-    final dateRange = _calculateCombinedDateRange(
-      _monthFilter,
-      _dateFilter,
-      months,
-    );
+    // Calculate date range based on month filter
+    final dateRange = _calculateCombinedDateRange(_monthFilter, 'all', months);
 
     if (kDebugMode) {
       print('🔄 LOADING DATA WITH FILTERS:');
       print('   Month Filter: $_monthFilter');
       print('   Months to Query: $months');
-      print('   Date Filter: $_dateFilter');
       print(
         '   Date Range: ${dateRange['start']?.toIso8601String() ?? "any"} to ${dateRange['end']?.toIso8601String() ?? "any"}',
       );
@@ -105,16 +98,12 @@ class _AdminAdvertsCampaignsScreenState
       await perfProvider.initialize();
     }
 
-    // Calculate date range from month filter and date filter
-    final dateRange = _calculateDateRangeForSplitCollections(
-      _monthFilter,
-      _dateFilter,
-    );
+    // Calculate date range from month filter
+    final dateRange = _calculateDateRangeForSplitCollections(_monthFilter);
 
     if (kDebugMode) {
       print('🔄 LOADING DATA WITH FILTERS (Split Collections):');
       print('   Month Filter: $_monthFilter');
-      print('   Date Filter: $_dateFilter');
       print(
         '   Date Range: ${dateRange['start']?.toIso8601String() ?? "any"} to ${dateRange['end']?.toIso8601String() ?? "any"}',
       );
@@ -135,14 +124,12 @@ class _AdminAdvertsCampaignsScreenState
   /// Calculate date range based on filters
   Map<String, DateTime?> _calculateDateRangeForSplitCollections(
     String monthFilter,
-    String dateFilter,
   ) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     DateTime? baseStart;
     DateTime? baseEnd;
 
-    // First, calculate base date range from month filter
     switch (monthFilter) {
       case 'thismonth':
         baseStart = DateTime(now.year, now.month, 1);
@@ -152,73 +139,20 @@ class _AdminAdvertsCampaignsScreenState
           1,
         ).subtract(const Duration(seconds: 1));
         break;
-      case 'lastmonth':
-        final lastMonth = DateTime(now.year, now.month - 1);
-        baseStart = DateTime(lastMonth.year, lastMonth.month, 1);
+      case 'last7days':
+        baseStart = today.subtract(const Duration(days: 6));
+        baseEnd = today;
+        break;
+      default:
+        baseStart = DateTime(now.year, now.month, 1);
         baseEnd = DateTime(
-          lastMonth.year,
-          lastMonth.month + 1,
+          now.year,
+          now.month + 1,
           1,
         ).subtract(const Duration(seconds: 1));
-        break;
-      case 'last3months':
-        baseStart = DateTime(now.year, now.month - 2, 1);
-        baseEnd = now;
-        break;
-      case 'last6months':
-        baseStart = DateTime(now.year, now.month - 5, 1);
-        baseEnd = now;
-        break;
-      case 'allmonths':
-        // Last 12 months
-        baseStart = DateTime(now.year, now.month - 11, 1);
-        baseEnd = now;
-        break;
-      default:
-        // Check if it's a specific month (e.g., "2025-10")
-        if (monthFilter.contains('-')) {
-          try {
-            final parts = monthFilter.split('-');
-            if (parts.length == 2) {
-              final year = int.parse(parts[0]);
-              final month = int.parse(parts[1]);
-              baseStart = DateTime(year, month, 1);
-              baseEnd = DateTime(
-                year,
-                month + 1,
-                1,
-              ).subtract(const Duration(seconds: 1));
-            }
-          } catch (e) {
-            // Default to last 3 months on parse error
-            baseStart = DateTime(now.year, now.month - 2, 1);
-            baseEnd = now;
-          }
-        } else {
-          // Default to last 3 months
-          baseStart = DateTime(now.year, now.month - 2, 1);
-          baseEnd = now;
-        }
     }
 
-    // Then, apply date filter on top of month range
-    switch (dateFilter) {
-      case 'today':
-        return {'start': today, 'end': now};
-      case 'yesterday':
-        final yesterday = today.subtract(const Duration(days: 1));
-        return {'start': yesterday, 'end': today};
-      case 'last7days':
-        final last7Days = today.subtract(const Duration(days: 7));
-        return {'start': last7Days, 'end': now};
-      case 'last30days':
-        final last30Days = today.subtract(const Duration(days: 30));
-        return {'start': last30Days, 'end': now};
-      case 'all':
-      default:
-        // Use the month-based range
-        return {'start': baseStart, 'end': baseEnd};
-    }
+    return {'start': baseStart, 'end': baseEnd};
   }
 
   /// Calculate which months to query based on month filter selection
@@ -467,97 +401,24 @@ class _AdminAdvertsCampaignsScreenState
             underline: const SizedBox(),
             icon: const Icon(Icons.arrow_drop_down, size: 20),
             style: TextStyle(fontSize: 13, color: Colors.grey[800]),
-            items: [
-              const DropdownMenuItem(
+            items: const [
+              DropdownMenuItem(
                 value: 'thismonth',
                 child: Text('📅 This Month'),
               ),
-              const DropdownMenuItem(
-                value: 'lastmonth',
-                child: Text('📅 Last Month'),
+              DropdownMenuItem(
+                value: 'last7days',
+                child: Text('📅 Last 7 Days'),
               ),
-              const DropdownMenuItem(
-                value: 'last3months',
-                child: Text('📅 Last 3 Months'),
-              ),
-              const DropdownMenuItem(
-                value: 'last6months',
-                child: Text('📅 Last 6 Months'),
-              ),
-              const DropdownMenuItem(
-                value: 'allmonths',
-                child: Text('📅 All Months'),
-              ),
-              // Add individual months dynamically
-              if (!PerformanceCostProvider.USE_SPLIT_COLLECTIONS)
-                ...perfProvider.availableMonths.take(6).map((month) {
-                  return DropdownMenuItem(
-                    value: month,
-                    child: Text('📅 ${_formatMonthLabel(month)}'),
-                  );
-                })
-              else
-                ...List.generate(12, (index) {
-                  final date = DateTime.now().subtract(
-                    Duration(days: 30 * index),
-                  );
-                  final monthStr =
-                      '${date.year}-${date.month.toString().padLeft(2, '0')}';
-                  return DropdownMenuItem(
-                    value: monthStr,
-                    child: Text('📅 ${_formatMonthLabel(monthStr)}'),
-                  );
-                }),
             ],
             onChanged: (value) {
               if (value != null) {
                 if (kDebugMode) {
-                  print('🔄 MONTH FILTER CHANGED: $_monthFilter → $value');
+                  print('🔄 FILTER CHANGED: $_monthFilter → $value');
                 }
                 setState(() {
                   _monthFilter = value;
-                  _dateFilter = 'all'; // Reset date filter when month changes
                 });
-
-                // Call appropriate loading method based on schema
-                if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
-                  _loadDataWithFiltersNew();
-                } else {
-                  _loadDataWithFilters();
-                }
-              }
-            },
-          ),
-        ),
-        const SizedBox(width: 8),
-        // Date filter (secondary - filters within selected months)
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: DropdownButton<String>(
-            value: _dateFilter,
-            underline: const SizedBox(),
-            icon: const Icon(Icons.arrow_drop_down, size: 20),
-            style: TextStyle(fontSize: 13, color: Colors.grey[800]),
-            items: const [
-              DropdownMenuItem(value: 'all', child: Text('🔍 All Dates')),
-              DropdownMenuItem(value: 'today', child: Text('🔍 Today')),
-              DropdownMenuItem(value: 'yesterday', child: Text('🔍 Yesterday')),
-              DropdownMenuItem(
-                value: 'last7days',
-                child: Text('🔍 Last 7 Days'),
-              ),
-              DropdownMenuItem(
-                value: 'last30days',
-                child: Text('🔍 Last 30 Days'),
-              ),
-            ],
-            onChanged: (value) {
-              if (value != null) {
-                setState(() => _dateFilter = value);
 
                 // Call appropriate loading method based on schema
                 if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
@@ -723,36 +584,5 @@ class _AdminAdvertsCampaignsScreenState
     } else {
       return '${difference.inDays}d ago';
     }
-  }
-
-  /// Format month string for display (e.g., "2025-10" -> "October 2025")
-  String _formatMonthLabel(String month) {
-    try {
-      final parts = month.split('-');
-      if (parts.length == 2) {
-        final year = parts[0];
-        final monthNum = int.parse(parts[1]);
-        const monthNames = [
-          'January',
-          'February',
-          'March',
-          'April',
-          'May',
-          'June',
-          'July',
-          'August',
-          'September',
-          'October',
-          'November',
-          'December',
-        ];
-        if (monthNum >= 1 && monthNum <= 12) {
-          return '${monthNames[monthNum - 1]} $year';
-        }
-      }
-    } catch (e) {
-      // Return original if parsing fails
-    }
-    return month;
   }
 }

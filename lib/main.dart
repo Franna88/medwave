@@ -48,6 +48,7 @@ import 'screens/admin/admin_patient_management_screen.dart';
 import 'screens/admin/adverts/admin_adverts_overview_screen.dart';
 import 'screens/admin/adverts/admin_adverts_campaigns_screen.dart';
 import 'screens/admin/adverts/admin_adverts_campaigns_old_screen.dart';
+import 'screens/admin/adverts/admin_adverts_comparison_screen.dart';
 import 'screens/admin/adverts/admin_adverts_ads_screen.dart';
 import 'screens/admin/adverts/admin_adverts_products_screen.dart';
 import 'screens/admin/adverts/admin_adverts_timeline_screen.dart';
@@ -376,6 +377,11 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
               path: 'timeline',
               name: 'admin-adverts-timeline',
               builder: (context, state) => const AdminAdvertsTimelineScreen(),
+            ),
+            GoRoute(
+              path: 'comparison',
+              name: 'admin-adverts-comparison',
+              builder: (context, state) => const AdminAdvertsComparisonScreen(),
             ),
             GoRoute(
               path: 'products',

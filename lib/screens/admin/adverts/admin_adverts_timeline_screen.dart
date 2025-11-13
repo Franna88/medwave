@@ -11,76 +11,86 @@ class AdminAdvertsTimelineScreen extends StatefulWidget {
   const AdminAdvertsTimelineScreen({Key? key}) : super(key: key);
 
   @override
-  State<AdminAdvertsTimelineScreen> createState() => _AdminAdvertsTimelineScreenState();
+  State<AdminAdvertsTimelineScreen> createState() =>
+      _AdminAdvertsTimelineScreenState();
 }
 
-class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen> {
+class _AdminAdvertsTimelineScreenState
+    extends State<AdminAdvertsTimelineScreen> {
   bool _isLoading = true;
   WeeklyAggregatedMetrics? _previousWeek;
   WeeklyAggregatedMetrics? _thisWeek;
   String? _error;
-  
-  // Month filter state
-  DateTime _selectedMonth = DateTime.now();
-  List<DateTime> _availableMonths = [];
+
+  String _timeFilter = 'thismonth';
 
   @override
   void initState() {
     super.initState();
-    _initializeMonths();
     _loadWeeklyData();
-  }
-
-  void _initializeMonths() {
-    // Generate last 6 months
-    final now = DateTime.now();
-    _availableMonths = List.generate(6, (index) {
-      return DateTime(now.year, now.month - index, 1);
-    });
-    // Default to previous month (more likely to have complete data)
-    _selectedMonth = _availableMonths.length > 1 ? _availableMonths[1] : _availableMonths.first;
   }
 
   Future<void> _loadWeeklyData() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final provider = Provider.of<PerformanceCostProvider>(context, listen: false);
-      
+      final provider = Provider.of<PerformanceCostProvider>(
+        context,
+        listen: false,
+      );
+
       // Get all ads (for metadata)
       final ads = provider.adPerformanceWithProducts.toList();
 
-      // Calculate date range for selected month
-      final startDate = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
-      final endDate = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0, 23, 59, 59);
+      // Calculate date range based on time filter
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      DateTime startDate;
+      DateTime endDate;
 
-      print('📊 Timeline: Loading data for ${_formatMonthYear(_selectedMonth)}');
-      print('📊 Timeline: Date range: ${startDate.toString().split(' ')[0]} to ${endDate.toString().split(' ')[0]}');
+      if (_timeFilter == 'last7days') {
+        startDate = today.subtract(const Duration(days: 6));
+        endDate = DateTime(today.year, today.month, today.day, 23, 59, 59);
+      } else {
+        // thismonth
+        startDate = DateTime(now.year, now.month, 1);
+        endDate = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+      }
+
+      print('📊 Timeline: Loading data for $_timeFilter');
+      print(
+        '📊 Timeline: Date range: ${startDate.toString().split(' ')[0]} to ${endDate.toString().split(' ')[0]}',
+      );
 
       // Use optimized collection group query to fetch ALL weekly insights for the month
       // This is MUCH faster than querying each ad individually
-      final weeklyDataMap = await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-        startDate: startDate,
-        endDate: endDate,
-      );
+      final weeklyDataMap =
+          await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
+            startDate: startDate,
+            endDate: endDate,
+          );
 
       if (!mounted) return;
 
-      print('📊 Timeline: Found ${weeklyDataMap.length} ads with weekly data for this month');
+      print(
+        '📊 Timeline: Found ${weeklyDataMap.length} ads with weekly data for this month',
+      );
 
       // Aggregate data by week
       final aggregated = _aggregateWeeklyData(weeklyDataMap, ads);
 
       if (!mounted) return;
-      
+
       // Debug: Check what we got
-      print('📊 Timeline: Aggregated data - Previous: ${aggregated['previous'] != null}, Current: ${aggregated['current'] != null}');
-      
+      print(
+        '📊 Timeline: Aggregated data - Previous: ${aggregated['previous'] != null}, Current: ${aggregated['current'] != null}',
+      );
+
       setState(() {
         _previousWeek = aggregated['previous'];
         _thisWeek = aggregated['current'];
@@ -96,10 +106,10 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
     }
   }
 
-  void _onMonthChanged(DateTime? newMonth) {
-    if (newMonth != null && newMonth != _selectedMonth) {
+  void _onFilterChanged(String? newFilter) {
+    if (newFilter != null && newFilter != _timeFilter) {
       setState(() {
-        _selectedMonth = newMonth;
+        _timeFilter = newFilter;
       });
       _loadWeeklyData();
     }
@@ -109,56 +119,65 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
     Map<String, List<FacebookWeeklyInsight>> weeklyDataMap,
     List<AdPerformanceWithProduct> ads,
   ) {
-    // Get all weeks from all ads
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Calculate proper calendar weeks (Sunday-Saturday)
+    final thisWeekStart = _getWeekStart(today);
+    final thisWeekEnd = _getWeekEnd(thisWeekStart);
+    final previousWeekStart = thisWeekStart.subtract(const Duration(days: 7));
+    final previousWeekEnd = _getWeekEnd(previousWeekStart);
+
+    // Get all weekly insights
     final allWeeks = <FacebookWeeklyInsight>[];
     for (final weeklyList in weeklyDataMap.values) {
       allWeeks.addAll(weeklyList);
     }
 
-    if (allWeeks.isEmpty) {
-      return {'previous': null, 'current': null};
-    }
+    // Filter data for previous week
+    final previousWeekData = allWeeks.where((week) {
+      return (week.dateStart.isAfter(
+                previousWeekStart.subtract(const Duration(days: 1)),
+              ) ||
+              week.dateStart.isAtSameMomentAs(previousWeekStart)) &&
+          (week.dateStop.isBefore(
+                previousWeekEnd.add(const Duration(days: 1)),
+              ) ||
+              week.dateStop.isAtSameMomentAs(previousWeekEnd));
+    }).toList();
 
-    // Sort by date
-    allWeeks.sort((a, b) => a.dateStart.compareTo(b.dateStart));
-
-    // Get unique weeks by date range
-    final weeksByDateRange = <String, List<FacebookWeeklyInsight>>{};
-    for (final week in allWeeks) {
-      final key = '${week.dateStart.toIso8601String().split('T')[0]}_${week.dateStop.toIso8601String().split('T')[0]}';
-      weeksByDateRange.putIfAbsent(key, () => []).add(week);
-    }
-
-    final uniqueWeeks = weeksByDateRange.keys.toList()..sort();
-
-    if (uniqueWeeks.length < 2) {
-      // Not enough weeks
-      if (uniqueWeeks.length == 1) {
-        final currentWeekData = weeksByDateRange[uniqueWeeks[0]]!;
-        return {
-          'previous': null,
-          'current': _aggregateWeek(currentWeekData, ads),
-        };
-      }
-      return {'previous': null, 'current': null};
-    }
-
-    // Get last two weeks
-    final previousWeekKey = uniqueWeeks[uniqueWeeks.length - 2];
-    final currentWeekKey = uniqueWeeks[uniqueWeeks.length - 1];
-
-    final previousWeekData = weeksByDateRange[previousWeekKey]!;
-    final currentWeekData = weeksByDateRange[currentWeekKey]!;
+    // Filter data for this week
+    final thisWeekData = allWeeks.where((week) {
+      return (week.dateStart.isAfter(
+                thisWeekStart.subtract(const Duration(days: 1)),
+              ) ||
+              week.dateStart.isAtSameMomentAs(thisWeekStart)) &&
+          (week.dateStop.isBefore(thisWeekEnd.add(const Duration(days: 1))) ||
+              week.dateStop.isAtSameMomentAs(thisWeekEnd));
+    }).toList();
 
     return {
-      'previous': _aggregateWeek(previousWeekData, ads),
-      'current': _aggregateWeek(currentWeekData, ads),
+      'previous': previousWeekData.isNotEmpty
+          ? _aggregateWeek(
+              previousWeekData,
+              ads,
+              _getWeekRangeString(previousWeekStart),
+            )
+          : _createEmptyWeek(_getWeekRangeString(previousWeekStart)),
+      'current': thisWeekData.isNotEmpty
+          ? _aggregateWeek(
+              thisWeekData,
+              ads,
+              _getWeekRangeString(thisWeekStart),
+            )
+          : _createEmptyWeek(_getWeekRangeString(thisWeekStart)),
     };
   }
 
   WeeklyAggregatedMetrics _aggregateWeek(
     List<FacebookWeeklyInsight> weekData,
     List<AdPerformanceWithProduct> ads,
+    String dateRange,
   ) {
     double totalSpend = 0;
     int totalImpressions = 0;
@@ -189,11 +208,6 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
     // Calculate profit
     final totalProfit = totalCash - totalSpend;
 
-    // Get date range from first week in the list
-    final dateRange = weekData.isNotEmpty
-        ? '${_formatDate(weekData.first.dateStart)} - ${_formatDate(weekData.first.dateStop)}'
-        : 'Unknown';
-
     return WeeklyAggregatedMetrics(
       dateRange: dateRange,
       spend: totalSpend,
@@ -207,15 +221,62 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
     );
   }
 
+  /// Create an empty week with zero metrics
+  WeeklyAggregatedMetrics _createEmptyWeek(String dateRange) {
+    return WeeklyAggregatedMetrics(
+      dateRange: dateRange,
+      spend: 0,
+      impressions: 0,
+      clicks: 0,
+      leads: 0,
+      bookings: 0,
+      deposits: 0,
+      cash: 0,
+      profit: 0,
+    );
+  }
+
   String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month - 1]} ${date.day}';
   }
 
-  String _formatMonthYear(DateTime date) {
-    final months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                    'July', 'August', 'September', 'October', 'November', 'December'];
-    return '${months[date.month - 1]} ${date.year}';
+  /// Get the start of the week (Sunday) for a given date
+  DateTime _getWeekStart(DateTime date) {
+    // DateTime.weekday returns 1 for Monday, 7 for Sunday
+    // We want Sunday as start, so we subtract (weekday % 7) days
+    final daysSinceSunday = date.weekday % 7;
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+    ).subtract(Duration(days: daysSinceSunday));
+  }
+
+  /// Get the end of the week (Saturday 23:59:59) for a given date
+  DateTime _getWeekEnd(DateTime weekStart) {
+    return weekStart.add(
+      const Duration(days: 6, hours: 23, minutes: 59, seconds: 59),
+    );
+  }
+
+  /// Get date range string for a week
+  String _getWeekRangeString(DateTime weekStart) {
+    final weekEnd = _getWeekEnd(weekStart);
+    return '${_formatDate(weekStart)} - ${_formatDate(weekEnd)}';
   }
 
   @override
@@ -224,22 +285,26 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
       appBar: AppBar(
         title: const Text('Timeline Performance Analysis'),
         actions: [
-          // Month filter dropdown
+          // Time filter dropdown
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: DropdownButton<DateTime>(
-              value: _selectedMonth,
-              dropdownColor: Colors.blue[700],
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              underline: Container(height: 1, color: Colors.white70),
-              icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-              items: _availableMonths.map((month) {
-                return DropdownMenuItem<DateTime>(
-                  value: month,
-                  child: Text(_formatMonthYear(month)),
-                );
-              }).toList(),
-              onChanged: _onMonthChanged,
+            child: DropdownButton<String>(
+              value: _timeFilter,
+              dropdownColor: Colors.white,
+              style: const TextStyle(color: Colors.black, fontSize: 14),
+              underline: Container(height: 1, color: Colors.black54),
+              icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
+              items: const [
+                DropdownMenuItem<String>(
+                  value: 'thismonth',
+                  child: Text('This Month'),
+                ),
+                DropdownMenuItem<String>(
+                  value: 'last7days',
+                  child: Text('Last 7 Days'),
+                ),
+              ],
+              onChanged: _onFilterChanged,
             ),
           ),
           const SizedBox(width: 8),
@@ -253,64 +318,65 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildErrorState()
-              : _previousWeek == null && _thisWeek == null
-                  ? _buildNoDataState()
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Month indicator
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.blue[50],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue[200]!),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.calendar_month, color: Colors.blue[700], size: 24),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Viewing: ${_formatMonthYear(_selectedMonth)}',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue[900],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          const Text(
-                            'Week-over-Week Comparison',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (_previousWeek != null)
-                                Expanded(child: _buildPreviousWeekCard(_previousWeek!)),
-                              if (_previousWeek != null && _thisWeek != null)
-                                const SizedBox(width: 24),
-                              if (_thisWeek != null)
-                                Expanded(child: _buildThisWeekCard(_thisWeek!)),
-                            ],
-                          ),
-                          if (_previousWeek != null && _thisWeek != null) ...[
-                            const SizedBox(height: 32),
-                            _buildResultsGrid(_previousWeek!, _thisWeek!),
-                          ],
-                        ],
-                      ),
+          ? _buildErrorState()
+          : _previousWeek == null && _thisWeek == null
+          ? _buildNoDataState()
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Month indicator
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue[200]!),
                     ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_month,
+                          color: Colors.blue[700],
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Viewing: ${_timeFilter == "thismonth" ? "This Month" : "Last 7 Days"}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Week-over-Week Comparison',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_previousWeek != null)
+                        Expanded(child: _buildPreviousWeekCard(_previousWeek!)),
+                      if (_previousWeek != null && _thisWeek != null)
+                        const SizedBox(width: 24),
+                      if (_thisWeek != null)
+                        Expanded(child: _buildThisWeekCard(_thisWeek!)),
+                    ],
+                  ),
+                  if (_previousWeek != null && _thisWeek != null) ...[
+                    const SizedBox(height: 32),
+                    _buildResultsGrid(_previousWeek!, _thisWeek!),
+                  ],
+                ],
+              ),
+            ),
     );
   }
 
@@ -345,12 +411,12 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
           Icon(Icons.timeline, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            'No weekly data for ${_formatMonthYear(_selectedMonth)}',
+            'No weekly data for ${_timeFilter == "thismonth" ? "This Month" : "Last 7 Days"}',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
-            'Try selecting a different month or ensure ads were running during this period',
+            'Try selecting a different time range or ensure ads were running during this period',
             style: TextStyle(color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
@@ -366,12 +432,12 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
               const SizedBox(width: 12),
               OutlinedButton.icon(
                 onPressed: () {
-                  if (_availableMonths.length > 1) {
-                    _onMonthChanged(_availableMonths[1]);
-                  }
+                  _onFilterChanged(
+                    _timeFilter == 'thismonth' ? 'last7days' : 'thismonth',
+                  );
                 },
-                icon: const Icon(Icons.navigate_before),
-                label: const Text('Previous Month'),
+                icon: const Icon(Icons.swap_horiz),
+                label: const Text('Switch Filter'),
               ),
             ],
           ),
@@ -480,10 +546,7 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
-          ),
+          Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[700])),
           Text(
             value,
             style: TextStyle(
@@ -502,12 +565,33 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
     WeeklyAggregatedMetrics current,
   ) {
     final comparisons = [
-      _createComparison('Spend', previous.spend, current.spend, isGoodWhenUp: false),
-      _createComparison('Leads', previous.leads.toDouble(), current.leads.toDouble()),
+      _createComparison(
+        'Spend',
+        previous.spend,
+        current.spend,
+        isGoodWhenUp: false,
+      ),
+      _createComparison(
+        'Leads',
+        previous.leads.toDouble(),
+        current.leads.toDouble(),
+      ),
       _createComparison('Profit', previous.profit, current.profit),
-      _createComparison('Impressions', previous.impressions.toDouble(), current.impressions.toDouble()),
-      _createComparison('Bookings', previous.bookings.toDouble(), current.bookings.toDouble()),
-      _createComparison('Deposits', previous.deposits.toDouble(), current.deposits.toDouble()),
+      _createComparison(
+        'Impressions',
+        previous.impressions.toDouble(),
+        current.impressions.toDouble(),
+      ),
+      _createComparison(
+        'Bookings',
+        previous.bookings.toDouble(),
+        current.bookings.toDouble(),
+      ),
+      _createComparison(
+        'Deposits',
+        previous.deposits.toDouble(),
+        current.deposits.toDouble(),
+      ),
     ];
 
     return Card(
@@ -538,7 +622,8 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
                 mainAxisSpacing: 12,
               ),
               itemCount: comparisons.length,
-              itemBuilder: (context, index) => _buildComparisonCard(comparisons[index]),
+              itemBuilder: (context, index) =>
+                  _buildComparisonCard(comparisons[index]),
             ),
           ],
         ),
@@ -587,7 +672,9 @@ class _AdminAdvertsTimelineScreenState extends State<AdminAdvertsTimelineScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  comparison.isIncrease ? Icons.arrow_upward : Icons.arrow_downward,
+                  comparison.isIncrease
+                      ? Icons.arrow_upward
+                      : Icons.arrow_downward,
                   color: color,
                   size: 24,
                 ),
@@ -676,4 +763,3 @@ class MetricComparison {
     }
   }
 }
-

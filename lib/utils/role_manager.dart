@@ -108,6 +108,7 @@ class RoleManager {
                 NavigationSubItem('Campaigns', '/admin/adverts/campaigns', 'campaign'),
                 NavigationSubItem('Campaigns (Old)', '/admin/adverts/campaigns-old', 'history'),
                 NavigationSubItem('Timeline', '/admin/adverts/timeline', 'timeline'),
+                NavigationSubItem('Comparison', '/admin/adverts/comparison', 'compare'),
                 NavigationSubItem('Products', '/admin/adverts/products', 'inventory'),
               ],
             ),
