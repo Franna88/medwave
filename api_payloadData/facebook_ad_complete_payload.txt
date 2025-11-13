@@ -1,0 +1,1248 @@
+/Users/mac/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+
+====================================================================================================
+  FACEBOOK AD DATA INSPECTOR - FIND AD WITH PERFORMANCE DATA
+====================================================================================================
+API Version: v24.0
+Ad Account: act_220298027464902
+Timestamp: 2025-11-13 13:37:29
+
+====================================================================================================
+  FETCHING ADS WITH PERFORMANCE DATA (LAST 7 DAYS)
+====================================================================================================
+
+✅ Found 20 ads with performance data
+
+1. Dynamic Video
+   Ad ID: 120233712971960335
+   Campaign: Matthys | 03102025 ABOLEADFORM (DDM)
+   Impressions: 3,508
+   Spend: R 564.80
+   Clicks: 169
+
+2. Dynamic Video
+   Ad ID: 120233712943990335
+   Campaign: Matthys | 03102025 ABOLEADFORM (DDM)
+   Impressions: 3,429
+   Spend: R 556.98
+   Clicks: 153
+
+3. Dynamic Video
+   Ad ID: 120233713011700335
+   Campaign: Matthys | 03102025 ABOLEADFORM (DDM)
+   Impressions: 3,771
+   Spend: R 554.47
+   Clicks: 215
+
+4. Dynamic Video
+   Ad ID: 120233712910150335
+   Campaign: Matthys | 03102025 ABOLEADFORM (DDM)
+   Impressions: 3,517
+   Spend: R 550.81
+   Clicks: 131
+
+5. Dynamic Video
+   Ad ID: 120233712403210335
+   Campaign: Matthys | 03102025 ABOLEADFORM (DDM)
+   Impressions: 3,158
+   Spend: R 550.74
+   Clicks: 149
+
+6. Dynamic Video
+   Ad ID: 120235190066410335
+   Campaign: USA 3
+   Impressions: 10,749
+   Spend: R 442.72
+   Clicks: 286
+
+7. Dynamic Video
+   Ad ID: 120235190451200335
+   Campaign: USA 3
+   Impressions: 10,595
+   Spend: R 442.66
+   Clicks: 252
+
+8. VIDEO
+   Ad ID: 120226895526770335
+   Campaign: Matthys | 13062025ABO | Body Contouring – Bowers (DDM)
+   Impressions: 1,960
+   Spend: R 345.19
+   Clicks: 99
+
+9. VIDEO
+   Ad ID: 120226897911690335
+   Campaign: Matthys | 13062025ABO | Body Contouring – Bowers (DDM)
+   Impressions: 2,291
+   Spend: R 344.48
+   Clicks: 96
+
+10. VIDEO
+   Ad ID: 120226898149900335
+   Campaign: Matthys | 13062025ABO | Body Contouring – Bowers (DDM)
+   Impressions: 2,695
+   Spend: R 344.39
+   Clicks: 115
+
+11. VIDEO
+   Ad ID: 120226897695550335
+   Campaign: Matthys | 13062025ABO | Body Contouring – Bowers (DDM)
+   Impressions: 2,295
+   Spend: R 344.03
+   Clicks: 109
+
+12. Pasiënt Resultaat (Afrikaans)
+   Ad ID: 120235560676180335
+   Campaign: 05112025 - ABOLEADFORMZA (DDM) - Afrikaans
+   Impressions: 40,994
+   Spend: R 341.44
+   Clicks: 1581
+
+13. B2B October 2025
+   Ad ID: 120235560266860335
+   Campaign: 05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences
+   Impressions: 55,696
+   Spend: R 338.30
+   Clicks: 1701
+
+14. B2B October 2025
+   Ad ID: 120235560267990335
+   Campaign: 05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences
+   Impressions: 44,459
+   Spend: R 327.07
+   Clicks: 1331
+
+15. B2B October 2025
+   Ad ID: 120235556204840335
+   Campaign: 05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences
+   Impressions: 39,037
+   Spend: R 317.08
+   Clicks: 1315
+
+16. B2B October 2025
+   Ad ID: 120235560268260335
+   Campaign: 05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences
+   Impressions: 52,065
+   Spend: R 310.04
+   Clicks: 1750
+
+17. Physiotherapists - Elmien
+   Ad ID: 120234487479400335
+   Campaign: Matthys - 16102025 - ABOLEADFORMZA (DDM) - Physiotherapist
+   Impressions: 19,938
+   Spend: R 206.68
+   Clicks: 476
+
+18. Medical Problems (Retargeting) - DDM
+   Ad ID: 120234485362400335
+   Campaign: Matthys - 16102025 - ABOLANDER (DDM) - Retargeting
+   Impressions: 12,939
+   Spend: R 153.05
+   Clicks: 722
+
+19. COLIN LAGRANGE (DDM)
+   Ad ID: 120235704085790335
+   Campaign: 07112025 - ABOLEADZA (DDM) - Targeted Audiences
+   Impressions: 10,331
+   Spend: R 100.64
+   Clicks: 340
+
+20. COLIN LAGRANGE (DDM)
+   Ad ID: 120235702891130335
+   Campaign: 07112025 - ABOLEADZA (DDM) - Targeted Audiences
+   Impressions: 7,991
+   Spend: R 77.52
+   Clicks: 219
+
+
+====================================================================================================
+  INSPECTING AD: Dynamic Video
+====================================================================================================
+Ad ID: 120233712971960335
+Spend: R 564.80
+Impressions: 3,508
+
+====================================================================================================
+  COMPLETE AD DETAILS FOR: 120233712971960335
+====================================================================================================
+
+📦 COMPLETE AD DATA:
+{
+  "id": "120233712971960335",
+  "name": "Dynamic Video",
+  "status": "ACTIVE",
+  "effective_status": "ACTIVE",
+  "configured_status": "ACTIVE",
+  "created_time": "2025-10-06T11:29:03+0100",
+  "updated_time": "2025-10-06T14:36:44+0100",
+  "account_id": "220298027464902",
+  "campaign_id": "120233712403260335",
+  "campaign": {
+    "id": "120233712403260335",
+    "name": "Matthys | 03102025 ABOLEADFORM (DDM)",
+    "status": "ACTIVE",
+    "objective": "OUTCOME_LEADS"
+  },
+  "adset_id": "120233712971950335",
+  "adset": {
+    "id": "120233712971950335",
+    "name": "Dynamic Ads | 1% LLA (USA) | Chiro's with Shockwave - DDM",
+    "status": "ACTIVE",
+    "targeting": {
+      "age_max": 65,
+      "age_min": 25,
+      "age_range": [
+        30,
+        60
+      ],
+      "custom_audiences": [
+        {
+          "id": "120233712773400335",
+          "name": "Lookalike (US, 1%) - Chiro's with Shockwave Device (09-25)"
+        }
+      ],
+      "genders": [
+        0
+      ],
+      "geo_locations": {
+        "countries": [
+          "US"
+        ],
+        "location_types": [
+          "home",
+          "recent"
+        ]
+      },
+      "brand_safety_content_filter_levels": [
+        "FACEBOOK_STANDARD",
+        "AN_STANDARD"
+      ],
+      "targeting_automation": {
+        "advantage_audience": 1,
+        "individual_setting": {
+          "age": 1,
+          "gender": 1
+        }
+      }
+    },
+    "optimization_goal": "LEAD_GENERATION",
+    "billing_event": "IMPRESSIONS",
+    "daily_budget": "8000",
+    "lifetime_budget": "0"
+  },
+  "creative": {
+    "id": "1098904672229695",
+    "name": "{{product.name}} 2025-10-06-95622b2c007ef93ba389124bd692d9d1",
+    "thumbnail_url": "https://scontent-jnb2-1.xx.fbcdn.net/v/t15.13418-10/462234930_1127616739031030_4929789128430407513_n.jpg?_nc_cat=111&ccb=1-7&_nc_ohc=0LomXUvuIs4Q7kNvwHEScFZ&_nc_oc=Admnx-wtUnEYZycJhFsmevlSDjYU0VNgmfHOCTVqEW8G2b9dZHkRR-NcYcfV30YxaTE&_nc_zt=23&_nc_ht=scontent-jnb2-1.xx&edm=AAwGEdEEAAAA&_nc_gid=8HHksF1UlhNPrIhbwNEPDA&_nc_tpa=Q5bMBQFhEY0nSsH4m33EHx5FrIAMQoLKfwqdPmgqD8EPB7vnUl9g586jCI0CNDOIVMZtJ2Q7XFD35YquLA&stp=c0.5000x0.5000f_dst-emg0_p64x64_q75_tt6&ur=c3b633&_nc_sid=58080a&oh=00_AfjbGTbYXzJOJtPbqD-sq1evxxDTs0smBvZdcvJTaD82rw&oe=691B823B",
+    "object_story_spec": {
+      "page_id": "100391263069899",
+      "instagram_user_id": "17841458823670579"
+    }
+  },
+  "tracking_specs": [
+    {
+      "action.type": [
+        "onsite_conversion"
+      ],
+      "page": [
+        "100391263069899"
+      ]
+    },
+    {
+      "action.type": [
+        "onsite_conversion"
+      ],
+      "conversion_id": [
+        "6614125778712643",
+        "7356988427736426",
+        "7569134179864205",
+        "7601470179964724",
+        "7716360548413422",
+        "7789610797783262",
+        "7840551792695351",
+        "7850079171743535",
+        "7916789848374001",
+        "7920029681419521",
+        "8001208859940616",
+        "8008642102516290",
+        "8253588081339571",
+        "8311429468876931",
+        "8311513415547385",
+        "8391962230828096",
+        "8399251843442640",
+        "8427552480607765",
+        "8448430065186008",
+        "26024350100543233",
+        "26461912420066868"
+      ]
+    },
+    {
+      "action.type": [
+        "messenger"
+      ],
+      "page": [
+        "100391263069899"
+      ]
+    },
+    {
+      "action.type": [
+        "offsite_conversion"
+      ],
+      "fb_pixel": [
+        "1025766262569910"
+      ]
+    },
+    {
+      "action.type": [
+        "leadgen_nurturing_messenger_deep_conversation"
+      ],
+      "page": [
+        "100391263069899"
+      ]
+    },
+    {
+      "action.type": [
+        "onsite_conversion"
+      ],
+      "conversion_id": [
+        "10061813817250320"
+      ]
+    },
+    {
+      "action.type": [
+        "onsite_conversion"
+      ]
+    },
+    {
+      "action.type": [
+        "post_engagement"
+      ],
+      "page": [
+        "100391263069899"
+      ],
+      "post": [
+        "714925651618401"
+      ]
+    },
+    {
+      "action.type": [
+        "post_interaction_gross"
+      ],
+      "page": [
+        "100391263069899"
+      ],
+      "post": [
+        "714925651618401"
+      ]
+    },
+    {
+      "action.type": [
+        "link_click"
+      ],
+      "post": [
+        "714925651618401"
+      ],
+      "post.wall": [
+        "100391263069899"
+      ]
+    }
+  ],
+  "conversion_specs": [
+    {
+      "action.type": [
+        "leadgen"
+      ],
+      "leadgen": [
+        "229029650206059"
+      ]
+    }
+  ],
+  "bid_type": "ABSOLUTE_OCPM"
+}
+
+====================================================================================================
+  COMPLETE INSIGHTS PAYLOAD FOR AD: 120233712971960335
+====================================================================================================
+
+📊 COMPLETE INSIGHTS DATA:
+{
+  "data": [
+    {
+      "account_id": "220298027464902",
+      "account_name": "MedWave Master Ads Account",
+      "ad_id": "120233712971960335",
+      "ad_name": "Dynamic Video",
+      "adset_id": "120233712971950335",
+      "adset_name": "Dynamic Ads | 1% LLA (USA) | Chiro's with Shockwave - DDM",
+      "campaign_id": "120233712403260335",
+      "campaign_name": "Matthys | 03102025 ABOLEADFORM (DDM)",
+      "objective": "OUTCOME_LEADS",
+      "buying_type": "AUCTION",
+      "optimization_goal": "LEAD_GENERATION",
+      "impressions": "3508",
+      "reach": "2867",
+      "frequency": "1.223579",
+      "clicks": "169",
+      "unique_clicks": "136",
+      "ctr": "4.81756",
+      "unique_ctr": "4.743634",
+      "inline_link_clicks": "83",
+      "inline_link_click_ctr": "2.366021",
+      "unique_inline_link_clicks": "82",
+      "spend": "564.8",
+      "cpm": "161.003421",
+      "cpc": "3.342012",
+      "cpp": "197.000349",
+      "cost_per_inline_link_click": "6.804819",
+      "cost_per_unique_click": "4.152941",
+      "cost_per_unique_inline_link_click": "6.887805",
+      "actions": [
+        {
+          "action_type": "onsite_conversion.total_messaging_connection",
+          "value": "9"
+        },
+        {
+          "action_type": "onsite_conversion.lead",
+          "value": "1"
+        },
+        {
+          "action_type": "offsite_complete_registration_add_meta_leads",
+          "value": "11"
+        },
+        {
+          "action_type": "link_click",
+          "value": "83"
+        },
+        {
+          "action_type": "page_engagement",
+          "value": "1877"
+        },
+        {
+          "action_type": "landing_page_view",
+          "value": "1"
+        },
+        {
+          "action_type": "omni_landing_page_view",
+          "value": "1"
+        },
+        {
+          "action_type": "post_engagement",
+          "value": "1874"
+        },
+        {
+          "action_type": "comment",
+          "value": "7"
+        },
+        {
+          "action_type": "offsite_content_view_add_meta_leads",
+          "value": "11"
+        },
+        {
+          "action_type": "lead",
+          "value": "11"
+        },
+        {
+          "action_type": "offsite_search_add_meta_leads",
+          "value": "11"
+        },
+        {
+          "action_type": "post",
+          "value": "5"
+        },
+        {
+          "action_type": "onsite_conversion.post_save",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.post_net_save",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_web_lead",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_first_reply",
+          "value": "8"
+        },
+        {
+          "action_type": "post_interaction_gross",
+          "value": "61"
+        },
+        {
+          "action_type": "like",
+          "value": "3"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_conversation_started_7d",
+          "value": "9"
+        },
+        {
+          "action_type": "onsite_conversion.lead_grouped",
+          "value": "11"
+        },
+        {
+          "action_type": "video_view",
+          "value": "1730"
+        },
+        {
+          "action_type": "post_reaction",
+          "value": "48"
+        }
+      ],
+      "cost_per_action_type": [
+        {
+          "action_type": "onsite_conversion.lead",
+          "value": "564.8"
+        },
+        {
+          "action_type": "onsite_conversion.total_messaging_connection",
+          "value": "62.755556"
+        },
+        {
+          "action_type": "offsite_submit_application_add_meta_leads",
+          "value": "51.345455"
+        },
+        {
+          "action_type": "offsite_search_add_meta_leads",
+          "value": "51.345455"
+        },
+        {
+          "action_type": "offsite_complete_registration_add_meta_leads",
+          "value": "51.345455"
+        },
+        {
+          "action_type": "video_view",
+          "value": "0.326474"
+        },
+        {
+          "action_type": "link_click",
+          "value": "6.804819"
+        },
+        {
+          "action_type": "like",
+          "value": "188.266667"
+        },
+        {
+          "action_type": "onsite_conversion.lead_grouped",
+          "value": "51.345455"
+        },
+        {
+          "action_type": "post_interaction_gross",
+          "value": "9.259016"
+        },
+        {
+          "action_type": "onsite_web_lead",
+          "value": "564.8"
+        },
+        {
+          "action_type": "lead",
+          "value": "51.345455"
+        },
+        {
+          "action_type": "post_engagement",
+          "value": "0.301387"
+        },
+        {
+          "action_type": "offsite_content_view_add_meta_leads",
+          "value": "51.345455"
+        },
+        {
+          "action_type": "landing_page_view",
+          "value": "564.8"
+        },
+        {
+          "action_type": "offsite_contact_website_add_meta_leads",
+          "value": "51.345455"
+        },
+        {
+          "action_type": "page_engagement",
+          "value": "0.300906"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_first_reply",
+          "value": "70.6"
+        },
+        {
+          "action_type": "omni_landing_page_view",
+          "value": "564.8"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_conversation_started_7d",
+          "value": "62.755556"
+        }
+      ],
+      "video_play_actions": [
+        {
+          "action_type": "video_view",
+          "value": "3208"
+        }
+      ],
+      "video_avg_time_watched_actions": [
+        {
+          "action_type": "video_view",
+          "value": "10"
+        }
+      ],
+      "video_p25_watched_actions": [
+        {
+          "action_type": "video_view",
+          "value": "525"
+        }
+      ],
+      "video_p50_watched_actions": [
+        {
+          "action_type": "video_view",
+          "value": "343"
+        }
+      ],
+      "video_p75_watched_actions": [
+        {
+          "action_type": "video_view",
+          "value": "259"
+        }
+      ],
+      "video_p100_watched_actions": [
+        {
+          "action_type": "video_view",
+          "value": "106"
+        }
+      ],
+      "video_p95_watched_actions": [
+        {
+          "action_type": "video_view",
+          "value": "129"
+        }
+      ],
+      "video_30_sec_watched_actions": [
+        {
+          "action_type": "video_view",
+          "value": "335"
+        }
+      ],
+      "social_spend": "0",
+      "attribution_setting": "1d_view_7d_click",
+      "date_start": "2025-11-06",
+      "date_stop": "2025-11-12"
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "MAZDZD",
+      "after": "MAZDZD"
+    }
+  }
+}
+
+====================================================================================================
+  DAILY BREAKDOWN FOR AD: 120233712971960335
+====================================================================================================
+
+📅 DAILY BREAKDOWN:
+{
+  "data": [
+    {
+      "date_start": "2025-11-06",
+      "date_stop": "2025-11-06",
+      "impressions": "430",
+      "reach": "403",
+      "spend": "77.63",
+      "clicks": "23",
+      "ctr": "5.348837",
+      "cpm": "180.534884",
+      "cpc": "3.375217",
+      "actions": [
+        {
+          "action_type": "onsite_conversion.total_messaging_connection",
+          "value": "1"
+        },
+        {
+          "action_type": "offsite_complete_registration_add_meta_leads",
+          "value": "1"
+        },
+        {
+          "action_type": "link_click",
+          "value": "10"
+        },
+        {
+          "action_type": "page_engagement",
+          "value": "236"
+        },
+        {
+          "action_type": "post_engagement",
+          "value": "236"
+        },
+        {
+          "action_type": "comment",
+          "value": "2"
+        },
+        {
+          "action_type": "offsite_content_view_add_meta_leads",
+          "value": "1"
+        },
+        {
+          "action_type": "lead",
+          "value": "1"
+        },
+        {
+          "action_type": "offsite_search_add_meta_leads",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_first_reply",
+          "value": "1"
+        },
+        {
+          "action_type": "post_interaction_gross",
+          "value": "8"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_conversation_started_7d",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.lead_grouped",
+          "value": "1"
+        },
+        {
+          "action_type": "video_view",
+          "value": "218"
+        },
+        {
+          "action_type": "post_reaction",
+          "value": "6"
+        }
+      ]
+    },
+    {
+      "date_start": "2025-11-07",
+      "date_stop": "2025-11-07",
+      "impressions": "419",
+      "reach": "397",
+      "spend": "77.04",
+      "clicks": "27",
+      "ctr": "6.443914",
+      "cpm": "183.866348",
+      "cpc": "2.853333",
+      "actions": [
+        {
+          "action_type": "onsite_conversion.total_messaging_connection",
+          "value": "1"
+        },
+        {
+          "action_type": "offsite_complete_registration_add_meta_leads",
+          "value": "2"
+        },
+        {
+          "action_type": "link_click",
+          "value": "17"
+        },
+        {
+          "action_type": "page_engagement",
+          "value": "245"
+        },
+        {
+          "action_type": "post_engagement",
+          "value": "245"
+        },
+        {
+          "action_type": "comment",
+          "value": "1"
+        },
+        {
+          "action_type": "offsite_content_view_add_meta_leads",
+          "value": "2"
+        },
+        {
+          "action_type": "lead",
+          "value": "2"
+        },
+        {
+          "action_type": "offsite_search_add_meta_leads",
+          "value": "2"
+        },
+        {
+          "action_type": "post",
+          "value": "2"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_first_reply",
+          "value": "1"
+        },
+        {
+          "action_type": "post_interaction_gross",
+          "value": "13"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_conversation_started_7d",
+          "value": "2"
+        },
+        {
+          "action_type": "onsite_conversion.lead_grouped",
+          "value": "2"
+        },
+        {
+          "action_type": "video_view",
+          "value": "215"
+        },
+        {
+          "action_type": "post_reaction",
+          "value": "10"
+        }
+      ]
+    },
+    {
+      "date_start": "2025-11-08",
+      "date_stop": "2025-11-08",
+      "impressions": "451",
+      "reach": "429",
+      "spend": "68.37",
+      "clicks": "24",
+      "ctr": "5.321508",
+      "cpm": "151.596452",
+      "cpc": "2.84875",
+      "actions": [
+        {
+          "action_type": "onsite_conversion.total_messaging_connection",
+          "value": "1"
+        },
+        {
+          "action_type": "offsite_complete_registration_add_meta_leads",
+          "value": "1"
+        },
+        {
+          "action_type": "link_click",
+          "value": "12"
+        },
+        {
+          "action_type": "page_engagement",
+          "value": "260"
+        },
+        {
+          "action_type": "post_engagement",
+          "value": "259"
+        },
+        {
+          "action_type": "comment",
+          "value": "1"
+        },
+        {
+          "action_type": "offsite_content_view_add_meta_leads",
+          "value": "1"
+        },
+        {
+          "action_type": "lead",
+          "value": "1"
+        },
+        {
+          "action_type": "offsite_search_add_meta_leads",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_first_reply",
+          "value": "1"
+        },
+        {
+          "action_type": "post_interaction_gross",
+          "value": "10"
+        },
+        {
+          "action_type": "like",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_conversation_started_7d",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.lead_grouped",
+          "value": "1"
+        },
+        {
+          "action_type": "video_view",
+          "value": "237"
+        },
+        {
+          "action_type": "post_reaction",
+          "value": "9"
+        }
+      ]
+    },
+    {
+      "date_start": "2025-11-09",
+      "date_stop": "2025-11-09",
+      "impressions": "689",
+      "reach": "649",
+      "spend": "92.99",
+      "clicks": "30",
+      "ctr": "4.354136",
+      "cpm": "134.963716",
+      "cpc": "3.099667",
+      "actions": [
+        {
+          "action_type": "onsite_conversion.total_messaging_connection",
+          "value": "1"
+        },
+        {
+          "action_type": "link_click",
+          "value": "13"
+        },
+        {
+          "action_type": "page_engagement",
+          "value": "384"
+        },
+        {
+          "action_type": "post_engagement",
+          "value": "383"
+        },
+        {
+          "action_type": "comment",
+          "value": "1"
+        },
+        {
+          "action_type": "post",
+          "value": "2"
+        },
+        {
+          "action_type": "onsite_conversion.post_save",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.post_net_save",
+          "value": "1"
+        },
+        {
+          "action_type": "post_interaction_gross",
+          "value": "11"
+        },
+        {
+          "action_type": "like",
+          "value": "1"
+        },
+        {
+          "action_type": "video_view",
+          "value": "359"
+        },
+        {
+          "action_type": "post_reaction",
+          "value": "7"
+        }
+      ]
+    },
+    {
+      "date_start": "2025-11-10",
+      "date_stop": "2025-11-10",
+      "impressions": "456",
+      "reach": "411",
+      "spend": "80.75",
+      "clicks": "17",
+      "ctr": "3.72807",
+      "cpm": "177.083333",
+      "cpc": "4.75",
+      "actions": [
+        {
+          "action_type": "onsite_conversion.total_messaging_connection",
+          "value": "1"
+        },
+        {
+          "action_type": "offsite_complete_registration_add_meta_leads",
+          "value": "1"
+        },
+        {
+          "action_type": "link_click",
+          "value": "8"
+        },
+        {
+          "action_type": "page_engagement",
+          "value": "208"
+        },
+        {
+          "action_type": "post_engagement",
+          "value": "208"
+        },
+        {
+          "action_type": "offsite_content_view_add_meta_leads",
+          "value": "1"
+        },
+        {
+          "action_type": "lead",
+          "value": "1"
+        },
+        {
+          "action_type": "offsite_search_add_meta_leads",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_first_reply",
+          "value": "1"
+        },
+        {
+          "action_type": "post_interaction_gross",
+          "value": "3"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_conversation_started_7d",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.lead_grouped",
+          "value": "1"
+        },
+        {
+          "action_type": "video_view",
+          "value": "197"
+        },
+        {
+          "action_type": "post_reaction",
+          "value": "3"
+        }
+      ]
+    },
+    {
+      "date_start": "2025-11-11",
+      "date_stop": "2025-11-11",
+      "impressions": "477",
+      "reach": "446",
+      "spend": "81.64",
+      "clicks": "23",
+      "ctr": "4.821803",
+      "cpm": "171.15304",
+      "cpc": "3.549565",
+      "actions": [
+        {
+          "action_type": "onsite_conversion.total_messaging_connection",
+          "value": "2"
+        },
+        {
+          "action_type": "onsite_conversion.lead",
+          "value": "1"
+        },
+        {
+          "action_type": "offsite_complete_registration_add_meta_leads",
+          "value": "4"
+        },
+        {
+          "action_type": "link_click",
+          "value": "11"
+        },
+        {
+          "action_type": "page_engagement",
+          "value": "228"
+        },
+        {
+          "action_type": "post_engagement",
+          "value": "227"
+        },
+        {
+          "action_type": "offsite_content_view_add_meta_leads",
+          "value": "4"
+        },
+        {
+          "action_type": "lead",
+          "value": "4"
+        },
+        {
+          "action_type": "offsite_search_add_meta_leads",
+          "value": "4"
+        },
+        {
+          "action_type": "onsite_web_lead",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_first_reply",
+          "value": "2"
+        },
+        {
+          "action_type": "post_interaction_gross",
+          "value": "4"
+        },
+        {
+          "action_type": "like",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_conversation_started_7d",
+          "value": "2"
+        },
+        {
+          "action_type": "onsite_conversion.lead_grouped",
+          "value": "4"
+        },
+        {
+          "action_type": "video_view",
+          "value": "212"
+        },
+        {
+          "action_type": "post_reaction",
+          "value": "4"
+        }
+      ]
+    },
+    {
+      "date_start": "2025-11-12",
+      "date_stop": "2025-11-12",
+      "impressions": "586",
+      "reach": "550",
+      "spend": "86.38",
+      "clicks": "25",
+      "ctr": "4.266212",
+      "cpm": "147.406143",
+      "cpc": "3.4552",
+      "actions": [
+        {
+          "action_type": "onsite_conversion.total_messaging_connection",
+          "value": "2"
+        },
+        {
+          "action_type": "offsite_complete_registration_add_meta_leads",
+          "value": "2"
+        },
+        {
+          "action_type": "link_click",
+          "value": "12"
+        },
+        {
+          "action_type": "page_engagement",
+          "value": "316"
+        },
+        {
+          "action_type": "landing_page_view",
+          "value": "1"
+        },
+        {
+          "action_type": "omni_landing_page_view",
+          "value": "1"
+        },
+        {
+          "action_type": "post_engagement",
+          "value": "316"
+        },
+        {
+          "action_type": "comment",
+          "value": "2"
+        },
+        {
+          "action_type": "offsite_content_view_add_meta_leads",
+          "value": "2"
+        },
+        {
+          "action_type": "lead",
+          "value": "2"
+        },
+        {
+          "action_type": "offsite_search_add_meta_leads",
+          "value": "2"
+        },
+        {
+          "action_type": "post",
+          "value": "1"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_first_reply",
+          "value": "2"
+        },
+        {
+          "action_type": "post_interaction_gross",
+          "value": "12"
+        },
+        {
+          "action_type": "onsite_conversion.messaging_conversation_started_7d",
+          "value": "2"
+        },
+        {
+          "action_type": "onsite_conversion.lead_grouped",
+          "value": "2"
+        },
+        {
+          "action_type": "video_view",
+          "value": "292"
+        },
+        {
+          "action_type": "post_reaction",
+          "value": "9"
+        }
+      ]
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "MAZDZD",
+      "after": "NgZDZD"
+    }
+  }
+}
+
+====================================================================================================
+  DATA SUMMARY
+====================================================================================================
+
+✅ AVAILABLE INSIGHT FIELDS:
+   - account_id: 220298027464902
+   - account_name: MedWave Master Ads Account
+   - actions: list (see full payload above)
+   - ad_id: 120233712971960335
+   - ad_name: Dynamic Video
+   - adset_id: 120233712971950335
+   - adset_name: Dynamic Ads | 1% LLA (USA) | Chiro's with Shockwave - DDM
+   - attribution_setting: 1d_view_7d_click
+   - buying_type: AUCTION
+   - campaign_id: 120233712403260335
+   - campaign_name: Matthys | 03102025 ABOLEADFORM (DDM)
+   - clicks: 169
+   - cost_per_action_type: list (see full payload above)
+   - cost_per_inline_link_click: 6.804819
+   - cost_per_unique_click: 4.152941
+   - cost_per_unique_inline_link_click: 6.887805
+   - cpc: 3.342012
+   - cpm: 161.003421
+   - cpp: 197.000349
+   - ctr: 4.81756
+   - date_start: 2025-11-06
+   - date_stop: 2025-11-12
+   - frequency: 1.223579
+   - impressions: 3508
+   - inline_link_click_ctr: 2.366021
+   - inline_link_clicks: 83
+   - objective: OUTCOME_LEADS
+   - optimization_goal: LEAD_GENERATION
+   - reach: 2867
+   - social_spend: 0
+   - spend: 564.8
+   - unique_clicks: 136
+   - unique_ctr: 4.743634
+   - unique_inline_link_clicks: 82
+   - video_30_sec_watched_actions: list (see full payload above)
+   - video_avg_time_watched_actions: list (see full payload above)
+   - video_p100_watched_actions: list (see full payload above)
+   - video_p25_watched_actions: list (see full payload above)
+   - video_p50_watched_actions: list (see full payload above)
+   - video_p75_watched_actions: list (see full payload above)
+   - video_p95_watched_actions: list (see full payload above)
+   - video_play_actions: list (see full payload above)
+
+✅ AVAILABLE AD DETAIL FIELDS:
+   - account_id: 220298027464902
+   - adset_id: 120233712971950335
+   - bid_type: ABSOLUTE_OCPM
+   - campaign_id: 120233712403260335
+   - configured_status: ACTIVE
+   - created_time: 2025-10-06T11:29:03+0100
+   - effective_status: ACTIVE
+   - id: 120233712971960335
+   - name: Dynamic Video
+   - status: ACTIVE
+   - updated_time: 2025-10-06T14:36:44+0100
+
+====================================================================================================
+  INSPECTION COMPLETE
+====================================================================================================
+
+✅ All available data has been retrieved and displayed above
+📝 Review the complete payloads to see what data Facebook API provides
+
+💡 KEY FINDINGS:
+   - Ad details include: status, targeting, creative, tracking specs
+   - Insights include: impressions, reach, spend, clicks, conversions, actions
+   - Daily breakdown shows day-by-day performance
+   - Actions array contains all conversion events (leads, purchases, etc.)

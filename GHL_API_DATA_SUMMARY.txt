@@ -1,0 +1,659 @@
+================================================================================
+GHL (GOHIGHLEVEL) API - COMPLETE DATA PAYLOAD ANALYSIS
+================================================================================
+Date: November 13, 2025
+API Version: 2021-07-28
+Location ID: QdLXaFEqrdF0JbVbpKLw
+API Key: pit-22f8af95-3244-41e7-9a52-22c87b166f5a
+
+================================================================================
+EXECUTIVE SUMMARY
+================================================================================
+
+✅ Successfully connected to GHL API
+✅ Retrieved complete data for Opportunities, Contacts, and Form Submissions
+✅ Identified all available fields and data structures
+✅ Confirmed Form Submissions API as SOURCE OF TRUTH for Facebook ad attribution
+
+KEY APIS ANALYZED:
+1. Opportunities API - Pipeline stages, monetary values, contact info
+2. Contacts API - Contact details, basic attribution
+3. Form Submissions API - Complete Facebook attribution (ad_id, campaign_id, etc.)
+
+================================================================================
+1. OPPORTUNITIES API
+================================================================================
+
+Endpoint: GET https://services.leadconnectorhq.com/opportunities/search
+Single: GET https://services.leadconnectorhq.com/opportunities/{opportunityId}
+
+HEADERS:
+Authorization: Bearer pit-22f8af95-3244-41e7-9a52-22c87b166f5a
+Version: 2021-07-28
+
+PARAMETERS (Search):
+- location_id: QdLXaFEqrdF0JbVbpKLw
+- limit: 100 (max)
+- page: 1, 2, 3... (PAGE-BASED pagination, NOT cursor-based)
+
+AVAILABLE FIELDS:
+-----------------
+
+📋 BASIC FIELDS:
+✓ id - Opportunity ID
+✓ name - Contact name (e.g., "Bev Gradidge")
+✓ status - Status (open, won, lost, abandoned)
+
+🔄 PIPELINE FIELDS:
+✓ pipelineId - Pipeline ID (Andries, Davide, etc.)
+✓ pipelineStageId - Stage ID (MUST be mapped to stage name)
+✓ pipelineStageUId - Stage unique ID (same as pipelineStageId)
+
+👤 CONTACT FIELDS:
+✓ contactId - Contact ID (for linking to contacts API)
+✓ contact - Nested contact object:
+  - id - Contact ID
+  - name - Contact name
+  - email - Email address
+  - phone - Phone number
+  - tags - Array of tags
+  - assignedTo - Assigned user ID
+  - followers - Array of follower IDs
+
+💰 MONETARY FIELDS:
+✓ monetaryValue - ⭐ CASH AMOUNT in cents (e.g., 25000 = R 250.00)
+  NOTE: Divide by 100 to get currency value
+
+🎯 ATTRIBUTION FIELDS:
+✓ attributions - Array of attribution objects:
+  - utmSessionSource - Session source (e.g., "CRM UI", "Paid Social")
+  - medium - Medium (e.g., "facebook", "manual")
+  - isFirst - Boolean indicating first attribution
+  - utmAdId - Ad ID (RARE - only ~24% have this)
+  - utmCampaignId - Campaign ID
+  - utmCampaign - Campaign name
+  - utmMedium - Ad set name
+  - utmContent - Ad name
+  - utmSource - Source (e.g., "facebook")
+
+⚠️  IMPORTANT: Most opportunities from search endpoint have LIMITED attribution data
+    Use Form Submissions API for complete Facebook attribution!
+
+📅 DATE/TIME FIELDS:
+✓ createdAt - When opportunity was created
+✓ updatedAt - Last update timestamp
+✓ lastStatusChangeAt - When status last changed
+✓ lastStageChangeAt - When stage last changed
+✓ lastActionDate - Last action timestamp
+
+📦 OTHER FIELDS:
+✓ assignedTo - Assigned user ID
+✓ source - Source description (e.g., "Referral from...")
+✓ locationId - Location ID
+✓ customFields - Array of custom field objects
+✓ lostReasonId - Reason for lost status (if applicable)
+✓ followers - Array of follower IDs
+✓ relations - Array of relationship objects
+✓ indexVersion - Index version number
+✓ sort - Sort array for pagination
+✓ isAttribute - Boolean flag
+✓ internalSource - Internal source object:
+  - type - Source type (e.g., "CREATED")
+  - id - Source ID
+  - apiVersion - API version used
+  - channel - Channel (e.g., "ISTIO_MESH")
+  - source - Source (e.g., "WORKFLOW_NEW")
+
+RESPONSE STRUCTURE:
+-------------------
+{
+  "opportunities": [ /* array of opportunity objects */ ],
+  "meta": {
+    "total": 1234,
+    "currentPage": 1,
+    "nextPage": 2,
+    "prevPage": null
+  },
+  "aggregations": { /* aggregation data */ },
+  "traceId": "uuid"
+}
+
+SAMPLE OPPORTUNITY (from search):
+----------------------------------
+{
+  "id": "JayAAH4P6KGl6vxp1t6Z",
+  "name": "Dr Keshara Bawasa",
+  "monetaryValue": 0,
+  "pipelineId": "fNSrQQofiOJzcszYP5mq",
+  "pipelineStageId": "8e93a0d2-7c69-45ee-b5d0-4326f82c04f7",
+  "assignedTo": "06QeKYnSfUBnRuD0tTGp",
+  "status": "open",
+  "source": "Referral from Juanita Jonssons workwear",
+  "lastStatusChangeAt": "2025-11-13T09:57:14.575Z",
+  "lastStageChangeAt": "2025-11-13T09:57:14.575Z",
+  "createdAt": "2025-11-13T09:57:14.575Z",
+  "updatedAt": "2025-11-13T09:57:14.575Z",
+  "contactId": "1CVlBWmzA33P5dB9tCjB",
+  "locationId": "QdLXaFEqrdF0JbVbpKLw",
+  "customFields": [],
+  "followers": [],
+  "contact": {
+    "id": "1CVlBWmzA33P5dB9tCjB",
+    "name": "Dr Keshara Bawasa",
+    "email": null,
+    "phone": "+27824438981",
+    "tags": []
+  },
+  "attributions": [
+    {
+      "utmSessionSource": "CRM UI",
+      "medium": "manual",
+      "isFirst": true
+    }
+  ]
+}
+
+================================================================================
+2. CONTACTS API
+================================================================================
+
+Endpoint: GET https://services.leadconnectorhq.com/contacts/
+Single: GET https://services.leadconnectorhq.com/contacts/{contactId}
+
+PARAMETERS:
+- locationId: QdLXaFEqrdF0JbVbpKLw
+- limit: 100 (max)
+
+AVAILABLE FIELDS:
+-----------------
+
+📋 BASIC CONTACT INFO:
+✓ id - Contact ID
+✓ firstName - First name
+✓ lastName - Last name
+✓ fullNameLowerCase - Full name (lowercase)
+✓ firstNameLowerCase - First name (lowercase)
+✓ lastNameLowerCase - Last name (lowercase)
+✓ email - Email address
+✓ emailLowerCase - Email (lowercase)
+✓ phone - Phone number
+
+📞 CONTACT DETAILS:
+✓ type - Contact type (lead, customer, etc.)
+✓ additionalEmails - Array of additional emails
+✓ additionalPhones - Array of additional phone numbers
+
+📍 ADDRESS FIELDS (if available):
+✓ address1 - Address line 1
+✓ city - City
+✓ state - State/Province
+✓ country - Country
+✓ postalCode - Postal/ZIP code
+
+🎯 ATTRIBUTION FIELDS:
+✓ attributionSource - First attribution object:
+  - sessionSource - Session source (e.g., "Social media")
+  - medium - Medium (e.g., "facebook")
+  - mediumId - Medium ID
+  - adId - Ad ID (usually null in contacts API)
+  - productId - Product ID
+  - utmContent - UTM content
+  - pSid - Page/Session ID
+  - postId - Post ID
+  - flowId - Flow ID
+  - photoUrl - Photo URL
+  - videoUrl - Video URL
+
+✓ lastAttributionSource - Last attribution object (same structure)
+
+⚠️  IMPORTANT: Contacts API rarely has adId populated!
+    Use Form Submissions API for Facebook ad attribution!
+
+⚙️  CUSTOM FIELDS:
+✓ customFields - Array of custom field objects:
+  - id - Custom field ID
+  - value - Custom field value
+
+🏷️  TAG FIELDS:
+✓ tags - Array of tag strings
+
+📅 DATE/TIME FIELDS:
+✓ dateAdded - When contact was added
+✓ dateUpdated - Last update timestamp
+
+📦 OTHER FIELDS:
+✓ locationId - Location ID
+✓ assignedTo - Assigned user ID (if applicable)
+✓ followers - Array of follower IDs
+
+RESPONSE STRUCTURE:
+-------------------
+{
+  "contacts": [ /* array of contact objects */ ],
+  "meta": {
+    "total": 5678,
+    "currentPage": 1,
+    "nextPage": 2
+  },
+  "traceId": "uuid"
+}
+
+SAMPLE CONTACT:
+---------------
+{
+  "id": "KGMHtceu6vRhvoF24eIT",
+  "firstName": "LaLisa",
+  "lastName": "Cliver",
+  "fullNameLowerCase": "lalisa cliver",
+  "email": "Lisa.voice@yandex.com",
+  "emailLowerCase": "lisa.voice@yandex.com",
+  "type": "lead",
+  "locationId": "QdLXaFEqrdF0JbVbpKLw",
+  "dateAdded": "2025-11-13T11:19:08.927Z",
+  "dateUpdated": "2025-11-13T11:19:09.749Z",
+  "lastAttributionSource": {
+    "sessionSource": "Social media",
+    "medium": "facebook",
+    "mediumId": "9408059125916332",
+    "pSid": "9408059125916332",
+    "adId": null,
+    "productId": null,
+    "utmContent": null,
+    "postId": null,
+    "flowId": null,
+    "photoUrl": null,
+    "videoUrl": null
+  },
+  "attributionSource": {
+    "sessionSource": "Social media",
+    "medium": "facebook",
+    "mediumId": "9408059125916332",
+    "pSid": "9408059125916332",
+    "adId": null
+  },
+  "customFields": [],
+  "additionalEmails": [],
+  "additionalPhones": []
+}
+
+================================================================================
+3. FORM SUBMISSIONS API ⭐ SOURCE OF TRUTH FOR FACEBOOK ATTRIBUTION
+================================================================================
+
+Endpoint: GET https://services.leadconnectorhq.com/forms/submissions
+
+PARAMETERS:
+- locationId: QdLXaFEqrdF0JbVbpKLw
+- limit: 100 (max)
+- startAt: ISO timestamp (for date filtering)
+- endAt: ISO timestamp (for date filtering)
+
+⭐ WHY THIS API IS CRITICAL:
+----------------------------
+- Contains COMPLETE Facebook attribution data
+- Includes ad_id, campaign_id, adset_id for ALL Facebook lead form submissions
+- Most reliable source for matching GHL opportunities to Facebook ads
+- 73.8% of opportunities can be matched using this API
+
+AVAILABLE FIELDS:
+-----------------
+
+📋 BASIC FIELDS:
+✓ id - Submission ID (UUID)
+✓ contactId - Contact ID (for linking to contacts/opportunities)
+✓ formId - Form ID (e.g., "fb-QdLXaFEqrdF0JbVbpKLw" for Facebook forms)
+✓ name - Contact name
+✓ email - Email address
+✓ external - Boolean (external submission flag)
+✓ createdAt - Submission timestamp
+
+📦 OTHERS OBJECT (contains all the good stuff):
+✓ others - Main data container:
+
+  LOCATION & SOURCE:
+  - locationId - Location ID
+  - facebookLeadId - Facebook lead ID
+  - type - Type (e.g., "lead")
+  - source - Source (e.g., "Facebook")
+
+  ⭐ LAST ATTRIBUTION SOURCE (CRITICAL):
+  - lastAttributionSource - Complete attribution object:
+    * sessionSource - "Paid Social"
+    * medium - "facebook"
+    * mediumId - Form/Medium ID
+    * formId - Facebook form ID
+    * formName - Form name (e.g., "A/B for Lander | DDM (5xQ) v2")
+    * campaign - Campaign name
+    * utm_campaign - UTM campaign name
+    * campaignId - ⭐ Facebook Campaign ID (e.g., "120235556205010335")
+    * utmMedium - Ad set name
+    * utmContent - Ad name
+    * adSetId - ⭐ Facebook Ad Set ID (e.g., "120235556204900335")
+    * adId - ⭐⭐⭐ Facebook Ad ID (e.g., "120235556204840335")
+    * utmSource - "facebook"
+    * source - "facebook"
+    * referrer - Referrer URL
+    * keyword - Keyword (if applicable)
+    * adSource - "facebook"
+
+  CONTACT INFO:
+  - firstName - First name
+  - lastName - Last name
+  - phone - Phone number
+  - email - Email address
+
+  CUSTOM FIELDS:
+  - customFields - Array of custom field objects:
+    * id - Custom field ID
+    * field_value - Custom field value
+
+  EVENT DATA (alternative location for attribution):
+  - eventData - Event data object:
+    * url_params - URL parameters object:
+      - ad_id - Facebook Ad ID (alternative location)
+      - campaign_id - Campaign ID
+      - adset_id - Ad set ID
+      - ad_name - Ad name
+      - campaign_name - Campaign name
+      - adset_name - Ad set name
+
+RESPONSE STRUCTURE:
+-------------------
+{
+  "submissions": [ /* array of submission objects */ ],
+  "meta": {
+    "total": 3353,
+    "currentPage": 1,
+    "nextPage": 2
+  },
+  "traceId": "uuid"
+}
+
+SAMPLE FORM SUBMISSION (FACEBOOK LEAD):
+----------------------------------------
+{
+  "id": "ba964d58-9f5c-45be-8220-74722ba1f9c6",
+  "contactId": "ziJ4rSgkJA5qIqIXzD0X",
+  "formId": "fb-QdLXaFEqrdF0JbVbpKLw",
+  "name": "Rogers Pillay",
+  "email": "rogerspillay007@gmail.com",
+  "external": false,
+  "createdAt": "2025-11-13T10:53:34.920Z",
+  "others": {
+    "locationId": "QdLXaFEqrdF0JbVbpKLw",
+    "facebookLeadId": "1155012289591107",
+    "type": "lead",
+    "source": "Facebook",
+    "lastAttributionSource": {
+      "sessionSource": "Paid Social",
+      "mediumId": "1168700714593335",
+      "medium": "facebook",
+      "formId": "1168700714593335",
+      "formName": "A/B for Lander | DDM (5xQ) v2",
+      "campaign": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "utm_campaign": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "campaignId": "120235556205010335",
+      "utmMedium": "Interests - General Hospital (DDM)",
+      "utmContent": "B2B October 2025",
+      "adSetId": "120235556204900335",
+      "adId": "120235556204840335",
+      "utmSource": "facebook",
+      "source": "facebook",
+      "referrer": "",
+      "keyword": null,
+      "adSource": "facebook"
+    },
+    "firstName": "Rogers",
+    "lastName": "Pillay",
+    "phone": "+27763345920",
+    "email": "rogerspillay007@gmail.com",
+    "customFields": [
+      {
+        "id": "bc4LhOHnMuRlX9e3a1h8",
+        "field_value": "No"
+      }
+    ]
+  }
+}
+
+================================================================================
+4. PIPELINE STAGE MAPPINGS (CRITICAL)
+================================================================================
+
+⚠️  GHL API DOES NOT RETURN STAGE NAMES!
+Only returns pipelineStageId, which must be mapped to stage name.
+
+STAGE MAPPING FILE: ghl_info/pipeline_stage_mappings.json
+
+ANDRIES PIPELINE (XeAGJWRnUGJ5tuhXam2g):
+- Booked Appointments: 9861ef30-81b6-49dc-ba4b-061ef194dcf9
+- Call Completed: 00567f7d-293b-4438-8172-76531a225b76
+- Deposit Received: 52a076ca-851f-43fc-a57d-309403a4b208 ⭐
+- Cash Collected: 3a8ead84-92b0-4796-aaf8-6594c3217a2c ⭐
+
+DAVIDE PIPELINE (AUduOJBB2lxlsEaNmlJz):
+- Booked Appointments: 003d5559-d057-4e9b-8a77-525acecfb6c8
+- Call Completed: f38bbbc9-93e2-4e74-8238-f8bb456aaa92
+- Deposit Received: 13d54d18-d1e7-476b-aad8-cb4767b8b979 ⭐
+- Cash Collected: 3c89afba-9797-4b0f-947c-ba00b60468c6 ⭐
+
+ERICH PIPELINE (pTbNvnrXqJc9u1oxir3q):
+- ❌ Does NOT have Deposit Received or Cash Collected stages
+- ❌ NOT tracked for revenue metrics
+
+IMPLEMENTATION:
+---------------
+```python
+import json
+
+# Load stage mappings
+with open('ghl_info/pipeline_stage_mappings.json', 'r') as f:
+    STAGE_MAPPINGS = json.load(f)
+
+# Get stage name from stage ID
+def get_stage_name(pipeline_id, stage_id):
+    if pipeline_id == 'XeAGJWRnUGJ5tuhXam2g':
+        return STAGE_MAPPINGS['andries']['stages'].get(stage_id, 'Unknown')
+    elif pipeline_id == 'AUduOJBB2lxlsEaNmlJz':
+        return STAGE_MAPPINGS['davide']['stages'].get(stage_id, 'Unknown')
+    return 'Unknown'
+```
+
+================================================================================
+5. MATCHING GHL OPPORTUNITIES TO FACEBOOK ADS
+================================================================================
+
+CURRENT IMPLEMENTATION (WORKING):
+----------------------------------
+
+STEP 1: Fetch Form Submissions
+- GET /forms/submissions?locationId={id}&limit=100
+- Extract ad_id from others.lastAttributionSource.adId
+- Create mapping: contactId → ad_id
+
+STEP 2: Fetch Opportunities
+- GET /opportunities/search?location_id={id}
+- Match opportunity.contactId to form submission contactId
+- Assign ad_id to opportunity
+
+STEP 3: Store in Firebase
+- Update ghlOpportunities collection
+- Set assignedAdId field
+- Set assignmentMethod: 'form_submission_ad_id'
+
+RESULTS:
+--------
+✅ 73.8% match rate (960 out of 1,300 opportunities)
+✅ 99.3% match rate for recent data (last 2 months)
+✅ NO cross-campaign duplicates
+✅ Each opportunity assigned to exactly ONE ad
+
+FALLBACK MATCHING (if no form submission):
+-------------------------------------------
+Priority 2: Match by campaign_id + ad_name
+Priority 3: Match by campaign_id only
+Priority 4: Unmatched (older data outside form submission date range)
+
+================================================================================
+6. KEY INSIGHTS FOR YOUR SYSTEM
+================================================================================
+
+OPPORTUNITY TRACKING:
+---------------------
+✅ Use pipelineStageId to determine stage (requires mapping)
+✅ monetaryValue is in cents (divide by 100)
+✅ Track these stages for revenue:
+   - Booked Appointments (lead qualified)
+   - Deposit Received (revenue committed)
+   - Cash Collected (revenue realized)
+
+ATTRIBUTION TRACKING:
+---------------------
+✅ Form Submissions API is SOURCE OF TRUTH
+✅ Contains ad_id for 73.8% of opportunities
+✅ Covers last 120 days of data
+✅ Should be synced weekly to catch new opportunities
+
+DATA QUALITY:
+-------------
+✅ Opportunities API: Limited attribution (24% have ad_id)
+✅ Contacts API: Rarely has ad_id (mostly null)
+✅ Form Submissions API: Complete attribution (100% for Facebook leads)
+
+MONETARY VALUES:
+----------------
+✅ Stored in cents (25000 = R 250.00)
+✅ Only populated for Deposit Received and Cash Collected stages
+✅ NO default values (R 1,500 removed from all scripts)
+✅ Use actual monetaryValue from GHL
+
+================================================================================
+7. RECOMMENDED DATA FLOW
+================================================================================
+
+DAILY SYNC:
+-----------
+1. Fetch new opportunities from Opportunities API
+2. Extract contactId from each opportunity
+3. Check if opportunity already has assignedAdId in Firebase
+4. If not, look up contactId in form submissions mapping
+5. Assign ad_id if found
+6. Update opportunity stage and monetary value
+7. Aggregate metrics at ad, ad set, and campaign levels
+
+WEEKLY BACKFILL:
+----------------
+1. Fetch form submissions for last 7 days
+2. Update contactId → ad_id mapping
+3. Re-process unmatched opportunities
+4. Catch any opportunities that were missed in daily sync
+
+REAL-TIME UPDATES:
+------------------
+1. Listen for opportunity stage changes (webhook)
+2. Update ghlOpportunities collection in Firebase
+3. Trigger aggregation for affected ad, ad set, campaign
+4. Update UI via provider.notifyListeners()
+
+================================================================================
+8. API RATE LIMITS & BEST PRACTICES
+================================================================================
+
+RATE LIMITS:
+------------
+- Development tier: 200 calls/hour
+- Production tier: Higher limits (contact GHL)
+
+BEST PRACTICES:
+---------------
+✅ Use pagination (page-based, NOT cursor-based)
+✅ Limit to 100 per request (max)
+✅ Cache form submissions mapping (refresh weekly)
+✅ Use date filters to reduce data volume
+✅ Implement exponential backoff for rate limit errors
+✅ Store traceId for debugging
+
+PAGINATION:
+-----------
+```python
+page = 1
+all_opportunities = []
+
+while True:
+    response = requests.get(url, params={'page': page, 'limit': 100})
+    data = response.json()
+    opportunities = data.get('opportunities', [])
+    
+    if not opportunities:
+        break
+    
+    all_opportunities.extend(opportunities)
+    page += 1
+```
+
+================================================================================
+9. COMPARISON: FACEBOOK vs GHL DATA
+================================================================================
+
+FACEBOOK PROVIDES:
+------------------
+- Ad performance (impressions, clicks, spend, CTR, CPM, CPC)
+- Lead count (from Facebook's perspective)
+- Video engagement metrics
+- Targeting and creative info
+- Daily breakdown of performance
+
+GHL PROVIDES:
+-------------
+- Individual lead details (name, email, phone)
+- Lead stage progression (Booked → Deposit → Cash)
+- Monetary values (deposit amounts, cash collected)
+- Lead quality and conversion data
+- Custom field data
+
+COMBINED VIEW:
+--------------
+Facebook Spend + GHL Revenue = ROI
+Facebook Leads + GHL Conversions = Conversion Rate
+Ad Performance + Lead Quality = Optimization Insights
+
+================================================================================
+10. NEXT STEPS & RECOMMENDATIONS
+================================================================================
+
+✅ CURRENT IMPLEMENTATION IS SOLID:
+   - Using Form Submissions API for attribution
+   - Storing opportunities in ghlOpportunities collection
+   - Matching to specific ads (no duplicates)
+   - Pre-aggregating metrics at all levels
+
+💡 POTENTIAL ENHANCEMENTS:
+   1. Extend form submissions date range to 180 days (catch older data)
+   2. Implement automated weekly backfill
+   3. Add webhook listener for real-time opportunity updates
+   4. Track custom fields for lead quality analysis
+   5. Monitor rate limits and implement retry logic
+
+📊 REPORTING OPPORTUNITIES:
+   - Lead quality by ad (which ads generate best leads)
+   - Conversion funnel (Leads → Booked → Deposit → Cash)
+   - Time-to-conversion analysis
+   - Revenue attribution by campaign/ad set/ad
+
+================================================================================
+END OF ANALYSIS
+================================================================================
+
+Full payloads saved to:
+- ghl_opportunities_complete_payload.txt
+- ghl_contacts_complete_payload.txt
+
+Inspection scripts:
+- inspect_ghl_opportunities.py
+- inspect_ghl_contacts.py
+
+Reference files:
+- ghl_info/pipeline_stage_mappings.json
+- ghl_info/QUICK_REFERENCE.txt
+- ghl_info/GHL_OPPORTUNITY_API_REFERENCE.txt
+

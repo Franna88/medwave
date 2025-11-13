@@ -1,0 +1,1318 @@
+/Users/mac/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+================================================================================
+WEEKLY SUMMARY COLLECTION CREATION
+================================================================================
+Date range: 2025-08-15 to 2025-11-13
+================================================================================
+✅ Loaded stage mappings for 3 pipelines
+
+🔥 Loading ads from Firebase...
+✅ Loaded 641 ads from Firebase
+   Total checked: 755, Filtered out: 114
+
+================================================================================
+STEP 1: FETCHING FACEBOOK INSIGHTS
+================================================================================
+📂 Loaded checkpoint: 359 ads already processed
+
+[360/641] Fetching insights for ad: GP & Nurses
+  Ad ID: 120232878045990335
+  ✅ Aggregated 15 days into 3 weeks
+  💾 Checkpoint saved (360/641 ads)
+
+[361/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120232979771410335
+  ✅ Aggregated 7 days into 2 weeks
+
+[362/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120232979771420335
+  ✅ Aggregated 7 days into 2 weeks
+
+[363/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120232979771450335
+  ✅ Aggregated 7 days into 2 weeks
+
+[364/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120232979821800335
+  ✅ Aggregated 7 days into 2 weeks
+
+[365/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120232979822300335
+  ✅ Aggregated 7 days into 2 weeks
+
+[366/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120232979822610335
+  ✅ Aggregated 7 days into 2 weeks
+
+[367/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120232979822620335
+  ✅ Aggregated 7 days into 2 weeks
+
+[368/641] Fetching insights for ad: Dr. Loren Hilton (Testimonial ) - DDM
+  Ad ID: 120233165222570335
+  ✅ Aggregated 10 days into 2 weeks
+
+[369/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120233258888480335
+  ✅ Aggregated 9 days into 2 weeks
+
+[370/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120233259499740335
+  ✅ Aggregated 9 days into 2 weeks
+  💾 Checkpoint saved (370/641 ads)
+
+[371/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120233259549670335
+  ✅ Aggregated 9 days into 2 weeks
+
+[372/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120233259569150335
+  ✅ Aggregated 9 days into 2 weeks
+
+[373/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120233259609510335
+  ✅ Aggregated 9 days into 2 weeks
+
+[374/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120233259710810335
+  ✅ Aggregated 9 days into 2 weeks
+
+[375/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120233259728790335
+  ✅ Aggregated 9 days into 2 weeks
+
+[376/641] Fetching insights for ad: Nurses - Urgent Call
+  Ad ID: 120233259748720335
+  ✅ Aggregated 9 days into 2 weeks
+
+[377/641] Fetching insights for ad: Dynamic Video
+  Ad ID: 120233712403210335
+  ✅ Aggregated 39 days into 6 weeks
+
+[378/641] Fetching insights for ad: Dynamic Video
+  Ad ID: 120233712910150335
+  ✅ Aggregated 39 days into 6 weeks
+
+[379/641] Fetching insights for ad: Dynamic Video
+  Ad ID: 120233712943990335
+  ✅ Aggregated 39 days into 6 weeks
+
+[380/641] Fetching insights for ad: Dynamic Video
+  Ad ID: 120233712971960335
+  ✅ Aggregated 39 days into 6 weeks
+  💾 Checkpoint saved (380/641 ads)
+
+[381/641] Fetching insights for ad: Dynamic Video
+  Ad ID: 120233713011700335
+  ✅ Aggregated 39 days into 6 weeks
+
+[382/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234166546090335
+  ✅ Aggregated 3 days into 1 weeks
+
+[383/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234166917020335
+  ✅ Aggregated 2 days into 1 weeks
+
+[384/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167175300335
+  ✅ Aggregated 3 days into 1 weeks
+
+[385/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234167286420335
+  ✅ Aggregated 3 days into 1 weeks
+
+[386/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234167286430335
+  ✅ Aggregated 3 days into 1 weeks
+
+[387/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167286440335
+  ✅ Aggregated 2 days into 1 weeks
+
+[388/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234167331140335
+  ✅ Aggregated 3 days into 1 weeks
+
+[389/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167331150335
+  ✅ Aggregated 3 days into 1 weeks
+
+[390/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234167331160335
+  ✅ Aggregated 3 days into 1 weeks
+  💾 Checkpoint saved (390/641 ads)
+
+[391/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234167354570335
+  ✅ Aggregated 3 days into 1 weeks
+
+[392/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234167354590335
+  ✅ Aggregated 3 days into 1 weeks
+
+[393/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167354600335
+  ✅ Aggregated 3 days into 1 weeks
+
+[394/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234167419910335
+  ✅ Aggregated 3 days into 1 weeks
+
+[395/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167419920335
+  ✅ Aggregated 3 days into 1 weeks
+
+[396/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234167419940335
+  ✅ Aggregated 3 days into 1 weeks
+
+[397/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234167419950335
+  ✅ Aggregated 3 days into 1 weeks
+
+[398/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234167419960335
+  ✅ Aggregated 2 days into 1 weeks
+
+[399/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234167419970335
+  ✅ Aggregated 3 days into 1 weeks
+
+[400/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167420000335
+  ✅ Aggregated 3 days into 1 weeks
+  💾 Checkpoint saved (400/641 ads)
+
+[401/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234167420010335
+  ✅ Aggregated 2 days into 1 weeks
+
+[402/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167420020335
+  ✅ Aggregated 3 days into 1 weeks
+
+[403/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167420030335
+  ✅ Aggregated 2 days into 1 weeks
+
+[404/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234167420040335
+  ✅ Aggregated 3 days into 1 weeks
+
+[405/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234167420050335
+  ✅ Aggregated 3 days into 1 weeks
+
+[406/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167755960335
+  ⚠️  No insights found (likely no activity in date range)
+
+[407/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234167755970335
+  ⚠️  No insights found (likely no activity in date range)
+
+[408/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167755980335
+  ⚠️  No insights found (likely no activity in date range)
+
+[409/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234167755990335
+  ⚠️  No insights found (likely no activity in date range)
+
+[410/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234167756000335
+  ⚠️  No insights found (likely no activity in date range)
+  💾 Checkpoint saved (410/641 ads)
+
+[411/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234167756020335
+  ⚠️  No insights found (likely no activity in date range)
+
+[412/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167756040335
+  ⚠️  No insights found (likely no activity in date range)
+
+[413/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234167756050335
+  ⚠️  No insights found (likely no activity in date range)
+
+[414/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234167756060335
+  ⚠️  No insights found (likely no activity in date range)
+
+[415/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234167756070335
+  ⚠️  No insights found (likely no activity in date range)
+
+[416/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234167756080335
+  ⚠️  No insights found (likely no activity in date range)
+
+[417/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234167756110335
+  ⚠️  No insights found (likely no activity in date range)
+
+[418/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168230390335
+  ✅ Aggregated 3 days into 1 weeks
+
+[419/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168230400335
+  ✅ Aggregated 3 days into 1 weeks
+
+[420/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168230410335
+  ✅ Aggregated 3 days into 1 weeks
+  💾 Checkpoint saved (420/641 ads)
+
+[421/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168230420335
+  ✅ Aggregated 3 days into 1 weeks
+
+[422/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168230450335
+  ✅ Aggregated 3 days into 1 weeks
+
+[423/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168230460335
+  ✅ Aggregated 2 days into 1 weeks
+
+[424/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168230470335
+  ✅ Aggregated 1 days into 1 weeks
+
+[425/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168230480335
+  ✅ Aggregated 3 days into 1 weeks
+
+[426/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168230490335
+  ✅ Aggregated 3 days into 1 weeks
+
+[427/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168230500335
+  ✅ Aggregated 3 days into 1 weeks
+
+[428/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168230510335
+  ✅ Aggregated 3 days into 1 weeks
+
+[429/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168230520335
+  ✅ Aggregated 3 days into 1 weeks
+
+[430/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168403490335
+  ✅ Aggregated 3 days into 1 weeks
+  💾 Checkpoint saved (430/641 ads)
+
+[431/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168403510335
+  ✅ Aggregated 3 days into 1 weeks
+
+[432/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168403520335
+  ✅ Aggregated 3 days into 1 weeks
+
+[433/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168403530335
+  ✅ Aggregated 1 days into 1 weeks
+
+[434/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168403540335
+  ✅ Aggregated 3 days into 1 weeks
+
+[435/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168403550335
+  ✅ Aggregated 3 days into 1 weeks
+
+[436/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168403560335
+  ✅ Aggregated 3 days into 1 weeks
+
+[437/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168403570335
+  ✅ Aggregated 3 days into 1 weeks
+
+[438/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168403580335
+  ✅ Aggregated 3 days into 1 weeks
+
+[439/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168403590335
+  ✅ Aggregated 3 days into 1 weeks
+
+[440/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168403600335
+  ✅ Aggregated 3 days into 1 weeks
+  💾 Checkpoint saved (440/641 ads)
+
+[441/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168403610335
+  ✅ Aggregated 3 days into 1 weeks
+
+[442/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168534050335
+  ✅ Aggregated 3 days into 1 weeks
+
+[443/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168534060335
+  ✅ Aggregated 3 days into 1 weeks
+
+[444/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168534090335
+  ✅ Aggregated 3 days into 1 weeks
+
+[445/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168534110335
+  ✅ Aggregated 3 days into 1 weeks
+
+[446/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168534120335
+  ✅ Aggregated 3 days into 1 weeks
+
+[447/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168534130335
+  ✅ Aggregated 2 days into 1 weeks
+
+[448/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168534140335
+  ✅ Aggregated 3 days into 1 weeks
+
+[449/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168534150335
+  ✅ Aggregated 3 days into 1 weeks
+
+[450/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168534160335
+  ✅ Aggregated 3 days into 1 weeks
+  💾 Checkpoint saved (450/641 ads)
+
+[451/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168534170335
+  ✅ Aggregated 3 days into 1 weeks
+
+[452/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168534180335
+  ✅ Aggregated 2 days into 1 weeks
+
+[453/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168534200335
+  ✅ Aggregated 1 days into 1 weeks
+
+[454/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168650310335
+  ✅ Aggregated 3 days into 1 weeks
+
+[455/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168650320335
+  ✅ Aggregated 3 days into 1 weeks
+
+[456/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168650340335
+  ✅ Aggregated 3 days into 1 weeks
+
+[457/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168650350335
+  ✅ Aggregated 3 days into 1 weeks
+
+[458/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168650360335
+  ✅ Aggregated 3 days into 1 weeks
+
+[459/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168650370335
+  ✅ Aggregated 3 days into 1 weeks
+
+[460/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168650380335
+  ✅ Aggregated 3 days into 1 weeks
+  💾 Checkpoint saved (460/641 ads)
+
+[461/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168650390335
+  ✅ Aggregated 3 days into 1 weeks
+
+[462/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168650400335
+  ✅ Aggregated 3 days into 1 weeks
+
+[463/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234168650410335
+  ✅ Aggregated 3 days into 1 weeks
+
+[464/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234168650420335
+  ✅ Aggregated 3 days into 1 weeks
+
+[465/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234168650430335
+  ✅ Aggregated 3 days into 1 weeks
+
+[466/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234169644550335
+  ✅ Aggregated 3 days into 1 weeks
+
+[467/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234169644560335
+  ✅ Aggregated 3 days into 1 weeks
+
+[468/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234169644570335
+  ✅ Aggregated 3 days into 1 weeks
+
+[469/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234169644580335
+  ✅ Aggregated 3 days into 1 weeks
+
+[470/641] Fetching insights for ad: Weight Loss & ROI v Landry (ZA)
+  Ad ID: 120234169644610335
+  ✅ Aggregated 3 days into 1 weeks
+  💾 Checkpoint saved (470/641 ads)
+
+[471/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234169644620335
+  ✅ Aggregated 3 days into 1 weeks
+
+[472/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234169644630335
+  ✅ Aggregated 3 days into 1 weeks
+
+[473/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234169644640335
+  ✅ Aggregated 3 days into 1 weeks
+
+[474/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234169644650335
+  ✅ Aggregated 3 days into 1 weeks
+
+[475/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234169644660335
+  ✅ Aggregated 2 days into 1 weeks
+
+[476/641] Fetching insights for ad: Weight Loss & ROI v Rauch (ZA)
+  Ad ID: 120234169644670335
+  ✅ Aggregated 3 days into 1 weeks
+
+[477/641] Fetching insights for ad: Patient Results (ZA)
+  Ad ID: 120234169644690335
+  ✅ Aggregated 3 days into 1 weeks
+
+[478/641] Fetching insights for ad: Jeffrey’s Bay (English)
+  Ad ID: 120234170329470335
+  ✅ Aggregated 25 days into 5 weeks
+
+[479/641] Fetching insights for ad: Jeffrey’s Bay (Afrikaans)
+  Ad ID: 120234170569970335
+  ✅ Aggregated 20 days into 5 weeks
+
+[480/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319080620335
+  ✅ Aggregated 4 days into 1 weeks
+  💾 Checkpoint saved (480/641 ads)
+
+[481/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319081200335
+  ✅ Aggregated 4 days into 1 weeks
+
+[482/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319081340335
+  ✅ Aggregated 4 days into 1 weeks
+
+[483/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319081580335
+  ✅ Aggregated 4 days into 1 weeks
+
+[484/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319248180335
+  ✅ Aggregated 2 days into 1 weeks
+
+[485/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319248220335
+  ✅ Aggregated 2 days into 1 weeks
+
+[486/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319248230335
+  ✅ Aggregated 2 days into 1 weeks
+
+[487/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319248240335
+  ✅ Aggregated 2 days into 1 weeks
+
+[488/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319405310335
+  ✅ Aggregated 4 days into 1 weeks
+
+[489/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319405330335
+  ✅ Aggregated 4 days into 1 weeks
+
+[490/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319405340335
+  ✅ Aggregated 2 days into 1 weeks
+  💾 Checkpoint saved (490/641 ads)
+
+[491/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319405360335
+  ✅ Aggregated 2 days into 1 weeks
+
+[492/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319405370335
+  ✅ Aggregated 4 days into 1 weeks
+
+[493/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319405390335
+  ✅ Aggregated 2 days into 1 weeks
+
+[494/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319405400335
+  ✅ Aggregated 2 days into 1 weeks
+
+[495/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319405410335
+  ✅ Aggregated 4 days into 1 weeks
+
+[496/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319560010335
+  ✅ Aggregated 2 days into 1 weeks
+
+[497/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319560020335
+  ✅ Aggregated 2 days into 1 weeks
+
+[498/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319560040335
+  ✅ Aggregated 4 days into 1 weeks
+
+[499/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319560060335
+  ✅ Aggregated 4 days into 1 weeks
+
+[500/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319560070335
+  ✅ Aggregated 2 days into 1 weeks
+  💾 Checkpoint saved (500/641 ads)
+
+[501/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319560080335
+  ✅ Aggregated 4 days into 1 weeks
+
+[502/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319560090335
+  ✅ Aggregated 2 days into 1 weeks
+
+[503/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319560110335
+  ✅ Aggregated 4 days into 1 weeks
+
+[504/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319737620335
+  ✅ Aggregated 2 days into 1 weeks
+
+[505/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319737630335
+  ✅ Aggregated 4 days into 1 weeks
+
+[506/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319737640335
+  ✅ Aggregated 4 days into 1 weeks
+
+[507/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319737680335
+  ✅ Aggregated 4 days into 1 weeks
+
+[508/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319737690335
+  ✅ Aggregated 2 days into 1 weeks
+
+[509/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234319737700335
+  ✅ Aggregated 4 days into 1 weeks
+
+[510/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319737710335
+  ✅ Aggregated 2 days into 1 weeks
+  💾 Checkpoint saved (510/641 ads)
+
+[511/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234319737720335
+  ✅ Aggregated 2 days into 1 weeks
+
+[512/641] Fetching insights for ad: MedWave Image Ads
+  Ad ID: 120234319834320335
+  ✅ Aggregated 24 days into 4 weeks
+
+[513/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234374452130335
+  ✅ Aggregated 3 days into 1 weeks
+
+[514/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234374567700335
+  ✅ Aggregated 3 days into 1 weeks
+
+[515/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234374861870335
+  ✅ Aggregated 3 days into 1 weeks
+
+[516/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375244070335
+  ✅ Aggregated 3 days into 1 weeks
+
+[517/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375398540335
+  ✅ Aggregated 3 days into 1 weeks
+
+[518/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375398550335
+  ✅ Aggregated 2 days into 1 weeks
+
+[519/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375398560335
+  ✅ Aggregated 3 days into 1 weeks
+
+[520/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375398570335
+  ✅ Aggregated 3 days into 1 weeks
+  💾 Checkpoint saved (520/641 ads)
+
+[521/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375398580335
+  ✅ Aggregated 3 days into 1 weeks
+
+[522/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375398590335
+  ✅ Aggregated 2 days into 1 weeks
+
+[523/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375398600335
+  ✅ Aggregated 3 days into 1 weeks
+
+[524/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375398610335
+  ✅ Aggregated 1 days into 1 weeks
+
+[525/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375398620335
+  ✅ Aggregated 3 days into 1 weeks
+
+[526/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375398630335
+  ✅ Aggregated 3 days into 1 weeks
+
+[527/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375398640335
+  ✅ Aggregated 3 days into 1 weeks
+
+[528/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375398650335
+  ✅ Aggregated 2 days into 1 weeks
+
+[529/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375485020335
+  ✅ Aggregated 3 days into 1 weeks
+
+[530/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375485030335
+  ✅ Aggregated 1 days into 1 weeks
+  💾 Checkpoint saved (530/641 ads)
+
+[531/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375485040335
+  ✅ Aggregated 2 days into 1 weeks
+
+[532/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375485050335
+  ✅ Aggregated 2 days into 1 weeks
+
+[533/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375485300335
+  ✅ Aggregated 3 days into 1 weeks
+
+[534/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375485310335
+  ✅ Aggregated 2 days into 1 weeks
+
+[535/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375485320335
+  ✅ Aggregated 3 days into 1 weeks
+
+[536/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375485330335
+  ✅ Aggregated 2 days into 1 weeks
+
+[537/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375485340335
+  ✅ Aggregated 3 days into 1 weeks
+
+[538/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375485350335
+  ✅ Aggregated 2 days into 1 weeks
+
+[539/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375485360335
+  ✅ Aggregated 3 days into 1 weeks
+
+[540/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375485660335
+  ✅ Aggregated 2 days into 1 weeks
+  💾 Checkpoint saved (540/641 ads)
+
+[541/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375485670335
+  ✅ Aggregated 2 days into 1 weeks
+
+[542/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375485680335
+  ✅ Aggregated 2 days into 1 weeks
+
+[543/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375485690335
+  ✅ Aggregated 3 days into 1 weeks
+
+[544/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375485700335
+  ✅ Aggregated 3 days into 1 weeks
+
+[545/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375485710335
+  ✅ Aggregated 2 days into 1 weeks
+
+[546/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375485720335
+  ✅ Aggregated 3 days into 1 weeks
+
+[547/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375485730335
+  ✅ Aggregated 3 days into 1 weeks
+
+[548/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375485740335
+  ✅ Aggregated 3 days into 1 weeks
+
+[549/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375486680335
+  ✅ Aggregated 2 days into 1 weeks
+
+[550/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375486690335
+  ✅ Aggregated 2 days into 1 weeks
+  💾 Checkpoint saved (550/641 ads)
+
+[551/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375486700335
+  ✅ Aggregated 3 days into 1 weeks
+
+[552/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375486710335
+  ✅ Aggregated 2 days into 1 weeks
+
+[553/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375486890335
+  ✅ Aggregated 3 days into 1 weeks
+
+[554/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375486900335
+  ✅ Aggregated 2 days into 1 weeks
+
+[555/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375486910335
+  ✅ Aggregated 2 days into 1 weeks
+
+[556/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375486920335
+  ✅ Aggregated 2 days into 1 weeks
+
+[557/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375486930335
+  ✅ Aggregated 2 days into 1 weeks
+
+[558/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375486940335
+  ✅ Aggregated 2 days into 1 weeks
+
+[559/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375486950335
+  ✅ Aggregated 3 days into 1 weeks
+
+[560/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375486960335
+  ✅ Aggregated 3 days into 1 weeks
+  💾 Checkpoint saved (560/641 ads)
+
+[561/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375486970335
+  ✅ Aggregated 2 days into 1 weeks
+
+[562/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375486980335
+  ✅ Aggregated 3 days into 1 weeks
+
+[563/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375486990335
+  ✅ Aggregated 3 days into 1 weeks
+
+[564/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375487000335
+  ✅ Aggregated 3 days into 1 weeks
+
+[565/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375487010335
+  ✅ Aggregated 3 days into 1 weeks
+
+[566/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375487020335
+  ✅ Aggregated 2 days into 1 weeks
+
+[567/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375487030335
+  ✅ Aggregated 3 days into 1 weeks
+
+[568/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375487040335
+  ✅ Aggregated 2 days into 1 weeks
+
+[569/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375487050335
+  ✅ Aggregated 2 days into 1 weeks
+
+[570/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375487060335
+  ✅ Aggregated 2 days into 1 weeks
+  💾 Checkpoint saved (570/641 ads)
+
+[571/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375487070335
+  ✅ Aggregated 3 days into 1 weeks
+
+[572/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375487080335
+  ✅ Aggregated 3 days into 1 weeks
+
+[573/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234375487090335
+  ✅ Aggregated 3 days into 1 weeks
+
+[574/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234375487100335
+  ✅ Aggregated 3 days into 1 weeks
+
+[575/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234375487110335
+  ✅ Aggregated 2 days into 1 weeks
+
+[576/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234375487120335
+  ✅ Aggregated 2 days into 1 weeks
+
+[577/641] Fetching insights for ad: Explainer (Afrikaans) - DDM
+  Ad ID: 120234435129760335
+  ✅ Aggregated 22 days into 4 weeks
+
+[578/641] Fetching insights for ad: Medical Problems (Retargeting) - DDM
+  Ad ID: 120234485362400335
+  ✅ Aggregated 29 days into 5 weeks
+
+[579/641] Fetching insights for ad: Physiotherapists - Elmien
+  Ad ID: 120234487479400335
+  ✅ Aggregated 29 days into 5 weeks
+
+[580/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234497185390335
+  ✅ Aggregated 20 days into 4 weeks
+  💾 Checkpoint saved (580/641 ads)
+
+[581/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234497185540335
+  ⚠️  No insights found (likely no activity in date range)
+
+[582/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234497185550335
+  ✅ Aggregated 20 days into 4 weeks
+
+[583/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234497185560335
+  ✅ Aggregated 20 days into 4 weeks
+
+[584/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234497185570335
+  ✅ Aggregated 17 days into 4 weeks
+
+[585/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234497185580335
+  ✅ Aggregated 20 days into 4 weeks
+
+[586/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234497254000335
+  ⚠️  No insights found (likely no activity in date range)
+
+[587/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234497254010335
+  ✅ Aggregated 12 days into 4 weeks
+
+[588/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234497254020335
+  ✅ Aggregated 20 days into 4 weeks
+
+[589/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234497254040335
+  ✅ Aggregated 20 days into 4 weeks
+
+[590/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234497254050335
+  ✅ Aggregated 20 days into 4 weeks
+  💾 Checkpoint saved (590/641 ads)
+
+[591/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234497254060335
+  ✅ Aggregated 19 days into 4 weeks
+
+[592/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234497314770335
+  ✅ Aggregated 20 days into 4 weeks
+
+[593/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234497314780335
+  ✅ Aggregated 20 days into 4 weeks
+
+[594/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234497314790335
+  ⚠️  No insights found (likely no activity in date range)
+
+[595/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234497314800335
+  ✅ Aggregated 20 days into 4 weeks
+
+[596/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234497314820335
+  ✅ Aggregated 20 days into 4 weeks
+
+[597/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234497314830335
+  ✅ Aggregated 13 days into 4 weeks
+
+[598/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120234497491400335
+  ✅ Aggregated 6 days into 3 weeks
+
+[599/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120234497491410335
+  ✅ Aggregated 5 days into 2 weeks
+
+[600/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120234497491420335
+  ✅ Aggregated 6 days into 2 weeks
+  💾 Checkpoint saved (600/641 ads)
+
+[601/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120234497491430335
+  ⚠️  No insights found (likely no activity in date range)
+
+[602/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120234497491440335
+  ✅ Aggregated 7 days into 3 weeks
+
+[603/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120234497491450335
+  ✅ Aggregated 20 days into 4 weeks
+/Users/mac/Library/Python/3.9/lib/python/site-packages/google/cloud/firestore_v1/base_collection.py:304: UserWarning: Detected filter using positional arguments. Prefer using the 'filter' keyword argument instead.
+  return query.where(field_path, op_string, value)
+
+[604/641] Fetching insights for ad: Dynamic Video
+  Ad ID: 120235189605440335
+  ✅ Aggregated 6 days into 2 weeks
+
+[605/641] Fetching insights for ad: Dynamic Video
+  Ad ID: 120235190066410335
+  ✅ Aggregated 15 days into 3 weeks
+
+[606/641] Fetching insights for ad: Dynamic Video
+  Ad ID: 120235190451200335
+  ✅ Aggregated 15 days into 3 weeks
+
+[607/641] Fetching insights for ad: B2B October 2025
+  Ad ID: 120235556204840335
+  ✅ Aggregated 9 days into 2 weeks
+
+[608/641] Fetching insights for ad: Why Choose MedWave?
+  Ad ID: 120235559581980335
+  ✅ Aggregated 7 days into 2 weeks
+
+[609/641] Fetching insights for ad: Practitioners Image
+  Ad ID: 120235559827960335
+  ✅ Aggregated 9 days into 2 weeks
+
+[610/641] Fetching insights for ad: B2B October 2025
+  Ad ID: 120235560266860335
+  ✅ Aggregated 9 days into 2 weeks
+  💾 Checkpoint saved (610/641 ads)
+
+[611/641] Fetching insights for ad: Why Choose MedWave?
+  Ad ID: 120235560266870335
+  ✅ Aggregated 6 days into 2 weeks
+
+[612/641] Fetching insights for ad: Practitioners Image
+  Ad ID: 120235560267040335
+  ✅ Aggregated 6 days into 2 weeks
+
+[613/641] Fetching insights for ad: Practitioners Image
+  Ad ID: 120235560267970335
+  ✅ Aggregated 9 days into 2 weeks
+
+[614/641] Fetching insights for ad: Why Choose MedWave?
+  Ad ID: 120235560267980335
+  ✅ Aggregated 6 days into 2 weeks
+
+[615/641] Fetching insights for ad: B2B October 2025
+  Ad ID: 120235560267990335
+  ✅ Aggregated 9 days into 2 weeks
+
+[616/641] Fetching insights for ad: Why Choose MedWave?
+  Ad ID: 120235560268250335
+  ✅ Aggregated 6 days into 2 weeks
+
+[617/641] Fetching insights for ad: B2B October 2025
+  Ad ID: 120235560268260335
+  ✅ Aggregated 9 days into 2 weeks
+
+[618/641] Fetching insights for ad: Practitioners Image
+  Ad ID: 120235560268290335
+  ✅ Aggregated 9 days into 2 weeks
+
+[619/641] Fetching insights for ad: Pasiënt Resultaat (Afrikaans)
+  Ad ID: 120235560676180335
+  ✅ Aggregated 9 days into 2 weeks
+
+[620/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120235702891130335
+  ✅ Aggregated 7 days into 2 weeks
+  💾 Checkpoint saved (620/641 ads)
+
+[621/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120235702891170335
+  ✅ Aggregated 5 days into 2 weeks
+
+[622/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120235702891180335
+  ✅ Aggregated 4 days into 2 weeks
+
+[623/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120235702891190335
+  ✅ Aggregated 6 days into 2 weeks
+
+[624/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120235702891200335
+  ✅ Aggregated 5 days into 2 weeks
+
+[625/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120235702891220335
+  ✅ Aggregated 7 days into 2 weeks
+
+[626/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120235704085720335
+  ✅ Aggregated 4 days into 2 weeks
+
+[627/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120235704085730335
+  ✅ Aggregated 6 days into 2 weeks
+
+[628/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120235704085740335
+  ✅ Aggregated 7 days into 2 weeks
+
+[629/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120235704085750335
+  ✅ Aggregated 7 days into 2 weeks
+
+[630/641] Fetching insights for ad: Obesity - DDM
+  Ad ID: 120235704085760335
+  ✅ Aggregated 7 days into 2 weeks
+  💾 Checkpoint saved (630/641 ads)
+
+[631/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120235704085770335
+  ✅ Aggregated 5 days into 2 weeks
+
+[632/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120235704085780335
+  ✅ Aggregated 7 days into 2 weeks
+
+[633/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120235704085790335
+  ✅ Aggregated 7 days into 2 weeks
+
+[634/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120235704085800335
+  ✅ Aggregated 4 days into 2 weeks
+
+[635/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120235704085810335
+  ✅ Aggregated 6 days into 2 weeks
+
+[636/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120235704085830335
+  ✅ Aggregated 5 days into 2 weeks
+
+[637/641] Fetching insights for ad: AI Proof - DDM
+  Ad ID: 120235704085840335
+  ✅ Aggregated 7 days into 2 weeks
+
+[638/641] Fetching insights for ad: COLIN LAGRANGE (DDM)
+  Ad ID: 120235704085850335
+  ✅ Aggregated 6 days into 2 weeks
+
+[639/641] Fetching insights for ad: Obesity - Andries - DDM
+  Ad ID: 120235704085870335
+  ✅ Aggregated 6 days into 2 weeks
+
+[640/641] Fetching insights for ad: Metabolic Weight Loss (2) | DDM
+  Ad ID: 120235704085970335
+  ✅ Aggregated 7 days into 2 weeks
+  💾 Checkpoint saved (640/641 ads)
+
+[641/641] Fetching insights for ad: AI Jab - DDM
+  Ad ID: 120235704085980335
+  ✅ Aggregated 4 days into 2 weeks
+
+✅ Fetched Facebook insights for 517 ads
+   Processed: 641/641
+   Skipped (no data): 16
+   Errors: 0
+
+================================================================================
+STEP 2: FETCHING GHL DATA
+================================================================================
+
+📊 Fetching GHL opportunities...
+  Page 1: 100 opportunities (16 total tracked)
+  Page 2: 100 opportunities (28 total tracked)
+  Page 3: 100 opportunities (36 total tracked)
+  Page 4: 100 opportunities (47 total tracked)
+  Page 5: 100 opportunities (57 total tracked)
+  Page 6: 100 opportunities (66 total tracked)
+  Page 7: 100 opportunities (76 total tracked)
+  Page 8: 100 opportunities (90 total tracked)
+  Page 9: 100 opportunities (97 total tracked)
+  Page 10: 100 opportunities (97 total tracked)
+  Page 11: 100 opportunities (112 total tracked)
+  Page 12: 100 opportunities (127 total tracked)
+  Page 13: 100 opportunities (149 total tracked)
+  Page 14: 100 opportunities (172 total tracked)
+  Page 15: 100 opportunities (185 total tracked)
+  Page 16: 100 opportunities (199 total tracked)
+  Page 17: 100 opportunities (212 total tracked)
+  Page 18: 100 opportunities (225 total tracked)
+  Page 19: 100 opportunities (254 total tracked)
+  Page 20: 100 opportunities (269 total tracked)
+  Page 21: 100 opportunities (286 total tracked)
+  Page 22: 100 opportunities (297 total tracked)
+  Page 23: 100 opportunities (307 total tracked)
+  Page 24: 100 opportunities (310 total tracked)
+  Page 25: 100 opportunities (323 total tracked)
+  Page 26: 100 opportunities (335 total tracked)
+  Page 27: 100 opportunities (351 total tracked)
+  Page 28: 100 opportunities (372 total tracked)
+  Page 29: 100 opportunities (393 total tracked)
+  Page 30: 100 opportunities (399 total tracked)
+  Page 31: 100 opportunities (417 total tracked)
+  Page 32: 100 opportunities (452 total tracked)
+  Page 33: 100 opportunities (481 total tracked)
+  Page 34: 100 opportunities (510 total tracked)
+  Page 35: 100 opportunities (525 total tracked)
+  Page 36: 100 opportunities (558 total tracked)
+  Page 37: 100 opportunities (565 total tracked)
+  Page 38: 100 opportunities (567 total tracked)
+  Page 39: 100 opportunities (567 total tracked)
+  Page 40: 100 opportunities (567 total tracked)
+  Page 41: 100 opportunities (567 total tracked)
+  Page 42: 100 opportunities (567 total tracked)
+  Page 43: 100 opportunities (567 total tracked)
+  Page 44: 100 opportunities (567 total tracked)
+  Page 45: 100 opportunities (567 total tracked)
+  Page 46: 100 opportunities (567 total tracked)
+  Page 47: 100 opportunities (567 total tracked)
+  Page 48: 100 opportunities (567 total tracked)
+  Page 49: 100 opportunities (567 total tracked)
+  Page 50: 100 opportunities (567 total tracked)
+  Page 51: 100 opportunities (567 total tracked)
+  Page 52: 100 opportunities (567 total tracked)
+  Page 53: 100 opportunities (567 total tracked)
+  Page 54: 100 opportunities (567 total tracked)
+  Page 55: 100 opportunities (567 total tracked)
+  Page 56: 100 opportunities (567 total tracked)
+  Page 57: 100 opportunities (567 total tracked)
+  Page 58: 100 opportunities (567 total tracked)
+  Page 59: 100 opportunities (567 total tracked)
+  Page 60: 100 opportunities (567 total tracked)
+  Page 61: 100 opportunities (567 total tracked)
+  Page 62: 100 opportunities (567 total tracked)
+  Page 63: 100 opportunities (567 total tracked)
+  Page 64: 100 opportunities (567 total tracked)
+  Page 65: 100 opportunities (567 total tracked)
+  Page 66: 100 opportunities (567 total tracked)
+  Page 67: 100 opportunities (567 total tracked)
+  Page 68: 86 opportunities (567 total tracked)
+✅ Fetched 567 opportunities from tracked pipelines
+
+🔥 Loading ad assignments from Firebase...
+✅ Loaded 960 opportunity-to-ad mappings from Firebase
+
+📝 Fetching GHL form submissions for ad_id mapping...
+  Page 1: 100 submissions (90 contacts mapped)
+  Page 2: 100 submissions (183 contacts mapped)
+  Page 3: 100 submissions (273 contacts mapped)
+  Page 4: 100 submissions (358 contacts mapped)
+  Page 5: 100 submissions (440 contacts mapped)
+  Page 6: 100 submissions (524 contacts mapped)
+  Page 7: 100 submissions (604 contacts mapped)
+  Page 8: 100 submissions (685 contacts mapped)
+  Page 9: 100 submissions (766 contacts mapped)
+  Page 10: 100 submissions (844 contacts mapped)
+  Page 11: 100 submissions (916 contacts mapped)
+  Page 12: 100 submissions (970 contacts mapped)
+  Page 13: 100 submissions (1038 contacts mapped)
+  Page 14: 100 submissions (1118 contacts mapped)
+  Page 15: 100 submissions (1202 contacts mapped)
+  Page 16: 100 submissions (1283 contacts mapped)
+  Page 17: 100 submissions (1371 contacts mapped)
+  Page 18: 100 submissions (1457 contacts mapped)
+  Page 19: 100 submissions (1543 contacts mapped)
+  Page 20: 100 submissions (1628 contacts mapped)
+  Page 21: 100 submissions (1718 contacts mapped)
+  Page 22: 100 submissions (1743 contacts mapped)
+  Page 23: 100 submissions (1743 contacts mapped)
+  Page 24: 100 submissions (1743 contacts mapped)
+  Page 25: 20 submissions (1743 contacts mapped)
+✅ Mapped 1743 contacts to ad IDs
+
+📊 Calculating weekly GHL metrics...
+✅ Matched 327 opportunities to ads
+⚠️  240 opportunities could not be matched to ads
+
+================================================================================
+STEP 3: AGGREGATING DATA
+================================================================================
+
+📦 Aggregating data into summary collection structure...
+✅ Aggregated data for 61 campaigns
+
+================================================================================
+STEP 4: WRITING TO FIREBASE
+================================================================================
+
+🔥 Writing summary data to Firebase...
+  ✅ Committed final batch (61 campaigns written)
+✅ Successfully wrote 61 campaign summaries to Firebase
+
+================================================================================
+SUMMARY
+================================================================================
+✅ Total ads processed: 641
+✅ Ads with Facebook data: 517
+✅ Ads with GHL data: 114
+✅ Campaigns in summary: 61
+✅ Total opportunities processed: 567
+================================================================================
+COMPLETE!
+================================================================================

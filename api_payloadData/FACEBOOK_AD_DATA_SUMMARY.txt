@@ -1,0 +1,415 @@
+================================================================================
+FACEBOOK ADS API - COMPLETE DATA PAYLOAD ANALYSIS
+================================================================================
+Date: November 13, 2025
+API Version: v24.0
+Ad Account: act_220298027464902
+
+================================================================================
+EXECUTIVE SUMMARY
+================================================================================
+
+✅ Successfully connected to Facebook Marketing API
+✅ Retrieved complete data for active ads with performance metrics
+✅ Identified all available fields and data structures
+
+SAMPLE AD ANALYZED:
+- Ad ID: 120233712971960335
+- Ad Name: Dynamic Video
+- Campaign: Matthys | 03102025 ABOLEADFORM (DDM)
+- Performance: R 564.80 spend, 3,508 impressions, 169 clicks, 11 leads
+
+================================================================================
+1. AD BASIC INFORMATION (Ad Details Endpoint)
+================================================================================
+
+Endpoint: GET /{ad_id}
+
+AVAILABLE FIELDS:
+-----------------
+✓ id - Ad ID
+✓ name - Ad name
+✓ status - Ad status (ACTIVE, PAUSED, etc.)
+✓ effective_status - Current effective status
+✓ configured_status - Configured status
+✓ created_time - When ad was created
+✓ updated_time - Last update timestamp
+✓ account_id - Ad account ID
+✓ bid_type - Bidding type (e.g., ABSOLUTE_OCPM)
+
+CAMPAIGN INFO (nested):
+✓ campaign_id - Parent campaign ID
+✓ campaign.id - Campaign ID
+✓ campaign.name - Campaign name
+✓ campaign.status - Campaign status
+✓ campaign.objective - Campaign objective (e.g., OUTCOME_LEADS)
+
+AD SET INFO (nested):
+✓ adset_id - Parent ad set ID
+✓ adset.id - Ad set ID
+✓ adset.name - Ad set name
+✓ adset.status - Ad set status
+✓ adset.optimization_goal - Optimization goal (e.g., LEAD_GENERATION)
+✓ adset.billing_event - Billing event (e.g., IMPRESSIONS)
+✓ adset.daily_budget - Daily budget (in cents)
+✓ adset.lifetime_budget - Lifetime budget
+✓ adset.targeting - Complete targeting object (see below)
+
+TARGETING INFO (nested in adset):
+✓ age_min, age_max - Age range
+✓ age_range - Age range array
+✓ genders - Gender targeting
+✓ geo_locations - Geographic targeting
+  - countries - Country codes (e.g., ["US", "ZA"])
+  - location_types - Location types (home, recent)
+✓ custom_audiences - Custom audience objects
+  - id - Audience ID
+  - name - Audience name
+✓ targeting_automation - Automation settings
+  - advantage_audience - Advantage+ audience setting
+✓ publisher_platforms - Platforms (facebook, instagram)
+✓ facebook_positions - Facebook placements
+✓ instagram_positions - Instagram placements
+✓ device_platforms - Device types (mobile, desktop)
+
+CREATIVE INFO (nested):
+✓ creative.id - Creative ID
+✓ creative.name - Creative name
+✓ creative.thumbnail_url - Thumbnail URL
+✓ creative.object_story_spec - Story specification
+  - page_id - Facebook page ID
+  - instagram_user_id - Instagram account ID
+
+TRACKING & CONVERSION:
+✓ tracking_specs - Array of tracking specifications
+  - action.type - Action types being tracked
+  - fb_pixel - Pixel IDs
+  - conversion_id - Conversion IDs
+  - page - Page IDs
+✓ conversion_specs - Conversion specifications
+  - action.type - Conversion action types
+  - leadgen - Lead form IDs
+
+OTHER:
+✓ preview_shareable_link - Shareable preview URL
+
+================================================================================
+2. AD INSIGHTS (Performance Metrics Endpoint)
+================================================================================
+
+Endpoint: GET /{ad_id}/insights
+
+IDENTIFIERS:
+✓ account_id - Ad account ID
+✓ account_name - Ad account name
+✓ ad_id - Ad ID
+✓ ad_name - Ad name
+✓ adset_id - Ad set ID
+✓ adset_name - Ad set name
+✓ campaign_id - Campaign ID
+✓ campaign_name - Campaign name
+
+CAMPAIGN SETTINGS:
+✓ objective - Campaign objective (e.g., OUTCOME_LEADS)
+✓ buying_type - Buying type (e.g., AUCTION)
+✓ optimization_goal - Optimization goal (e.g., LEAD_GENERATION)
+
+DELIVERY METRICS:
+✓ impressions - Total impressions (e.g., "3508")
+✓ reach - Unique reach (e.g., "2867")
+✓ frequency - Average frequency (e.g., "1.223579")
+
+ENGAGEMENT METRICS:
+✓ clicks - Total clicks (e.g., "169")
+✓ unique_clicks - Unique clicks (e.g., "136")
+✓ ctr - Click-through rate (e.g., "4.81756")
+✓ unique_ctr - Unique CTR (e.g., "4.743634")
+✓ inline_link_clicks - Link clicks (e.g., "83")
+✓ inline_link_click_ctr - Link click CTR (e.g., "2.366021")
+✓ unique_inline_link_clicks - Unique link clicks (e.g., "82")
+
+COST METRICS:
+✓ spend - Total spend (e.g., "564.8" in account currency)
+✓ cpm - Cost per 1000 impressions (e.g., "161.003421")
+✓ cpc - Cost per click (e.g., "3.342012")
+✓ cpp - Cost per 1000 people reached (e.g., "197.000349")
+✓ cost_per_inline_link_click - Cost per link click (e.g., "6.804819")
+✓ cost_per_unique_click - Cost per unique click (e.g., "4.152941")
+✓ cost_per_unique_inline_link_click - Cost per unique link click (e.g., "6.887805")
+
+ACTIONS ARRAY (conversion events):
+✓ actions - Array of action objects, each containing:
+  - action_type - Type of action
+  - value - Count of actions
+
+AVAILABLE ACTION TYPES IN SAMPLE:
+- onsite_conversion.total_messaging_connection (9)
+- onsite_conversion.lead (1)
+- offsite_complete_registration_add_meta_leads (11) ⭐ FACEBOOK LEADS
+- link_click (83)
+- page_engagement (1877)
+- landing_page_view (1)
+- omni_landing_page_view (1)
+- post_engagement (1874)
+- comment (7)
+- offsite_content_view_add_meta_leads (11)
+- lead (11) ⭐ TOTAL LEADS
+- offsite_search_add_meta_leads (11)
+- post (5)
+- onsite_conversion.post_save (1)
+- onsite_conversion.post_net_save (1)
+- onsite_web_lead (1)
+- onsite_conversion.messaging_first_reply (8)
+- post_interaction_gross (61)
+- like (3)
+- onsite_conversion.messaging_conversation_started_7d (9)
+- onsite_conversion.lead_grouped (11)
+- video_view (1730)
+- post_reaction (48)
+
+COST PER ACTION TYPE:
+✓ cost_per_action_type - Array of cost per action objects
+  - action_type - Type of action
+  - value - Cost per action
+
+VIDEO METRICS (if video ad):
+✓ video_play_actions - Video plays
+✓ video_avg_time_watched_actions - Average watch time
+✓ video_p25_watched_actions - 25% completion
+✓ video_p50_watched_actions - 50% completion
+✓ video_p75_watched_actions - 75% completion
+✓ video_p95_watched_actions - 95% completion
+✓ video_p100_watched_actions - 100% completion
+✓ video_30_sec_watched_actions - 30-second views
+
+OTHER:
+✓ social_spend - Spend from social context
+✓ attribution_setting - Attribution window (e.g., "1d_view_7d_click")
+✓ date_start - Start date of data range
+✓ date_stop - End date of data range
+
+================================================================================
+3. DAILY BREAKDOWN (Time-Series Data)
+================================================================================
+
+Endpoint: GET /{ad_id}/insights?time_increment=1
+
+Returns array of daily performance data with same metrics as above, plus:
+✓ date_start - Day start date
+✓ date_stop - Day end date
+
+Each day includes:
+- All standard metrics (impressions, reach, spend, clicks, etc.)
+- Actions array with daily conversion events
+- Cost metrics for that day
+
+EXAMPLE DAILY DATA:
+{
+  "date_start": "2025-11-06",
+  "date_stop": "2025-11-06",
+  "impressions": "430",
+  "reach": "403",
+  "spend": "77.63",
+  "clicks": "23",
+  "actions": [
+    { "action_type": "lead", "value": "1" },
+    { "action_type": "video_view", "value": "218" }
+  ]
+}
+
+================================================================================
+4. KEY INSIGHTS FOR YOUR SYSTEM
+================================================================================
+
+LEAD TRACKING:
+--------------
+✅ Facebook provides multiple lead-related action types:
+   - "lead" - Total leads (most reliable)
+   - "offsite_complete_registration_add_meta_leads" - Facebook lead forms
+   - "onsite_conversion.lead" - Website conversions
+   - "onsite_web_lead" - Website leads
+   - "onsite_conversion.lead_grouped" - Grouped leads
+
+⭐ RECOMMENDATION: Use action_type "lead" for total lead count
+
+COST PER LEAD:
+--------------
+✅ Available in cost_per_action_type array
+✅ Look for action_type: "lead" to get CPL directly from Facebook
+
+TARGETING DATA:
+---------------
+✅ Complete targeting information available in ad details
+✅ Includes custom audiences, geo-targeting, age/gender, placements
+✅ Can be used for audience analysis and optimization
+
+VIDEO PERFORMANCE:
+------------------
+✅ Detailed video engagement metrics available
+✅ Can track completion rates at 25%, 50%, 75%, 95%, 100%
+✅ Average watch time available
+
+DAILY TRENDS:
+-------------
+✅ Daily breakdown provides granular performance data
+✅ Can track performance changes over time
+✅ Useful for identifying trends and anomalies
+
+================================================================================
+5. WHAT'S NOT AVAILABLE
+================================================================================
+
+❌ Lead Form Data:
+   - Cannot access individual lead submissions via ad endpoint
+   - Requires pages_manage_ads or leads_retrieval permission
+   - Use GHL Forms Submissions API instead (as currently implemented)
+
+❌ Quality Scores:
+   - quality_score_organic, quality_score_ectr, quality_score_ecvr
+   - These fields were removed or require special permissions
+
+================================================================================
+6. RECOMMENDED DATA STRUCTURE FOR YOUR SYSTEM
+================================================================================
+
+CAMPAIGNS COLLECTION:
+{
+  campaignId: string,
+  campaignName: string,
+  objective: string,
+  status: string,
+  // ... aggregated metrics
+}
+
+AD SETS COLLECTION:
+{
+  adSetId: string,
+  adSetName: string,
+  campaignId: string,
+  targeting: {
+    ageMin: number,
+    ageMax: number,
+    countries: string[],
+    customAudiences: array,
+    // ... other targeting
+  },
+  optimizationGoal: string,
+  dailyBudget: number,
+  // ... aggregated metrics
+}
+
+ADS COLLECTION:
+{
+  adId: string,
+  adName: string,
+  adSetId: string,
+  campaignId: string,
+  status: string,
+  creativeId: string,
+  creativeThumbnail: string,
+  facebookStats: {
+    impressions: number,
+    reach: number,
+    frequency: number,
+    clicks: number,
+    ctr: number,
+    spend: number,
+    cpm: number,
+    cpc: number,
+    dateStart: string,
+    dateStop: string
+  },
+  actions: {
+    leads: number,              // From action_type: "lead"
+    videoViews: number,         // From action_type: "video_view"
+    linkClicks: number,         // From action_type: "link_click"
+    pageEngagement: number,     // From action_type: "page_engagement"
+    // ... other actions
+  },
+  costPerAction: {
+    costPerLead: number,        // From cost_per_action_type
+    costPerClick: number,
+    // ... other costs
+  },
+  videoMetrics: {
+    p25: number,
+    p50: number,
+    p75: number,
+    p100: number,
+    avgWatchTime: number
+  }
+}
+
+================================================================================
+7. INTEGRATION WITH GHL
+================================================================================
+
+CURRENT FLOW (WORKING):
+1. Facebook Lead Form → GHL Webhook → GHL Contact Created
+2. GHL Forms Submissions API → Contains ad_id attribution
+3. Match GHL Opportunity to Facebook Ad using ad_id
+4. Combine Facebook metrics + GHL opportunity data
+
+FACEBOOK PROVIDES:
+- Ad performance (impressions, clicks, spend)
+- Lead count from Facebook's perspective
+- Video engagement metrics
+- Targeting and creative info
+
+GHL PROVIDES:
+- Individual lead details
+- Lead stage progression (Booked, Deposit, Cash Collected)
+- Monetary values (deposit amounts, cash collected)
+- Lead quality and conversion data
+
+COMBINED VIEW:
+- Facebook spend + GHL revenue = ROI
+- Facebook leads + GHL conversions = conversion rate
+- Ad performance + lead quality = optimization insights
+
+================================================================================
+8. SAMPLE API CALLS
+================================================================================
+
+GET ACTIVE ADS WITH PERFORMANCE:
+GET /act_{account_id}/insights?level=ad&date_preset=last_7d&fields=ad_id,ad_name,impressions,spend,clicks,actions
+
+GET SINGLE AD DETAILS:
+GET /{ad_id}?fields=id,name,status,campaign{name,objective},adset{name,targeting},creative{thumbnail_url}
+
+GET AD INSIGHTS:
+GET /{ad_id}/insights?fields=impressions,reach,spend,clicks,ctr,cpm,cpc,actions,cost_per_action_type&date_preset=last_30d
+
+GET DAILY BREAKDOWN:
+GET /{ad_id}/insights?fields=impressions,spend,actions&time_increment=1&date_preset=last_7d
+
+================================================================================
+9. NEXT STEPS & RECOMMENDATIONS
+================================================================================
+
+✅ CURRENT IMPLEMENTATION IS SOLID:
+   - Using Forms Submissions API for ad_id attribution
+   - Storing Facebook metrics in ads collection
+   - Matching GHL opportunities to specific ads
+   - Pre-aggregating metrics at all levels
+
+💡 POTENTIAL ENHANCEMENTS:
+   1. Store targeting data for audience analysis
+   2. Track video engagement metrics (if using video ads)
+   3. Store daily breakdown for trend analysis
+   4. Track cost_per_action_type for detailed CPL/CPB tracking
+   5. Monitor action types beyond just leads (engagement, video views)
+
+📊 REPORTING OPPORTUNITIES:
+   - Audience performance analysis (which targeting works best)
+   - Creative performance (thumbnail, video completion rates)
+   - Time-based trends (daily/weekly performance)
+   - Action funnel analysis (impressions → clicks → leads → conversions)
+
+================================================================================
+END OF ANALYSIS
+================================================================================
+
+Full payload saved to: facebook_ad_complete_payload.txt
+Inspection scripts: inspect_facebook_ad_data.py, inspect_ad_with_data.py
+
