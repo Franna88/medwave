@@ -109,7 +109,7 @@ class MedWaveApp extends StatelessWidget {
           // Show loading screen while auth is initializing
           if (authProvider.isLoading) {
             return MaterialApp(
-              title: 'MedWave Provider',
+              title: 'MedX AI',
               theme: AppTheme.lightTheme,
               debugShowCheckedModeBanner: false,
               home: Scaffold(
@@ -145,7 +145,7 @@ class MedWaveApp extends StatelessWidget {
           }
 
           return MaterialApp.router(
-            title: 'MedWave Provider',
+            title: 'MedX AI',
             theme: AppTheme.lightTheme,
             routerConfig: _buildRouter(authProvider),
             debugShowCheckedModeBanner: false,

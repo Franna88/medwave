@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Medwave App</string>
+	<string>MedX AI</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>medwave_app</string>
+	<string>MedX AI</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -46,11 +46,11 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>MedWave requires camera access to capture wound photographs for medical documentation and treatment progress tracking. This is essential for clinical wound care management.</string>
+	<string>MedX AI requires camera access to capture wound photographs for medical documentation and treatment progress tracking. This is essential for clinical wound care management by licensed healthcare professionals.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>MedWave requires photo library access to select existing wound images for medical documentation, treatment comparisons, and clinical progress tracking.</string>
+	<string>MedX AI requires photo library access to select existing wound images for medical documentation, treatment comparisons, and clinical progress tracking by licensed healthcare professionals.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>MedWave requires permission to save medical wound documentation photos to your photo library for healthcare record keeping and clinical continuity.</string>
+	<string>MedX AI requires permission to save medical wound documentation photos to your photo library for healthcare record keeping and clinical continuity.</string>
 	
 	<!-- iOS Privacy Configuration for Healthcare App -->
 	<key>ITSAppUsesNonExemptEncryption</key>

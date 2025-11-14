@@ -1,0 +1,422 @@
+═══════════════════════════════════════════════════════════════════════════════
+  GOOGLE PLAY CONSOLE UPDATE INSTRUCTIONS - MedX AI Rebranding
+═══════════════════════════════════════════════════════════════════════════════
+
+Date: November 14, 2025
+App: MedX AI (formerly MedWave Provider)
+Package: com.barefoot.medwave2
+Status: Code changes complete - Ready for Play Console updates
+
+═══════════════════════════════════════════════════════════════════════════════
+  STEP 1: BUILD NEW APP BUNDLE (15 minutes)
+═══════════════════════════════════════════════════════════════════════════════
+
+Run these commands in Terminal:
+
+cd /Users/mac/dev/medwave
+flutter clean
+flutter pub get
+flutter build appbundle --release
+
+The output file will be at:
+build/app/outputs/bundle/release/app-release.aab
+
+═══════════════════════════════════════════════════════════════════════════════
+  STEP 2: UPDATE GOOGLE PLAY CONSOLE STORE LISTING (30 minutes)
+═══════════════════════════════════════════════════════════════════════════════
+
+Login: https://play.google.com/console
+
+Navigate to: MedWave Provider → Store presence → Main store listing
+
+───────────────────────────────────────────────────────────────────────────────
+A. APP NAME (CRITICAL - Fixes Misleading Claims Violation)
+───────────────────────────────────────────────────────────────────────────────
+
+Current: "MedX.Ai" or "MedWave Provider"
+Change to: MedX AI
+
+Location: Store presence → Main store listing → App name
+Action: Update to exactly "MedX AI" (no period, space between MedX and AI)
+
+───────────────────────────────────────────────────────────────────────────────
+B. SHORT DESCRIPTION (80 characters max)
+───────────────────────────────────────────────────────────────────────────────
+
+Copy and paste exactly:
+
+Professional wound care documentation tool for licensed healthcare practitioners.
+
+───────────────────────────────────────────────────────────────────────────────
+C. FULL DESCRIPTION (CRITICAL - Fixes Health Content Policy Violation)
+───────────────────────────────────────────────────────────────────────────────
+
+Copy and paste the following COMPLETE description:
+
+FOR LICENSED HEALTHCARE PROFESSIONALS ONLY
+
+IMPORTANT MEDICAL DISCLAIMER
+
+This app is a DOCUMENTATION TOOL ONLY and does NOT provide medical advice, diagnosis, or treatment. All clinical decisions, medical assessments, diagnoses, and treatment plans must be made solely by licensed healthcare professionals. Users must consult with qualified healthcare providers for all medical decisions.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MedX AI is a professional wound care documentation and practice management platform designed exclusively for qualified healthcare practitioners, including:
+
+✓ Licensed nurses and wound care specialists
+✓ Physicians and medical doctors  
+✓ Clinical practitioners with professional credentials
+✓ Healthcare facilities and clinics
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 CLINICAL DOCUMENTATION FEATURES
+
+Patient Management
+• Comprehensive patient onboarding and medical history documentation
+• Secure patient information management
+• Session logging and appointment tracking
+
+Wound Documentation
+• Photo documentation with measurement tools
+• Baseline wound assessments and measurements
+• Digital consent forms and signatures
+• Wound classification and documentation standards
+
+Progress Tracking
+• Visual wound healing progress monitoring
+• Multi-wound support for complex cases
+• Session-by-session documentation
+• Treatment notes and clinical observations
+
+Professional Tools
+• Clinical report generation
+• Treatment documentation and notes
+• Medical aid integration for billing
+• Professional dashboard and analytics
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔒 SECURITY & COMPLIANCE
+
+• HIPAA-compliant data handling practices
+• End-to-end encryption for patient data
+• Secure cloud synchronization
+• Professional authentication system
+• Role-based access controls
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👥 WHO SHOULD USE THIS APP
+
+INTENDED FOR:
+✓ Licensed healthcare professionals
+✓ Medical practitioners with valid credentials
+✓ Clinical wound care specialists
+✓ Healthcare facilities and clinics
+
+NOT INTENDED FOR:
+✗ Patients or consumers
+✗ Self-diagnosis or self-treatment
+✗ Medical advice or consultation
+✗ Emergency medical situations
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ PROFESSIONAL USE DISCLAIMER
+
+MedX AI is a clinical workflow and documentation tool designed to assist licensed healthcare professionals in their practice. This application:
+
+• Does NOT diagnose medical conditions
+• Does NOT provide treatment recommendations
+• Does NOT replace clinical judgment
+• Does NOT substitute for professional medical consultation
+• Is NOT intended for patient or consumer use
+
+All medical decisions, diagnoses, and treatment plans are the sole responsibility of the licensed healthcare professional using this tool.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌍 PERFECT FOR
+
+• Wound care specialists and clinics
+• General practitioners managing wound care
+• Nursing professionals in clinical settings
+• Healthcare facilities focused on evidence-based wound management
+• Medical practices requiring efficient documentation workflows
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📞 SUPPORT & COMPLIANCE
+
+For professional support, compliance questions, or technical assistance, please contact our healthcare support team through the app settings.
+
+Privacy Policy: https://downloads-medx-ai.web.app/privacy-policy.html
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+© 2025 Barefoot Bytes (Pty) Ltd. All rights reserved.
+
+MedX AI - Professional Wound Care Documentation Platform
+
+───────────────────────────────────────────────────────────────────────────────
+D. APP CATEGORY
+───────────────────────────────────────────────────────────────────────────────
+
+Location: Store presence → Main store listing → Category
+Select: Medical
+
+───────────────────────────────────────────────────────────────────────────────
+E. VERIFY APP ICON
+───────────────────────────────────────────────────────────────────────────────
+
+Location: Store presence → Main store listing → Graphics → App icon
+
+Current icon should show: "MedX AI" branding (blue background)
+✓ This is CORRECT - matches the app's actual icon
+
+If it shows anything else, upload: /Users/mac/dev/medwave/images/medX_appIcon.png
+
+───────────────────────────────────────────────────────────────────────────────
+F. VERIFY SCREENSHOTS (IMPORTANT)
+───────────────────────────────────────────────────────────────────────────────
+
+Location: Store presence → Main store listing → Graphics → Screenshots
+
+Ensure screenshots show:
+✓ Professional/clinical interface
+✓ Healthcare practitioner workflows
+✓ NOT consumer-facing health advice
+✓ Documentation and management features
+
+If screenshots look consumer-focused, replace them with professional workflow screens.
+
+───────────────────────────────────────────────────────────────────────────────
+G. VERIFY TARGET AUDIENCE
+───────────────────────────────────────────────────────────────────────────────
+
+Location: Policy and programs → App content → Target audience
+
+Confirm: Adults 18+ only
+If not set, update to: Adults (18+)
+
+───────────────────────────────────────────────────────────────────────────────
+H. VERIFY CONTENT RATING
+───────────────────────────────────────────────────────────────────────────────
+
+Location: Policy and programs → App content → Content rating
+
+Should be: Everyone or PEGI 3 (medical professional tool)
+If incomplete, complete the questionnaire emphasizing professional use.
+
+───────────────────────────────────────────────────────────────────────────────
+I. VERIFY DATA SAFETY SECTION
+───────────────────────────────────────────────────────────────────────────────
+
+Location: Policy and programs → App content → Data safety
+
+Ensure all sections are complete:
+✓ Data collection practices disclosed
+✓ Data sharing practices disclosed
+✓ Security practices disclosed
+✓ Data deletion available
+
+───────────────────────────────────────────────────────────────────────────────
+J. VERIFY PRIVACY POLICY URL
+───────────────────────────────────────────────────────────────────────────────
+
+Location: Policy and programs → App content → Privacy policy
+
+Should be: https://downloads-medx-ai.web.app/privacy-policy.html
+
+Verify the URL is accessible and loads correctly.
+
+═══════════════════════════════════════════════════════════════════════════════
+  STEP 3: UPLOAD NEW APP BUNDLE (10 minutes)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Navigate to: Release → Production → Create new release
+
+2. Upload the app bundle from:
+   build/app/outputs/bundle/release/app-release.aab
+
+3. Version should be: 1.2.13 (15) or higher
+
+4. Release notes - Copy and paste:
+
+───────────────────────────────────────────────────────────────────────────────
+RELEASE NOTES:
+───────────────────────────────────────────────────────────────────────────────
+
+Version 1.2.13 - Policy Compliance Update
+
+• Updated app branding to MedX AI for consistency
+• Enhanced medical disclaimers and professional-use warnings
+• Improved compliance with Google Play Health Content policies
+• Clarified that app is for licensed healthcare professionals only
+• Emphasized documentation tool purpose (not diagnostic/treatment tool)
+
+This update addresses policy violations identified in the October review and ensures full compliance with Google Play Developer Program Policies.
+
+═══════════════════════════════════════════════════════════════════════════════
+  STEP 4: ADD NOTE FOR REVIEWERS (CRITICAL)
+═══════════════════════════════════════════════════════════════════════════════
+
+When submitting for review, add this note in the "Notes for reviewers" section:
+
+───────────────────────────────────────────────────────────────────────────────
+REVIEWER NOTE:
+───────────────────────────────────────────────────────────────────────────────
+
+Subject: Resolution of Policy Violations - Misleading Claims & Health Content
+
+Dear Google Play Review Team,
+
+We are resubmitting MedX AI (Package: com.barefoot.medwave2) after addressing all policy violations identified in the recent rejection.
+
+ISSUES ADDRESSED:
+
+1. MISLEADING CLAIMS POLICY - App Name Inconsistency
+   ✓ FIXED: Updated app name to "MedX AI" across all platforms
+   ✓ RESULT: App name now consistent (Android label, store listing, launcher icon)
+   ✓ VERIFICATION: App displays as "MedX AI" everywhere
+
+2. HEALTH CONTENT AND SERVICES POLICY VIOLATION
+   ✓ FIXED: Completely revised all app descriptions
+   ✓ ADDED: "FOR LICENSED HEALTHCARE PROFESSIONALS ONLY" prominently displayed
+   ✓ ADDED: Comprehensive medical disclaimer at top of description
+   ✓ CLARIFIED: App is documentation tool ONLY, not diagnostic/treatment tool
+   ✓ CLARIFIED: All clinical decisions made by licensed professionals
+   ✓ REMOVED: Any language suggesting medical advice to consumers
+   ✓ EMPHASIZED: Professional-only use throughout all descriptions
+
+SPECIFIC CHANGES:
+
+Code Changes:
+• AndroidManifest.xml: Changed android:label to "MedX AI"
+• iOS Info.plist: Changed CFBundleDisplayName to "MedX AI"
+• App description: Added explicit medical disclaimers
+• App description: Emphasized professional-only use
+• App description: Clarified documentation-only purpose
+
+Store Listing Changes:
+• App name: Updated to "MedX AI"
+• Short description: Emphasizes licensed professional use
+• Full description: Leads with medical disclaimer and professional-only warning
+• Full description: Multiple sections clarifying NOT for patient/consumer use
+• Full description: Clear statement that app does NOT provide medical advice
+
+COMPLIANCE VERIFICATION:
+✓ App icon matches store listing (MedX AI branding)
+✓ App name consistent across all platforms
+✓ Medical disclaimers prominent and clear
+✓ Professional-only use emphasized throughout
+✓ No medical advice or treatment claims
+✓ Documentation tool purpose clearly stated
+
+We believe this update fully addresses all policy concerns and demonstrates our commitment to Google Play Developer Program compliance.
+
+Thank you for your review.
+
+Barefoot Bytes (Pty) Ltd
+Development Team
+
+═══════════════════════════════════════════════════════════════════════════════
+  STEP 5: SUBMIT FOR REVIEW
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Review all changes in Publishing overview
+2. Ensure no warnings or errors
+3. Click "Send for review" or "Submit app"
+4. Confirm submission
+5. Note submission date and time
+
+═══════════════════════════════════════════════════════════════════════════════
+  EXPECTED TIMELINE
+═══════════════════════════════════════════════════════════════════════════════
+
+• Initial review: 3-7 days
+• If additional info needed: 1-3 days response time
+• Total expected time: 5-10 days
+
+═══════════════════════════════════════════════════════════════════════════════
+  CHECKLIST - COMPLETE BEFORE SUBMITTING
+═══════════════════════════════════════════════════════════════════════════════
+
+Code & Build:
+[ ] Flutter clean completed
+[ ] Flutter pub get completed
+[ ] App bundle built successfully
+[ ] Bundle file located and ready to upload
+
+Store Listing:
+[ ] App name changed to "MedX AI"
+[ ] Short description updated
+[ ] Full description updated with medical disclaimers
+[ ] App category set to "Medical"
+[ ] App icon verified (shows MedX AI branding)
+[ ] Screenshots reviewed (show professional interface)
+
+Policy Compliance:
+[ ] Target audience set to 18+ adults
+[ ] Content rating completed
+[ ] Data safety section complete
+[ ] Privacy policy URL verified and accessible
+[ ] Medical disclaimers prominent in description
+[ ] Professional-only use emphasized throughout
+
+Release:
+[ ] New app bundle uploaded
+[ ] Release notes added
+[ ] Reviewer note added
+[ ] All changes reviewed in Publishing overview
+[ ] No warnings or errors present
+
+═══════════════════════════════════════════════════════════════════════════════
+  SUMMARY OF CODE CHANGES MADE
+═══════════════════════════════════════════════════════════════════════════════
+
+Files Modified:
+1. android/app/src/main/AndroidManifest.xml
+   - Changed android:label from "MedWave Provider" to "MedX AI"
+
+2. ios/Runner/Info.plist
+   - Changed CFBundleDisplayName from "Medwave App" to "MedX AI"
+   - Changed CFBundleName from "medwave_app" to "MedX AI"
+
+3. web/manifest.json
+   - Changed name from "MedWave Provider" to "MedX AI"
+   - Changed short_name from "MedWave" to "MedX AI"
+   - Updated description with professional-only disclaimer
+
+4. pubspec.yaml
+   - Updated description with comprehensive medical disclaimers
+   - Added "FOR LICENSED HEALTHCARE PROFESSIONALS ONLY"
+   - Added explicit statement: "does NOT provide medical advice"
+   - Added requirement to consult healthcare providers
+
+5. lib/main.dart
+   - Changed MaterialApp title from "MedWave Provider" to "MedX AI" (2 instances)
+
+═══════════════════════════════════════════════════════════════════════════════
+  NEXT STEPS AFTER APPROVAL
+═══════════════════════════════════════════════════════════════════════════════
+
+Once approved:
+1. Monitor user reviews for any confusion about app name/purpose
+2. Update any external marketing materials to use "MedX AI" branding
+3. Update website/documentation if applicable
+4. Consider updating app icon if needed for better brand recognition
+
+═══════════════════════════════════════════════════════════════════════════════
+  SUPPORT CONTACTS
+═══════════════════════════════════════════════════════════════════════════════
+
+If you encounter issues during submission:
+• Google Play Console Help: https://support.google.com/googleplay/android-developer
+• Developer Policy Center: https://play.google.com/about/developer-content-policy/
+
+═══════════════════════════════════════════════════════════════════════════════
+  END OF INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════════════════
+

@@ -1,5 +1,5 @@
 name: medwave_app
-description: "MedWave Provider - FOR LICENSED HEALTHCARE PROFESSIONALS ONLY. A professional wound care documentation and practice management platform designed exclusively for qualified healthcare practitioners. This clinical workflow tool enables practitioners to document patient sessions, capture wound photos, track treatment progress, and manage their practice efficiently. All clinical decisions and medical assessments are made solely by licensed healthcare professionals using this documentation tool."
+description: "MedX AI - FOR LICENSED HEALTHCARE PROFESSIONALS ONLY. A professional wound care documentation and practice management platform designed exclusively for qualified healthcare practitioners. This clinical workflow tool enables practitioners to document patient sessions, capture wound photos, track treatment progress, and manage their practice efficiently. This app does NOT provide medical advice, diagnosis, or treatment. All clinical decisions and medical assessments are made solely by licensed healthcare professionals. Users must consult with qualified healthcare providers for all medical decisions."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.2.13+15
+version: 1.2.14+16
 
 environment:
   sdk: ^3.8.1
