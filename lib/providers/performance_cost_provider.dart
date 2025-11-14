@@ -1183,15 +1183,18 @@ class PerformanceCostProvider extends ChangeNotifier {
 
     try {
       if (kDebugMode) {
-        print('🔄 Loading campaigns with date range from split collections...');
+        print('🔄 Loading campaigns with date-filtered totals...');
         print('   - Start date: ${startDate?.toIso8601String() ?? "any"}');
         print('   - End date: ${endDate?.toIso8601String() ?? "any"}');
         print('   - Order by: $orderBy (${descending ? "desc" : "asc"})');
+        print(
+          '   ⏳ Calculating date-specific metrics using summary collection...',
+        );
       }
 
-      // Load campaigns using pre-aggregated totals from Firebase
-      // The totals were calculated by the Python script and stored in campaigns collection
-      _campaigns = await _campaignService.getCampaignsByDateRange(
+      // Load campaigns with date-filtered totals calculated on-the-fly
+      // Uses summary collection (fast, accurate, no overlap issues) with fallback to weeklyInsights
+      _campaigns = await _campaignService.getCampaignsWithDateFilteredTotals(
         startDate: startDate,
         endDate: endDate,
         limit: limit,
@@ -1213,23 +1216,32 @@ class PerformanceCostProvider extends ChangeNotifier {
         final totalLeads = _campaigns.fold(0, (sum, c) => sum + c.totalLeads);
         print('   - Total spend: \$${totalSpend.toStringAsFixed(2)}');
         print('   - Total leads: $totalLeads');
-        
+
         // Show top 3 campaigns by SPEND for verification
         if (_campaigns.isNotEmpty) {
           print('   📋 Top 3 campaigns by PROFIT (current sort):');
-          for (var i = 0; i < (_campaigns.length > 3 ? 3 : _campaigns.length); i++) {
+          for (
+            var i = 0;
+            i < (_campaigns.length > 3 ? 3 : _campaigns.length);
+            i++
+          ) {
             final c = _campaigns[i];
             print('      ${i + 1}. ${c.campaignName}');
-            print('          Spend: \$${c.totalSpend.toStringAsFixed(2)}, Profit: \$${c.totalProfit.toStringAsFixed(2)}');
+            print(
+              '          Spend: \$${c.totalSpend.toStringAsFixed(2)}, Profit: \$${c.totalProfit.toStringAsFixed(2)}',
+            );
           }
-          
+
           // Also show top 3 by SPEND
-          final bySpend = List<Campaign>.from(_campaigns)..sort((a, b) => b.totalSpend.compareTo(a.totalSpend));
+          final bySpend = List<Campaign>.from(_campaigns)
+            ..sort((a, b) => b.totalSpend.compareTo(a.totalSpend));
           print('   💰 Top 3 campaigns by SPEND:');
           for (var i = 0; i < (bySpend.length > 3 ? 3 : bySpend.length); i++) {
             final c = bySpend[i];
             print('      ${i + 1}. ${c.campaignName}');
-            print('          Spend: \$${c.totalSpend.toStringAsFixed(2)}, Profit: \$${c.totalProfit.toStringAsFixed(2)}');
+            print(
+              '          Spend: \$${c.totalSpend.toStringAsFixed(2)}, Profit: \$${c.totalProfit.toStringAsFixed(2)}',
+            );
           }
         }
       }
@@ -1249,7 +1261,7 @@ class PerformanceCostProvider extends ChangeNotifier {
   }
 
   /// Load ad sets for a campaign from split collections
-  /// Uses pre-aggregated totals from Firebase
+  /// Uses date-filtered totals from summary collection
   Future<void> loadAdSetsForCampaign(
     String campaignId, {
     String orderBy = 'totalProfit',
@@ -1259,14 +1271,17 @@ class PerformanceCostProvider extends ChangeNotifier {
       if (kDebugMode) {
         print('🔄 Loading ad sets for campaign $campaignId...');
         if (_filterStartDate != null || _filterEndDate != null) {
-          print('   📅 With date filtering: ${_filterStartDate?.toIso8601String() ?? "any"} to ${_filterEndDate?.toIso8601String() ?? "any"}');
+          print(
+            '   📅 With date filtering: ${_filterStartDate?.toIso8601String() ?? "any"} to ${_filterEndDate?.toIso8601String() ?? "any"}',
+          );
         }
       }
 
-      // Load ad sets using pre-aggregated totals from Firebase
-      // The totals were calculated by the Python script and stored in adSets collection
-      _adSets = await _adSetService.getAdSetsForCampaign(
-        campaignId,
+      // Load ad sets with date-filtered totals from summary collection
+      _adSets = await _adSetService.getAdSetsWithDateFilteredTotals(
+        campaignId: campaignId,
+        startDate: _filterStartDate,
+        endDate: _filterEndDate,
         orderBy: orderBy,
         descending: descending,
       );
@@ -1274,7 +1289,10 @@ class PerformanceCostProvider extends ChangeNotifier {
       if (kDebugMode) {
         print('✅ Loaded ${_adSets.length} ad sets');
         if (_adSets.isNotEmpty) {
-          final totalSpend = _adSets.fold(0.0, (sum, adSet) => sum + adSet.totalSpend);
+          final totalSpend = _adSets.fold(
+            0.0,
+            (sum, adSet) => sum + adSet.totalSpend,
+          );
           print('   💰 Total ad set spend: \$${totalSpend.toStringAsFixed(2)}');
         }
       }
@@ -1289,7 +1307,9 @@ class PerformanceCostProvider extends ChangeNotifier {
   }
 
   /// Load ads for an ad set from split collections
+  /// Uses date-filtered totals from summary collection
   Future<void> loadAdsForAdSet(
+    String campaignId,
     String adSetId, {
     String orderBy = 'facebookStats.spend',
     bool descending = true,
@@ -1297,10 +1317,19 @@ class PerformanceCostProvider extends ChangeNotifier {
     try {
       if (kDebugMode) {
         print('🔄 Loading ads for ad set $adSetId...');
+        if (_filterStartDate != null || _filterEndDate != null) {
+          print(
+            '   📅 With date filtering: ${_filterStartDate?.toIso8601String() ?? "any"} to ${_filterEndDate?.toIso8601String() ?? "any"}',
+          );
+        }
       }
 
-      _ads = await _adService.getAdsForAdSet(
-        adSetId,
+      // Load ads with date-filtered totals from summary collection
+      _ads = await _adService.getAdsWithDateFilteredTotals(
+        campaignId: campaignId,
+        adSetId: adSetId,
+        startDate: _filterStartDate,
+        endDate: _filterEndDate,
         orderBy: orderBy,
         descending: descending,
       );

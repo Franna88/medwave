@@ -1,5 +1,5 @@
 /// Role-based access control system for MedWave application
-/// 
+///
 /// This utility manages user roles and permissions for both practitioner
 /// and administrative functionalities within the unified MedWave app.
 
@@ -90,11 +90,19 @@ class RoleManager {
       case UserRole.countryAdmin:
         // Admin users see ONLY admin navigation items
         final List<NavigationItem> adminItems = [
-          NavigationItem('Admin Dashboard', '/admin/dashboard', 'admin_panel_settings'),
+          NavigationItem(
+            'Admin Dashboard',
+            '/admin/dashboard',
+            'admin_panel_settings',
+          ),
           NavigationItem('Provider Management', '/admin/providers', 'business'),
           NavigationItem('Provider Approvals', '/admin/approvals', 'approval'),
           NavigationItem('Analytics', '/admin/analytics', 'analytics'),
-          NavigationItem('Patient Management', '/admin/patients', 'medical_services'),
+          NavigationItem(
+            'Patient Management',
+            '/admin/patients',
+            'medical_services',
+          ),
         ];
 
         // Super admin exclusive items
@@ -105,15 +113,39 @@ class RoleManager {
               '/admin/adverts/campaigns',
               'campaign',
               subItems: [
-                NavigationSubItem('Campaigns', '/admin/adverts/campaigns', 'campaign'),
-                NavigationSubItem('Campaigns (Old)', '/admin/adverts/campaigns-old', 'history'),
-                NavigationSubItem('Timeline', '/admin/adverts/timeline', 'timeline'),
-                NavigationSubItem('Comparison', '/admin/adverts/comparison', 'compare'),
-                NavigationSubItem('Products', '/admin/adverts/products', 'inventory'),
+                NavigationSubItem(
+                  'Campaigns',
+                  '/admin/adverts/campaigns',
+                  'campaign',
+                ),
+                // NavigationSubItem('Campaigns (Old)', '/admin/adverts/campaigns-old', 'history'),
+                NavigationSubItem(
+                  'Timeline',
+                  '/admin/adverts/timeline',
+                  'timeline',
+                ),
+                NavigationSubItem(
+                  'Comparison',
+                  '/admin/adverts/comparison',
+                  'compare',
+                ),
+                NavigationSubItem(
+                  'Products',
+                  '/admin/adverts/products',
+                  'inventory',
+                ),
               ],
             ),
-            NavigationItem('Sales Performance', '/admin/sales-performance', 'trending_up'),
-            NavigationItem('Admin Management', '/admin/users', 'admin_panel_settings'),
+            NavigationItem(
+              'Sales Performance',
+              '/admin/sales-performance',
+              'trending_up',
+            ),
+            NavigationItem(
+              'Admin Management',
+              '/admin/users',
+              'admin_panel_settings',
+            ),
             NavigationItem('Report Builder', '/admin/report-builder', 'build'),
           ]);
         }
@@ -140,7 +172,7 @@ class NavigationItem {
   final List<NavigationSubItem>? subItems;
 
   NavigationItem(this.title, this.route, this.icon, {this.subItems});
-  
+
   bool get hasSubItems => subItems != null && subItems!.isNotEmpty;
 }
 

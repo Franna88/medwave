@@ -18,7 +18,8 @@ class ThreeColumnCampaignView extends StatefulWidget {
   });
 
   @override
-  State<ThreeColumnCampaignView> createState() => _ThreeColumnCampaignViewState();
+  State<ThreeColumnCampaignView> createState() =>
+      _ThreeColumnCampaignViewState();
 }
 
 class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
@@ -27,13 +28,14 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
   List<CampaignAggregate> _campaigns = [];
   List<AdSetAggregate> _adSets = [];
   List<AdPerformanceWithProduct> _ads = [];
-  
+
   // Loading states for split collections
   bool _isLoadingAdSets = false;
   bool _isLoadingAds = false;
-  
+
   // Filter states
-  String _campaignFilter = 'profit'; // profit, spend, leads, bookings, deposits, cash
+  String _campaignFilter =
+      'profit'; // profit, spend, leads, bookings, deposits, cash
   String _adSetFilter = 'profit';
   String _adsFilter = 'profit';
 
@@ -48,7 +50,8 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
     super.didUpdateWidget(oldWidget);
     if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
       // For split collections, reload if provider's filter dates changed
-      if (oldWidget.provider.filterStartDate != widget.provider.filterStartDate ||
+      if (oldWidget.provider.filterStartDate !=
+              widget.provider.filterStartDate ||
           oldWidget.provider.filterEndDate != widget.provider.filterEndDate) {
         _loadCampaigns();
       }
@@ -62,20 +65,15 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
 
   void _loadCampaigns() {
     if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
-      // NEW: Load from split collections with client-side filtering
-      // Get filtered campaigns based on the provider's date filter
-      final filteredCampaigns = widget.provider.getFilteredCampaigns(
-        startDate: widget.provider.filterStartDate,
-        endDate: widget.provider.filterEndDate,
-      );
-      
-      final campaigns = filteredCampaigns
+      // Campaigns are already date-filtered by the summary collection at service level
+      // No need for additional filtering - it would incorrectly exclude campaigns
+      // whose weekly summary data extends into the filter range
+      final campaigns = widget.provider.campaigns
           .map((c) => widget.provider.campaignToCampaignAggregate(c))
-          .where((c) => c.totalFbSpend > 0)
           .toList();
-      
+
       _sortCampaigns(campaigns);
-      
+
       setState(() {
         _campaigns = campaigns;
         _selectedCampaignId = null;
@@ -97,14 +95,18 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
       }
 
       final campaigns = widget.provider.getCampaignAggregates(widget.ads);
-      final campaignsWithSpend = campaigns.where((c) => c.totalFbSpend > 0).toList();
+      final campaignsWithSpend = campaigns
+          .where((c) => c.totalFbSpend > 0)
+          .toList();
       _sortCampaigns(campaignsWithSpend);
 
       setState(() {
         _campaigns = campaignsWithSpend;
         // Don't auto-select on load - user must click a campaign
-        if (_selectedCampaignId != null && 
-            !campaignsWithSpend.any((c) => c.campaignId == _selectedCampaignId)) {
+        if (_selectedCampaignId != null &&
+            !campaignsWithSpend.any(
+              (c) => c.campaignId == _selectedCampaignId,
+            )) {
           _selectedCampaignId = null;
           _selectedAdSetId = null;
           _adSets = [];
@@ -124,27 +126,22 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
         _ads = [];
         _isLoadingAdSets = true;
       });
-      
+
       try {
         await widget.provider.loadAdSetsForCampaign(campaignId);
-        
-        // Apply date filtering to ad sets
-        final filteredAdSets = widget.provider.getFilteredAdSets(
-          startDate: widget.provider.filterStartDate,
-          endDate: widget.provider.filterEndDate,
-        );
-        
-        final adSets = filteredAdSets
+
+        // Ad sets are already date-filtered by the summary collection at service level
+        // No need for additional filtering
+        final adSets = widget.provider.adSets
             .map((as) => widget.provider.adSetToAdSetAggregate(as))
-            .where((as) => as.totalFbSpend > 0)
             .toList();
-        
+
         _sortAdSets(adSets);
-        
+
         setState(() {
           _adSets = adSets;
           _isLoadingAdSets = false;
-          
+
           // Auto-select first ad set
           if (_adSets.isNotEmpty) {
             _selectedAdSetId = _adSets.first.adSetId;
@@ -164,15 +161,18 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
       setState(() {
         _selectedCampaignId = campaignId;
         _selectedAdSetId = null;
-        
+
         // Load ad sets for selected campaign
-        final campaign = _campaigns.firstWhere((c) => c.campaignId == campaignId);
+        final campaign = _campaigns.firstWhere(
+          (c) => c.campaignId == campaignId,
+        );
+        // Show all ad sets with activity, even $0 spend
         _adSets = widget.provider
             .getAdSetAggregates(campaign.ads)
-            .where((adSet) => adSet.campaignId == campaignId && adSet.totalFbSpend > 0)
+            .where((adSet) => adSet.campaignId == campaignId)
             .toList();
         _sortAdSets(_adSets);
-        
+
         // Auto-select first ad set
         if (_adSets.isNotEmpty) {
           _selectedAdSetId = _adSets.first.adSetId;
@@ -192,22 +192,19 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
         _ads = [];
         _isLoadingAds = true;
       });
-      
+
       try {
-        await widget.provider.loadAdsForAdSet(adSetId);
-        
-        // Apply date filtering to ads
-        final filteredAds = widget.provider.getFilteredAds(
-          startDate: widget.provider.filterStartDate,
-          endDate: widget.provider.filterEndDate,
-        );
-        
-        final ads = filteredAds
+        // Pass the selected campaign ID to load date-filtered ads
+        await widget.provider.loadAdsForAdSet(_selectedCampaignId!, adSetId);
+
+        // Ads are already date-filtered by the summary collection at service level
+        // No need for additional filtering
+        final ads = widget.provider.ads
             .map((a) => widget.provider.adToAdPerformanceWithProduct(a))
             .toList();
-        
+
         _sortAds(ads);
-        
+
         setState(() {
           _ads = ads;
           _isLoadingAds = false;
@@ -253,7 +250,9 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
         campaigns.sort((a, b) => b.totalDeposits.compareTo(a.totalDeposits));
         break;
       case 'cash':
-        campaigns.sort((a, b) => b.totalCashAmount.compareTo(a.totalCashAmount));
+        campaigns.sort(
+          (a, b) => b.totalCashAmount.compareTo(a.totalCashAmount),
+        );
         break;
     }
   }
@@ -287,19 +286,33 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
         ads.sort((a, b) => b.profit.compareTo(a.profit));
         break;
       case 'spend':
-        ads.sort((a, b) => b.facebookStats.spend.compareTo(a.facebookStats.spend));
+        ads.sort(
+          (a, b) => b.facebookStats.spend.compareTo(a.facebookStats.spend),
+        );
         break;
       case 'leads':
-        ads.sort((a, b) => (b.ghlStats?.leads ?? 0).compareTo(a.ghlStats?.leads ?? 0));
+        ads.sort(
+          (a, b) => (b.ghlStats?.leads ?? 0).compareTo(a.ghlStats?.leads ?? 0),
+        );
         break;
       case 'bookings':
-        ads.sort((a, b) => (b.ghlStats?.bookings ?? 0).compareTo(a.ghlStats?.bookings ?? 0));
+        ads.sort(
+          (a, b) =>
+              (b.ghlStats?.bookings ?? 0).compareTo(a.ghlStats?.bookings ?? 0),
+        );
         break;
       case 'deposits':
-        ads.sort((a, b) => (b.ghlStats?.deposits ?? 0).compareTo(a.ghlStats?.deposits ?? 0));
+        ads.sort(
+          (a, b) =>
+              (b.ghlStats?.deposits ?? 0).compareTo(a.ghlStats?.deposits ?? 0),
+        );
         break;
       case 'cash':
-        ads.sort((a, b) => (b.ghlStats?.cashAmount ?? 0).compareTo(a.ghlStats?.cashAmount ?? 0));
+        ads.sort(
+          (a, b) => (b.ghlStats?.cashAmount ?? 0).compareTo(
+            a.ghlStats?.cashAmount ?? 0,
+          ),
+        );
         break;
     }
   }
@@ -314,24 +327,15 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Left Column - Campaigns
-        Expanded(
-          flex: 35,
-          child: _buildCampaignsColumn(),
-        ),
+        Expanded(flex: 35, child: _buildCampaignsColumn()),
         const SizedBox(width: 16),
-        
+
         // Middle Column - Ad Sets
-        Expanded(
-          flex: 32,
-          child: _buildAdSetsColumn(),
-        ),
+        Expanded(flex: 32, child: _buildAdSetsColumn()),
         const SizedBox(width: 16),
-        
+
         // Right Column - Ads
-        Expanded(
-          flex: 33,
-          child: _buildAdsColumn(),
-        ),
+        Expanded(flex: 33, child: _buildAdsColumn()),
       ],
     );
   }
@@ -359,9 +363,15 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
 
   Widget _buildCampaignsColumn() {
     // Calculate totals for all campaigns
-    final totalSpend = _campaigns.fold<double>(0, (sum, c) => sum + c.totalFbSpend);
-    final totalProfit = _campaigns.fold<double>(0, (sum, c) => sum + c.totalProfit);
-    
+    final totalSpend = _campaigns.fold<double>(
+      0,
+      (sum, c) => sum + c.totalFbSpend,
+    );
+    final totalProfit = _campaigns.fold<double>(
+      0,
+      (sum, c) => sum + c.totalProfit,
+    );
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -382,14 +392,20 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withOpacity(0.05),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.campaign, size: 20, color: AppTheme.primaryColor),
+                    Icon(
+                      Icons.campaign,
+                      size: 20,
+                      color: AppTheme.primaryColor,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Campaigns',
@@ -424,12 +440,19 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildHeaderMetric('Total Spend', '\$${totalSpend.toStringAsFixed(0)}', Colors.blue),
+                      child: _buildHeaderMetric(
+                        'Total Spend',
+                        '\$${totalSpend.toStringAsFixed(0)}',
+                        Colors.blue,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildHeaderMetric('Total Profit', '\$${totalProfit.toStringAsFixed(0)}', 
-                          totalProfit >= 0 ? Colors.green : Colors.red),
+                      child: _buildHeaderMetric(
+                        'Total Profit',
+                        '\$${totalProfit.toStringAsFixed(0)}',
+                        totalProfit >= 0 ? Colors.green : Colors.red,
+                      ),
                     ),
                   ],
                 ),
@@ -455,9 +478,15 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
 
   Widget _buildAdSetsColumn() {
     // Calculate totals for selected campaign's ad sets
-    final totalSpend = _adSets.fold<double>(0, (sum, a) => sum + a.totalFbSpend);
-    final totalProfit = _adSets.fold<double>(0, (sum, a) => sum + a.totalProfit);
-    
+    final totalSpend = _adSets.fold<double>(
+      0,
+      (sum, a) => sum + a.totalFbSpend,
+    );
+    final totalProfit = _adSets.fold<double>(
+      0,
+      (sum, a) => sum + a.totalProfit,
+    );
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -478,14 +507,20 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.orange.withOpacity(0.05),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.folder_outlined, size: 20, color: Colors.orange[700]),
+                    Icon(
+                      Icons.folder_outlined,
+                      size: 20,
+                      color: Colors.orange[700],
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Ad Sets',
@@ -523,12 +558,19 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildHeaderMetric('Total Spend', '\$${totalSpend.toStringAsFixed(0)}', Colors.blue),
+                        child: _buildHeaderMetric(
+                          'Total Spend',
+                          '\$${totalSpend.toStringAsFixed(0)}',
+                          Colors.blue,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _buildHeaderMetric('Total Profit', '\$${totalProfit.toStringAsFixed(0)}', 
-                            totalProfit >= 0 ? Colors.green : Colors.red),
+                        child: _buildHeaderMetric(
+                          'Total Profit',
+                          '\$${totalProfit.toStringAsFixed(0)}',
+                          totalProfit >= 0 ? Colors.green : Colors.red,
+                        ),
                       ),
                     ],
                   ),
@@ -541,18 +583,18 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
             child: _selectedCampaignId == null
                 ? _buildColumnEmptyState('Select a campaign to view ad sets')
                 : _isLoadingAdSets
-                    ? _buildLoadingIndicator()
-                    : _adSets.isEmpty
-                        ? _buildColumnEmptyState('No ad sets found')
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(12),
-                            itemCount: _adSets.length,
-                            itemBuilder: (context, index) {
-                              final adSet = _adSets[index];
-                              final isSelected = _selectedAdSetId == adSet.adSetId;
-                              return _buildAdSetCard(adSet, isSelected);
-                            },
-                          ),
+                ? _buildLoadingIndicator()
+                : _adSets.isEmpty
+                ? _buildColumnEmptyState('No ad sets found')
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _adSets.length,
+                    itemBuilder: (context, index) {
+                      final adSet = _adSets[index];
+                      final isSelected = _selectedAdSetId == adSet.adSetId;
+                      return _buildAdSetCard(adSet, isSelected);
+                    },
+                  ),
           ),
         ],
       ),
@@ -561,9 +603,12 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
 
   Widget _buildAdsColumn() {
     // Calculate totals for selected ad set's ads
-    final totalSpend = _ads.fold<double>(0, (sum, a) => sum + a.facebookStats.spend);
+    final totalSpend = _ads.fold<double>(
+      0,
+      (sum, a) => sum + a.facebookStats.spend,
+    );
     final totalProfit = _ads.fold<double>(0, (sum, a) => sum + a.profit);
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -584,7 +629,9 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.purple.withOpacity(0.05),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -629,12 +676,19 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildHeaderMetric('Total Spend', '\$${totalSpend.toStringAsFixed(0)}', Colors.blue),
+                        child: _buildHeaderMetric(
+                          'Total Spend',
+                          '\$${totalSpend.toStringAsFixed(0)}',
+                          Colors.blue,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _buildHeaderMetric('Total Profit', '\$${totalProfit.toStringAsFixed(0)}', 
-                            totalProfit >= 0 ? Colors.green : Colors.red),
+                        child: _buildHeaderMetric(
+                          'Total Profit',
+                          '\$${totalProfit.toStringAsFixed(0)}',
+                          totalProfit >= 0 ? Colors.green : Colors.red,
+                        ),
                       ),
                     ],
                   ),
@@ -647,17 +701,17 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
             child: _selectedAdSetId == null
                 ? _buildColumnEmptyState('Select an ad set to view ads')
                 : _isLoadingAds
-                    ? _buildLoadingIndicator()
-                    : _ads.isEmpty
-                        ? _buildColumnEmptyState('No ads found')
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(12),
-                            itemCount: _ads.length,
-                            itemBuilder: (context, index) {
-                              final ad = _ads[index];
-                              return _buildAdCard(ad);
-                            },
-                          ),
+                ? _buildLoadingIndicator()
+                : _ads.isEmpty
+                ? _buildColumnEmptyState('No ads found')
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _ads.length,
+                    itemBuilder: (context, index) {
+                      final ad = _ads[index];
+                      return _buildAdCard(ad);
+                    },
+                  ),
           ),
         ],
       ),
@@ -671,10 +725,7 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[500],
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey[500]),
         ),
       ),
     );
@@ -695,7 +746,7 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: isSelected 
+          color: isSelected
               ? AppTheme.primaryColor.withOpacity(0.05)
               : Colors.white,
           borderRadius: BorderRadius.circular(8),
@@ -703,8 +754,8 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
             color: isSelected
                 ? AppTheme.primaryColor
                 : campaign.isProfitable
-                    ? Colors.green.withOpacity(0.3)
-                    : Colors.red.withOpacity(0.3),
+                ? Colors.green.withOpacity(0.3)
+                : Colors.red.withOpacity(0.3),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
@@ -738,7 +789,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: _getStatusColor(campaign.status).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -757,26 +811,55 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
               const SizedBox(height: 4),
               Text(
                 '${campaign.totalAds} Ads • ${campaign.totalAdSets} Ad Sets',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
               ),
               const SizedBox(height: 12),
               // Stats - 8 metrics in 2 rows
               _buildMetricsGrid([
-                _MetricData('FB Spend', '\$${campaign.totalFbSpend.toStringAsFixed(0)}', Colors.blue),
-                _MetricData('Leads', campaign.totalLeads.toString(), Colors.purple),
-                _MetricData('Bookings', campaign.totalBookings.toString(), Colors.orange),
-                _MetricData('Deposits', campaign.totalDeposits.toString(), Colors.teal),
+                _MetricData(
+                  'FB Spend',
+                  '\$${campaign.totalFbSpend.toStringAsFixed(0)}',
+                  Colors.blue,
+                ),
+                _MetricData(
+                  'Leads',
+                  campaign.totalLeads.toString(),
+                  Colors.purple,
+                ),
+                _MetricData(
+                  'Bookings',
+                  campaign.totalBookings.toString(),
+                  Colors.orange,
+                ),
+                _MetricData(
+                  'Deposits',
+                  campaign.totalDeposits.toString(),
+                  Colors.teal,
+                ),
               ]),
               const SizedBox(height: 8),
               _buildMetricsGrid([
-                _MetricData('Cash', '\$${campaign.totalCashAmount.toStringAsFixed(0)}', Colors.green),
-                _MetricData('CPL', '\$${campaign.cpl.toStringAsFixed(2)}', Colors.indigo),
-                _MetricData('CPB', '\$${campaign.cpb.toStringAsFixed(2)}', Colors.pink),
-                _MetricData('Profit', '\$${campaign.totalProfit.toStringAsFixed(0)}', 
-                    campaign.isProfitable ? Colors.green : Colors.red, bold: true),
+                _MetricData(
+                  'Cash',
+                  '\$${campaign.totalCashAmount.toStringAsFixed(0)}',
+                  Colors.green,
+                ),
+                _MetricData(
+                  'CPL',
+                  '\$${campaign.cpl.toStringAsFixed(2)}',
+                  Colors.indigo,
+                ),
+                _MetricData(
+                  'CPB',
+                  '\$${campaign.cpb.toStringAsFixed(2)}',
+                  Colors.pink,
+                ),
+                _MetricData(
+                  'Profit',
+                  '\$${campaign.totalProfit.toStringAsFixed(0)}',
+                  campaign.isProfitable ? Colors.green : Colors.red,
+                  bold: true,
+                ),
               ]),
             ],
           ),
@@ -791,16 +874,14 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: isSelected 
-              ? Colors.orange.withOpacity(0.05)
-              : Colors.white,
+          color: isSelected ? Colors.orange.withOpacity(0.05) : Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected
                 ? Colors.orange
                 : adSet.isProfitable
-                    ? Colors.green.withOpacity(0.3)
-                    : Colors.red.withOpacity(0.3),
+                ? Colors.green.withOpacity(0.3)
+                : Colors.red.withOpacity(0.3),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
@@ -837,26 +918,55 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
               const SizedBox(height: 4),
               Text(
                 '${adSet.totalAds} Ads',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
               ),
               const SizedBox(height: 12),
               // Stats - 8 metrics in 2 rows
               _buildMetricsGrid([
-                _MetricData('FB Spend', '\$${adSet.totalFbSpend.toStringAsFixed(0)}', Colors.blue),
-                _MetricData('Leads', adSet.totalLeads.toString(), Colors.purple),
-                _MetricData('Bookings', adSet.totalBookings.toString(), Colors.orange),
-                _MetricData('Deposits', adSet.totalDeposits.toString(), Colors.teal),
+                _MetricData(
+                  'FB Spend',
+                  '\$${adSet.totalFbSpend.toStringAsFixed(0)}',
+                  Colors.blue,
+                ),
+                _MetricData(
+                  'Leads',
+                  adSet.totalLeads.toString(),
+                  Colors.purple,
+                ),
+                _MetricData(
+                  'Bookings',
+                  adSet.totalBookings.toString(),
+                  Colors.orange,
+                ),
+                _MetricData(
+                  'Deposits',
+                  adSet.totalDeposits.toString(),
+                  Colors.teal,
+                ),
               ]),
               const SizedBox(height: 8),
               _buildMetricsGrid([
-                _MetricData('Cash', '\$${adSet.totalCashAmount.toStringAsFixed(0)}', Colors.green),
-                _MetricData('CPL', '\$${adSet.cpl.toStringAsFixed(2)}', Colors.indigo),
-                _MetricData('CPB', '\$${adSet.cpb.toStringAsFixed(2)}', Colors.pink),
-                _MetricData('Profit', '\$${adSet.totalProfit.toStringAsFixed(0)}', 
-                    adSet.isProfitable ? Colors.green : Colors.red, bold: true),
+                _MetricData(
+                  'Cash',
+                  '\$${adSet.totalCashAmount.toStringAsFixed(0)}',
+                  Colors.green,
+                ),
+                _MetricData(
+                  'CPL',
+                  '\$${adSet.cpl.toStringAsFixed(2)}',
+                  Colors.indigo,
+                ),
+                _MetricData(
+                  'CPB',
+                  '\$${adSet.cpb.toStringAsFixed(2)}',
+                  Colors.pink,
+                ),
+                _MetricData(
+                  'Profit',
+                  '\$${adSet.totalProfit.toStringAsFixed(0)}',
+                  adSet.isProfitable ? Colors.green : Colors.red,
+                  bold: true,
+                ),
               ]),
             ],
           ),
@@ -885,28 +995,53 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
             // Ad name
             Text(
               ad.adName,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 12),
             // Stats - 8 metrics in 2 rows
             _buildMetricsGrid([
-              _MetricData('FB Spend', '\$${ad.facebookStats.spend.toStringAsFixed(0)}', Colors.blue),
-              _MetricData('Leads', (ad.ghlStats?.leads ?? 0).toString(), Colors.purple),
-              _MetricData('Bookings', (ad.ghlStats?.bookings ?? 0).toString(), Colors.orange),
-              _MetricData('Deposits', (ad.ghlStats?.deposits ?? 0).toString(), Colors.teal),
+              _MetricData(
+                'FB Spend',
+                '\$${ad.facebookStats.spend.toStringAsFixed(0)}',
+                Colors.blue,
+              ),
+              _MetricData(
+                'Leads',
+                (ad.ghlStats?.leads ?? 0).toString(),
+                Colors.purple,
+              ),
+              _MetricData(
+                'Bookings',
+                (ad.ghlStats?.bookings ?? 0).toString(),
+                Colors.orange,
+              ),
+              _MetricData(
+                'Deposits',
+                (ad.ghlStats?.deposits ?? 0).toString(),
+                Colors.teal,
+              ),
             ]),
             const SizedBox(height: 8),
             _buildMetricsGrid([
-              _MetricData('Cash', '\$${(ad.ghlStats?.cashAmount ?? 0).toStringAsFixed(0)}', Colors.green),
-              _MetricData('CPL', '\$${ad.cpl.toStringAsFixed(2)}', Colors.indigo),
+              _MetricData(
+                'Cash',
+                '\$${(ad.ghlStats?.cashAmount ?? 0).toStringAsFixed(0)}',
+                Colors.green,
+              ),
+              _MetricData(
+                'CPL',
+                '\$${ad.cpl.toStringAsFixed(2)}',
+                Colors.indigo,
+              ),
               _MetricData('CPB', '\$${ad.cpb.toStringAsFixed(2)}', Colors.pink),
-              _MetricData('Profit', '\$${ad.profit.toStringAsFixed(0)}', 
-                  ad.profit >= 0 ? Colors.green : Colors.red, bold: true),
+              _MetricData(
+                'Profit',
+                '\$${ad.profit.toStringAsFixed(0)}',
+                ad.profit >= 0 ? Colors.green : Colors.red,
+                bold: true,
+              ),
             ]),
           ],
         ),
@@ -916,13 +1051,27 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
 
   Widget _buildMetricsGrid(List<_MetricData> metrics) {
     return Row(
-      children: metrics.map((metric) => Expanded(
-        child: _buildMetric(metric.label, metric.value, metric.color, bold: metric.bold),
-      )).toList(),
+      children: metrics
+          .map(
+            (metric) => Expanded(
+              child: _buildMetric(
+                metric.label,
+                metric.value,
+                metric.color,
+                bold: metric.bold,
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 
-  Widget _buildMetric(String label, String value, Color color, {bool bold = false}) {
+  Widget _buildMetric(
+    String label,
+    String value,
+    Color color, {
+    bool bold = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1031,4 +1180,3 @@ class _MetricData {
 
   _MetricData(this.label, this.value, this.color, {this.bold = false});
 }
-

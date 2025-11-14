@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/comparison/comparison_models.dart';
 import '../../../models/comparison/comparison_list_models.dart';
-import '../../../models/performance/campaign.dart';
 import '../../../services/comparison_service.dart';
-import '../../../services/firebase/campaign_service.dart';
 import '../../../theme/app_theme.dart';
 
 /// Campaign Comparison Screen - Drill-down analysis
@@ -19,126 +17,47 @@ class AdminAdvertsComparisonScreen extends StatefulWidget {
 class _AdminAdvertsComparisonScreenState
     extends State<AdminAdvertsComparisonScreen> {
   final ComparisonService _comparisonService = ComparisonService();
-  final CampaignService _campaignService = CampaignService();
 
   // State
-  String _selectedMonth = 'thismonth';
-  TimePeriod _selectedTimePeriod = TimePeriod.LAST_7_DAYS;
+  TimePeriod _selectedTimePeriod = TimePeriod.THIS_MONTH;
   bool _isLoading = false;
   String? _error;
 
-  // Available months for filter
-  List<String> _availableMonths = [];
-
-  // Campaigns data
-  List<Campaign> _campaigns = [];
+  // Comparison data
+  List<CampaignComparison> _campaignComparisons = [];
 
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
-  }
-
-  Future<void> _loadInitialData() async {
-    await _loadAvailableMonths();
-    await _loadCampaignsForMonth();
-  }
-
-  Future<void> _loadAvailableMonths() async {
-    // Generate last 12 months for the filter
-    final now = DateTime.now();
-    final months = <String>[];
-
-    for (int i = 0; i < 12; i++) {
-      final date = DateTime(now.year, now.month - i, 1);
-      final monthStr = '${date.year}-${date.month.toString().padLeft(2, '0')}';
-      months.add(monthStr);
-    }
-
-    setState(() {
-      _availableMonths = months;
+    // Always load THIS_MONTH on initial page load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadComparisons();
     });
   }
 
-  Future<void> _loadCampaignsForMonth() async {
+  Future<void> _loadComparisons() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      List<Campaign> campaigns;
-      final dateRange = _calculateDateRangeForMonth(_selectedMonth);
+      print('🔄 Loading campaign comparisons for $_selectedTimePeriod...');
 
-      print('🔄 Loading campaigns with date range from split collections...');
-      print('   - Month filter: $_selectedMonth');
-      print('   - Start date: ${dateRange['start']?.toIso8601String()}');
-      print('   - End date: ${dateRange['end']?.toIso8601String()}');
-      print('   - Order by: totalProfit (desc)');
+      final comparisons = await _comparisonService.getAllCampaignsComparison(
+        _selectedTimePeriod,
+      );
 
-      if (_selectedMonth == 'thismonth') {
-        // Try monthlyTotals first for current month
-        final now = DateTime.now();
-        final currentMonth =
-            '${now.year}-${now.month.toString().padLeft(2, '0')}';
-
-        campaigns = await _campaignService.getCampaignsWithMonthTotals(
-          month: currentMonth,
-          limit: 100,
-          orderBy: 'lastUpdated',
-          descending: true,
-        );
-
-        // If no campaigns with monthlyTotals, fall back to date range query
-        if (campaigns.isEmpty) {
-          campaigns = await _campaignService.getCampaignsByDateRange(
-            startDate: dateRange['start'],
-            endDate: dateRange['end'],
-            limit: 100,
-            orderBy: 'lastUpdated',
-            descending: true,
-          );
-        }
-      } else if (_availableMonths.contains(_selectedMonth)) {
-        // Try monthlyTotals first for specific month
-        campaigns = await _campaignService.getCampaignsWithMonthTotals(
-          month: _selectedMonth,
-          limit: 100,
-          orderBy: 'lastUpdated',
-          descending: true,
-        );
-
-        // If no campaigns with monthlyTotals, fall back to date range query
-        if (campaigns.isEmpty) {
-          campaigns = await _campaignService.getCampaignsByDateRange(
-            startDate: dateRange['start'],
-            endDate: dateRange['end'],
-            limit: 100,
-            orderBy: 'lastUpdated',
-            descending: true,
-          );
-        }
-      } else {
-        // For 'allmonths' or unknown filters, use date range
-        campaigns = await _campaignService.getCampaignsByDateRange(
-          startDate: dateRange['start'],
-          endDate: dateRange['end'],
-          limit: 100,
-          orderBy: 'lastUpdated',
-          descending: true,
-        );
-      }
-
-      print('✅ Loaded ${campaigns.length} campaigns from split collections');
+      print('✅ Loaded ${comparisons.length} campaign comparisons');
 
       if (!mounted) return;
 
       setState(() {
-        _campaigns = campaigns;
+        _campaignComparisons = comparisons;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading campaigns: $e');
+      print('Error loading comparisons: $e');
       if (!mounted) return;
       setState(() {
         _error = e.toString();
@@ -147,72 +66,21 @@ class _AdminAdvertsComparisonScreenState
     }
   }
 
-  /// Calculate date range based on month filter
-  Map<String, DateTime?> _calculateDateRangeForMonth(String monthFilter) {
-    final now = DateTime.now();
-    DateTime? baseStart;
-    DateTime? baseEnd;
-
-    if (monthFilter == 'thismonth') {
-      baseStart = DateTime(now.year, now.month, 1);
-      baseEnd = DateTime(
-        now.year,
-        now.month + 1,
-        1,
-      ).subtract(const Duration(seconds: 1));
-    } else if (_availableMonths.contains(monthFilter)) {
-      // Parse specific month (format: "2025-11")
-      final parts = monthFilter.split('-');
-      if (parts.length == 2) {
-        final year = int.tryParse(parts[0]);
-        final month = int.tryParse(parts[1]);
-        if (year != null && month != null) {
-          baseStart = DateTime(year, month, 1);
-          baseEnd = DateTime(
-            year,
-            month + 1,
-            1,
-          ).subtract(const Duration(seconds: 1));
-        }
-      }
-    }
-
-    // Default to current month if parsing failed
-    if (baseStart == null || baseEnd == null) {
-      baseStart = DateTime(now.year, now.month, 1);
-      baseEnd = DateTime(
-        now.year,
-        now.month + 1,
-        1,
-      ).subtract(const Duration(seconds: 1));
-    }
-
-    return {'start': baseStart, 'end': baseEnd};
-  }
-
-  void _onMonthChanged(String? newMonth) {
-    if (newMonth != null && newMonth != _selectedMonth) {
-      setState(() {
-        _selectedMonth = newMonth;
-      });
-      _loadCampaignsForMonth();
-    }
-  }
-
   void _onTimePeriodChanged(TimePeriod? newPeriod) {
     if (newPeriod != null && newPeriod != _selectedTimePeriod) {
       setState(() {
         _selectedTimePeriod = newPeriod;
       });
+      _loadComparisons();
     }
   }
 
-  void _openCampaignModal(Campaign campaign) {
+  void _openCampaignModal(CampaignComparison campaignComparison) {
     showDialog(
       context: context,
       builder: (context) => _DrillDownModal(
-        campaignId: campaign.campaignId,
-        campaignName: campaign.campaignName,
+        campaignId: campaignComparison.campaignId,
+        campaignName: campaignComparison.campaignName,
         timePeriod: _selectedTimePeriod,
         comparisonService: _comparisonService,
       ),
@@ -232,7 +100,7 @@ class _AdminAdvertsComparisonScreenState
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadCampaignsForMonth,
+            onPressed: _loadComparisons,
             tooltip: 'Refresh',
           ),
         ],
@@ -245,7 +113,7 @@ class _AdminAdvertsComparisonScreenState
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
                 ? _buildErrorState()
-                : _campaigns.isEmpty
+                : _campaignComparisons.isEmpty
                 ? _buildNoDataState()
                 : _buildCampaignGrid(),
           ),
@@ -255,23 +123,35 @@ class _AdminAdvertsComparisonScreenState
   }
 
   Widget _buildHeader() {
+    final dateRanges = TimePeriodCalculator.calculateDateRanges(
+      _selectedTimePeriod,
+    );
+    final currentRange = TimePeriodCalculator.formatDateRange(
+      dateRanges['currentStart']!,
+      dateRanges['currentEnd']!,
+    );
+    final previousRange = TimePeriodCalculator.formatDateRange(
+      dateRanges['previousStart']!,
+      dateRanges['previousEnd']!,
+    );
+
     return Container(
       padding: const EdgeInsets.all(16),
       color: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Selected month indicator
+          // Time period indicator
           Row(
             children: [
               Icon(
-                Icons.calendar_today,
+                Icons.compare_arrows,
                 size: 20,
                 color: AppTheme.primaryColor,
               ),
               const SizedBox(width: 8),
               Text(
-                'Viewing: ${_getSelectedMonthDisplay()}',
+                '${_selectedTimePeriod.displayName}',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -280,173 +160,67 @@ class _AdminAdvertsComparisonScreenState
               ),
               const Spacer(),
               Text(
-                '${_campaigns.length} campaigns',
+                '${_campaignComparisons.length} campaigns',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          // Date ranges display
           Row(
             children: [
-              // Month filter
               Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedMonth,
-                  decoration: const InputDecoration(
-                    labelText: 'Select Month',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'thismonth',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.today,
-                            size: 16,
-                            color: AppTheme.primaryColor,
-                          ),
-                          const SizedBox(width: 8),
-                          Text('This Month (${_getCurrentMonthName()})'),
-                        ],
-                      ),
-                    ),
-                    ..._availableMonths.map((month) {
-                      return DropdownMenuItem(
-                        value: month,
-                        child: Text(_formatMonthLabel(month)),
-                      );
-                    }),
-                  ],
-                  onChanged: _onMonthChanged,
+                  child: Text(
+                    'Previous: $previousRange',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
-              // Period toggle
+              const SizedBox(width: 8),
               Expanded(
-                flex: 2,
-                child: SegmentedButton<TimePeriod>(
-                  segments: const [
-                    ButtonSegment(
-                      value: TimePeriod.LAST_7_DAYS,
-                      label: Text('Last 7 Days'),
-                      icon: Icon(Icons.calendar_view_week),
-                    ),
-                    ButtonSegment(
-                      value: TimePeriod.LAST_30_DAYS,
-                      label: Text('Last 30 Days'),
-                      icon: Icon(Icons.calendar_month),
-                    ),
-                  ],
-                  selected: {_selectedTimePeriod},
-                  onSelectionChanged: (Set<TimePeriod> newSelection) {
-                    _onTimePeriodChanged(newSelection.first);
-                  },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Current: $currentRange',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                  ),
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          // Period toggle
+          SegmentedButton<TimePeriod>(
+            segments: const [
+              ButtonSegment(
+                value: TimePeriod.THIS_WEEK,
+                label: Text('This Week vs Last Week'),
+                icon: Icon(Icons.calendar_view_week),
+              ),
+              ButtonSegment(
+                value: TimePeriod.THIS_MONTH,
+                label: Text('This Month vs Last Month'),
+                icon: Icon(Icons.calendar_month),
+              ),
+            ],
+            selected: {_selectedTimePeriod},
+            onSelectionChanged: (Set<TimePeriod> newSelection) {
+              _onTimePeriodChanged(newSelection.first);
+            },
+          ),
         ],
       ),
     );
-  }
-
-  String _getCurrentMonthName() {
-    final now = DateTime.now();
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[now.month - 1];
-  }
-
-  String _getSelectedMonthDisplay() {
-    if (_selectedMonth == 'thismonth') {
-      final now = DateTime.now();
-      const months = [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-      ];
-      return '${months[now.month - 1]} ${now.year}';
-    } else {
-      try {
-        final parts = _selectedMonth.split('-');
-        if (parts.length == 2) {
-          final year = parts[0];
-          final monthNum = int.parse(parts[1]);
-          const months = [
-            'January',
-            'February',
-            'March',
-            'April',
-            'May',
-            'June',
-            'July',
-            'August',
-            'September',
-            'October',
-            'November',
-            'December',
-          ];
-          return '${months[monthNum - 1]} $year';
-        }
-      } catch (e) {
-        // Fall back
-      }
-    }
-    return _selectedMonth;
-  }
-
-  String _formatMonthLabel(String month) {
-    try {
-      final parts = month.split('-');
-      if (parts.length == 2) {
-        final year = parts[0];
-        final monthNum = int.parse(parts[1]);
-        const months = [
-          'Jan',
-          'Feb',
-          'Mar',
-          'Apr',
-          'May',
-          'Jun',
-          'Jul',
-          'Aug',
-          'Sep',
-          'Oct',
-          'Nov',
-          'Dec',
-        ];
-        return '${months[monthNum - 1]} $year';
-      }
-    } catch (e) {
-      // Fall back to original
-    }
-    return month;
   }
 
   Widget _buildCampaignGrid() {
@@ -458,19 +232,24 @@ class _AdminAdvertsComparisonScreenState
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
-      itemCount: _campaigns.length,
+      itemCount: _campaignComparisons.length,
       itemBuilder: (context, index) {
-        final campaign = _campaigns[index];
-        return _buildCampaignCard(campaign);
+        final campaignComparison = _campaignComparisons[index];
+        return _buildCampaignCard(campaignComparison);
       },
     );
   }
 
-  Widget _buildCampaignCard(Campaign campaign) {
+  Widget _buildCampaignCard(CampaignComparison campaignComparison) {
+    final comparison = campaignComparison.comparison;
+    final profitChange = campaignComparison.profitChange;
+    final isPositive = profitChange >= 0;
+    final profitColor = isPositive ? Colors.green : Colors.red;
+
     return Card(
       elevation: 2,
       child: InkWell(
-        onTap: () => _openCampaignModal(campaign),
+        onTap: () => _openCampaignModal(campaignComparison),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -479,60 +258,73 @@ class _AdminAdvertsComparisonScreenState
             children: [
               // Campaign name
               Text(
-                campaign.campaignName,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                campaignComparison.campaignName,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15, // Reduced from 16 (titleMedium default)
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
-              // Status badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getStatusColor(campaign.status).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  campaign.status,
-                  style: TextStyle(
-                    color: _getStatusColor(campaign.status),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              // Metrics preview
+              const SizedBox(height: 8),
+              // Comparison preview
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildMetricPreview(
-                    'Spend',
-                    '\$${campaign.totalSpend.toStringAsFixed(2)}',
-                    Icons.payments,
+                  Expanded(
+                    child: _buildMetricPreview(
+                      'Previous Spend',
+                      '\$${comparison.dataset1.getMetric('totalSpend').toStringAsFixed(0)}',
+                      Icons.arrow_back,
+                      Colors.blue,
+                    ),
                   ),
-                  _buildMetricPreview(
-                    'Leads',
-                    campaign.totalLeads.toString(),
-                    Icons.people,
-                  ),
-                  _buildMetricPreview(
-                    'ROI',
-                    '${campaign.roi.toStringAsFixed(1)}%',
-                    Icons.trending_up,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildMetricPreview(
+                      'Current Spend',
+                      '\$${comparison.dataset2.getMetric('totalSpend').toStringAsFixed(0)}',
+                      Icons.arrow_forward,
+                      Colors.green,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
+              // Profit change indicator
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: profitColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      isPositive ? Icons.trending_up : Icons.trending_down,
+                      size: 16,
+                      color: profitColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Profit: ${profitChange.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        color: profitColor,
+                        fontSize: 11, // Reduced from 12
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
               // Compare button
               Center(
                 child: Text(
-                  'Click to compare',
+                  'Click to view details',
                   style: TextStyle(
                     color: AppTheme.primaryColor,
-                    fontSize: 12,
+                    fontSize: 11, // Reduced from 12
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -544,31 +336,34 @@ class _AdminAdvertsComparisonScreenState
     );
   }
 
-  Widget _buildMetricPreview(String label, String value, IconData icon) {
+  Widget _buildMetricPreview(
+    String label,
+    String value,
+    IconData icon, [
+    Color? color,
+  ]) {
     return Column(
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
+        Icon(icon, size: 16, color: color ?? Colors.grey[600]),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 13, // Reduced from 14
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
         ),
-        Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            color: Colors.grey[600],
+          ), // Reduced from 10
+          textAlign: TextAlign.center,
+        ),
       ],
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return Colors.green;
-      case 'paused':
-        return Colors.orange;
-      case 'archived':
-        return Colors.grey;
-      default:
-        return Colors.blue;
-    }
   }
 
   Widget _buildErrorState() {
@@ -590,7 +385,7 @@ class _AdminAdvertsComparisonScreenState
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: _loadCampaignsForMonth,
+            onPressed: _loadComparisons,
             child: const Text('Retry'),
           ),
         ],
@@ -662,7 +457,7 @@ class _DrillDownModalState extends State<_DrillDownModal> {
   bool _isLoading = false;
   String? _error;
 
-  _DrillDownModalState() : _timePeriod = TimePeriod.LAST_7_DAYS;
+  _DrillDownModalState() : _timePeriod = TimePeriod.THIS_WEEK;
 
   @override
   void initState() {
@@ -704,7 +499,8 @@ class _DrillDownModalState extends State<_DrillDownModal> {
         setState(() {
           _campaignComparison = null;
           _adSetComparisons = null;
-          _error = 'This Campaign does not have stats for the last 7 days. Please compare last 30 days.'; 
+          _error =
+              'This Campaign does not have stats for the selected time period. Please try a different period.';
           _isLoading = false;
         });
       } else {
@@ -970,12 +766,12 @@ class _DrillDownModalState extends State<_DrillDownModal> {
             ),
             segments: const [
               ButtonSegment(
-                value: TimePeriod.LAST_7_DAYS,
-                label: Text('Last 7 Days'),
+                value: TimePeriod.THIS_WEEK,
+                label: Text('This Week vs Last Week'),
               ),
               ButtonSegment(
-                value: TimePeriod.LAST_30_DAYS,
-                label: Text('Last 30 Days'),
+                value: TimePeriod.THIS_MONTH,
+                label: Text('This Month vs Last Month'),
               ),
             ],
             selected: {_timePeriod},
@@ -1231,12 +1027,53 @@ class _DrillDownModalState extends State<_DrillDownModal> {
 
   Widget _buildMetricChip(MetricComparison metric) {
     final changePercent = metric.changePercent;
-    final isPositive = changePercent >= 0;
-    final isGoodChange =
-        (isPositive && metric.isGoodWhenUp) ||
-        (!isPositive && !metric.isGoodWhenUp);
+    final absChangePercent = changePercent.abs();
 
-    final color = isGoodChange ? Colors.green : Colors.red;
+    // Check if change is effectively 0% (within 0.1% threshold)
+    final isZeroChange = absChangePercent < 0.1;
+
+    Color color;
+    Widget changeIndicator;
+
+    if (isZeroChange) {
+      color = Colors.grey;
+      changeIndicator = Text(
+        '0.0%',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      );
+    } else {
+      // Non-zero change: determine if good or bad
+      final isPositive = changePercent >= 0;
+      final isGoodChange =
+          (isPositive && metric.isGoodWhenUp) ||
+          (!isPositive && !metric.isGoodWhenUp);
+
+      color = isGoodChange ? Colors.green : Colors.red;
+
+      changeIndicator = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${absChangePercent.toStringAsFixed(1)}%',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1253,25 +1090,7 @@ class _DrillDownModalState extends State<_DrillDownModal> {
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-                size: 16,
-                color: color,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${changePercent.abs().toStringAsFixed(1)}%',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
+          changeIndicator,
           const SizedBox(height: 2),
           Text(
             '${metric.previousValue.toStringAsFixed(1)} → ${metric.currentValue.toStringAsFixed(1)}',
@@ -1361,12 +1180,12 @@ class _DrillDownModalState extends State<_DrillDownModal> {
   }
 
   Widget _buildNoDataInPeriodView() {
-    final periodLabel = _timePeriod == TimePeriod.LAST_7_DAYS
-        ? 'Last 7 Days'
-        : 'Last 30 Days';
-    final alternativePeriod = _timePeriod == TimePeriod.LAST_7_DAYS
-        ? 'Last 30 Days'
-        : 'Last 7 Days';
+    final periodLabel = _timePeriod == TimePeriod.THIS_WEEK
+        ? 'This Week vs Last Week'
+        : 'This Month vs Last Month';
+    final alternativePeriod = _timePeriod == TimePeriod.THIS_WEEK
+        ? 'This Month vs Last Month'
+        : 'This Week vs Last Week';
 
     return Center(
       child: Padding(
@@ -1436,9 +1255,9 @@ class _DrillDownModalState extends State<_DrillDownModal> {
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
                   onPressed: () {
-                    final newPeriod = _timePeriod == TimePeriod.LAST_7_DAYS
-                        ? TimePeriod.LAST_30_DAYS
-                        : TimePeriod.LAST_7_DAYS;
+                    final newPeriod = _timePeriod == TimePeriod.THIS_WEEK
+                        ? TimePeriod.THIS_MONTH
+                        : TimePeriod.THIS_WEEK;
                     _onTimePeriodChanged(newPeriod);
                   },
                   icon: const Icon(Icons.sync),

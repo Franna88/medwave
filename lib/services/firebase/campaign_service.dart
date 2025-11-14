@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../../models/performance/campaign.dart';
+import 'summary_service.dart';
 
 /// Service for managing campaign data from the split collections schema
 class CampaignService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SummaryService _summaryService = SummaryService();
 
   /// Get all campaigns with cached totals
   /// Returns campaigns sorted by totalProfit (descending) by default
@@ -87,7 +90,8 @@ class CampaignService {
       Query query = _firestore.collection('campaigns');
 
       if (startDate != null) {
-        final startDateStr = _dateTimeToString(startDate);
+        final bufferedStartDate = startDate.subtract(Duration(days: 7));
+        final startDateStr = _dateTimeToString(bufferedStartDate);
         query = query.where('lastAdDate', isGreaterThanOrEqualTo: startDateStr);
       }
 
@@ -326,15 +330,36 @@ class CampaignService {
     }
   }
 
-  /// Calculate campaign totals for a specific date range by aggregating from ads
-  /// This provides month-specific or date-range-specific totals instead of lifetime totals
-  /// Uses weekly insights to get accurate month-specific spend data
   Future<Map<String, dynamic>> calculateCampaignTotalsForDateRange({
     required String campaignId,
     DateTime? startDate,
     DateTime? endDate,
   }) async {
     try {
+      if (kDebugMode) {
+        print('   🚀 Trying summary collection for campaign $campaignId');
+      }
+
+      final summaryTotals = await _summaryService
+          .calculateCampaignTotalsFromSummary(
+            campaignId: campaignId,
+            startDate: startDate,
+            endDate: endDate,
+          );
+
+      if (summaryTotals != null) {
+        if (kDebugMode) {
+          print('   ✅ Using SUMMARY collection (fast, accurate)');
+        }
+        return summaryTotals;
+      }
+
+      // FALLBACK: Use old method if summary data not available
+      if (kDebugMode) {
+        print(
+          '   ⚠️ Summary data not available, falling back to weeklyInsights (slower)',
+        );
+      }
       // Query ads for this campaign
       Query query = _firestore
           .collection('ads')
@@ -619,6 +644,155 @@ class CampaignService {
       return campaignsWithMonthData;
     } catch (e) {
       print('Error getting campaigns with month totals: $e');
+      rethrow;
+    }
+  }
+
+  /// Get campaigns with date-filtered totals (accurate, on-the-fly calculation)
+  /// This method calculates metrics specific to the date range using summary collection
+  /// Perfect for "This Month" and "Last 7 Days" filters
+  Future<List<Campaign>> getCampaignsWithDateFilteredTotals({
+    DateTime? startDate,
+    DateTime? endDate,
+    int limit = 100,
+    String orderBy = 'totalProfit',
+    bool descending = true,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print('🔄 Getting campaigns with date-filtered totals...');
+        print('   Start: ${startDate?.toIso8601String() ?? "any"}');
+        print('   End: ${endDate?.toIso8601String() ?? "any"}');
+      }
+
+      // First, get campaigns that have activity in the date range
+      final campaigns = await getCampaignsByDateRange(
+        startDate: startDate,
+        endDate: endDate,
+        limit: limit * 2, // Fetch more to account for filtering
+        orderBy: 'lastUpdated', // Use simple order first
+        descending: true,
+      );
+
+      if (kDebugMode) {
+        print('   Found ${campaigns.length} campaigns in date range');
+      }
+
+      // Calculate date-range-specific totals for each campaign
+      List<Campaign> campaignsWithFilteredTotals = [];
+
+      for (var campaign in campaigns) {
+        if (kDebugMode) {
+          print('   Calculating totals for: ${campaign.campaignName}');
+        }
+
+        final totals = await calculateCampaignTotalsForDateRange(
+          campaignId: campaign.campaignId,
+          startDate: startDate,
+          endDate: endDate,
+        );
+
+        // Calculate conversion rates
+        final leadToBookingRate = totals['totalLeads'] > 0
+            ? (totals['totalBookings'] / totals['totalLeads']) * 100
+            : 0.0;
+        final bookingToDepositRate = totals['totalBookings'] > 0
+            ? (totals['totalDeposits'] / totals['totalBookings']) * 100
+            : 0.0;
+        final depositToCashRate = totals['totalDeposits'] > 0
+            ? (totals['totalCashCollected'] / totals['totalDeposits']) * 100
+            : 0.0;
+
+        // Create a new campaign with date-filtered totals
+        final updatedCampaign = Campaign(
+          campaignId: campaign.campaignId,
+          campaignName: campaign.campaignName,
+          status: campaign.status,
+          totalSpend: totals['totalSpend'],
+          totalImpressions: totals['totalImpressions'],
+          totalClicks: totals['totalClicks'],
+          totalReach: totals['totalReach'],
+          avgCPM: totals['cpm'],
+          avgCPC: totals['cpc'],
+          avgCTR: totals['ctr'],
+          totalLeads: totals['totalLeads'],
+          totalBookings: totals['totalBookings'],
+          totalDeposits: totals['totalDeposits'],
+          totalCashCollected: totals['totalCashCollected'],
+          totalCashAmount: totals['totalCashAmount'],
+          totalProfit: totals['totalProfit'],
+          cpl: totals['cpl'],
+          cpb: totals['cpb'],
+          cpa: totals['cpa'],
+          roi: totals['roi'],
+          leadToBookingRate: leadToBookingRate,
+          bookingToDepositRate: bookingToDepositRate,
+          depositToCashRate: depositToCashRate,
+          adSetCount: campaign.adSetCount,
+          adCount: totals['adsInRange'],
+          firstAdDate: campaign.firstAdDate,
+          lastAdDate: campaign.lastAdDate,
+          lastUpdated: campaign.lastUpdated,
+          createdAt: campaign.createdAt,
+        );
+
+        // Include all campaigns that were found in the date range
+        // Even if they have $0 spend in this specific period, they should appear
+        // This shows campaigns that ran during the period with their period-specific metrics
+        campaignsWithFilteredTotals.add(updatedCampaign);
+      }
+
+      if (kDebugMode) {
+        print(
+          '   ✅ ${campaignsWithFilteredTotals.length} campaigns with data in range',
+        );
+      }
+
+      // Sort by the requested field
+      campaignsWithFilteredTotals.sort((a, b) {
+        dynamic aValue, bValue;
+        switch (orderBy) {
+          case 'totalSpend':
+            aValue = a.totalSpend;
+            bValue = b.totalSpend;
+            break;
+          case 'totalProfit':
+            aValue = a.totalProfit;
+            bValue = b.totalProfit;
+            break;
+          case 'totalLeads':
+            aValue = a.totalLeads;
+            bValue = b.totalLeads;
+            break;
+          case 'roi':
+            aValue = a.roi;
+            bValue = b.roi;
+            break;
+          default:
+            aValue = a.totalProfit;
+            bValue = b.totalProfit;
+        }
+
+        final comparison = (aValue as num).compareTo(bValue as num);
+        return descending ? -comparison : comparison;
+      });
+
+      // Apply limit
+      if (limit > 0 && campaignsWithFilteredTotals.length > limit) {
+        campaignsWithFilteredTotals = campaignsWithFilteredTotals
+            .take(limit)
+            .toList();
+      }
+
+      if (kDebugMode) {
+        print(
+          '✅ Returning ${campaignsWithFilteredTotals.length} campaigns with date-filtered totals',
+        );
+      }
+
+      return campaignsWithFilteredTotals;
+    } catch (e) {
+      print('❌ Error getting campaigns with date-filtered totals: $e');
       rethrow;
     }
   }

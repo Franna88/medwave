@@ -1,9 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../../models/performance/ad_set.dart';
+import 'summary_service.dart';
 
 /// Service for managing ad set data from the split collections schema
 class AdSetService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SummaryService _summaryService = SummaryService();
 
   /// Get all ad sets for a campaign
   Future<List<AdSet>> getAdSetsForCampaign(
@@ -84,6 +87,171 @@ class AdSetService {
       print('Error streaming ad set $adSetId: $e');
       rethrow;
     }
+  }
+
+  /// Get ad sets with date-filtered totals from summary collection
+  /// Similar to CampaignService.getCampaignsWithDateFilteredTotals()
+  Future<List<AdSet>> getAdSetsWithDateFilteredTotals({
+    required String campaignId,
+    DateTime? startDate,
+    DateTime? endDate,
+    int limit = 100,
+    String orderBy = 'totalProfit',
+    bool descending = true,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print(
+          '🔄 Loading ad sets with date-filtered totals for campaign $campaignId',
+        );
+        if (startDate != null || endDate != null) {
+          print(
+            '   📅 Date range: ${startDate?.toIso8601String() ?? "any"} to ${endDate?.toIso8601String() ?? "any"}',
+          );
+        }
+      }
+
+      // Get all ad sets for this campaign (without date filtering)
+      final snapshot = await _firestore
+          .collection('adSets')
+          .where('campaignId', isEqualTo: campaignId)
+          .get();
+
+      if (kDebugMode) {
+        print('   📋 Found ${snapshot.docs.length} ad sets in campaign');
+      }
+
+      List<AdSet> adSetsWithDateFilteredTotals = [];
+      int adSetsWithData = 0;
+
+      for (var doc in snapshot.docs) {
+        final adSet = AdSet.fromFirestore(doc);
+        final adSetId = adSet.adSetId;
+
+        if (kDebugMode) {
+          print('   Calculating totals for ad set: ${adSet.adSetName}');
+          print('   🚀 Trying summary collection for ad set $adSetId');
+        }
+
+        // TRY SUMMARY COLLECTION FIRST (fast path - 1 query, no overlap issues)
+        final summaryTotals = await _summaryService
+            .calculateAdSetTotalsFromSummary(
+              campaignId: campaignId,
+              adSetId: adSetId,
+              startDate: startDate,
+              endDate: endDate,
+            );
+
+        Map<String, dynamic> totals;
+
+        if (summaryTotals != null) {
+          if (kDebugMode) {
+            print('   ✅ Using SUMMARY collection (fast, accurate)');
+          }
+          totals = summaryTotals;
+        } else {
+          // FALLBACK: Use old method if summary data not available
+          if (kDebugMode) {
+            print(
+              '   ⚠️ No summary data, falling back to on-the-fly calculation',
+            );
+          }
+          totals = await calculateAdSetTotalsForDateRange(
+            adSetId: adSetId,
+            startDate: startDate,
+            endDate: endDate,
+          );
+        }
+
+        // Create a new ad set with updated totals
+        final updatedAdSet = AdSet(
+          adSetId: adSet.adSetId,
+          adSetName: adSet.adSetName,
+          campaignId: adSet.campaignId,
+          campaignName: adSet.campaignName,
+          totalSpend: totals['totalSpend'],
+          totalImpressions: totals['totalImpressions'],
+          totalClicks: totals['totalClicks'],
+          totalReach: totals['totalReach'],
+          avgCPM: totals['cpm'],
+          avgCPC: totals['cpc'],
+          avgCTR: totals['ctr'],
+          totalLeads: totals['totalLeads'],
+          totalBookings: totals['totalBookings'],
+          totalDeposits: totals['totalDeposits'],
+          totalCashCollected: totals['totalCashCollected'],
+          totalCashAmount: totals['totalCashAmount'],
+          totalProfit: totals['totalProfit'],
+          cpl: totals['cpl'],
+          cpb: totals['cpb'],
+          cpa: totals['cpa'],
+          adCount: totals['adsInRange'],
+          lastUpdated: adSet.lastUpdated,
+          createdAt: adSet.createdAt,
+          firstAdDate: adSet.firstAdDate,
+          lastAdDate: adSet.lastAdDate,
+        );
+
+        // Include all ad sets that have weeks overlapping with the date range
+        // Even if they have $0 spend (per user requirement)
+        if (totals['adsInRange'] > 0) {
+          adSetsWithDateFilteredTotals.add(updatedAdSet);
+          adSetsWithData++;
+        }
+      }
+
+      if (kDebugMode) {
+        print('   ✅ $adSetsWithData ad sets with data in range');
+      }
+
+      // Sort by the requested field
+      _sortAdSets(adSetsWithDateFilteredTotals, orderBy, descending);
+
+      // Apply limit
+      if (adSetsWithDateFilteredTotals.length > limit) {
+        adSetsWithDateFilteredTotals = adSetsWithDateFilteredTotals.sublist(
+          0,
+          limit,
+        );
+      }
+
+      if (kDebugMode) {
+        print(
+          '✅ Returning ${adSetsWithDateFilteredTotals.length} ad sets with date-filtered totals',
+        );
+      }
+
+      return adSetsWithDateFilteredTotals;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error getting ad sets with date-filtered totals: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Helper method to sort ad sets
+  void _sortAdSets(List<AdSet> adSets, String orderBy, bool descending) {
+    adSets.sort((a, b) {
+      int comparison = 0;
+      switch (orderBy) {
+        case 'totalProfit':
+          comparison = a.totalProfit.compareTo(b.totalProfit);
+          break;
+        case 'totalSpend':
+          comparison = a.totalSpend.compareTo(b.totalSpend);
+          break;
+        case 'totalLeads':
+          comparison = a.totalLeads.compareTo(b.totalLeads);
+          break;
+        case 'totalBookings':
+          comparison = a.totalBookings.compareTo(b.totalBookings);
+          break;
+        default:
+          comparison = a.totalProfit.compareTo(b.totalProfit);
+      }
+      return descending ? -comparison : comparison;
+    });
   }
 
   /// Calculate weekly totals for an ad within a specific date range
