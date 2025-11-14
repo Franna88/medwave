@@ -582,6 +582,366 @@ class SummaryService {
     }
   }
 
+  // ============================================================================
+  // COMPARISON-SPECIFIC METHODS
+  // These methods are optimized for comparison queries, returning full metrics
+  // maps that can be directly used by ComparisonService
+  // ============================================================================
+
+  /// Get campaign metrics for comparison from summary collection
+  /// Returns metrics map suitable for ComparisonResult.fromMetricsMap()
+  Future<Map<String, dynamic>> calculateCampaignTotalsFromSummaryForComparison({
+    required String campaignId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final totals = await calculateCampaignTotalsFromSummary(
+      campaignId: campaignId,
+      startDate: startDate,
+      endDate: endDate,
+    );
+
+    if (totals == null) {
+      // Return zero metrics if no data found
+      return _createZeroMetrics();
+    }
+
+    // Add ROI and average metrics for campaigns
+    final spend = totals['totalSpend'] as double;
+    final profit = totals['totalProfit'] as double;
+    final impressions = totals['totalImpressions'] as int;
+    final clicks = totals['totalClicks'] as int;
+
+    final roi = spend > 0 ? (profit / spend) * 100 : 0.0;
+    final avgCPM = impressions > 0 ? (spend / impressions) * 1000 : 0.0;
+    final avgCPC = clicks > 0 ? spend / clicks : 0.0;
+    final avgCTR = impressions > 0 ? (clicks / impressions) * 100 : 0.0;
+
+    return {
+      ...totals,
+      'roi': roi,
+      'avgCPM': avgCPM,
+      'avgCPC': avgCPC,
+      'avgCTR': avgCTR,
+    };
+  }
+
+  /// Get ad set metrics for comparison from summary collection
+  /// Returns metrics map suitable for ComparisonResult.fromMetricsMap()
+  Future<Map<String, dynamic>> calculateAdSetTotalsFromSummaryForComparison({
+    required String campaignId,
+    required String adSetId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final totals = await calculateAdSetTotalsFromSummary(
+      campaignId: campaignId,
+      adSetId: adSetId,
+      startDate: startDate,
+      endDate: endDate,
+    );
+
+    if (totals == null) {
+      // Return zero metrics if no data found
+      return _createZeroMetrics();
+    }
+
+    // Add average metrics for ad sets
+    final spend = totals['totalSpend'] as double;
+    final impressions = totals['totalImpressions'] as int;
+    final clicks = totals['totalClicks'] as int;
+
+    final avgCPM = impressions > 0 ? (spend / impressions) * 1000 : 0.0;
+    final avgCPC = clicks > 0 ? spend / clicks : 0.0;
+    final avgCTR = impressions > 0 ? (clicks / impressions) * 100 : 0.0;
+
+    return {...totals, 'avgCPM': avgCPM, 'avgCPC': avgCPC, 'avgCTR': avgCTR};
+  }
+
+  /// Get ad metrics for comparison from summary collection
+  /// Returns metrics map suitable for ComparisonResult.fromMetricsMap()
+  Future<Map<String, dynamic>> calculateAdTotalsFromSummaryForComparison({
+    required String campaignId,
+    required String adId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final totals = await calculateAdTotalsFromSummary(
+      campaignId: campaignId,
+      adId: adId,
+      startDate: startDate,
+      endDate: endDate,
+    );
+
+    if (totals == null) {
+      // Return zero metrics if no data found
+      return _createZeroMetrics();
+    }
+
+    // Ad metrics are already complete from calculateAdTotalsFromSummary
+    return totals;
+  }
+
+  /// Get all campaign IDs that have summary data with activity in date range
+  Future<List<String>> getCampaignIdsWithActivityInDateRange({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print(
+          '📊 Fetching campaign IDs with activity from ${startDate.toIso8601String()} to ${endDate.toIso8601String()}',
+        );
+      }
+
+      // Query all summary documents
+      final snapshot = await _firestore.collection('summary').get();
+
+      final campaignIds = <String>[];
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final weeksMap = data['weeks'] as Map<String, dynamic>?;
+
+        if (weeksMap == null || weeksMap.isEmpty) continue;
+
+        // Check if any week overlaps with the date range
+        bool hasActivity = false;
+        for (final weekId in weeksMap.keys) {
+          if (_weekIdOverlapsWithDateRange(weekId, startDate, endDate)) {
+            hasActivity = true;
+            break;
+          }
+        }
+
+        if (hasActivity) {
+          campaignIds.add(doc.id);
+        }
+      }
+
+      if (kDebugMode) {
+        print('   ✅ Found ${campaignIds.length} campaigns with activity');
+      }
+
+      return campaignIds;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error fetching campaign IDs: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Get campaign IDs with names that have activity in date range (optimized)
+  /// Returns a map of campaignId -> campaignName
+  Future<Map<String, String>> getCampaignsWithActivityInDateRange({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print(
+          '📊 Fetching campaigns with names from ${startDate.toIso8601String()} to ${endDate.toIso8601String()}',
+        );
+      }
+
+      // Query all summary documents
+      final snapshot = await _firestore.collection('summary').get();
+
+      final campaigns = <String, String>{};
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final weeksMap = data['weeks'] as Map<String, dynamic>?;
+
+        if (weeksMap == null || weeksMap.isEmpty) continue;
+
+        // Check if any week overlaps with the date range
+        bool hasActivity = false;
+        for (final weekId in weeksMap.keys) {
+          if (_weekIdOverlapsWithDateRange(weekId, startDate, endDate)) {
+            hasActivity = true;
+            break;
+          }
+        }
+
+        if (hasActivity) {
+          final campaignName =
+              data['campaignName'] as String? ?? 'Unknown Campaign';
+          campaigns[doc.id] = campaignName;
+        }
+      }
+
+      if (kDebugMode) {
+        print('   ✅ Found ${campaigns.length} campaigns with activity');
+      }
+
+      return campaigns;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error fetching campaigns: $e');
+      }
+      return {};
+    }
+  }
+
+  /// Get all ad set IDs for a campaign that have activity in date range
+  Future<List<String>> getAdSetIdsWithActivityInDateRange({
+    required String campaignId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print(
+          '📊 Fetching ad set IDs for campaign $campaignId with activity from ${startDate.toIso8601String()} to ${endDate.toIso8601String()}',
+        );
+      }
+
+      // Get the summary document for this campaign
+      final summaryDoc = await _firestore
+          .collection('summary')
+          .doc(campaignId)
+          .get();
+
+      if (!summaryDoc.exists) {
+        if (kDebugMode) {
+          print('   ⚠️ No summary document found');
+        }
+        return [];
+      }
+
+      final data = summaryDoc.data();
+      if (data == null) return [];
+
+      final weeksMap = data['weeks'] as Map<String, dynamic>?;
+      if (weeksMap == null || weeksMap.isEmpty) return [];
+
+      // Collect all unique ad set IDs from weeks that overlap with date range
+      final adSetIds = <String>{};
+
+      for (var weekEntry in weeksMap.entries) {
+        final weekId = weekEntry.key;
+
+        if (!_weekIdOverlapsWithDateRange(weekId, startDate, endDate)) {
+          continue;
+        }
+
+        final weekData = weekEntry.value as Map<String, dynamic>?;
+        if (weekData == null) continue;
+
+        final adSetsMap = weekData['adSets'] as Map<String, dynamic>?;
+        if (adSetsMap != null) {
+          adSetIds.addAll(adSetsMap.keys);
+        }
+      }
+
+      if (kDebugMode) {
+        print('   ✅ Found ${adSetIds.length} ad sets with activity');
+      }
+
+      return adSetIds.toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error fetching ad set IDs: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Get all ad IDs for an ad set that have activity in date range
+  Future<List<String>> getAdIdsWithActivityInDateRange({
+    required String campaignId,
+    required String adSetId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print(
+          '📊 Fetching ad IDs for ad set $adSetId with activity from ${startDate.toIso8601String()} to ${endDate.toIso8601String()}',
+        );
+      }
+
+      // Get the summary document for this campaign
+      final summaryDoc = await _firestore
+          .collection('summary')
+          .doc(campaignId)
+          .get();
+
+      if (!summaryDoc.exists) {
+        if (kDebugMode) {
+          print('   ⚠️ No summary document found');
+        }
+        return [];
+      }
+
+      final data = summaryDoc.data();
+      if (data == null) return [];
+
+      final weeksMap = data['weeks'] as Map<String, dynamic>?;
+      if (weeksMap == null || weeksMap.isEmpty) return [];
+
+      // Collect all unique ad IDs from weeks that overlap with date range
+      final adIds = <String>{};
+
+      for (var weekEntry in weeksMap.entries) {
+        final weekId = weekEntry.key;
+
+        if (!_weekIdOverlapsWithDateRange(weekId, startDate, endDate)) {
+          continue;
+        }
+
+        final weekData = weekEntry.value as Map<String, dynamic>?;
+        if (weekData == null) continue;
+
+        final adsMap = weekData['ads'] as Map<String, dynamic>?;
+        if (adsMap != null) {
+          // Filter ads by ad set ID
+          for (var adEntry in adsMap.entries) {
+            final adData = adEntry.value as Map<String, dynamic>?;
+            if (adData != null && adData['adSetId'] == adSetId) {
+              adIds.add(adEntry.key);
+            }
+          }
+        }
+      }
+
+      if (kDebugMode) {
+        print('   ✅ Found ${adIds.length} ads with activity');
+      }
+
+      return adIds.toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error fetching ad IDs: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Helper: Create zero metrics map for comparison
+  Map<String, dynamic> _createZeroMetrics() {
+    return {
+      'totalSpend': 0.0,
+      'totalImpressions': 0,
+      'totalClicks': 0,
+      'totalReach': 0,
+      'totalLeads': 0,
+      'totalBookings': 0,
+      'totalDeposits': 0,
+      'totalCashAmount': 0.0,
+      'totalProfit': 0.0,
+      'cpl': 0.0,
+      'cpb': 0.0,
+      'cpa': 0.0,
+      'roi': 0.0,
+      'avgCPM': 0.0,
+      'avgCPC': 0.0,
+      'avgCTR': 0.0,
+    };
+  }
+
   /// Check if summary data exists for a campaign
   Future<bool> hasSummaryData(String campaignId) async {
     try {

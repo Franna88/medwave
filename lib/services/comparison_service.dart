@@ -1,15 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/comparison/comparison_models.dart';
 import '../models/comparison/comparison_list_models.dart';
 import '../models/facebook/facebook_ad_data.dart';
 import 'firebase/campaign_service.dart';
 import 'firebase/ad_set_service.dart';
+import 'firebase/summary_service.dart';
 import 'firebase/weekly_insights_service.dart';
 
 /// Service for comparing campaigns, ad sets, and ads across time periods or against each other
 class ComparisonService {
   final CampaignService _campaignService = CampaignService();
   final AdSetService _adSetService = AdSetService();
+  final SummaryService _summaryService = SummaryService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // ============================================================================
@@ -606,278 +609,232 @@ class ComparisonService {
     }
   }
 
-  /// Get campaigns comparison using monthlyTotals (fast for THIS_MONTH)
+  /// Get campaigns comparison using summary collection (optimized with parallel processing)
+  /// Uses same campaign filtering as campaign screen (getCampaignsByDateRange)
   Future<List<CampaignComparison>> _getAllCampaignsMonthComparison() async {
-    final months = TimePeriodCalculator.getMonthStrings();
-    final currentMonth = months['current']!;
-    final previousMonth = months['previous']!;
-
-    print(
-      '📊 Fetching campaigns with monthlyTotals for: $currentMonth and $previousMonth',
+    final dateRanges = TimePeriodCalculator.calculateDateRanges(
+      TimePeriod.THIS_MONTH,
     );
+    final currentStart = dateRanges['currentStart']!;
+    final currentEnd = dateRanges['currentEnd']!;
+    final previousStart = dateRanges['previousStart']!;
+    final previousEnd = dateRanges['previousEnd']!;
 
-    // Fetch both months
-    final currentCampaigns = await _campaignService.getCampaignsWithMonthTotals(
-      month: currentMonth,
-      limit: 100,
-    );
-    final previousCampaigns = await _campaignService
-        .getCampaignsWithMonthTotals(month: previousMonth, limit: 100);
-
-    print(
-      '📊 Found ${currentCampaigns.length} campaigns for $currentMonth, ${previousCampaigns.length} for $previousMonth',
-    );
-
-    // FALLBACK: If no campaigns have monthlyTotals, use date range aggregation instead
-    if (currentCampaigns.isEmpty) {
+    if (kDebugMode) {
+      print('📊 Fetching campaigns for THIS_MONTH comparison');
       print(
-        '⚠️ No campaigns with monthlyTotals found, falling back to date range aggregation',
+        '   Current: ${_formatDate(currentStart)} to ${_formatDate(currentEnd)}',
       );
-      return await _getAllCampaignsThisMonthFallback();
+      print(
+        '   Previous: ${_formatDate(previousStart)} to ${_formatDate(previousEnd)}',
+      );
     }
 
-    // Create map of previous campaigns for easy lookup
-    final previousMap = {for (var c in previousCampaigns) c.campaignId: c};
+    // Get campaigns that ran in the current month (same filtering as campaign screen)
+    final campaigns = await _campaignService.getCampaignsByDateRange(
+      startDate: currentStart,
+      endDate: currentEnd,
+      limit: 200, // Fetch enough to account for filtering
+    );
 
-    final comparisons = <CampaignComparison>[];
+    if (kDebugMode) {
+      print(
+        '📊 Found ${campaigns.length} campaigns that ran in current period (from campaigns collection)',
+      );
+    }
 
-    // Only include campaigns that have data in current period
-    for (final currentCampaign in currentCampaigns) {
-      final previousCampaign = previousMap[currentCampaign.campaignId];
+    // Process all campaigns in parallel
+    final comparisonFutures = campaigns.map((campaign) async {
+      final campaignId = campaign.campaignId;
+      final campaignName = campaign.campaignName;
 
-      ComparisonResult comparison;
-      if (previousCampaign != null) {
-        comparison = ComparisonResult.fromCampaigns(
-          campaign1: previousCampaign,
-          campaign2: currentCampaign,
-          dateRange1: previousMonth,
-          dateRange2: currentMonth,
-          comparisonType: ComparisonType.TIME_PERIOD,
+      try {
+        // Get both period metrics in parallel using summary collection
+        final currentMetricsFuture = _summaryService
+            .calculateCampaignTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              startDate: currentStart,
+              endDate: currentEnd,
+            );
+
+        final previousMetricsFuture = _summaryService
+            .calculateCampaignTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              startDate: previousStart,
+              endDate: previousEnd,
+            );
+
+        // Wait for both metrics in parallel
+        final results = await Future.wait([
+          currentMetricsFuture,
+          previousMetricsFuture,
+        ]);
+
+        final currentMetrics = results[0];
+        final previousMetrics = results[1];
+
+        final currentRange = TimePeriodCalculator.formatDateRange(
+          currentStart,
+          currentEnd,
         );
-      } else {
-        // Campaign only has current period data
-        comparison = ComparisonResult.fromMetricsMap(
-          entityId1: currentCampaign.campaignId,
-          entityName1: currentCampaign.campaignName,
-          dateRange1: previousMonth,
-          metrics1: _createZeroMetrics(),
-          entityId2: currentCampaign.campaignId,
-          entityName2: currentCampaign.campaignName,
-          dateRange2: currentMonth,
-          metrics2: {
-            'totalSpend': currentCampaign.totalSpend,
-            'totalImpressions': currentCampaign.totalImpressions,
-            'totalClicks': currentCampaign.totalClicks,
-            'totalLeads': currentCampaign.totalLeads,
-            'totalBookings': currentCampaign.totalBookings,
-            'totalDeposits': currentCampaign.totalDeposits,
-            'totalCashAmount': currentCampaign.totalCashAmount,
-            'totalProfit': currentCampaign.totalProfit,
-            'cpl': currentCampaign.cpl,
-            'cpb': currentCampaign.cpb,
-            'roi': currentCampaign.roi,
-          },
+        final previousRange = TimePeriodCalculator.formatDateRange(
+          previousStart,
+          previousEnd,
+        );
+
+        final comparison = ComparisonResult.fromMetricsMap(
+          entityId1: campaignId,
+          entityName1: campaignName,
+          dateRange1: previousRange,
+          metrics1: previousMetrics,
+          entityId2: campaignId,
+          entityName2: campaignName,
+          dateRange2: currentRange,
+          metrics2: currentMetrics,
           comparisonType: ComparisonType.TIME_PERIOD,
           entityLevel: EntityLevel.CAMPAIGN,
         );
-      }
 
-      comparisons.add(
-        CampaignComparison(
-          campaignId: currentCampaign.campaignId,
-          campaignName: currentCampaign.campaignName,
-          comparison: comparison,
-        ),
-      );
-    }
-
-    // Sort by current spend descending
-    comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
-
-    return comparisons;
-  }
-
-  /// Fallback method for THIS_MONTH when monthlyTotals is not available
-  /// Uses date range aggregation like LAST_7_DAYS/LAST_30_DAYS
-  Future<List<CampaignComparison>> _getAllCampaignsThisMonthFallback() async {
-    print('📊 Using date range fallback for THIS_MONTH');
-
-    // Calculate this month vs last month date ranges
-    final now = DateTime.now();
-    final currentMonthStart = DateTime(now.year, now.month, 1);
-    final currentMonthEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
-    final lastMonthDate = DateTime(now.year, now.month - 1, 1);
-    final lastMonthStart = DateTime(lastMonthDate.year, lastMonthDate.month, 1);
-    // Use the same day of month in the previous month for fair comparison
-    final lastMonthDay = now.day;
-    final daysInLastMonth = DateTime(
-      lastMonthDate.year,
-      lastMonthDate.month + 1,
-      0,
-    ).day;
-    final adjustedDay = lastMonthDay > daysInLastMonth
-        ? daysInLastMonth
-        : lastMonthDay;
-    final lastMonthEnd = DateTime(
-      lastMonthDate.year,
-      lastMonthDate.month,
-      adjustedDay,
-      23,
-      59,
-      59,
-    );
-
-    print('📊 Date ranges:');
-    print('   Current: $currentMonthStart to $currentMonthEnd');
-    print('   Previous: $lastMonthStart to $lastMonthEnd');
-
-    // Fetch weekly insights for both periods
-    final currentData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: currentMonthStart,
-          endDate: currentMonthEnd,
-        );
-    final previousData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: lastMonthStart,
-          endDate: lastMonthEnd,
-        );
-
-    print(
-      '📊 Found weekly insights: ${currentData.length} ads in current period, ${previousData.length} ads in previous period',
-    );
-
-    // Aggregate by campaign
-    final currentByCampaign = await _aggregateByCampaign(currentData);
-    final previousByCampaign = await _aggregateByCampaign(previousData);
-
-    print(
-      '📊 Aggregated: ${currentByCampaign.length} campaigns in current period, ${previousByCampaign.length} in previous period',
-    );
-
-    final comparisons = <CampaignComparison>[];
-    final currentRange = TimePeriodCalculator.formatDateRange(
-      currentMonthStart,
-      currentMonthEnd,
-    );
-    final previousRange = TimePeriodCalculator.formatDateRange(
-      lastMonthStart,
-      lastMonthEnd,
-    );
-
-    // Only include campaigns with data in current period
-    for (final campaignId in currentByCampaign.keys) {
-      final currentMetrics = currentByCampaign[campaignId]!;
-      final previousMetrics =
-          previousByCampaign[campaignId] ?? _createZeroMetrics();
-
-      final comparison = ComparisonResult.fromMetricsMap(
-        entityId1: campaignId,
-        entityName1: currentMetrics['campaignName'] as String? ?? 'Unknown',
-        dateRange1: previousRange,
-        metrics1: previousMetrics,
-        entityId2: campaignId,
-        entityName2: currentMetrics['campaignName'] as String? ?? 'Unknown',
-        dateRange2: currentRange,
-        metrics2: currentMetrics,
-        comparisonType: ComparisonType.TIME_PERIOD,
-        entityLevel: EntityLevel.CAMPAIGN,
-      );
-
-      comparisons.add(
-        CampaignComparison(
+        return CampaignComparison(
           campaignId: campaignId,
-          campaignName: currentMetrics['campaignName'] as String? ?? 'Unknown',
+          campaignName: campaignName,
           comparison: comparison,
-        ),
-      );
-    }
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Error getting comparison for campaign $campaignId: $e');
+        }
+        return null;
+      }
+    }).toList();
+
+    // Wait for all comparisons to complete
+    final comparisonResults = await Future.wait(comparisonFutures);
+    final comparisons = comparisonResults
+        .whereType<CampaignComparison>()
+        .toList();
 
     // Sort by current spend descending
     comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
 
+    if (kDebugMode) {
+      print('✅ Returning ${comparisons.length} campaign comparisons');
+    }
+
     return comparisons;
   }
 
-  /// Get campaigns comparison using date ranges (for LAST_7_DAYS, LAST_30_DAYS)
+  /// Get campaigns comparison using summary collection for date ranges (THIS_WEEK) - optimized
+  /// Uses same campaign filtering as campaign screen (getCampaignsByDateRange)
   Future<List<CampaignComparison>> _getAllCampaignsDateRangeComparison(
     TimePeriod timePeriod,
   ) async {
     final dateRanges = TimePeriodCalculator.calculateDateRanges(timePeriod);
+    final currentStart = dateRanges['currentStart']!;
+    final currentEnd = dateRanges['currentEnd']!;
+    final previousStart = dateRanges['previousStart']!;
+    final previousEnd = dateRanges['previousEnd']!;
 
-    print('📊 Fetching weekly insights for date ranges:');
-    print(
-      '   Current: ${dateRanges['currentStart']} to ${dateRanges['currentEnd']}',
-    );
-    print(
-      '   Previous: ${dateRanges['previousStart']} to ${dateRanges['previousEnd']}',
-    );
-
-    // Fetch weekly insights for both periods
-    final currentData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: dateRanges['currentStart']!,
-          endDate: dateRanges['currentEnd']!,
-        );
-    final previousData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: dateRanges['previousStart']!,
-          endDate: dateRanges['previousEnd']!,
-        );
-
-    print(
-      '📊 Found weekly insights: ${currentData.length} ads in current period, ${previousData.length} ads in previous period',
-    );
-
-    // Aggregate by campaign
-    final currentByCampaign = await _aggregateByCampaign(currentData);
-    final previousByCampaign = await _aggregateByCampaign(previousData);
-
-    print(
-      '📊 Aggregated: ${currentByCampaign.length} campaigns in current period, ${previousByCampaign.length} in previous period',
-    );
-
-    final comparisons = <CampaignComparison>[];
-    final currentRange = TimePeriodCalculator.formatDateRange(
-      dateRanges['currentStart']!,
-      dateRanges['currentEnd']!,
-    );
-    final previousRange = TimePeriodCalculator.formatDateRange(
-      dateRanges['previousStart']!,
-      dateRanges['previousEnd']!,
-    );
-
-    // Only include campaigns with data in current period
-    for (final campaignId in currentByCampaign.keys) {
-      final currentMetrics = currentByCampaign[campaignId]!;
-      final previousMetrics =
-          previousByCampaign[campaignId] ?? _createZeroMetrics();
-
-      final comparison = ComparisonResult.fromMetricsMap(
-        entityId1: campaignId,
-        entityName1: currentMetrics['campaignName'] as String? ?? 'Unknown',
-        dateRange1: previousRange,
-        metrics1: previousMetrics,
-        entityId2: campaignId,
-        entityName2: currentMetrics['campaignName'] as String? ?? 'Unknown',
-        dateRange2: currentRange,
-        metrics2: currentMetrics,
-        comparisonType: ComparisonType.TIME_PERIOD,
-        entityLevel: EntityLevel.CAMPAIGN,
+    if (kDebugMode) {
+      print('📊 Fetching campaigns for $timePeriod comparison');
+      print(
+        '   Current: ${_formatDate(currentStart)} to ${_formatDate(currentEnd)}',
       );
-
-      comparisons.add(
-        CampaignComparison(
-          campaignId: campaignId,
-          campaignName: currentMetrics['campaignName'] as String? ?? 'Unknown',
-          comparison: comparison,
-        ),
+      print(
+        '   Previous: ${_formatDate(previousStart)} to ${_formatDate(previousEnd)}',
       );
     }
 
+    // Get campaigns that ran in the current period (same filtering as campaign screen)
+    final campaigns = await _campaignService.getCampaignsByDateRange(
+      startDate: currentStart,
+      endDate: currentEnd,
+      limit: 200, // Fetch enough to account for filtering
+    );
+
+    if (kDebugMode) {
+      print(
+        '📊 Found ${campaigns.length} campaigns that ran in current period (from campaigns collection)',
+      );
+    }
+
+    // Process all campaigns in parallel
+    final comparisonFutures = campaigns.map((campaign) async {
+      final campaignId = campaign.campaignId;
+      final campaignName = campaign.campaignName;
+
+      try {
+        // Get both period metrics in parallel using summary collection
+        final currentMetricsFuture = _summaryService
+            .calculateCampaignTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              startDate: currentStart,
+              endDate: currentEnd,
+            );
+
+        final previousMetricsFuture = _summaryService
+            .calculateCampaignTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              startDate: previousStart,
+              endDate: previousEnd,
+            );
+
+        // Wait for both metrics in parallel
+        final results = await Future.wait([
+          currentMetricsFuture,
+          previousMetricsFuture,
+        ]);
+
+        final currentMetrics = results[0];
+        final previousMetrics = results[1];
+
+        final currentRange = TimePeriodCalculator.formatDateRange(
+          currentStart,
+          currentEnd,
+        );
+        final previousRange = TimePeriodCalculator.formatDateRange(
+          previousStart,
+          previousEnd,
+        );
+
+        final comparison = ComparisonResult.fromMetricsMap(
+          entityId1: campaignId,
+          entityName1: campaignName,
+          dateRange1: previousRange,
+          metrics1: previousMetrics,
+          entityId2: campaignId,
+          entityName2: campaignName,
+          dateRange2: currentRange,
+          metrics2: currentMetrics,
+          comparisonType: ComparisonType.TIME_PERIOD,
+          entityLevel: EntityLevel.CAMPAIGN,
+        );
+
+        return CampaignComparison(
+          campaignId: campaignId,
+          campaignName: campaignName,
+          comparison: comparison,
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Error getting comparison for campaign $campaignId: $e');
+        }
+        return null;
+      }
+    }).toList();
+
+    // Wait for all comparisons to complete
+    final comparisonResults = await Future.wait(comparisonFutures);
+    final comparisons = comparisonResults
+        .whereType<CampaignComparison>()
+        .toList();
+
     // Sort by current spend descending
     comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
+
+    if (kDebugMode) {
+      print('✅ Returning ${comparisons.length} campaign comparisons');
+    }
 
     return comparisons;
   }
@@ -899,418 +856,233 @@ class ComparisonService {
     }
   }
 
-  /// Get ad sets comparison using monthlyTotals
+  /// Get ad sets comparison using summary collection
   Future<List<AdSetComparison>> _getAdSetsMonthComparison(
     String campaignId,
   ) async {
-    final months = TimePeriodCalculator.getMonthStrings();
-    final currentMonth = months['current']!;
-    final previousMonth = months['previous']!;
-
-    final currentAdSets = await _adSetService.getAdSetsWithMonthTotals(
-      campaignId: campaignId,
-      month: currentMonth,
+    final dateRanges = TimePeriodCalculator.calculateDateRanges(
+      TimePeriod.THIS_MONTH,
     );
-    final previousAdSets = await _adSetService.getAdSetsWithMonthTotals(
-      campaignId: campaignId,
-      month: previousMonth,
-    );
+    final currentStart = dateRanges['currentStart']!;
+    final currentEnd = dateRanges['currentEnd']!;
+    final previousStart = dateRanges['previousStart']!;
+    final previousEnd = dateRanges['previousEnd']!;
 
-    // FALLBACK: If no ad sets have monthlyTotals, use date range aggregation
-    if (currentAdSets.isEmpty) {
+    if (kDebugMode) {
       print(
-        '⚠️ No ad sets with monthlyTotals found for campaign $campaignId, falling back to date range aggregation',
+        '📊 Fetching ad sets with summary collection for campaign $campaignId (THIS_MONTH)',
       );
-      return await _getAdSetsThisMonthFallback(campaignId);
+      print(
+        '   Current: ${_formatDate(currentStart)} to ${_formatDate(currentEnd)}',
+      );
+      print(
+        '   Previous: ${_formatDate(previousStart)} to ${_formatDate(previousEnd)}',
+      );
     }
 
-    final previousMap = {for (var a in previousAdSets) a.adSetId: a};
+    // Get all ad set IDs with activity in current period
+    final adSetIds = await _summaryService.getAdSetIdsWithActivityInDateRange(
+      campaignId: campaignId,
+      startDate: currentStart,
+      endDate: currentEnd,
+    );
+
+    if (kDebugMode) {
+      print(
+        '📊 Found ${adSetIds.length} ad sets with activity in current period',
+      );
+    }
+
     final comparisons = <AdSetComparison>[];
 
-    for (final currentAdSet in currentAdSets) {
-      final previousAdSet = previousMap[currentAdSet.adSetId];
+    // For each ad set, get metrics for both periods
+    for (final adSetId in adSetIds) {
+      try {
+        // Get ad set name from ad set service
+        final adSet = await _adSetService.getAdSet(adSetId);
+        if (adSet == null) {
+          if (kDebugMode) {
+            print('⚠️ Ad set $adSetId not found in adSets collection');
+          }
+          continue;
+        }
 
-      ComparisonResult comparison;
-      if (previousAdSet != null) {
-        comparison = ComparisonResult.fromAdSets(
-          adSet1: previousAdSet,
-          adSet2: currentAdSet,
-          dateRange1: previousMonth,
-          dateRange2: currentMonth,
-          comparisonType: ComparisonType.TIME_PERIOD,
+        // Get current period metrics
+        final currentMetrics = await _summaryService
+            .calculateAdSetTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              adSetId: adSetId,
+              startDate: currentStart,
+              endDate: currentEnd,
+            );
+
+        // Get previous period metrics
+        final previousMetrics = await _summaryService
+            .calculateAdSetTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              adSetId: adSetId,
+              startDate: previousStart,
+              endDate: previousEnd,
+            );
+
+        final currentRange = TimePeriodCalculator.formatDateRange(
+          currentStart,
+          currentEnd,
         );
-      } else {
-        comparison = ComparisonResult.fromMetricsMap(
-          entityId1: currentAdSet.adSetId,
-          entityName1: currentAdSet.adSetName,
-          dateRange1: previousMonth,
-          metrics1: _createZeroMetrics(),
-          entityId2: currentAdSet.adSetId,
-          entityName2: currentAdSet.adSetName,
-          dateRange2: currentMonth,
-          metrics2: {
-            'totalSpend': currentAdSet.totalSpend,
-            'totalImpressions': currentAdSet.totalImpressions,
-            'totalClicks': currentAdSet.totalClicks,
-            'totalLeads': currentAdSet.totalLeads,
-            'totalBookings': currentAdSet.totalBookings,
-            'totalDeposits': currentAdSet.totalDeposits,
-            'totalCashAmount': currentAdSet.totalCashAmount,
-            'totalProfit': currentAdSet.totalProfit,
-            'cpl': currentAdSet.cpl,
-            'cpb': currentAdSet.cpb,
-          },
+        final previousRange = TimePeriodCalculator.formatDateRange(
+          previousStart,
+          previousEnd,
+        );
+
+        final comparison = ComparisonResult.fromMetricsMap(
+          entityId1: adSetId,
+          entityName1: adSet.adSetName,
+          dateRange1: previousRange,
+          metrics1: previousMetrics,
+          entityId2: adSetId,
+          entityName2: adSet.adSetName,
+          dateRange2: currentRange,
+          metrics2: currentMetrics,
           comparisonType: ComparisonType.TIME_PERIOD,
           entityLevel: EntityLevel.AD_SET,
         );
+
+        comparisons.add(
+          AdSetComparison(
+            adSetId: adSetId,
+            adSetName: adSet.adSetName,
+            campaignId: campaignId,
+            comparison: comparison,
+          ),
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Error getting comparison for ad set $adSetId: $e');
+        }
       }
-
-      comparisons.add(
-        AdSetComparison(
-          adSetId: currentAdSet.adSetId,
-          adSetName: currentAdSet.adSetName,
-          campaignId: campaignId,
-          comparison: comparison,
-        ),
-      );
     }
 
     comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
-    return comparisons;
-  }
 
-  /// Fallback method for ad sets THIS_MONTH when monthlyTotals is not available
-  Future<List<AdSetComparison>> _getAdSetsThisMonthFallback(
-    String campaignId,
-  ) async {
-    print('📊 Using date range fallback for ad sets THIS_MONTH');
-
-    // Calculate this month vs last month date ranges
-    final now = DateTime.now();
-    final currentMonthStart = DateTime(now.year, now.month, 1);
-    final currentMonthEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
-    final lastMonthDate = DateTime(now.year, now.month - 1, 1);
-    final lastMonthStart = DateTime(lastMonthDate.year, lastMonthDate.month, 1);
-    final lastMonthDay = now.day;
-    final daysInLastMonth = DateTime(
-      lastMonthDate.year,
-      lastMonthDate.month + 1,
-      0,
-    ).day;
-    final adjustedDay = lastMonthDay > daysInLastMonth
-        ? daysInLastMonth
-        : lastMonthDay;
-    final lastMonthEnd = DateTime(
-      lastMonthDate.year,
-      lastMonthDate.month,
-      adjustedDay,
-      23,
-      59,
-      59,
-    );
-
-    final currentData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: currentMonthStart,
-          endDate: currentMonthEnd,
-        );
-    final previousData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: lastMonthStart,
-          endDate: lastMonthEnd,
-        );
-
-    // Filter by campaign and aggregate by ad set
-    final currentByAdSet = await _aggregateByAdSet(currentData, campaignId);
-    final previousByAdSet = await _aggregateByAdSet(previousData, campaignId);
-
-    final comparisons = <AdSetComparison>[];
-    final currentRange = TimePeriodCalculator.formatDateRange(
-      currentMonthStart,
-      currentMonthEnd,
-    );
-    final previousRange = TimePeriodCalculator.formatDateRange(
-      lastMonthStart,
-      lastMonthEnd,
-    );
-
-    for (final adSetId in currentByAdSet.keys) {
-      final currentMetrics = currentByAdSet[adSetId]!;
-      final previousMetrics = previousByAdSet[adSetId] ?? _createZeroMetrics();
-
-      final comparison = ComparisonResult.fromMetricsMap(
-        entityId1: adSetId,
-        entityName1: currentMetrics['adSetName'] as String? ?? 'Unknown',
-        dateRange1: previousRange,
-        metrics1: previousMetrics,
-        entityId2: adSetId,
-        entityName2: currentMetrics['adSetName'] as String? ?? 'Unknown',
-        dateRange2: currentRange,
-        metrics2: currentMetrics,
-        comparisonType: ComparisonType.TIME_PERIOD,
-        entityLevel: EntityLevel.AD_SET,
-      );
-
-      comparisons.add(
-        AdSetComparison(
-          adSetId: adSetId,
-          adSetName: currentMetrics['adSetName'] as String? ?? 'Unknown',
-          campaignId: campaignId,
-          comparison: comparison,
-        ),
-      );
+    if (kDebugMode) {
+      print('✅ Returning ${comparisons.length} ad set comparisons');
     }
 
-    comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
     return comparisons;
   }
 
-  /// Get ad sets comparison using date ranges
+  /// Get ad sets comparison using summary collection for date ranges (THIS_WEEK)
   Future<List<AdSetComparison>> _getAdSetsDateRangeComparison(
     String campaignId,
     TimePeriod timePeriod,
   ) async {
     final dateRanges = TimePeriodCalculator.calculateDateRanges(timePeriod);
+    final currentStart = dateRanges['currentStart']!;
+    final currentEnd = dateRanges['currentEnd']!;
+    final previousStart = dateRanges['previousStart']!;
+    final previousEnd = dateRanges['previousEnd']!;
 
-    final currentData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: dateRanges['currentStart']!,
-          endDate: dateRanges['currentEnd']!,
-        );
-    final previousData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: dateRanges['previousStart']!,
-          endDate: dateRanges['previousEnd']!,
-        );
+    if (kDebugMode) {
+      print(
+        '📊 Fetching ad sets with summary collection for campaign $campaignId ($timePeriod)',
+      );
+      print(
+        '   Current: ${_formatDate(currentStart)} to ${_formatDate(currentEnd)}',
+      );
+      print(
+        '   Previous: ${_formatDate(previousStart)} to ${_formatDate(previousEnd)}',
+      );
+    }
 
-    // Filter by campaign and aggregate by ad set
-    final currentByAdSet = await _aggregateByAdSet(currentData, campaignId);
-    final previousByAdSet = await _aggregateByAdSet(previousData, campaignId);
+    // Get all ad set IDs with activity in current period
+    final adSetIds = await _summaryService.getAdSetIdsWithActivityInDateRange(
+      campaignId: campaignId,
+      startDate: currentStart,
+      endDate: currentEnd,
+    );
+
+    if (kDebugMode) {
+      print(
+        '📊 Found ${adSetIds.length} ad sets with activity in current period',
+      );
+    }
 
     final comparisons = <AdSetComparison>[];
-    final currentRange = TimePeriodCalculator.formatDateRange(
-      dateRanges['currentStart']!,
-      dateRanges['currentEnd']!,
-    );
-    final previousRange = TimePeriodCalculator.formatDateRange(
-      dateRanges['previousStart']!,
-      dateRanges['previousEnd']!,
-    );
 
-    for (final adSetId in currentByAdSet.keys) {
-      final currentMetrics = currentByAdSet[adSetId]!;
-      final previousMetrics = previousByAdSet[adSetId] ?? _createZeroMetrics();
+    // For each ad set, get metrics for both periods
+    for (final adSetId in adSetIds) {
+      try {
+        // Get ad set name from ad set service
+        final adSet = await _adSetService.getAdSet(adSetId);
+        if (adSet == null) {
+          if (kDebugMode) {
+            print('⚠️ Ad set $adSetId not found in adSets collection');
+          }
+          continue;
+        }
 
-      final comparison = ComparisonResult.fromMetricsMap(
-        entityId1: adSetId,
-        entityName1: currentMetrics['adSetName'] as String? ?? 'Unknown',
-        dateRange1: previousRange,
-        metrics1: previousMetrics,
-        entityId2: adSetId,
-        entityName2: currentMetrics['adSetName'] as String? ?? 'Unknown',
-        dateRange2: currentRange,
-        metrics2: currentMetrics,
-        comparisonType: ComparisonType.TIME_PERIOD,
-        entityLevel: EntityLevel.AD_SET,
-      );
+        // Get current period metrics
+        final currentMetrics = await _summaryService
+            .calculateAdSetTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              adSetId: adSetId,
+              startDate: currentStart,
+              endDate: currentEnd,
+            );
 
-      comparisons.add(
-        AdSetComparison(
-          adSetId: adSetId,
-          adSetName: currentMetrics['adSetName'] as String? ?? 'Unknown',
-          campaignId: campaignId,
-          comparison: comparison,
-        ),
-      );
+        // Get previous period metrics
+        final previousMetrics = await _summaryService
+            .calculateAdSetTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              adSetId: adSetId,
+              startDate: previousStart,
+              endDate: previousEnd,
+            );
+
+        final currentRange = TimePeriodCalculator.formatDateRange(
+          currentStart,
+          currentEnd,
+        );
+        final previousRange = TimePeriodCalculator.formatDateRange(
+          previousStart,
+          previousEnd,
+        );
+
+        final comparison = ComparisonResult.fromMetricsMap(
+          entityId1: adSetId,
+          entityName1: adSet.adSetName,
+          dateRange1: previousRange,
+          metrics1: previousMetrics,
+          entityId2: adSetId,
+          entityName2: adSet.adSetName,
+          dateRange2: currentRange,
+          metrics2: currentMetrics,
+          comparisonType: ComparisonType.TIME_PERIOD,
+          entityLevel: EntityLevel.AD_SET,
+        );
+
+        comparisons.add(
+          AdSetComparison(
+            adSetId: adSetId,
+            adSetName: adSet.adSetName,
+            campaignId: campaignId,
+            comparison: comparison,
+          ),
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Error getting comparison for ad set $adSetId: $e');
+        }
+      }
     }
 
     comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
+
+    if (kDebugMode) {
+      print('✅ Returning ${comparisons.length} ad set comparisons');
+    }
+
     return comparisons;
-  }
-
-  /// Helper: Aggregate weekly insights by campaign
-  /// IMPORTANT: This requires fetching ad metadata, which is expensive
-  /// For better performance, use getCampaignsWithMonthTotals when possible
-  Future<Map<String, Map<String, dynamic>>> _aggregateByCampaign(
-    Map<String, List<FacebookWeeklyInsight>> weeklyData,
-  ) async {
-    final result = <String, Map<String, dynamic>>{};
-
-    // Fetch ad metadata for all ads in the weekly data
-    final adIds = weeklyData.keys.toList();
-    final adMetadata = <String, Map<String, dynamic>>{};
-
-    print('🔄 Fetching metadata for ${adIds.length} ads in batches...');
-
-    // Batch fetch ads in groups of 10 to avoid sequential reads
-    const batchSize = 10;
-    for (var i = 0; i < adIds.length; i += batchSize) {
-      final batchEnd = (i + batchSize < adIds.length)
-          ? i + batchSize
-          : adIds.length;
-      final batchIds = adIds.sublist(i, batchEnd);
-
-      // Fetch all docs in this batch in parallel
-      final futures = batchIds
-          .map((adId) => _firestore.collection('ads').doc(adId).get())
-          .toList();
-
-      try {
-        final snapshots = await Future.wait(futures);
-
-        for (var j = 0; j < snapshots.length; j++) {
-          final doc = snapshots[j];
-          if (doc.exists) {
-            final data = doc.data();
-            adMetadata[batchIds[j]] = {
-              'campaignId': data?['campaignId'] ?? '',
-              'campaignName': data?['campaignName'] ?? 'Unknown Campaign',
-              'adSetId': data?['adSetId'] ?? '',
-              'adSetName': data?['adSetName'] ?? 'Unknown Ad Set',
-            };
-          }
-        }
-      } catch (e) {
-        print('Error fetching ad metadata batch: $e');
-      }
-    }
-
-    print('✅ Fetched metadata for ${adMetadata.length} ads');
-
-    // Aggregate by campaign
-    for (final entry in weeklyData.entries) {
-      final adId = entry.key;
-      final insights = entry.value;
-      if (insights.isEmpty) continue;
-
-      final metadata = adMetadata[adId];
-      if (metadata == null) continue;
-
-      final campaignId = metadata['campaignId'] as String;
-      final campaignName = metadata['campaignName'] as String;
-
-      if (campaignId.isEmpty) continue;
-
-      if (!result.containsKey(campaignId)) {
-        result[campaignId] = {
-          'campaignName': campaignName,
-          ..._createZeroMetrics(),
-        };
-      }
-
-      for (final insight in insights) {
-        result[campaignId]!['totalSpend'] =
-            (result[campaignId]!['totalSpend'] as double) + insight.spend;
-        result[campaignId]!['totalImpressions'] =
-            (result[campaignId]!['totalImpressions'] as int) +
-            insight.impressions;
-        result[campaignId]!['totalClicks'] =
-            (result[campaignId]!['totalClicks'] as int) + insight.clicks;
-      }
-    }
-
-    return result;
-  }
-
-  /// Helper: Aggregate weekly insights by ad set
-  /// IMPORTANT: This requires fetching ad metadata, which is expensive
-  Future<Map<String, Map<String, dynamic>>> _aggregateByAdSet(
-    Map<String, List<FacebookWeeklyInsight>> weeklyData,
-    String campaignId,
-  ) async {
-    final result = <String, Map<String, dynamic>>{};
-
-    // Fetch ad metadata for all ads in the weekly data
-    final adIds = weeklyData.keys.toList();
-    final adMetadata = <String, Map<String, dynamic>>{};
-
-    print('🔄 Fetching ad set metadata for ${adIds.length} ads in batches...');
-
-    // Batch fetch ads in groups of 10
-    const batchSize = 10;
-    for (var i = 0; i < adIds.length; i += batchSize) {
-      final batchEnd = (i + batchSize < adIds.length)
-          ? i + batchSize
-          : adIds.length;
-      final batchIds = adIds.sublist(i, batchEnd);
-
-      // Fetch all docs in this batch in parallel
-      final futures = batchIds
-          .map((adId) => _firestore.collection('ads').doc(adId).get())
-          .toList();
-
-      try {
-        final snapshots = await Future.wait(futures);
-
-        for (var j = 0; j < snapshots.length; j++) {
-          final doc = snapshots[j];
-          if (doc.exists) {
-            final data = doc.data();
-            final adCampaignId = data?['campaignId'] ?? '';
-            // Only include ads from the specified campaign
-            if (adCampaignId == campaignId) {
-              adMetadata[batchIds[j]] = {
-                'adSetId': data?['adSetId'] ?? '',
-                'adSetName': data?['adSetName'] ?? 'Unknown Ad Set',
-              };
-            }
-          }
-        }
-      } catch (e) {
-        print('Error fetching ad metadata batch: $e');
-      }
-    }
-
-    print('✅ Fetched ad set metadata for ${adMetadata.length} ads');
-
-    // Aggregate by ad set
-    for (final entry in weeklyData.entries) {
-      final adId = entry.key;
-      final insights = entry.value;
-      if (insights.isEmpty) continue;
-
-      final metadata = adMetadata[adId];
-      if (metadata == null) continue;
-
-      final adSetId = metadata['adSetId'] as String;
-      final adSetName = metadata['adSetName'] as String;
-
-      if (adSetId.isEmpty) continue;
-
-      if (!result.containsKey(adSetId)) {
-        result[adSetId] = {'adSetName': adSetName, ..._createZeroMetrics()};
-      }
-
-      for (final insight in insights) {
-        result[adSetId]!['totalSpend'] =
-            (result[adSetId]!['totalSpend'] as double) + insight.spend;
-        result[adSetId]!['totalImpressions'] =
-            (result[adSetId]!['totalImpressions'] as int) + insight.impressions;
-        result[adSetId]!['totalClicks'] =
-            (result[adSetId]!['totalClicks'] as int) + insight.clicks;
-      }
-    }
-
-    return result;
-  }
-
-  /// Helper: Create zero metrics map
-  Map<String, dynamic> _createZeroMetrics() {
-    return {
-      'totalSpend': 0.0,
-      'totalImpressions': 0,
-      'totalClicks': 0,
-      'totalReach': 0,
-      'totalLeads': 0,
-      'totalBookings': 0,
-      'totalDeposits': 0,
-      'totalCashAmount': 0.0,
-      'totalProfit': 0.0,
-      'cpl': 0.0,
-      'cpb': 0.0,
-      'roi': 0.0,
-    };
   }
 
   // ============================================================================
@@ -1389,15 +1161,34 @@ class ComparisonService {
     TimePeriod timePeriod,
   ) async {
     try {
-      print('📊 Fetching ads comparison for ad set: $adSetId');
+      if (kDebugMode) {
+        print('📊 Fetching ads comparison for ad set: $adSetId');
+      }
+
+      // Get the ad set to find the campaign ID
+      final adSet = await _adSetService.getAdSet(adSetId);
+      if (adSet == null) {
+        throw Exception('Ad set $adSetId not found');
+      }
+
+      final campaignId = adSet.campaignId;
+      if (campaignId.isEmpty) {
+        throw Exception('Ad set $adSetId has no campaign ID');
+      }
 
       if (timePeriod == TimePeriod.THIS_MONTH) {
-        return await _getAdsThisMonthComparison(adSetId);
+        return await _getAdsMonthComparison(campaignId, adSetId);
       } else {
-        return await _getAdsDateRangeComparison(adSetId, timePeriod);
+        return await _getAdsDateRangeComparison(
+          campaignId,
+          adSetId,
+          timePeriod,
+        );
       }
     } catch (e) {
-      print('❌ Error getting ads comparison: $e');
+      if (kDebugMode) {
+        print('❌ Error getting ads comparison: $e');
+      }
       rethrow;
     }
   }
@@ -1439,98 +1230,127 @@ class ComparisonService {
     }
   }
 
-  /// Helper: Get ads comparison for THIS_MONTH time period
-  Future<List<AdComparison>> _getAdsThisMonthComparison(String adSetId) async {
-    print('📊 Using date range fallback for ads THIS_MONTH');
-
-    // Calculate this month vs last month date ranges
-    final now = DateTime.now();
-    final currentMonthStart = DateTime(now.year, now.month, 1);
-    final currentMonthEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
-    final lastMonthDate = DateTime(now.year, now.month - 1, 1);
-    final lastMonthStart = DateTime(lastMonthDate.year, lastMonthDate.month, 1);
-    final lastMonthDay = now.day;
-    final daysInLastMonth = DateTime(
-      lastMonthDate.year,
-      lastMonthDate.month + 1,
-      0,
-    ).day;
-    final adjustedDay = lastMonthDay > daysInLastMonth
-        ? daysInLastMonth
-        : lastMonthDay;
-    final lastMonthEnd = DateTime(
-      lastMonthDate.year,
-      lastMonthDate.month,
-      adjustedDay,
-      23,
-      59,
-      59,
+  /// Get ads comparison using summary collection for THIS_MONTH
+  Future<List<AdComparison>> _getAdsMonthComparison(
+    String campaignId,
+    String adSetId,
+  ) async {
+    final dateRanges = TimePeriodCalculator.calculateDateRanges(
+      TimePeriod.THIS_MONTH,
     );
+    final currentStart = dateRanges['currentStart']!;
+    final currentEnd = dateRanges['currentEnd']!;
+    final previousStart = dateRanges['previousStart']!;
+    final previousEnd = dateRanges['previousEnd']!;
 
-    final currentData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: currentMonthStart,
-          endDate: currentMonthEnd,
-        );
-    final previousData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: lastMonthStart,
-          endDate: lastMonthEnd,
-        );
-
-    // Filter by ad set and aggregate by ad
-    final currentByAd = await _aggregateByAd(currentData, adSetId);
-    final previousByAd = await _aggregateByAd(previousData, adSetId);
-
-    print(
-      '📊 Aggregated: ${currentByAd.length} ads in current period, ${previousByAd.length} in previous period',
-    );
-
-    final comparisons = <AdComparison>[];
-    final currentRange = TimePeriodCalculator.formatDateRange(
-      currentMonthStart,
-      currentMonthEnd,
-    );
-    final previousRange = TimePeriodCalculator.formatDateRange(
-      lastMonthStart,
-      lastMonthEnd,
-    );
-
-    for (final adId in currentByAd.keys) {
-      final currentMetrics = currentByAd[adId]!;
-      final previousMetrics = previousByAd[adId] ?? _createZeroMetrics();
-      final adName = currentMetrics['adName'] as String? ?? 'Unknown';
-
-      final comparison = ComparisonResult.fromMetricsMap(
-        entityId1: adId,
-        entityName1: adName,
-        dateRange1: previousRange,
-        metrics1: previousMetrics,
-        entityId2: adId,
-        entityName2: adName,
-        dateRange2: currentRange,
-        metrics2: currentMetrics,
-        comparisonType: ComparisonType.TIME_PERIOD,
-        entityLevel: EntityLevel.ADVERT,
+    if (kDebugMode) {
+      print(
+        '📊 Fetching ads with summary collection for ad set $adSetId (THIS_MONTH)',
       );
-
-      comparisons.add(
-        AdComparison(
-          adId: adId,
-          adName: adName,
-          adSetId: adSetId,
-          comparison: comparison,
-        ),
+      print(
+        '   Current: ${_formatDate(currentStart)} to ${_formatDate(currentEnd)}',
+      );
+      print(
+        '   Previous: ${_formatDate(previousStart)} to ${_formatDate(previousEnd)}',
       );
     }
 
+    // Get all ad IDs with activity in current period
+    final adIds = await _summaryService.getAdIdsWithActivityInDateRange(
+      campaignId: campaignId,
+      adSetId: adSetId,
+      startDate: currentStart,
+      endDate: currentEnd,
+    );
+
+    if (kDebugMode) {
+      print('📊 Found ${adIds.length} ads with activity in current period');
+    }
+
+    final comparisons = <AdComparison>[];
+
+    // For each ad, get metrics for both periods
+    for (final adId in adIds) {
+      try {
+        // Get ad name from Firestore
+        final adDoc = await _firestore.collection('ads').doc(adId).get();
+        if (!adDoc.exists) {
+          if (kDebugMode) {
+            print('⚠️ Ad $adId not found in ads collection');
+          }
+          continue;
+        }
+
+        final adData = adDoc.data();
+        final adName = adData?['adName'] as String? ?? 'Unknown Ad';
+
+        // Get current period metrics
+        final currentMetrics = await _summaryService
+            .calculateAdTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              adId: adId,
+              startDate: currentStart,
+              endDate: currentEnd,
+            );
+
+        // Get previous period metrics
+        final previousMetrics = await _summaryService
+            .calculateAdTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              adId: adId,
+              startDate: previousStart,
+              endDate: previousEnd,
+            );
+
+        final currentRange = TimePeriodCalculator.formatDateRange(
+          currentStart,
+          currentEnd,
+        );
+        final previousRange = TimePeriodCalculator.formatDateRange(
+          previousStart,
+          previousEnd,
+        );
+
+        final comparison = ComparisonResult.fromMetricsMap(
+          entityId1: adId,
+          entityName1: adName,
+          dateRange1: previousRange,
+          metrics1: previousMetrics,
+          entityId2: adId,
+          entityName2: adName,
+          dateRange2: currentRange,
+          metrics2: currentMetrics,
+          comparisonType: ComparisonType.TIME_PERIOD,
+          entityLevel: EntityLevel.ADVERT,
+        );
+
+        comparisons.add(
+          AdComparison(
+            adId: adId,
+            adName: adName,
+            adSetId: adSetId,
+            comparison: comparison,
+          ),
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Error getting comparison for ad $adId: $e');
+        }
+      }
+    }
+
     comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
+
+    if (kDebugMode) {
+      print('✅ Returning ${comparisons.length} ad comparisons');
+    }
+
     return comparisons;
   }
 
-  /// Helper: Get ads comparison for date range time periods (LAST_7_DAYS, LAST_30_DAYS)
+  /// Get ads comparison using summary collection for date range (THIS_WEEK)
   Future<List<AdComparison>> _getAdsDateRangeComparison(
+    String campaignId,
     String adSetId,
     TimePeriod timePeriod,
   ) async {
@@ -1540,181 +1360,108 @@ class ComparisonService {
     final previousStart = ranges['previousStart']!;
     final previousEnd = ranges['previousEnd']!;
 
-    print('📊 Fetching ads for date ranges:');
-    print('   Current: $currentStart to $currentEnd');
-    print('   Previous: $previousStart to $previousEnd');
+    if (kDebugMode) {
+      print(
+        '📊 Fetching ads with summary collection for ad set $adSetId ($timePeriod)',
+      );
+      print(
+        '   Current: ${_formatDate(currentStart)} to ${_formatDate(currentEnd)}',
+      );
+      print(
+        '   Previous: ${_formatDate(previousStart)} to ${_formatDate(previousEnd)}',
+      );
+    }
 
-    final currentData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: currentStart,
-          endDate: currentEnd,
-        );
-    final previousData =
-        await WeeklyInsightsService.fetchAllWeeklyInsightsForDateRange(
-          startDate: previousStart,
-          endDate: previousEnd,
-        );
+    // Get all ad IDs with activity in current period
+    final adIds = await _summaryService.getAdIdsWithActivityInDateRange(
+      campaignId: campaignId,
+      adSetId: adSetId,
+      startDate: currentStart,
+      endDate: currentEnd,
+    );
 
-    // Filter by ad set and aggregate by ad
-    final currentByAd = await _aggregateByAd(currentData, adSetId);
-    final previousByAd = await _aggregateByAd(previousData, adSetId);
+    if (kDebugMode) {
+      print('📊 Found ${adIds.length} ads with activity in current period');
+    }
 
     final comparisons = <AdComparison>[];
-    final currentRange = TimePeriodCalculator.formatDateRange(
-      currentStart,
-      currentEnd,
-    );
-    final previousRange = TimePeriodCalculator.formatDateRange(
-      previousStart,
-      previousEnd,
-    );
 
-    for (final adId in currentByAd.keys) {
-      final currentMetrics = currentByAd[adId]!;
-      final previousMetrics = previousByAd[adId] ?? _createZeroMetrics();
-      final adName = currentMetrics['adName'] as String? ?? 'Unknown';
+    // For each ad, get metrics for both periods
+    for (final adId in adIds) {
+      try {
+        // Get ad name from Firestore
+        final adDoc = await _firestore.collection('ads').doc(adId).get();
+        if (!adDoc.exists) {
+          if (kDebugMode) {
+            print('⚠️ Ad $adId not found in ads collection');
+          }
+          continue;
+        }
 
-      final comparison = ComparisonResult.fromMetricsMap(
-        entityId1: adId,
-        entityName1: adName,
-        dateRange1: previousRange,
-        metrics1: previousMetrics,
-        entityId2: adId,
-        entityName2: adName,
-        dateRange2: currentRange,
-        metrics2: currentMetrics,
-        comparisonType: ComparisonType.TIME_PERIOD,
-        entityLevel: EntityLevel.ADVERT,
-      );
+        final adData = adDoc.data();
+        final adName = adData?['adName'] as String? ?? 'Unknown Ad';
 
-      comparisons.add(
-        AdComparison(
-          adId: adId,
-          adName: adName,
-          adSetId: adSetId,
-          comparison: comparison,
-        ),
-      );
+        // Get current period metrics
+        final currentMetrics = await _summaryService
+            .calculateAdTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              adId: adId,
+              startDate: currentStart,
+              endDate: currentEnd,
+            );
+
+        // Get previous period metrics
+        final previousMetrics = await _summaryService
+            .calculateAdTotalsFromSummaryForComparison(
+              campaignId: campaignId,
+              adId: adId,
+              startDate: previousStart,
+              endDate: previousEnd,
+            );
+
+        final currentRange = TimePeriodCalculator.formatDateRange(
+          currentStart,
+          currentEnd,
+        );
+        final previousRange = TimePeriodCalculator.formatDateRange(
+          previousStart,
+          previousEnd,
+        );
+
+        final comparison = ComparisonResult.fromMetricsMap(
+          entityId1: adId,
+          entityName1: adName,
+          dateRange1: previousRange,
+          metrics1: previousMetrics,
+          entityId2: adId,
+          entityName2: adName,
+          dateRange2: currentRange,
+          metrics2: currentMetrics,
+          comparisonType: ComparisonType.TIME_PERIOD,
+          entityLevel: EntityLevel.ADVERT,
+        );
+
+        comparisons.add(
+          AdComparison(
+            adId: adId,
+            adName: adName,
+            adSetId: adSetId,
+            comparison: comparison,
+          ),
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Error getting comparison for ad $adId: $e');
+        }
+      }
     }
 
     comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
+
+    if (kDebugMode) {
+      print('✅ Returning ${comparisons.length} ad comparisons');
+    }
+
     return comparisons;
-  }
-
-  /// Helper: Aggregate weekly insights by individual ad
-  /// Filters by adSetId and returns metrics per adId
-  Future<Map<String, Map<String, dynamic>>> _aggregateByAd(
-    Map<String, List<FacebookWeeklyInsight>> weeklyData,
-    String adSetId,
-  ) async {
-    final result = <String, Map<String, dynamic>>{};
-
-    // Fetch ad metadata for all ads in the weekly data
-    final adIds = weeklyData.keys.toList();
-    final adMetadata = <String, Map<String, dynamic>>{};
-
-    print('🔍 DEBUG: Aggregating by ad for adSetId: $adSetId');
-    print('🔍 DEBUG: Total ads with weekly data: ${adIds.length}');
-
-    // Batch fetch ads in groups of 10
-    const batchSize = 10;
-    int matchingAds = 0;
-    int nonMatchingAds = 0;
-
-    for (var i = 0; i < adIds.length; i += batchSize) {
-      final batchEnd = (i + batchSize < adIds.length)
-          ? i + batchSize
-          : adIds.length;
-      final batchIds = adIds.sublist(i, batchEnd);
-
-      // Fetch all docs in this batch in parallel
-      final futures = batchIds
-          .map((adId) => _firestore.collection('ads').doc(adId).get())
-          .toList();
-
-      try {
-        final snapshots = await Future.wait(futures);
-
-        for (var j = 0; j < snapshots.length; j++) {
-          final doc = snapshots[j];
-          if (doc.exists) {
-            final data = doc.data();
-            final adAdSetId = data?['adSetId'] ?? '';
-            final adName = data?['adName'] ?? 'Unknown Ad';
-
-            print(
-              '🔍 DEBUG: Ad ${batchIds[j]} ($adName) belongs to adSetId: $adAdSetId',
-            );
-
-            // Only include ads from the specified ad set
-            if (adAdSetId == adSetId) {
-              adMetadata[batchIds[j]] = {
-                'adSetId': adAdSetId,
-                'adName': adName,
-              };
-              matchingAds++;
-              print('   ✅ MATCH - Added to results');
-            } else {
-              nonMatchingAds++;
-              print(
-                '   ❌ NO MATCH - Filtered out (expected: $adSetId, got: $adAdSetId)',
-              );
-            }
-          } else {
-            print(
-              '🔍 DEBUG: Ad ${batchIds[j]} document does not exist in ads collection',
-            );
-          }
-        }
-      } catch (e) {
-        print('Error fetching ad metadata batch: $e');
-      }
-    }
-
-    print('✅ Fetched metadata for ${adMetadata.length} ads in ad set');
-    print('📊 Matching ads: $matchingAds, Non-matching ads: $nonMatchingAds');
-
-    // Aggregate by ad
-    print('🔍 DEBUG: Starting aggregation of weekly insights...');
-    int skippedNoMetadata = 0;
-    int aggregatedAds = 0;
-
-    for (final entry in weeklyData.entries) {
-      final adId = entry.key;
-      final insights = entry.value;
-      if (insights.isEmpty) continue;
-
-      final metadata = adMetadata[adId];
-      if (metadata == null) {
-        skippedNoMetadata++;
-        continue;
-      }
-
-      final adName = metadata['adName'] as String;
-
-      if (!result.containsKey(adId)) {
-        result[adId] = {'adName': adName, ..._createZeroMetrics()};
-        aggregatedAds++;
-        print(
-          '🔍 DEBUG: Aggregating ad $adId ($adName) - ${insights.length} weeks of data',
-        );
-      }
-
-      for (final insight in insights) {
-        result[adId]!['totalSpend'] =
-            (result[adId]!['totalSpend'] as double) + insight.spend;
-        result[adId]!['totalImpressions'] =
-            (result[adId]!['totalImpressions'] as int) + insight.impressions;
-        result[adId]!['totalClicks'] =
-            (result[adId]!['totalClicks'] as int) + insight.clicks;
-      }
-    }
-
-    print('📊 Final aggregation results:');
-    print('   - Ads successfully aggregated: $aggregatedAds');
-    print('   - Ads skipped (no metadata match): $skippedNoMetadata');
-    print('   - Total ads in result: ${result.length}');
-
-    return result;
   }
 }
