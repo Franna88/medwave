@@ -857,6 +857,7 @@ class ComparisonService {
   }
 
   /// Get ad sets comparison using summary collection
+  /// Uses same pattern as campaign screen: fetch all ad sets first, then calculate metrics
   Future<List<AdSetComparison>> _getAdSetsMonthComparison(
     String campaignId,
   ) async {
@@ -870,7 +871,7 @@ class ComparisonService {
 
     if (kDebugMode) {
       print(
-        '📊 Fetching ad sets with summary collection for campaign $campaignId (THIS_MONTH)',
+        '📊 Fetching ad sets for comparison (THIS_MONTH) for campaign $campaignId',
       );
       print(
         '   Current: ${_formatDate(currentStart)} to ${_formatDate(currentEnd)}',
@@ -880,35 +881,22 @@ class ComparisonService {
       );
     }
 
-    // Get all ad set IDs with activity in current period
-    final adSetIds = await _summaryService.getAdSetIdsWithActivityInDateRange(
-      campaignId: campaignId,
-      startDate: currentStart,
-      endDate: currentEnd,
-    );
+    // Get all ad sets for this campaign (same pattern as campaign screen)
+    final adSets = await _adSetService.getAdSetsForCampaign(campaignId);
 
     if (kDebugMode) {
       print(
-        '📊 Found ${adSetIds.length} ad sets with activity in current period',
+        '📊 Found ${adSets.length} ad sets in campaign (from adSets collection)',
       );
     }
 
-    final comparisons = <AdSetComparison>[];
+    // Process all ad sets in parallel
+    final comparisonFutures = adSets.map((adSet) async {
+      final adSetId = adSet.adSetId;
 
-    // For each ad set, get metrics for both periods
-    for (final adSetId in adSetIds) {
       try {
-        // Get ad set name from ad set service
-        final adSet = await _adSetService.getAdSet(adSetId);
-        if (adSet == null) {
-          if (kDebugMode) {
-            print('⚠️ Ad set $adSetId not found in adSets collection');
-          }
-          continue;
-        }
-
-        // Get current period metrics
-        final currentMetrics = await _summaryService
+        // Get both period metrics in parallel using summary collection
+        final currentMetricsFuture = _summaryService
             .calculateAdSetTotalsFromSummaryForComparison(
               campaignId: campaignId,
               adSetId: adSetId,
@@ -916,14 +904,33 @@ class ComparisonService {
               endDate: currentEnd,
             );
 
-        // Get previous period metrics
-        final previousMetrics = await _summaryService
+        final previousMetricsFuture = _summaryService
             .calculateAdSetTotalsFromSummaryForComparison(
               campaignId: campaignId,
               adSetId: adSetId,
               startDate: previousStart,
               endDate: previousEnd,
             );
+
+        // Wait for both metrics in parallel
+        final results = await Future.wait([
+          currentMetricsFuture,
+          previousMetricsFuture,
+        ]);
+
+        final currentMetrics = results[0];
+        final previousMetrics = results[1];
+
+        // Check if ad set has activity in current period (adsInRange > 0)
+        final currentAdsInRange = currentMetrics['adsInRange'] as int? ?? 0;
+        if (currentAdsInRange == 0) {
+          if (kDebugMode) {
+            print(
+              '   ⏭️ Skipping ad set $adSetId (no activity in current period)',
+            );
+          }
+          return null;
+        }
 
         final currentRange = TimePeriodCalculator.formatDateRange(
           currentStart,
@@ -947,31 +954,37 @@ class ComparisonService {
           entityLevel: EntityLevel.AD_SET,
         );
 
-        comparisons.add(
-          AdSetComparison(
-            adSetId: adSetId,
-            adSetName: adSet.adSetName,
-            campaignId: campaignId,
-            comparison: comparison,
-          ),
+        return AdSetComparison(
+          adSetId: adSetId,
+          adSetName: adSet.adSetName,
+          campaignId: campaignId,
+          comparison: comparison,
         );
       } catch (e) {
         if (kDebugMode) {
           print('❌ Error getting comparison for ad set $adSetId: $e');
         }
+        return null;
       }
-    }
+    }).toList();
 
-    comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
+    // Wait for all comparisons to complete
+    final comparisonResults = await Future.wait(comparisonFutures);
+    final validComparisons = comparisonResults
+        .whereType<AdSetComparison>()
+        .toList();
+
+    validComparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
 
     if (kDebugMode) {
-      print('✅ Returning ${comparisons.length} ad set comparisons');
+      print('✅ Returning ${validComparisons.length} ad set comparisons');
     }
 
-    return comparisons;
+    return validComparisons;
   }
 
   /// Get ad sets comparison using summary collection for date ranges (THIS_WEEK)
+  /// Uses same pattern as campaign screen: fetch all ad sets first, then calculate metrics
   Future<List<AdSetComparison>> _getAdSetsDateRangeComparison(
     String campaignId,
     TimePeriod timePeriod,
@@ -984,7 +997,7 @@ class ComparisonService {
 
     if (kDebugMode) {
       print(
-        '📊 Fetching ad sets with summary collection for campaign $campaignId ($timePeriod)',
+        '📊 Fetching ad sets for comparison ($timePeriod) for campaign $campaignId',
       );
       print(
         '   Current: ${_formatDate(currentStart)} to ${_formatDate(currentEnd)}',
@@ -994,35 +1007,22 @@ class ComparisonService {
       );
     }
 
-    // Get all ad set IDs with activity in current period
-    final adSetIds = await _summaryService.getAdSetIdsWithActivityInDateRange(
-      campaignId: campaignId,
-      startDate: currentStart,
-      endDate: currentEnd,
-    );
+    // Get all ad sets for this campaign (same pattern as campaign screen)
+    final adSets = await _adSetService.getAdSetsForCampaign(campaignId);
 
     if (kDebugMode) {
       print(
-        '📊 Found ${adSetIds.length} ad sets with activity in current period',
+        '📊 Found ${adSets.length} ad sets in campaign (from adSets collection)',
       );
     }
 
-    final comparisons = <AdSetComparison>[];
+    // Process all ad sets in parallel
+    final comparisonFutures = adSets.map((adSet) async {
+      final adSetId = adSet.adSetId;
 
-    // For each ad set, get metrics for both periods
-    for (final adSetId in adSetIds) {
       try {
-        // Get ad set name from ad set service
-        final adSet = await _adSetService.getAdSet(adSetId);
-        if (adSet == null) {
-          if (kDebugMode) {
-            print('⚠️ Ad set $adSetId not found in adSets collection');
-          }
-          continue;
-        }
-
-        // Get current period metrics
-        final currentMetrics = await _summaryService
+        // Get both period metrics in parallel using summary collection
+        final currentMetricsFuture = _summaryService
             .calculateAdSetTotalsFromSummaryForComparison(
               campaignId: campaignId,
               adSetId: adSetId,
@@ -1030,14 +1030,33 @@ class ComparisonService {
               endDate: currentEnd,
             );
 
-        // Get previous period metrics
-        final previousMetrics = await _summaryService
+        final previousMetricsFuture = _summaryService
             .calculateAdSetTotalsFromSummaryForComparison(
               campaignId: campaignId,
               adSetId: adSetId,
               startDate: previousStart,
               endDate: previousEnd,
             );
+
+        // Wait for both metrics in parallel
+        final results = await Future.wait([
+          currentMetricsFuture,
+          previousMetricsFuture,
+        ]);
+
+        final currentMetrics = results[0];
+        final previousMetrics = results[1];
+
+        // Check if ad set has activity in current period (adsInRange > 0)
+        final currentAdsInRange = currentMetrics['adsInRange'] as int? ?? 0;
+        if (currentAdsInRange == 0) {
+          if (kDebugMode) {
+            print(
+              '   ⏭️ Skipping ad set $adSetId (no activity in current period)',
+            );
+          }
+          return null;
+        }
 
         final currentRange = TimePeriodCalculator.formatDateRange(
           currentStart,
@@ -1061,28 +1080,33 @@ class ComparisonService {
           entityLevel: EntityLevel.AD_SET,
         );
 
-        comparisons.add(
-          AdSetComparison(
-            adSetId: adSetId,
-            adSetName: adSet.adSetName,
-            campaignId: campaignId,
-            comparison: comparison,
-          ),
+        return AdSetComparison(
+          adSetId: adSetId,
+          adSetName: adSet.adSetName,
+          campaignId: campaignId,
+          comparison: comparison,
         );
       } catch (e) {
         if (kDebugMode) {
           print('❌ Error getting comparison for ad set $adSetId: $e');
         }
+        return null;
       }
-    }
+    }).toList();
 
-    comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
+    // Wait for all comparisons to complete
+    final comparisonResults = await Future.wait(comparisonFutures);
+    final validComparisons = comparisonResults
+        .whereType<AdSetComparison>()
+        .toList();
+
+    validComparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
 
     if (kDebugMode) {
-      print('✅ Returning ${comparisons.length} ad set comparisons');
+      print('✅ Returning ${validComparisons.length} ad set comparisons');
     }
 
-    return comparisons;
+    return validComparisons;
   }
 
   // ============================================================================
@@ -1231,6 +1255,7 @@ class ComparisonService {
   }
 
   /// Get ads comparison using summary collection for THIS_MONTH
+  /// Uses same pattern as campaign screen: fetch all ads first, then calculate metrics
   Future<List<AdComparison>> _getAdsMonthComparison(
     String campaignId,
     String adSetId,
@@ -1244,9 +1269,7 @@ class ComparisonService {
     final previousEnd = dateRanges['previousEnd']!;
 
     if (kDebugMode) {
-      print(
-        '📊 Fetching ads with summary collection for ad set $adSetId (THIS_MONTH)',
-      );
+      print('📊 Fetching ads for comparison (THIS_MONTH) for ad set $adSetId');
       print(
         '   Current: ${_formatDate(currentStart)} to ${_formatDate(currentEnd)}',
       );
@@ -1255,37 +1278,27 @@ class ComparisonService {
       );
     }
 
-    // Get all ad IDs with activity in current period
-    final adIds = await _summaryService.getAdIdsWithActivityInDateRange(
-      campaignId: campaignId,
-      adSetId: adSetId,
-      startDate: currentStart,
-      endDate: currentEnd,
-    );
+    // Get all ads for this ad set (same pattern as campaign screen)
+    final snapshot = await _firestore
+        .collection('ads')
+        .where('adSetId', isEqualTo: adSetId)
+        .get();
 
     if (kDebugMode) {
-      print('📊 Found ${adIds.length} ads with activity in current period');
+      print(
+        '📊 Found ${snapshot.docs.length} ads in ad set (from ads collection)',
+      );
     }
 
-    final comparisons = <AdComparison>[];
+    // Process all ads in parallel
+    final comparisonFutures = snapshot.docs.map((doc) async {
+      final adData = doc.data();
+      final adId = doc.id;
+      final adName = adData['adName'] as String? ?? 'Unknown Ad';
 
-    // For each ad, get metrics for both periods
-    for (final adId in adIds) {
       try {
-        // Get ad name from Firestore
-        final adDoc = await _firestore.collection('ads').doc(adId).get();
-        if (!adDoc.exists) {
-          if (kDebugMode) {
-            print('⚠️ Ad $adId not found in ads collection');
-          }
-          continue;
-        }
-
-        final adData = adDoc.data();
-        final adName = adData?['adName'] as String? ?? 'Unknown Ad';
-
-        // Get current period metrics
-        final currentMetrics = await _summaryService
+        // Get both period metrics in parallel using summary collection
+        final currentMetricsFuture = _summaryService
             .calculateAdTotalsFromSummaryForComparison(
               campaignId: campaignId,
               adId: adId,
@@ -1293,14 +1306,31 @@ class ComparisonService {
               endDate: currentEnd,
             );
 
-        // Get previous period metrics
-        final previousMetrics = await _summaryService
+        final previousMetricsFuture = _summaryService
             .calculateAdTotalsFromSummaryForComparison(
               campaignId: campaignId,
               adId: adId,
               startDate: previousStart,
               endDate: previousEnd,
             );
+
+        // Wait for both metrics in parallel
+        final results = await Future.wait([
+          currentMetricsFuture,
+          previousMetricsFuture,
+        ]);
+
+        final currentMetrics = results[0];
+        final previousMetrics = results[1];
+
+        // Check if ad has activity in current period (adsInRange > 0)
+        final currentAdsInRange = currentMetrics['adsInRange'] as int? ?? 0;
+        if (currentAdsInRange == 0) {
+          if (kDebugMode) {
+            print('   ⏭️ Skipping ad $adId (no activity in current period)');
+          }
+          return null;
+        }
 
         final currentRange = TimePeriodCalculator.formatDateRange(
           currentStart,
@@ -1324,31 +1354,37 @@ class ComparisonService {
           entityLevel: EntityLevel.ADVERT,
         );
 
-        comparisons.add(
-          AdComparison(
-            adId: adId,
-            adName: adName,
-            adSetId: adSetId,
-            comparison: comparison,
-          ),
+        return AdComparison(
+          adId: adId,
+          adName: adName,
+          adSetId: adSetId,
+          comparison: comparison,
         );
       } catch (e) {
         if (kDebugMode) {
           print('❌ Error getting comparison for ad $adId: $e');
         }
+        return null;
       }
-    }
+    }).toList();
 
-    comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
+    // Wait for all comparisons to complete
+    final comparisonResults = await Future.wait(comparisonFutures);
+    final validComparisons = comparisonResults
+        .whereType<AdComparison>()
+        .toList();
+
+    validComparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
 
     if (kDebugMode) {
-      print('✅ Returning ${comparisons.length} ad comparisons');
+      print('✅ Returning ${validComparisons.length} ad comparisons');
     }
 
-    return comparisons;
+    return validComparisons;
   }
 
   /// Get ads comparison using summary collection for date range (THIS_WEEK)
+  /// Uses same pattern as campaign screen: fetch all ads first, then calculate metrics
   Future<List<AdComparison>> _getAdsDateRangeComparison(
     String campaignId,
     String adSetId,
@@ -1361,9 +1397,7 @@ class ComparisonService {
     final previousEnd = ranges['previousEnd']!;
 
     if (kDebugMode) {
-      print(
-        '📊 Fetching ads with summary collection for ad set $adSetId ($timePeriod)',
-      );
+      print('📊 Fetching ads for comparison ($timePeriod) for ad set $adSetId');
       print(
         '   Current: ${_formatDate(currentStart)} to ${_formatDate(currentEnd)}',
       );
@@ -1372,37 +1406,27 @@ class ComparisonService {
       );
     }
 
-    // Get all ad IDs with activity in current period
-    final adIds = await _summaryService.getAdIdsWithActivityInDateRange(
-      campaignId: campaignId,
-      adSetId: adSetId,
-      startDate: currentStart,
-      endDate: currentEnd,
-    );
+    // Get all ads for this ad set (same pattern as campaign screen)
+    final snapshot = await _firestore
+        .collection('ads')
+        .where('adSetId', isEqualTo: adSetId)
+        .get();
 
     if (kDebugMode) {
-      print('📊 Found ${adIds.length} ads with activity in current period');
+      print(
+        '📊 Found ${snapshot.docs.length} ads in ad set (from ads collection)',
+      );
     }
 
-    final comparisons = <AdComparison>[];
+    // Process all ads in parallel
+    final comparisonFutures = snapshot.docs.map((doc) async {
+      final adData = doc.data();
+      final adId = doc.id;
+      final adName = adData['adName'] as String? ?? 'Unknown Ad';
 
-    // For each ad, get metrics for both periods
-    for (final adId in adIds) {
       try {
-        // Get ad name from Firestore
-        final adDoc = await _firestore.collection('ads').doc(adId).get();
-        if (!adDoc.exists) {
-          if (kDebugMode) {
-            print('⚠️ Ad $adId not found in ads collection');
-          }
-          continue;
-        }
-
-        final adData = adDoc.data();
-        final adName = adData?['adName'] as String? ?? 'Unknown Ad';
-
-        // Get current period metrics
-        final currentMetrics = await _summaryService
+        // Get both period metrics in parallel using summary collection
+        final currentMetricsFuture = _summaryService
             .calculateAdTotalsFromSummaryForComparison(
               campaignId: campaignId,
               adId: adId,
@@ -1410,14 +1434,31 @@ class ComparisonService {
               endDate: currentEnd,
             );
 
-        // Get previous period metrics
-        final previousMetrics = await _summaryService
+        final previousMetricsFuture = _summaryService
             .calculateAdTotalsFromSummaryForComparison(
               campaignId: campaignId,
               adId: adId,
               startDate: previousStart,
               endDate: previousEnd,
             );
+
+        // Wait for both metrics in parallel
+        final results = await Future.wait([
+          currentMetricsFuture,
+          previousMetricsFuture,
+        ]);
+
+        final currentMetrics = results[0];
+        final previousMetrics = results[1];
+
+        // Check if ad has activity in current period (adsInRange > 0)
+        final currentAdsInRange = currentMetrics['adsInRange'] as int? ?? 0;
+        if (currentAdsInRange == 0) {
+          if (kDebugMode) {
+            print('   ⏭️ Skipping ad $adId (no activity in current period)');
+          }
+          return null;
+        }
 
         final currentRange = TimePeriodCalculator.formatDateRange(
           currentStart,
@@ -1441,27 +1482,32 @@ class ComparisonService {
           entityLevel: EntityLevel.ADVERT,
         );
 
-        comparisons.add(
-          AdComparison(
-            adId: adId,
-            adName: adName,
-            adSetId: adSetId,
-            comparison: comparison,
-          ),
+        return AdComparison(
+          adId: adId,
+          adName: adName,
+          adSetId: adSetId,
+          comparison: comparison,
         );
       } catch (e) {
         if (kDebugMode) {
           print('❌ Error getting comparison for ad $adId: $e');
         }
+        return null;
       }
-    }
+    }).toList();
 
-    comparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
+    // Wait for all comparisons to complete
+    final comparisonResults = await Future.wait(comparisonFutures);
+    final validComparisons = comparisonResults
+        .whereType<AdComparison>()
+        .toList();
+
+    validComparisons.sort((a, b) => b.currentSpend.compareTo(a.currentSpend));
 
     if (kDebugMode) {
-      print('✅ Returning ${comparisons.length} ad comparisons');
+      print('✅ Returning ${validComparisons.length} ad comparisons');
     }
 
-    return comparisons;
+    return validComparisons;
   }
 }

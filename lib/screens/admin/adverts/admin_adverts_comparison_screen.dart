@@ -1027,12 +1027,53 @@ class _DrillDownModalState extends State<_DrillDownModal> {
 
   Widget _buildMetricChip(MetricComparison metric) {
     final changePercent = metric.changePercent;
-    final isPositive = changePercent >= 0;
-    final isGoodChange =
-        (isPositive && metric.isGoodWhenUp) ||
-        (!isPositive && !metric.isGoodWhenUp);
+    final absChangePercent = changePercent.abs();
 
-    final color = isGoodChange ? Colors.green : Colors.red;
+    // Check if change is effectively 0% (within 0.1% threshold)
+    final isZeroChange = absChangePercent < 0.1;
+
+    Color color;
+    Widget changeIndicator;
+
+    if (isZeroChange) {
+      color = Colors.grey;
+      changeIndicator = Text(
+        '0.0%',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      );
+    } else {
+      // Non-zero change: determine if good or bad
+      final isPositive = changePercent >= 0;
+      final isGoodChange =
+          (isPositive && metric.isGoodWhenUp) ||
+          (!isPositive && !metric.isGoodWhenUp);
+
+      color = isGoodChange ? Colors.green : Colors.red;
+
+      changeIndicator = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${absChangePercent.toStringAsFixed(1)}%',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1049,25 +1090,7 @@ class _DrillDownModalState extends State<_DrillDownModal> {
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-                size: 16,
-                color: color,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${changePercent.abs().toStringAsFixed(1)}%',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
+          changeIndicator,
           const SizedBox(height: 2),
           Text(
             '${metric.previousValue.toStringAsFixed(1)} → ${metric.currentValue.toStringAsFixed(1)}',
