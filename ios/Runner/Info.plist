@@ -87,8 +87,16 @@
 			<array>
 				<string>com.adobe.pdf</string>
 			</array>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
 		</dict>
 	</array>
+	
+	<!-- Document Browser Configuration -->
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	
 	<!-- Exported Type Identifiers for Medical Reports -->
 	<key>UTExportedTypeDeclarations</key>
