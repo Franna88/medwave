@@ -134,9 +134,9 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
           endDate: widget.provider.filterEndDate,
         );
         
+        // Show all ad sets with activity in the date range, even $0 spend
         final adSets = filteredAdSets
             .map((as) => widget.provider.adSetToAdSetAggregate(as))
-            .where((as) => as.totalFbSpend > 0)
             .toList();
         
         _sortAdSets(adSets);
@@ -167,9 +167,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
         
         // Load ad sets for selected campaign
         final campaign = _campaigns.firstWhere((c) => c.campaignId == campaignId);
+        // Show all ad sets with activity, even $0 spend
         _adSets = widget.provider
             .getAdSetAggregates(campaign.ads)
-            .where((adSet) => adSet.campaignId == campaignId && adSet.totalFbSpend > 0)
+            .where((adSet) => adSet.campaignId == campaignId)
             .toList();
         _sortAdSets(_adSets);
         
@@ -194,7 +195,8 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
       });
       
       try {
-        await widget.provider.loadAdsForAdSet(adSetId);
+        // Pass the selected campaign ID to load date-filtered ads
+        await widget.provider.loadAdsForAdSet(_selectedCampaignId!, adSetId);
         
         // Apply date filtering to ads
         final filteredAds = widget.provider.getFilteredAds(
