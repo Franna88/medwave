@@ -90,7 +90,8 @@ class CampaignService {
       Query query = _firestore.collection('campaigns');
 
       if (startDate != null) {
-        final startDateStr = _dateTimeToString(startDate);
+        final bufferedStartDate = startDate.subtract(Duration(days: 7));
+        final startDateStr = _dateTimeToString(bufferedStartDate);
         query = query.where('lastAdDate', isGreaterThanOrEqualTo: startDateStr);
       }
 
