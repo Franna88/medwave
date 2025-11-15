@@ -1,0 +1,138 @@
+SUMMARY COLLECTION - QUICK START GUIDE
+=======================================
+
+OVERVIEW
+--------
+The summary collection stores pre-aggregated weekly performance data for campaigns,
+ad sets, and ads. This enables fast queries without scanning thousands of records.
+
+QUICK COMMANDS
+--------------
+
+1. Test the rebuild (dry run - no writes):
+   cd /Users/mac/dev/medwave
+   python3 summary_collection/rebuild_summary_from_firebase.py --dry-run
+
+2. Rebuild October data only:
+   python3 summary_collection/rebuild_summary_from_firebase.py --october
+
+3. Rebuild November data only:
+   python3 summary_collection/rebuild_summary_from_firebase.py --november
+
+4. Rebuild both months (full rebuild):
+   python3 summary_collection/rebuild_summary_from_firebase.py
+
+5. Verify existing summary structure:
+   python3 summary_collection/verify_summary_structure.py
+
+6. Verify specific campaign:
+   python3 summary_collection/verify_summary_structure.py <campaign_id>
+
+TYPICAL WORKFLOW
+----------------
+
+Step 1: Verify current structure
+  python3 summary_collection/verify_summary_structure.py
+
+Step 2: Test rebuild with dry run
+  python3 summary_collection/rebuild_summary_from_firebase.py --dry-run
+
+Step 3: Review output and ensure data looks correct
+
+Step 4: Run actual rebuild
+  python3 summary_collection/rebuild_summary_from_firebase.py
+
+Step 5: Verify new structure
+  python3 summary_collection/verify_summary_structure.py
+
+WHAT THE REBUILD DOES
+----------------------
+
+1. Reads fb_ads collection
+   - Extracts daily insights
+   - Groups by week (Monday-Sunday)
+   - Aggregates: spend, impressions, reach, clicks
+   - Calculates: CPM, CPC, CTR
+
+2. Reads ghl_data collection
+   - Maps contactId to adId
+
+3. Reads ghl_opportunities collection
+   - Matches opportunities to ads
+   - Groups by week
+   - Counts leads, bookings, deposits, cash
+   - Sums monetary values
+
+4. Builds summary structure
+   - Campaign → Ad Set → Ad hierarchy
+   - Weekly aggregations
+   - Derived metrics
+
+5. Writes to summary collection
+   - One document per campaign
+   - All weeks in a single document
+
+DATA SOURCES
+------------
+
+Firebase Collections Used:
+- fb_ads: Facebook ad performance (insights array)
+- ghl_data: Contact to ad mappings
+- ghl_opportunities: Lead and conversion data
+
+NO API CALLS NEEDED - all data from Firebase!
+
+TROUBLESHOOTING
+---------------
+
+Issue: Script fails with "No module named firebase_admin"
+Fix: pip3 install firebase-admin
+
+Issue: Script fails with authentication error
+Fix: Ensure medx-ai-firebase-adminsdk-fbsvc-a86e7bd050.json exists
+
+Issue: No data in summary after rebuild
+Fix: Check that fb_ads and ghl_opportunities have data for Oct/Nov
+
+Issue: GHL data missing or zero
+Fix: Check ghl_data collection has contactId->adId mappings
+     Check ghl_opportunities has assignedAdId or contactId fields
+
+Issue: Want to rebuild just one campaign
+Fix: Not supported yet - rebuilds all campaigns for selected months
+
+PERFORMANCE NOTES
+-----------------
+
+- October + November rebuild: ~2-5 minutes
+- Depends on number of ads and opportunities
+- Uses batch writes (no rate limiting issues)
+- Can be run multiple times (overwrites existing data)
+
+MONITORING PROGRESS
+-------------------
+
+The script outputs detailed progress:
+- Step 1: Loading fb_ads (shows count)
+- Step 2: Loading ghl_data mappings (shows count)
+- Step 3: Loading ghl_opportunities (shows matched/unmatched)
+- Step 4: Building structure (shows weeks processed)
+- Step 5: Writing to Firebase (shows each campaign)
+
+Watch for:
+- High unmatched opportunity count (means missing adId mappings)
+- Zero GHL data (means no opportunities matched)
+- Missing campaigns (means no fb_ads data)
+
+NEXT STEPS
+----------
+
+After rebuilding summary collection:
+
+1. Check Superadmin dashboard - metrics should update
+2. Verify weekly views show correct data
+3. Compare with previous summary data
+4. If issues found, check source collections (fb_ads, ghl_data, ghl_opportunities)
+
+For more details, see README.txt in this folder.
+

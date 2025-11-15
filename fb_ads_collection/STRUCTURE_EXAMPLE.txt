@@ -1,0 +1,171 @@
+FIRESTORE COLLECTION STRUCTURE
+==============================
+
+Collection: fb_ads
+Document ID: {adId}
+
+Example Document Structure:
+----------------------------
+
+fb_ads/120233712971960335
+{
+  "adId": "120233712971960335",
+  "adName": "Dynamic Video",
+  "status": "ACTIVE",
+  "effectiveStatus": "ACTIVE",
+  
+  "adDetails": {
+    "id": "120233712971960335",
+    "name": "Dynamic Video",
+    "status": "ACTIVE",
+    "effective_status": "ACTIVE",
+    "configured_status": "ACTIVE",
+    "created_time": "2025-10-06T11:29:03+0100",
+    "updated_time": "2025-10-06T14:36:44+0100",
+    "account_id": "220298027464902",
+    "campaign_id": "120233712403260335",
+    "campaign": {
+      "id": "120233712403260335",
+      "name": "Matthys | 03102025 ABOLEADFORM (DDM)",
+      "status": "ACTIVE",
+      "objective": "OUTCOME_LEADS"
+    },
+    "adset_id": "120233712971950335",
+    "adset": {
+      "id": "120233712971950335",
+      "name": "Dynamic Ads | 1% LLA (USA) | Chiro's with Shockwave - DDM",
+      "status": "ACTIVE",
+      "targeting": { ... },
+      "optimization_goal": "LEAD_GENERATION",
+      "billing_event": "IMPRESSIONS",
+      "daily_budget": "8000",
+      "lifetime_budget": "0"
+    },
+    "creative": {
+      "id": "1098904672229695",
+      "name": "...",
+      "thumbnail_url": "https://...",
+      "object_story_spec": { ... }
+    },
+    "tracking_specs": [ ... ],
+    "conversion_specs": [ ... ],
+    "bid_type": "ABSOLUTE_OCPM"
+  },
+  
+  "insightsSummary": [
+    {
+      "account_id": "220298027464902",
+      "account_name": "MedWave Master Ads Account",
+      "ad_id": "120233712971960335",
+      "ad_name": "Dynamic Video",
+      "adset_id": "120233712971950335",
+      "adset_name": "Dynamic Ads | 1% LLA (USA) | Chiro's with Shockwave - DDM",
+      "campaign_id": "120233712403260335",
+      "campaign_name": "Matthys | 03102025 ABOLEADFORM (DDM)",
+      "objective": "OUTCOME_LEADS",
+      "buying_type": "AUCTION",
+      "optimization_goal": "LEAD_GENERATION",
+      "impressions": "3508",
+      "reach": "2867",
+      "frequency": "1.223579",
+      "clicks": "169",
+      "unique_clicks": "136",
+      "ctr": "4.81756",
+      "unique_ctr": "4.743634",
+      "inline_link_clicks": "83",
+      "inline_link_click_ctr": "2.366021",
+      "unique_inline_link_clicks": "82",
+      "spend": "564.8",
+      "cpm": "161.003421",
+      "cpc": "3.342012",
+      "cpp": "197.000349",
+      "cost_per_inline_link_click": "6.804819",
+      "cost_per_unique_click": "4.152941",
+      "cost_per_unique_inline_link_click": "6.887805",
+      "actions": [
+        {
+          "action_type": "onsite_conversion.total_messaging_connection",
+          "value": "9"
+        },
+        {
+          "action_type": "lead",
+          "value": "11"
+        },
+        ...
+      ],
+      "cost_per_action_type": [ ... ],
+      "video_play_actions": [ ... ],
+      "video_avg_time_watched_actions": [ ... ],
+      "video_p25_watched_actions": [ ... ],
+      "video_p50_watched_actions": [ ... ],
+      "video_p75_watched_actions": [ ... ],
+      "video_p100_watched_actions": [ ... ],
+      "video_p95_watched_actions": [ ... ],
+      "video_30_sec_watched_actions": [ ... ],
+      "social_spend": "0",
+      "attribution_setting": "1d_view_7d_click",
+      "date_start": "2025-11-01",
+      "date_stop": "2025-11-30"
+    }
+  ],
+  
+  "insightsDaily": [
+    {
+      "date_start": "2025-11-06",
+      "date_stop": "2025-11-06",
+      "impressions": "430",
+      "reach": "403",
+      "spend": "77.63",
+      "clicks": "23",
+      "ctr": "5.348837",
+      "cpm": "180.534884",
+      "cpc": "3.375217",
+      "actions": [ ... ],
+      ... (all metrics for this day)
+    },
+    {
+      "date_start": "2025-11-07",
+      "date_stop": "2025-11-07",
+      "impressions": "419",
+      "reach": "397",
+      "spend": "77.04",
+      ...
+    },
+    ... (one entry per day)
+  ],
+  
+  "fetchedAt": "2025-11-14T12:00:00.000000",
+  "month": "November",
+  "year": 2025,
+  "dateRange": {
+    "start": "2025-11-01",
+    "end": "2025-11-30"
+  }
+}
+
+KEY FEATURES:
+-------------
+1. Complete ad details including campaign hierarchy
+2. Full targeting and creative information
+3. TWO insight formats:
+   - insightsSummary: Aggregated totals for entire period (Nov 1-30)
+   - insightsDaily: Daily breakdown (one entry per day)
+4. All action types (leads, conversions, engagement)
+5. Video metrics if applicable
+6. Cost per action metrics
+7. Metadata about when data was fetched
+
+QUERYING EXAMPLES:
+------------------
+1. Get all ads for November:
+   db.collection('fb_ads').where('month', '==', 'November').where('year', '==', 2025)
+
+2. Get specific ad:
+   db.collection('fb_ads').doc('120233712971960335')
+
+3. Get ads by campaign:
+   db.collection('fb_ads').where('adDetails.campaign.name', '==', 'Campaign Name')
+
+4. Get ads with high spend:
+   Filter in code after fetching, as Firestore can't query nested arrays directly
+

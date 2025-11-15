@@ -1,0 +1,165 @@
+====================================================================================================
+GHL OPPORTUNITIES FIRESTORE STRUCTURE - EXAMPLE
+====================================================================================================
+
+COLLECTION: ghl_opportunities
+DOCUMENT ID: contactId (e.g., "srKrKjdbJeF9LG5LEK5b")
+
+====================================================================================================
+EXAMPLE DOCUMENT STRUCTURE:
+====================================================================================================
+
+ghl_opportunities/srKrKjdbJeF9LG5LEK5b
+{
+  "opportunityId": "Z6DwRpe9TEyOl8X56YVk",
+  "contactId": "srKrKjdbJeF9LG5LEK5b",
+  "name": "Bev Gradidge",
+  "contactName": "Bev Gradidge",
+  "contactEmail": "soulsistersa22@gmail.com",
+  "contactPhone": "+27823086112",
+  "monetaryValue": 25000,
+  "pipelineId": "XeAGJWRnUGJ5tuhXam2g",
+  "pipelineStageId": "52a076ca-851f-43fc-a57d-309403a4b208",
+  "stageName": "Deposit Received",
+  "status": "open",
+  "source": "WORKFLOW_NEW",
+  "createdAt": "2025-11-13T04:17:37.520Z",
+  "updatedAt": "2025-11-13T04:17:38.183Z",
+  
+  "attributions": [
+    {
+      "utmSessionSource": "CRM UI",
+      "medium": "manual",
+      "isFirst": true
+    }
+  ],
+  
+  "fullOpportunity": {
+    "id": "Z6DwRpe9TEyOl8X56YVk",
+    "name": "Bev Gradidge",
+    "monetaryValue": 25000,
+    "pipelineId": "XeAGJWRnUGJ5tuhXam2g",
+    "pipelineStageId": "52a076ca-851f-43fc-a57d-309403a4b208",
+    "assignedTo": "Yj7mjEZBYBC5CqF1dNL2",
+    "status": "open",
+    "lastStatusChangeAt": "2025-11-13T04:17:37.520Z",
+    "lastStageChangeAt": "2025-11-13T04:17:37.520Z",
+    "createdAt": "2025-11-13T04:17:37.520Z",
+    "updatedAt": "2025-11-13T04:17:38.183Z",
+    "contactId": "srKrKjdbJeF9LG5LEK5b",
+    "locationId": "QdLXaFEqrdF0JbVbpKLw",
+    "followers": [],
+    "contact": {
+      "id": "srKrKjdbJeF9LG5LEK5b",
+      "name": "Bev Gradidge",
+      "email": "soulsistersa22@gmail.com",
+      "phone": "+27823086112",
+      "tags": [
+        "karen website leads",
+        "andries leads booked - e",
+        "andries booked appointments"
+      ]
+    },
+    "attributions": [...],
+    "customFields": [],
+    "relations": [...]
+  },
+  
+  "fetchedAt": "2025-11-14T12:00:00.000000",
+  "month": "November",
+  "year": 2025,
+  "dateRange": {
+    "start": "2025-11-01T00:00:00.000Z",
+    "end": "2025-11-30T23:59:59.999Z"
+  }
+}
+
+====================================================================================================
+KEY FEATURES:
+====================================================================================================
+
+1. ONLY Andries and Davide pipeline opportunities (Erich excluded)
+2. One document per contactId
+3. Top-level fields for easy querying (name, monetaryValue, pipelineId, stageName, etc.)
+4. stageName field automatically mapped from pipelineStageId
+5. fullOpportunity contains complete GHL API response
+6. Attribution data extracted to top level
+7. Contact information extracted for easy access
+8. Metadata (fetchedAt, month, year, dateRange)
+
+====================================================================================================
+QUERYING EXAMPLES:
+====================================================================================================
+
+1. Get all opportunities for November:
+   db.collection('ghl_opportunities').where('month', '==', 'November').where('year', '==', 2025)
+
+2. Get opportunity by contact ID:
+   db.collection('ghl_opportunities').doc('srKrKjdbJeF9LG5LEK5b')
+
+3. Get Andries opportunities:
+   db.collection('ghl_opportunities').where('pipelineId', '==', 'XeAGJWRnUGJ5tuhXam2g')
+
+4. Get Davide opportunities:
+   db.collection('ghl_opportunities').where('pipelineId', '==', 'AUduOJBB2lxlsEaNmlJz')
+
+5. Get opportunities by stage name:
+   db.collection('ghl_opportunities').where('stageName', '==', 'Deposit Received')
+
+6. Get opportunities by stage ID:
+   db.collection('ghl_opportunities').where('pipelineStageId', '==', '52a076ca-851f-43fc-a57d-309403a4b208')
+
+7. Get opportunities with value > R10,000:
+   db.collection('ghl_opportunities').where('monetaryValue', '>', 1000000)
+
+8. Get open opportunities:
+   db.collection('ghl_opportunities').where('status', '==', 'open')
+
+====================================================================================================
+LINKING WITH OTHER COLLECTIONS:
+====================================================================================================
+
+To combine GHL opportunities with form submissions and contacts:
+
+# Get opportunity
+opportunity = db.collection('ghl_opportunities').doc('srKrKjdbJeF9LG5LEK5b').get()
+contact_id = opportunity.data()['contactId']
+
+# Get related form submission
+submission = db.collection('ghl_data').doc(contact_id).get()
+ad_id = submission.data()['adId']
+
+# Get related contact
+contact = db.collection('ghl_contacts').doc(contact_id).get()
+
+# Get related Facebook ad
+if ad_id:
+    ad = db.collection('fb_ads').doc(ad_id).get()
+
+====================================================================================================
+IMPORTANT NOTES:
+====================================================================================================
+
+1. DOCUMENT ID = contactId (not opportunityId!)
+   - This allows easy linking with ghl_data and ghl_contacts
+   - If a contact has multiple opportunities, only the last one is stored
+   
+2. MONETARY VALUES:
+   - Stored in cents (25000 = R 250.00)
+   - Divide by 100 to get currency amount
+   
+3. PIPELINE STAGES:
+   - stageName field automatically included (human-readable)
+   - pipelineStageId is the UUID from GHL
+   - Only Andries and Davide pipeline stages included
+   
+4. ATTRIBUTION DATA:
+   - May include UTM parameters if from Facebook
+   - May be empty for manual entries
+   
+5. COMPLETE PAYLOAD:
+   - fullOpportunity field contains entire GHL API response
+   - Use this for any fields not extracted to top level
+
+====================================================================================================
+

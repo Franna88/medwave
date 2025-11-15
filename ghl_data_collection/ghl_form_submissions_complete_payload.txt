@@ -1,0 +1,413 @@
+====================================================================================================
+  GHL FORM SUBMISSIONS API - COMPLETE PAYLOAD
+====================================================================================================
+API Endpoint: https://services.leadconnectorhq.com/forms/submissions
+Location ID: QdLXaFEqrdF0JbVbpKLw
+API Version: 2021-07-28
+Method: GET
+Timestamp: 2025-11-14
+
+====================================================================================================
+  API REQUEST PARAMETERS
+====================================================================================================
+
+Required Parameters:
+- locationId: QdLXaFEqrdF0JbVbpKLw
+- limit: 100 (max per page)
+
+Optional Parameters:
+- startAt: 2025-11-01T00:00:00.000Z (ISO 8601 format)
+- endAt: 2025-11-30T23:59:59.999Z (ISO 8601 format)
+- page: 1 (for pagination)
+
+====================================================================================================
+  COMPLETE API RESPONSE STRUCTURE
+====================================================================================================
+
+📦 TOP-LEVEL RESPONSE KEYS:
+{
+  "submissions": [array of submission objects],
+  "meta": {
+    "total": 1234,
+    "currentPage": 1,
+    "nextPage": 2,
+    "prevPage": null
+  },
+  "traceId": "abc123xyz"
+}
+
+====================================================================================================
+  SAMPLE FORM SUBMISSION #1 - WITH FACEBOOK AD ATTRIBUTION
+====================================================================================================
+
+📦 COMPLETE SUBMISSION OBJECT:
+{
+  "id": "ba964d58-9f5c-45be-8220-74722ba1f9c6",
+  "contactId": "ziJ4rSgkJA5qIqIXzD0X",
+  "formId": "fb-QdLXaFEqrdF0JbVbpKLw",
+  "name": "Rogers Pillay",
+  "email": "rogerspillay007@gmail.com",
+  "others": {
+    "locationId": "QdLXaFEqrdF0JbVbpKLw",
+    "facebookLeadId": "1155012289591107",
+    "type": "lead",
+    "source": "Facebook",
+    "lastAttributionSource": {
+      "sessionSource": "Paid Social",
+      "mediumId": "1168700714593335",
+      "medium": "facebook",
+      "formId": "1168700714593335",
+      "formName": "A/B for Lander | DDM (5xQ) v2",
+      "campaign": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "utm_campaign": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+      "campaignId": "120235556205010335",
+      "utmMedium": "Interests - General Hospital (DDM)",
+      "utmContent": "B2B October 2025",
+      "adSetId": "120235556204900335",
+      "adId": "120235556204840335",
+      "utmSource": "facebook",
+      "source": "facebook",
+      "referrer": "",
+      "keyword": null,
+      "adSource": "facebook"
+    },
+    "lastName": "Pillay",
+    "phone": "+27763345920",
+    "firstName": "Rogers",
+    "email": "rogerspillay007@gmail.com",
+    "customFields": [
+      {
+        "id": "bc4LhOHnMuRlX9e3a1h8",
+        "field_value": "No"
+      },
+      {
+        "id": "6mcYhCsgPT77viSA5jWb",
+        "field_value": "None of the Above"
+      },
+      {
+        "id": "2nq0c83hEH0MKz2l5mcE",
+        "field_value": "0"
+      },
+      {
+        "id": "E5mcNMuKIjZV12WAZkus",
+        "field_value": "Patient seeking treatment"
+      },
+      {
+        "id": "rfc7qxlvb17T3HtKTDzB",
+        "field_value": "kolens"
+      }
+    ],
+    "facebookFormName": "A/B for Lander | DDM (5xQ) v2",
+    "facebookFormId": "1168700714593335",
+    "facebookLeadSubmissionDetails": {
+      "id": "1155012289591107",
+      "field_data": [
+        {
+          "name": "are_you_currently_doing_r80k_per_month?",
+          "values": [
+            "no"
+          ]
+        },
+        {
+          "name": "if_you_are_a_healthcare_provider,_what_type_of_provider_are_you?",
+          "values": [
+            "none_of_the_above"
+          ]
+        },
+        {
+          "name": "last_name",
+          "values": [
+            "Pillay"
+          ]
+        },
+        {
+          "name": "phone_number",
+          "values": [
+            "+27763345920"
+          ]
+        },
+        {
+          "name": "how_many_patients_do_you_see_on_average_per_week?",
+          "values": [
+            "0"
+          ]
+        },
+        {
+          "name": "first_name",
+          "values": [
+            "Rogers"
+          ]
+        },
+        {
+          "name": "are_you_a_healthcare_provider_or_a_patient_seeking_treatment?",
+          "values": [
+            "patient_seeking_treatment"
+          ]
+        },
+        {
+          "name": "what_is_the_name_of_your_practice_(if_relevant)?",
+          "values": [
+            "kolens"
+          ]
+        },
+        {
+          "name": "email",
+          "values": [
+            "rogerspillay007@gmail.com"
+          ]
+        },
+        {
+          "name": "inbox_url",
+          "values": [
+            "https://business.facebook.com/latest/32222599314055445?nav_ref=thread_view_by_psid"
+          ]
+        }
+      ],
+      "created_time": "2025-11-12T19:22:35+0000"
+    },
+    "eventData": {
+      "referrer": null,
+      "source": "Paid Social",
+      "url_params": {
+        "utm_campaign": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "campaign_id": "120235556205010335",
+        "ad_id": "120235556204840335",
+        "adset_id": "120235556204900335",
+        "utm_medium": "Interests - General Hospital (DDM)",
+        "utm_content": "B2B October 2025",
+        "utm_source": "facebook"
+      },
+      "campaign": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences"
+    },
+    "productType": "facebook"
+  },
+  "createdAt": "2025-11-13T10:53:34.920Z",
+  "external": false
+}
+
+====================================================================================================
+  SAMPLE FORM SUBMISSION #2 - WITHOUT FACEBOOK AD ATTRIBUTION (WEBSITE FORM)
+====================================================================================================
+
+📦 COMPLETE SUBMISSION OBJECT:
+{
+  "id": "xyz789-abc-def-456-123",
+  "contactId": "3TE7CVgLxCo2BllfvsmG",
+  "formId": "YeJfeoIzuBRGqgMeyl5n",
+  "name": "John Smith",
+  "email": "john.smith@example.com",
+  "others": {
+    "locationId": "QdLXaFEqrdF0JbVbpKLw",
+    "type": "lead",
+    "source": "Website",
+    "lastName": "Smith",
+    "phone": "+27821234567",
+    "firstName": "John",
+    "email": "john.smith@example.com",
+    "customFields": [
+      {
+        "id": "custom_field_1",
+        "field_value": "Some value"
+      }
+    ],
+    "eventData": {
+      "referrer": "https://www.google.com",
+      "source": "Direct",
+      "url_params": {},
+      "campaign": null
+    },
+    "productType": "website"
+  },
+  "createdAt": "2025-11-12T19:45:18.440Z",
+  "external": false
+}
+
+====================================================================================================
+  FIELD MAPPING FOR FACEBOOK AD ATTRIBUTION
+====================================================================================================
+
+✅ PRIMARY AD ID LOCATION:
+   others.lastAttributionSource.adId = "120235556204840335"
+
+✅ FALLBACK AD ID LOCATION:
+   others.eventData.url_params.ad_id = "120235556204840335"
+
+✅ CAMPAIGN DATA:
+   others.lastAttributionSource.campaignId = "120235556205010335"
+   others.lastAttributionSource.campaign = "Campaign Name"
+   others.eventData.url_params.campaign_id = "120235556205010335"
+   others.eventData.url_params.utm_campaign = "Campaign Name"
+
+✅ ADSET DATA:
+   others.lastAttributionSource.adSetId = "120235556204900335"
+   others.eventData.url_params.adset_id = "120235556204900335"
+
+✅ AD CREATIVE DATA:
+   others.lastAttributionSource.utmContent = "B2B October 2025"
+   others.eventData.url_params.utm_content = "B2B October 2025"
+
+✅ MEDIUM/SOURCE:
+   others.lastAttributionSource.medium = "facebook"
+   others.lastAttributionSource.utmSource = "facebook"
+   others.eventData.url_params.utm_source = "facebook"
+   others.eventData.url_params.utm_medium = "Interests - General Hospital (DDM)"
+
+====================================================================================================
+  FACEBOOK LEAD FORM SPECIFIC FIELDS
+====================================================================================================
+
+✅ FACEBOOK FORM INFO:
+   others.facebookFormName = "A/B for Lander | DDM (5xQ) v2"
+   others.facebookFormId = "1168700714593335"
+   others.facebookLeadId = "1155012289591107"
+
+✅ FACEBOOK LEAD SUBMISSION DETAILS:
+   others.facebookLeadSubmissionDetails.id = "1155012289591107"
+   others.facebookLeadSubmissionDetails.field_data = [array of form fields]
+   others.facebookLeadSubmissionDetails.created_time = "2025-11-12T19:22:35+0000"
+
+✅ FORM FIELD STRUCTURE:
+   {
+     "name": "field_name",
+     "values": ["field_value"]
+   }
+
+====================================================================================================
+  CUSTOM FIELDS STRUCTURE
+====================================================================================================
+
+✅ CUSTOM FIELDS ARRAY:
+   others.customFields = [
+     {
+       "id": "bc4LhOHnMuRlX9e3a1h8",
+       "field_value": "No"
+     },
+     {
+       "id": "6mcYhCsgPT77viSA5jWb",
+       "field_value": "None of the Above"
+     }
+   ]
+
+====================================================================================================
+  COMPLETE FIELD LIST
+====================================================================================================
+
+📋 TOP-LEVEL FIELDS:
+   - id (string): Submission ID
+   - contactId (string): GHL Contact ID
+   - formId (string): GHL Form ID
+   - name (string): Contact full name
+   - email (string): Contact email
+   - createdAt (string): ISO 8601 timestamp
+   - external (boolean): Whether submission is external
+   - others (object): Contains all additional data
+
+📦 OTHERS OBJECT FIELDS:
+   - locationId (string)
+   - type (string): "lead" or "contact"
+   - source (string): "Facebook", "Website", etc.
+   - firstName (string)
+   - lastName (string)
+   - phone (string)
+   - email (string)
+   - customFields (array)
+   - lastAttributionSource (object) - PRIMARY ATTRIBUTION DATA
+   - eventData (object) - FALLBACK ATTRIBUTION DATA
+   - productType (string): "facebook", "website", etc.
+
+📦 FACEBOOK-SPECIFIC FIELDS (in others):
+   - facebookLeadId (string)
+   - facebookFormName (string)
+   - facebookFormId (string)
+   - facebookLeadSubmissionDetails (object)
+
+====================================================================================================
+  API RESPONSE METADATA
+====================================================================================================
+
+📦 META OBJECT:
+{
+  "total": 1234,          // Total number of submissions matching criteria
+  "currentPage": 1,       // Current page number
+  "nextPage": 2,          // Next page number (null if last page)
+  "prevPage": null        // Previous page number (null if first page)
+}
+
+====================================================================================================
+  PAGINATION EXAMPLE
+====================================================================================================
+
+Request Page 1:
+GET /forms/submissions?locationId=XXX&limit=100&page=1
+
+Response:
+{
+  "submissions": [100 items],
+  "meta": {
+    "total": 250,
+    "currentPage": 1,
+    "nextPage": 2,
+    "prevPage": null
+  }
+}
+
+Request Page 2:
+GET /forms/submissions?locationId=XXX&limit=100&page=2
+
+Response:
+{
+  "submissions": [100 items],
+  "meta": {
+    "total": 250,
+    "currentPage": 2,
+    "nextPage": 3,
+    "prevPage": 1
+  }
+}
+
+Request Page 3 (last page):
+GET /forms/submissions?locationId=XXX&limit=100&page=3
+
+Response:
+{
+  "submissions": [50 items],
+  "meta": {
+    "total": 250,
+    "currentPage": 3,
+    "nextPage": null,
+    "prevPage": 2
+  }
+}
+
+====================================================================================================
+  KEY FINDINGS & USAGE NOTES
+====================================================================================================
+
+✅ FORM SUBMISSIONS ARE THE SOURCE OF TRUTH FOR FACEBOOK AD ATTRIBUTION
+   - Contains adId, campaignId, adSetId
+   - Has complete UTM parameters
+   - Links contacts to specific Facebook ads
+
+✅ TWO ATTRIBUTION DATA LOCATIONS:
+   1. others.lastAttributionSource (PRIMARY - most reliable)
+   2. others.eventData.url_params (FALLBACK - if primary is missing)
+
+✅ FACEBOOK LEAD FORMS:
+   - formId starts with "fb-" (e.g., "fb-QdLXaFEqrdF0JbVbpKLw")
+   - Contains facebookLeadId and facebookLeadSubmissionDetails
+   - Has complete Facebook form field data
+
+✅ WEBSITE FORMS:
+   - formId is a regular GHL form ID
+   - May not have Facebook attribution data
+   - eventData.source = "Direct" or "Website"
+
+✅ CONTACT TO AD MAPPING:
+   Use contactId + adId from form submissions to link:
+   - GHL Contacts → Facebook Ads
+   - GHL Opportunities → Facebook Ads (via contactId)
+
+====================================================================================================
+  END OF PAYLOAD DOCUMENTATION
+====================================================================================================
+

@@ -1,0 +1,63 @@
+FACEBOOK ADS COLLECTION - CHANGES SUMMARY
+==========================================
+
+ISSUE FIXED:
+------------
+1. ❌ BEFORE: Script was fetching ALL 1316 ads from the account (all time)
+   ✅ AFTER: Script now fetches only ads with activity in November 2025
+
+2. ❌ BEFORE: Only had daily breakdown insights
+   ✅ AFTER: Now captures BOTH summary and daily breakdown (matches payload structure)
+
+HOW IT WORKS NOW:
+-----------------
+Step 1: Uses the INSIGHTS endpoint to find ads that actually ran in November
+        - This filters to only ads with performance data in the date range
+        - Much more accurate than the ads endpoint
+
+Step 2: For each ad found, fetches:
+        a) Complete ad details (campaign, adset, creative, targeting)
+        b) Summary insights (aggregated totals for Nov 1-30)
+        c) Daily breakdown (one record per day)
+
+Step 3: Stores everything in Firestore collection "fb_ads"
+
+DATA STRUCTURE:
+---------------
+Each document now contains:
+- adId (document ID)
+- adName
+- status
+- effectiveStatus
+- adDetails (full ad payload)
+- insightsSummary[] - Aggregated totals for entire month
+- insightsDaily[] - Daily breakdown (one entry per day)
+- fetchedAt
+- month
+- year
+- dateRange
+
+MATCHES FACEBOOK PAYLOAD:
+-------------------------
+✅ Complete ad details (lines 169-361 in payload)
+✅ Complete insights summary (lines 367-635 in payload)
+✅ Daily breakdown (lines 642-1174 in payload)
+
+EXPECTED RESULTS:
+-----------------
+Instead of 1316 ads, you should now see:
+- Only ads that actually ran in November 2025
+- Likely 50-200 ads (realistic for one month)
+- Each with complete data matching the payload structure
+
+TO RUN:
+-------
+cd /Users/mac/dev/medwave/fb_ads_collection
+python3 facebook_Nov.py
+
+The script will:
+1. Validate token
+2. Find ads with November activity
+3. Fetch complete data for each
+4. Store in fb_ads collection
+

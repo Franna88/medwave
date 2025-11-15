@@ -1,0 +1,118 @@
+FIRESTORE COLLECTION STRUCTURE
+==============================
+
+Collection: ghl_data
+Document ID: {adId}
+
+Example Document Structure:
+----------------------------
+
+ghl_data/120235556204840335
+{
+  "adId": "120235556204840335",
+  "submissionCount": 12,
+  
+  "attribution": {
+    "campaignId": "120235556205010335",
+    "campaign": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+    "adSetId": "120235556204900335",
+    "utmContent": "B2B October 2025",
+    "utmMedium": "Interests - General Hospital (DDM)",
+    "utmSource": "facebook",
+    "medium": "facebook",
+    "source": "facebook"
+  },
+  
+  "submissions": {
+    "ba964d58-9f5c-45be-8220-74722ba1f9c6": {
+      "submissionId": "ba964d58-9f5c-45be-8220-74722ba1f9c6",
+      "contactId": "ziJ4rSgkJA5qIqIXzD0X",
+      "formId": "fb-QdLXaFEqrdF0JbVbpKLw",
+      "name": "Rogers Pillay",
+      "email": "rogerspillay007@gmail.com",
+      "createdAt": "2025-11-13T10:53:34.920Z",
+      "external": false,
+      "attribution": { ... },
+      "fullSubmission": { ... }
+    },
+    "xyz789-abc-def-456-123": {
+      "submissionId": "xyz789-abc-def-456-123",
+      "contactId": "abc123xyz",
+      "formId": "fb-QdLXaFEqrdF0JbVbpKLw",
+      "name": "Anne Linder",
+      "email": "anne.linder@example.com",
+      "createdAt": "2025-11-12T18:11:58.800Z",
+      "external": false,
+      "attribution": { ... },
+      "fullSubmission": { ... }
+    },
+    "another-submission-id": {
+      "submissionId": "another-submission-id",
+      "contactId": "contact456",
+      "formId": "fb-QdLXaFEqrdF0JbVbpKLw",
+      "name": "Pamela Dale",
+      "email": "pamela.dale@example.com",
+      "createdAt": "2025-11-11T15:22:10.500Z",
+      "external": false,
+      "attribution": { ... },
+      "fullSubmission": { ... }
+    }
+  },
+  
+  "fetchedAt": "2025-11-14T12:00:00.000000",
+  "month": "November",
+  "year": 2025,
+  "dateRange": {
+    "start": "2025-11-01T00:00:00.000Z",
+    "end": "2025-11-30T23:59:59.999Z"
+  }
+}
+
+KEY FEATURES:
+-------------
+1. One document per unique adId
+2. All submissions for that ad stored in a "submissions" map
+3. submissionCount shows total number of leads from this ad
+4. Attribution object with extracted campaign/adset data (from first submission)
+5. Each submission in the map contains complete GHL payload
+6. Easy to query and count leads per ad
+
+QUERYING EXAMPLES:
+------------------
+1. Get all ads for November:
+   db.collection('ghl_data').where('month', '==', 'November').where('year', '==', 2025)
+
+2. Get all submissions for a specific ad:
+   doc = db.collection('ghl_data').doc('120235556204840335').get()
+   submissions = doc.data()['submissions']
+   
+3. Get all ads for a campaign:
+   db.collection('ghl_data').where('attribution.campaignId', '==', '120235556205010335')
+
+4. Count total leads for an ad:
+   doc = db.collection('ghl_data').doc('120235556204840335').get()
+   lead_count = doc.data()['submissionCount']
+
+5. Access specific submission within an ad:
+   doc = db.collection('ghl_data').doc('120235556204840335').get()
+   submission = doc.data()['submissions']['ba964d58-9f5c-45be-8220-74722ba1f9c6']
+
+LINKING WITH FACEBOOK ADS:
+--------------------------
+To combine GHL and Facebook data:
+
+1. Query both collections by adId:
+   fb_ad = db.collection('fb_ads').doc('120235556204840335').get()
+   ghl_submission = db.collection('ghl_data').doc('120235556204840335').get()
+
+2. Combine data:
+   {
+     "ad_performance": fb_ad.data(),
+     "lead_data": ghl_submission.data()
+   }
+
+This gives you:
+- Facebook ad metrics (impressions, spend, clicks)
+- Lead information (name, email, phone, form responses)
+- Complete attribution chain
+

@@ -1,0 +1,1872 @@
+================================================================================
+GHL_DATA RECORDS WITHOUT ADID
+================================================================================
+Generated: 2025-11-15 00:44:02
+Total Records: 17
+================================================================================
+
+RECORD 1
+--------------------------------------------------------------------------------
+Contact ID: 3FEXoIk4YJKemOiCnTxO
+Name: Ashwin Kassan
+Email: ashwink@netactive.co.za
+Submission ID: 690e579a3d321e0fb46591cb
+Form ID: YeJfeoIzuBRGqgMeyl5n
+Source: Discovery Call With MedWave™
+Product Type: Unknown
+Created At: 2025-11-07T20:33:30.582Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Ashwin Kassan",
+  "contactId": "3FEXoIk4YJKemOiCnTxO",
+  "id": "690e579a3d321e0fb46591cb",
+  "createdAt": "2025-11-07T20:33:30.582Z",
+  "others": {
+    "sessionFingerprint": "489533a2-ccf1-4ea9-a809-b180a76f968b",
+    "HQHwpiNw95e5qC9oiVyN": "www.ashwinkassan.co.za",
+    "phone": "+27833007660",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "QzH9F9BMT1pxizNR9UjP": [
+      "As soon as possible"
+    ],
+    "fieldsOriSequance": [
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "FEuEesOQ1tT7rCAtDaHR",
+      "HQHwpiNw95e5qC9oiVyN",
+      "0btZxJfv0KE0hSvR20Zw",
+      "mNbTo6CZlZuWelf9NH0h",
+      "Z2TNnzpsi1uXc5flcbnM",
+      "m6PaZnlkM84xqac7uExE",
+      "HoKgwZV8uZVkJIJB4z3g",
+      "QzH9F9BMT1pxizNR9UjP",
+      "DB3wjRqe8EyGseJ7RuzU",
+      "button",
+      "header"
+    ],
+    "last_name": "Kassan",
+    "email": "ashwink@netactive.co.za",
+    "Z2TNnzpsi1uXc5flcbnM": "Yes",
+    "m6PaZnlkM84xqac7uExE": [
+      "Yes"
+    ],
+    "submissionId": "e2efcd31-8045-48a3-803f-09c0da2cc8c3",
+    "first_name": "Ashwin",
+    "HoKgwZV8uZVkJIJB4z3g": [
+      "Pain & Inflamation Management",
+      "Wound Care",
+      "All of the above",
+      "Weight Loss"
+    ],
+    "ip": "105.243.50.60",
+    "dateFieldDetails": [],
+    "internalSource": {
+      "id": "6h4ylAsXMIse8KiHn83q",
+      "type": "calendars"
+    },
+    "0btZxJfv0KE0hSvR20Zw": "since 1999",
+    "formId": "YeJfeoIzuBRGqgMeyl5n",
+    "source": "Discovery Call With MedWave™",
+    "sessionId": "bd1bfee8-be53-47ac-aac1-03892abe1dc6",
+    "signatureHash": "U2FsdGVkX1/TqB4dPHK4XhoDc1TBFzmFJPTYVlA9XGoYwUJQPtJVi+rYf2aB9vGfjG/nLCyz5axU7ogcqbqsNPpHt6yeHr/oglU8SSY0Hnvwwu3IyE8xuZydTSV16FpFnKcWwMSnA/LcaMS2wLNWMJqljFzqcZevCwNGxzX30KPJJCWo/EXe5wHY2j54PmebHG9xznVZjDy+yHpVQ6JxZmkuPL8wvc4ATzQa26EnshXBYkxJA54B1wYmVvxbeIBw3GWq5rKd8LWz1/wBum5RfEd1PckGz3KSiOA1UKTfs3oe3lSLuVWDwyG30BCQkgyOfdx1FuCFrvRbn660s/SmfsnlZd+H0F67X+fhJbrY0nfOoJOgQgMxQ/uYiMOieYqmdm7UZGiTXwmovMJGNg4W5JJ98+teFahu0DAurVGyCbjUcOiL3ESioxidS8/e4DN/X8xF/0QMUVEJVnwKrboucke4AAwZO7P+ghdupvN3vVdFD3BTxaygtUvaPaz0PNDxT0XB9NgbMqSpzvveV54aT/6NF6rPdijLEvQGPjBVxa19bxCbQdsI4a7dDDJaZPt0lDKinn3ZS/gtSkRC3ne9WGqvYVRNhozK7iawiHxYt28DBvS6pclcBQSPUf0GgjRLozjXpUfDZo5Y1pl7Puht+V7B5sPuKW6xYvvfBaPQmWCWW7ZW77AKiZwvSoJWR3rquzJLBZ/VofDU6becfunDzzW+KnAb9OZJgcwVw9P5jy4EO1zEMg/Ps0hkYRjdcPHcJlvjzd9S+yoolLYVFO4dJvst8dgp3yxmvYpSUvvfmy6gbgsIcX7AttnLA9LMnphCkg2REDeMZWQRRJMeaoB4pp3T/j9F9LbZ4vQB8btKgFEvOWBAZcweXYRodeL47KFYCU0mJNy7RZuaNyPHmJ48KUNzmeHHRM2orUjbw47hd08/WP4aSkiA8i3OH1UpcfJKQumzsXGJsY3Ksu3/D9KBm5pF7iyoX/3I9LAWbUfOW2JKpLeumhO5ZfJ7ocpl1xFCTS8lxYVMTITftyClw6b9ZgWF3/2f9PDJwMOnGVyTGD++ncZnDbNZApkHejEmXgM/ZJ+KAaUcGUzIJ6RKqYVAjCDbhEJaj+YLh8T3i+d2XF6qrktNMJTrMAJuEDtDf3OcBvN49NOsBpZHk5WBqHYHnGRYkuuO3bj4oRinsNN+0F4TLr8fCBd88ThjZRqrO8Dp/qwJcdEreeMZ0mj4RT3Ur2EcN3WTPNkD1Eco2R99iOaE7tb38iYOPTOeHVu8q3ifeoNqv+fEm8oT8LATOq9ohnj7JqzoAt8kz00A3lUJfWBkaMZD1TkhxJqVB64MvgLAfiY88LHpqu+VYWmx93Bvw5+LjJYmi86i10CoqImtxmtsQHVo3J7aYcgHfrZg/AGtwSgNQbWrF8ESDCQPEd3x7JAUbdufV+/VipHRUkhSudRIYnLGHbFla6Jv/oWEh6A5ulWTBKyXoNTdoEfvpRjKl2UzJ5xdmAfOn6fzJ/AqsTlFldPidyfhhQfjNw6L6ILyXGWw//2BH+ZbWS9LdsZV5IJYvUY/Hi8atfXlNxiULzUQBHRUMUM+goAwJBkoArxcF8Jx+VYsBzEjPWXGpmPEtUvbSrm5KEoT4VgO//Qi4Ce2TdqQaWbGxOBgExD4SqkRDQfE63ict7fLES4bP4JDg1tXXpUdQwiRVGaZ8FKPusB4YO/7Z0MOG/AU3g35Kz5l8rYPwHMl+0kJBjLhYk/AgRexF4DsjmaGDBGRyzuUBY34qAmHgmtpJ+5RBPym3ZgZ+sWCehUVvJX6CwSYFwgkh5xPO2j5TsCqvda3uEMSqyL4NW/dtWzY7ttla3/sMbGSTXCkSnxetPjM8a5uwB0lk7WRd4/Me+T0Br+zHDs73pX/j+cbx2acP2Ho5a+yNeRU5QRgHdNeFwtEyO1UsQ4oKGaAB13waDmqQ+m2x1DANcSi93HFwApG6mpSczlj9PpWNUfR93tqEmZRy85ShUHjx6AjSSOvuJALX9/MKb7L60q2EG8InrYOdRZlPMY3tACUATXskgnxNzO5RS2Grh20Hrt0dmy6af6++35t9WXVfXZkR5ErWiLkVy2qONAObDTyurcHM8J30W78xWZS4EyYoMSbOVAobLDwDrK0nfLQR0l27hpn/4AK76gEpNJNXAfixDFpf9CiwJAUYV0kohfMu4/GQwFLFwBGz916ZPg3b8Ui1b5TUlu3KZSWL8HOuFTCeeOF0qza98Wl0DRKqiArIPBsAqVQUk+4DsVKXIQPp+lR/TkDAyIeC1qZSa0La6UFaQJ1Kpp3J+ocJk6K8y1Q5Q==",
+    "calendar_name": "Discovery Call With MedWave™",
+    "selected_slot": "2025-11-10T13:30:00+02:00",
+    "Timezone": "Africa/Johannesburg",
+    "mNbTo6CZlZuWelf9NH0h": "Greenacres , Port Elizabeth",
+    "FEuEesOQ1tT7rCAtDaHR": "Dr Ashwin Kassan",
+    "eventData": {
+      "parentId": "6h4ylAsXMIse8KiHn83q",
+      "mediumId": "6h4ylAsXMIse8KiHn83q",
+      "timestamp": 1762547608310,
+      "source": "Direct traffic",
+      "fbc": "",
+      "documentURL": "https://api.leadconnectorhq.com/widget/booking/6h4ylAsXMIse8KiHn83q",
+      "contactSessionIds": {
+        "ids": [
+          "bd1bfee8-be53-47ac-aac1-03892abe1dc6"
+        ]
+      },
+      "type": "page-visit",
+      "fingerprint": null,
+      "medium": "calendar",
+      "parentName": "Discovery Call With MedWave™",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://www.medwavegroup.com/schedule-a-call/",
+        "title": ""
+      },
+      "fbEventId": "351fdc48-5720-4668-9435-0fe738a3a5b1",
+      "pageVisitType": "calendar",
+      "referrer": null,
+      "fbp": "",
+      "domain": "api.leadconnectorhq.com"
+    },
+    "DB3wjRqe8EyGseJ7RuzU": "Google Meet",
+    "selected_timezone": "Africa/Johannesburg"
+  },
+  "external": false,
+  "formId": "YeJfeoIzuBRGqgMeyl5n",
+  "email": "ashwink@netactive.co.za"
+}
+
+================================================================================
+
+RECORD 2
+--------------------------------------------------------------------------------
+Contact ID: 3TE7CVgLxCo2BllfvsmG
+Name: Annah Sphiwe Skhosana
+Email: skhosanasphiwe81@gmail.com
+Submission ID: 6914e3ced7645aa4814c8ddc
+Form ID: YeJfeoIzuBRGqgMeyl5n
+Source: Discovery Call With MedWave™
+Product Type: Unknown
+Created At: 2025-11-12T19:45:18.440Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Annah Sphiwe Skhosana",
+  "contactId": "3TE7CVgLxCo2BllfvsmG",
+  "id": "6914e3ced7645aa4814c8ddc",
+  "createdAt": "2025-11-12T19:45:18.440Z",
+  "others": {
+    "0btZxJfv0KE0hSvR20Zw": "8 years",
+    "formId": "YeJfeoIzuBRGqgMeyl5n",
+    "dateFieldDetails": [],
+    "sessionFingerprint": "559d04c7-ee67-4c3c-9332-a0985cfd2965",
+    "HQHwpiNw95e5qC9oiVyN": "www.sphiwesihle.co.za",
+    "source": "Discovery Call With MedWave™",
+    "submissionId": "f0da3268-f23d-4971-b74c-c2d6d3e6fec5",
+    "phone": "+27743888452",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "QzH9F9BMT1pxizNR9UjP": [
+      "As soon as possible"
+    ],
+    "signatureHash": "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",
+    "last_name": "Skhosana",
+    "email": "skhosanasphiwe81@gmail.com",
+    "fieldsOriSequance": [
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "FEuEesOQ1tT7rCAtDaHR",
+      "HQHwpiNw95e5qC9oiVyN",
+      "0btZxJfv0KE0hSvR20Zw",
+      "mNbTo6CZlZuWelf9NH0h",
+      "Z2TNnzpsi1uXc5flcbnM",
+      "m6PaZnlkM84xqac7uExE",
+      "HoKgwZV8uZVkJIJB4z3g",
+      "QzH9F9BMT1pxizNR9UjP",
+      "DB3wjRqe8EyGseJ7RuzU",
+      "button",
+      "header"
+    ],
+    "selected_slot": "2025-11-13T09:30:00+02:00",
+    "calendar_name": "Discovery Call With MedWave™",
+    "Z2TNnzpsi1uXc5flcbnM": "Yes",
+    "m6PaZnlkM84xqac7uExE": [
+      "No"
+    ],
+    "Timezone": "Africa/Johannesburg",
+    "mNbTo6CZlZuWelf9NH0h": "Kwamhlanga (Mpumalanga)",
+    "FEuEesOQ1tT7rCAtDaHR": "Sphiwesihle Private Clinic ",
+    "HoKgwZV8uZVkJIJB4z3g": [
+      "Weight Loss",
+      "Pain & Inflamation Management",
+      "All of the above",
+      "Wound Care"
+    ],
+    "eventData": {
+      "parentId": "6h4ylAsXMIse8KiHn83q",
+      "keyword": "120235556204830335",
+      "campaign": "Practitioners Image",
+      "source": "Social media",
+      "fbc": "",
+      "mediumId": "6h4ylAsXMIse8KiHn83q",
+      "timestamp": 1762976700021,
+      "documentURL": "https://api.leadconnectorhq.com/widget/bookings/team-medwave?utm_source=05112025+-+ABOLEADFORMZA+(DDM)+-+Targeted+Audiences&utm_medium=Interests+-+Healthcare+and+medical+services+(DDM)&utm_campaign=Practitioners+Image&fbc_id=120235556204830335&h_ad_id=120235560268290335&utm_id=120235556205010335&utm_content=120235560268290335&utm_term=120235556204830335",
+      "contactSessionIds": {
+        "ids": [
+          null
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "utm_id": "120235556205010335",
+        "fbc_id": "120235556204830335",
+        "utm_medium": "Interests - Healthcare and medical services (DDM)",
+        "utm_content": "120235560268290335",
+        "h_ad_id": "120235560268290335",
+        "utm_source": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "utm_campaign": "Practitioners Image",
+        "utm_term": "120235556204830335"
+      },
+      "medium": "calendar",
+      "fingerprint": null,
+      "parentName": "Discovery Call With MedWave™",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://api.leadconnectorhq.com/widget/bookings/team-medwave?utm_source=05112025+-+ABOLEADFORMZA+(DDM)+-+Targeted+Audiences&utm_medium=Interests+-+Healthcare+and+medical+services+(DDM)&utm_campaign=Practitioners+Image&fbc_id=120235556204830335&h_ad_id=120235560268290335&utm_id=120235556205010335&utm_content=120235560268290335&utm_term=120235556204830335",
+        "title": ""
+      },
+      "fbEventId": "263b56f1-6e51-4080-a1a0-489c7a16a138",
+      "pageVisitType": "calendar",
+      "referrer": "http://m.facebook.com",
+      "fbp": "",
+      "domain": "api.leadconnectorhq.com"
+    },
+    "ip": "105.4.5.183",
+    "first_name": "Annah Sphiwe",
+    "selected_timezone": "Africa/Johannesburg",
+    "internalSource": {
+      "id": "6h4ylAsXMIse8KiHn83q",
+      "type": "calendars"
+    },
+    "DB3wjRqe8EyGseJ7RuzU": "Google Meet"
+  },
+  "external": false,
+  "formId": "YeJfeoIzuBRGqgMeyl5n",
+  "email": "skhosanasphiwe81@gmail.com"
+}
+
+================================================================================
+
+RECORD 3
+--------------------------------------------------------------------------------
+Contact ID: 4X3cbzmXW3QuWOwGUSF3
+Name: Jan  Grobler 
+Email: jgevercool@gmail.com
+Submission ID: 690949d2cbfcaed45a82161c
+Form ID: xRzJo5Fh3puwyrZNeGLx
+Source: Unknown
+Product Type: Unknown
+Created At: 2025-11-04T00:33:22.706Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Jan  Grobler ",
+  "contactId": "4X3cbzmXW3QuWOwGUSF3",
+  "id": "690949d2cbfcaed45a82161c",
+  "createdAt": "2025-11-04T00:33:22.706Z",
+  "others": {
+    "sessionFingerprint": "58639baf-9719-4d2e-8a8c-dc99c3aeb9d8",
+    "phone": "+27724297384",
+    "sessionId": "c3c5abba-d7bc-4fb4-a547-b6ac1ab67375",
+    "funneEventData": {
+      "funnel_step_id": "b51bb3f4-795e-482a-9d8f-132c2d5ace28",
+      "funnel_id": "Bkw1W4xxiKb1dE290YVI",
+      "page_id": "JUs0su04vXPEzMJX1SXl",
+      "domain_name": "specials.medwavegroup.com",
+      "event_type": "optin",
+      "page_url": "/0-for-60-3173"
+    },
+    "signatureHash": "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",
+    "last_name": "Grobler ",
+    "email": "jgevercool@gmail.com",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "fieldsOriSequance": [
+      "E5mcNMuKIjZV12WAZkus",
+      "6mcYhCsgPT77viSA5jWb",
+      "2nq0c83hEH0MKz2l5mcE",
+      "bc4LhOHnMuRlX9e3a1h8",
+      "pwPhcFN9hagRV72sthTm",
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "button",
+      "header"
+    ],
+    "Timezone": "Africa/Johannesburg (GMT+02:00)",
+    "E5mcNMuKIjZV12WAZkus": "Patient seeking treatment",
+    "submissionId": "a114c3b1-86c3-4fc9-a370-275641e62e8f",
+    "first_name": "Jan ",
+    "ip": "213.172.149.230",
+    "eventData": {
+      "parentId": "JUs0su04vXPEzMJX1SXl",
+      "keyword": "120234319834300335",
+      "campaign": "MedWave Image Ads",
+      "source": "Social media",
+      "fbc": "fb.1.1762216247752.IwZXh0bgNhZW0BMABhZGlkAasoehc3Ia8BHpIPDccmP0eX4VObxEDtJ9n2QoPaqfEjdT_Sx4x66FeImmcTKa05TFM7qM2U_aem_KQR7Nd1fu1mrGOSQsbcjfQ",
+      "mediumId": "xRzJo5Fh3puwyrZNeGLx",
+      "timestamp": 1762216399984,
+      "documentURL": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&fbclid=IwZXh0bgNhZW0BMABhZGlkAasoehc3Ia8BHpIPDccmP0eX4VObxEDtJ9n2QoPaqfEjdT_Sx4x66FeImmcTKa05TFM7qM2U_aem_KQR7Nd1fu1mrGOSQsbcjfQ&utm_id=120234319834310335&utm_content=120234319885450335&utm_term=120234319834300335",
+      "contactSessionIds": {
+        "ids": [
+          "252052b7-54f9-491a-89ea-3c2327dbe541",
+          "c3c5abba-d7bc-4fb4-a547-b6ac1ab67375"
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "utm_id": "120234319834310335",
+        "fbc_id": "120234319834300335",
+        "utm_medium": "LLA 1% (ZA) | Grouped",
+        "utm_content": "120234319885450335",
+        "h_ad_id": "120234319834320335",
+        "fbclid": "IwZXh0bgNhZW0BMABhZGlkAasoehc3Ia8BHpIPDccmP0eX4VObxEDtJ9n2QoPaqfEjdT_Sx4x66FeImmcTKa05TFM7qM2U_aem_KQR7Nd1fu1mrGOSQsbcjfQ",
+        "utm_source": "Matthys - 13102025 - ABOLANDER - Varied",
+        "utm_campaign": "MedWave Image Ads",
+        "utm_term": "120234319834300335"
+      },
+      "medium": "form",
+      "fingerprint": null,
+      "parentName": "",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&fbclid=IwZXh0bgNhZW0BMABhZGlkAasoehc3Ia8BHpIPDccmP0eX4VObxEDtJ9n2QoPaqfEjdT_Sx4x66FeImmcTKa05TFM7qM2U_aem_KQR7Nd1fu1mrGOSQsbcjfQ&utm_id=120234319834310335&utm_content=120234319885450335&utm_term=120234319834300335",
+        "title": "Discover MedWave™ For Medical Providers"
+      },
+      "fbEventId": "d25946d3-b8b2-460b-b804-ebbbd66190ba",
+      "pageVisitType": "funnel",
+      "referrer": "http://m.facebook.com",
+      "fbp": "fb.1.1762216247785.987921740433791890",
+      "domain": "specials.medwavegroup.com"
+    },
+    "formId": "xRzJo5Fh3puwyrZNeGLx"
+  },
+  "external": false,
+  "formId": "xRzJo5Fh3puwyrZNeGLx",
+  "email": "jgevercool@gmail.com"
+}
+
+================================================================================
+
+RECORD 4
+--------------------------------------------------------------------------------
+Contact ID: ETQbPGIpetIYGmg0a3ft
+Name: Gladys  Witbooi 
+Email: gladyswitbooi70@gmail.com
+Submission ID: 690ee6073d321e133266c851
+Form ID: YeJfeoIzuBRGqgMeyl5n
+Source: Discovery Call With MedWave™
+Product Type: Unknown
+Created At: 2025-11-08T06:41:11.783Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Gladys  Witbooi ",
+  "contactId": "ETQbPGIpetIYGmg0a3ft",
+  "id": "690ee6073d321e133266c851",
+  "createdAt": "2025-11-08T06:41:11.783Z",
+  "others": {
+    "0btZxJfv0KE0hSvR20Zw": "5 months ",
+    "dateFieldDetails": [],
+    "submissionId": "fa306052-f460-445e-92d2-79ad8c4fa23f",
+    "sessionFingerprint": "1d33bb84-78fb-4ad5-b7ae-4625f49d96c3",
+    "HQHwpiNw95e5qC9oiVyN": "Likhwezi Medical ",
+    "source": "Discovery Call With MedWave™",
+    "phone": "+27646843672",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "QzH9F9BMT1pxizNR9UjP": [
+      "3+ Months or more"
+    ],
+    "signatureHash": "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",
+    "last_name": "Witbooi ",
+    "email": "gladyswitbooi70@gmail.com",
+    "calendar_name": "Discovery Call With MedWave™",
+    "selected_slot": "2025-11-11T10:00:00+02:00",
+    "fieldsOriSequance": [
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "FEuEesOQ1tT7rCAtDaHR",
+      "HQHwpiNw95e5qC9oiVyN",
+      "0btZxJfv0KE0hSvR20Zw",
+      "mNbTo6CZlZuWelf9NH0h",
+      "Z2TNnzpsi1uXc5flcbnM",
+      "m6PaZnlkM84xqac7uExE",
+      "HoKgwZV8uZVkJIJB4z3g",
+      "QzH9F9BMT1pxizNR9UjP",
+      "DB3wjRqe8EyGseJ7RuzU",
+      "button",
+      "header"
+    ],
+    "Z2TNnzpsi1uXc5flcbnM": "No",
+    "m6PaZnlkM84xqac7uExE": [
+      "No"
+    ],
+    "sessionId": "95df4e7f-3b03-4120-9be6-f9090356a3e2",
+    "Timezone": "Africa/Johannesburg",
+    "mNbTo6CZlZuWelf9NH0h": "Prieska ",
+    "FEuEesOQ1tT7rCAtDaHR": "Likhwezi Medical ",
+    "HoKgwZV8uZVkJIJB4z3g": [
+      "Weight Loss",
+      "Pain & Inflamation Management"
+    ],
+    "eventData": {
+      "parentId": "6h4ylAsXMIse8KiHn83q",
+      "mediumId": "6h4ylAsXMIse8KiHn83q",
+      "timestamp": 1762584458738,
+      "source": "Social media",
+      "fbc": "",
+      "documentURL": "https://api.leadconnectorhq.com/widget/bookings/team-medwave",
+      "contactSessionIds": {
+        "ids": [
+          "95df4e7f-3b03-4120-9be6-f9090356a3e2"
+        ]
+      },
+      "type": "page-visit",
+      "fingerprint": null,
+      "medium": "calendar",
+      "parentName": "Discovery Call With MedWave™",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://api.leadconnectorhq.com/widget/bookings/team-medwave",
+        "title": ""
+      },
+      "fbEventId": "34bd46bb-be46-437f-acfc-ab6b851005bf",
+      "pageVisitType": "calendar",
+      "referrer": "https://l.facebook.com",
+      "fbp": "",
+      "domain": "api.leadconnectorhq.com"
+    },
+    "ip": "41.144.65.49",
+    "first_name": "Gladys ",
+    "selected_timezone": "Africa/Johannesburg",
+    "internalSource": {
+      "id": "6h4ylAsXMIse8KiHn83q",
+      "type": "calendars"
+    },
+    "formId": "YeJfeoIzuBRGqgMeyl5n"
+  },
+  "external": false,
+  "formId": "YeJfeoIzuBRGqgMeyl5n",
+  "email": "gladyswitbooi70@gmail.com"
+}
+
+================================================================================
+
+RECORD 5
+--------------------------------------------------------------------------------
+Contact ID: GagXku54kD8EdY5OpufC
+Name: Lehlogonolo George Mokubedi
+Email: drlgmokubediinc@gmail.com
+Submission ID: 69123d3b3d321e22456e70fb
+Form ID: YeJfeoIzuBRGqgMeyl5n
+Source: Discovery Call With MedWave™
+Product Type: Unknown
+Created At: 2025-11-10T19:30:03.051Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Lehlogonolo George Mokubedi",
+  "contactId": "GagXku54kD8EdY5OpufC",
+  "id": "69123d3b3d321e22456e70fb",
+  "createdAt": "2025-11-10T19:30:03.051Z",
+  "others": {
+    "0btZxJfv0KE0hSvR20Zw": "6 months ",
+    "dateFieldDetails": [],
+    "submissionId": "c84da157-8b5a-4a31-b2a4-3cd2f500f8ad",
+    "sessionFingerprint": "02039311-c631-4bf4-9636-0d497525ee76",
+    "HQHwpiNw95e5qC9oiVyN": "Dr LG Mokubedi Inc",
+    "source": "Discovery Call With MedWave™",
+    "phone": "+27122520114",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "QzH9F9BMT1pxizNR9UjP": [
+      "1-2 Months"
+    ],
+    "signatureHash": "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",
+    "last_name": "Mokubedi",
+    "email": "drlgmokubediinc@gmail.com",
+    "fieldsOriSequance": [
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "FEuEesOQ1tT7rCAtDaHR",
+      "HQHwpiNw95e5qC9oiVyN",
+      "0btZxJfv0KE0hSvR20Zw",
+      "mNbTo6CZlZuWelf9NH0h",
+      "Z2TNnzpsi1uXc5flcbnM",
+      "m6PaZnlkM84xqac7uExE",
+      "HoKgwZV8uZVkJIJB4z3g",
+      "QzH9F9BMT1pxizNR9UjP",
+      "DB3wjRqe8EyGseJ7RuzU",
+      "button",
+      "header"
+    ],
+    "selected_slot": "2025-11-11T11:30:00+02:00",
+    "calendar_name": "Discovery Call With MedWave™",
+    "Z2TNnzpsi1uXc5flcbnM": "Yes",
+    "m6PaZnlkM84xqac7uExE": [
+      "No"
+    ],
+    "Timezone": "Africa/Johannesburg",
+    "mNbTo6CZlZuWelf9NH0h": "Shop 53 Krematart Sentrum Brits",
+    "FEuEesOQ1tT7rCAtDaHR": "Krematart Medical Centre ",
+    "HoKgwZV8uZVkJIJB4z3g": [
+      "All of the above"
+    ],
+    "eventData": {
+      "parentId": "6h4ylAsXMIse8KiHn83q",
+      "keyword": "120235556204830335",
+      "campaign": "Practitioners Image",
+      "source": "Social media",
+      "fbc": "",
+      "mediumId": "6h4ylAsXMIse8KiHn83q",
+      "timestamp": 1762802999564,
+      "documentURL": "https://api.leadconnectorhq.com/widget/bookings/team-medwave?utm_source=05112025+-+ABOLEADFORMZA+(DDM)+-+Targeted+Audiences&utm_medium=Interests+-+Healthcare+and+medical+services+(DDM)&utm_campaign=Practitioners+Image&fbc_id=120235556204830335&h_ad_id=120235560268290335&utm_id=120235556205010335&utm_content=120235560268290335&utm_term=120235556204830335&fbclid=IwYWdlaQUSYXR0cmlidXRpb25fY2hhbmdlAGV4dG4DYWVtATAAYWRpZAGrKZr6to2vc3J0YwZhcHBfaWQKNjYyODU2ODM3OQABHp87sphoc5cEEZ_GaqCmKT-i5ayLZ9u0bSmU0zmlJo8yQYa6LWZarBCMkTSF_aem_Y7joXFuCeVEcLKx3-a97aQ",
+      "contactSessionIds": null,
+      "type": "page-visit",
+      "url_params": {
+        "utm_id": "120235556205010335",
+        "fbc_id": "120235556204830335",
+        "utm_medium": "Interests - Healthcare and medical services (DDM)",
+        "utm_content": "120235560268290335",
+        "h_ad_id": "120235560268290335",
+        "fbclid": "IwYWdlaQUSYXR0cmlidXRpb25fY2hhbmdlAGV4dG4DYWVtATAAYWRpZAGrKZr6to2vc3J0YwZhcHBfaWQKNjYyODU2ODM3OQABHp87sphoc5cEEZ_GaqCmKT-i5ayLZ9u0bSmU0zmlJo8yQYa6LWZarBCMkTSF_aem_Y7joXFuCeVEcLKx3-a97aQ",
+        "utm_source": "05112025 - ABOLEADFORMZA (DDM) - Targeted Audiences",
+        "utm_campaign": "Practitioners Image",
+        "utm_term": "120235556204830335"
+      },
+      "medium": "calendar",
+      "fingerprint": null,
+      "parentName": "Discovery Call With MedWave™",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://api.leadconnectorhq.com/widget/bookings/team-medwave?utm_source=05112025+-+ABOLEADFORMZA+(DDM)+-+Targeted+Audiences&utm_medium=Interests+-+Healthcare+and+medical+services+(DDM)&utm_campaign=Practitioners+Image&fbc_id=120235556204830335&h_ad_id=120235560268290335&utm_id=120235556205010335&utm_content=120235560268290335&utm_term=120235556204830335&fbclid=IwYWdlaQUSYXR0cmlidXRpb25fY2hhbmdlAGV4dG4DYWVtATAAYWRpZAGrKZr6to2vc3J0YwZhcHBfaWQKNjYyODU2ODM3OQABHp87sphoc5cEEZ_GaqCmKT-i5ayLZ9u0bSmU0zmlJo8yQYa6LWZarBCMkTSF_aem_Y7joXFuCeVEcLKx3-a97aQ",
+        "title": ""
+      },
+      "fbEventId": "8da1e334-abd3-4174-9851-65a4639f06ac",
+      "pageVisitType": "calendar",
+      "referrer": "https://l.facebook.com",
+      "fbp": "",
+      "domain": "api.leadconnectorhq.com"
+    },
+    "ip": "41.122.133.109",
+    "first_name": "Lehlogonolo George",
+    "selected_timezone": "Africa/Johannesburg",
+    "internalSource": {
+      "id": "6h4ylAsXMIse8KiHn83q",
+      "type": "calendars"
+    },
+    "formId": "YeJfeoIzuBRGqgMeyl5n"
+  },
+  "external": false,
+  "formId": "YeJfeoIzuBRGqgMeyl5n",
+  "email": "drlgmokubediinc@gmail.com"
+}
+
+================================================================================
+
+RECORD 6
+--------------------------------------------------------------------------------
+Contact ID: H57qE2jOYD4WQPpvf8FK
+Name: Paula Fowler 
+Email: paulafowler68@gmail.com
+Submission ID: 6907a295cbfcae07677dd1b8
+Form ID: uyOk05oH9atXfNm48rBL
+Source: Unknown
+Product Type: Unknown
+Created At: 2025-11-02T18:27:33.652Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Paula Fowler ",
+  "contactId": "H57qE2jOYD4WQPpvf8FK",
+  "id": "6907a295cbfcae07677dd1b8",
+  "createdAt": "2025-11-02T18:27:33.652Z",
+  "others": {
+    "sessionFingerprint": "c6c54566-d170-47d4-8322-e81874fd4839",
+    "phone": "+27733501947",
+    "fieldsOriSequance": [
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "button",
+      "header"
+    ],
+    "funneEventData": {
+      "funnel_step_id": "4418e329-88b9-4f5d-8551-8579dc5316e2",
+      "funnel_id": "yNnzugU7xvJUvvXA5rFB",
+      "page_id": "lPICZQGqw0FMQamoZgLB",
+      "domain_name": "specials.medwavegroup.com",
+      "event_type": "optin",
+      "page_url": "/mw-pain"
+    },
+    "signatureHash": "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",
+    "last_name": "Fowler ",
+    "email": "paulafowler68@gmail.com",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "sessionId": "7ea59a13-13c8-4818-b7d7-0ab3408b9d7b",
+    "Timezone": "Africa/Johannesburg (GMT+02:00)",
+    "submissionId": "b4b4f0c0-9b92-4636-81ca-df95cb10cb88",
+    "first_name": "Paula",
+    "ip": "196.15.147.13",
+    "eventData": {
+      "parentId": "lPICZQGqw0FMQamoZgLB",
+      "keyword": "120234170329500335",
+      "campaign": "Jeffrey’s Bay (English)",
+      "source": "Social media",
+      "fbc": "",
+      "mediumId": "uyOk05oH9atXfNm48rBL",
+      "timestamp": 1762108050416,
+      "documentURL": "https://specials.medwavegroup.com/mw-pain?utm_source=Matthys+-+10102025+-+ABOLANDER+-+Jeffrey%27s+Bay&utm_medium=Advantage%2B+(Jeffrey%27s+Bay)&utm_campaign=Jeffrey%E2%80%99s+Bay+(English)&fbc_id=120234170329500335&h_ad_id=120234170329470335&utm_id=120234170329430335&utm_content=120234170329470335&utm_term=120234170329500335&fbclid=PAZXh0bgNhZW0BMABhZGlkAasoV1sYYU8Bp-k0cDsQf6CJAGpoUISVrYy5xBpBJFyMkgd1bsNRp7J0PVeBWCkRgLluZsa6_aem_JfFWEcVKa8fgSB6Q7OixvQ",
+      "contactSessionIds": {
+        "ids": [
+          "7ea59a13-13c8-4818-b7d7-0ab3408b9d7b"
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "utm_id": "120234170329430335",
+        "fbc_id": "120234170329500335",
+        "utm_medium": "Advantage+ (Jeffrey's Bay)",
+        "utm_content": "120234170329470335",
+        "h_ad_id": "120234170329470335",
+        "fbclid": "PAZXh0bgNhZW0BMABhZGlkAasoV1sYYU8Bp-k0cDsQf6CJAGpoUISVrYy5xBpBJFyMkgd1bsNRp7J0PVeBWCkRgLluZsa6_aem_JfFWEcVKa8fgSB6Q7OixvQ",
+        "utm_source": "Matthys - 10102025 - ABOLANDER - Jeffrey's Bay",
+        "utm_campaign": "Jeffrey’s Bay (English)",
+        "utm_term": "120234170329500335"
+      },
+      "medium": "form",
+      "fingerprint": null,
+      "parentName": "",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://specials.medwavegroup.com/mw-pain?utm_source=Matthys+-+10102025+-+ABOLANDER+-+Jeffrey%27s+Bay&utm_medium=Advantage%2B+(Jeffrey%27s+Bay)&utm_campaign=Jeffrey%E2%80%99s+Bay+(English)&fbc_id=120234170329500335&h_ad_id=120234170329470335&utm_id=120234170329430335&utm_content=120234170329470335&utm_term=120234170329500335&fbclid=PAZXh0bgNhZW0BMABhZGlkAasoV1sYYU8Bp-k0cDsQf6CJAGpoUISVrYy5xBpBJFyMkgd1bsNRp7J0PVeBWCkRgLluZsa6_aem_JfFWEcVKa8fgSB6Q7OixvQ",
+        "title": ""
+      },
+      "fbEventId": "d7a1fb0c-96a2-44f7-8db8-58c4825f69f6",
+      "pageVisitType": "funnel",
+      "referrer": "http://instagram.com",
+      "fbp": "",
+      "domain": "specials.medwavegroup.com"
+    },
+    "formId": "uyOk05oH9atXfNm48rBL"
+  },
+  "external": false,
+  "formId": "uyOk05oH9atXfNm48rBL",
+  "email": "paulafowler68@gmail.com"
+}
+
+================================================================================
+
+RECORD 7
+--------------------------------------------------------------------------------
+Contact ID: LivBj7IseXzAk2EWpgHF
+Name: Sibusiso Mazibuko
+Email: sbumazi70@gmail.com
+Submission ID: 6908c683cbfcae18ad805e07
+Form ID: xRzJo5Fh3puwyrZNeGLx
+Source: Unknown
+Product Type: Unknown
+Created At: 2025-11-03T15:13:07.144Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Sibusiso Mazibuko",
+  "contactId": "LivBj7IseXzAk2EWpgHF",
+  "id": "6908c683cbfcae18ad805e07",
+  "createdAt": "2025-11-03T15:13:07.144Z",
+  "others": {
+    "2nq0c83hEH0MKz2l5mcE": "1-50",
+    "sessionFingerprint": "9e5b6e40-9abc-42ca-a51a-c153a3d42fe9",
+    "bc4LhOHnMuRlX9e3a1h8": "Yes",
+    "phone": "+27733746865",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "funneEventData": {
+      "funnel_step_id": "b51bb3f4-795e-482a-9d8f-132c2d5ace28",
+      "funnel_id": "Bkw1W4xxiKb1dE290YVI",
+      "page_id": "JUs0su04vXPEzMJX1SXl",
+      "domain_name": "specials.medwavegroup.com",
+      "event_type": "optin",
+      "page_url": "/0-for-60-3173"
+    },
+    "signatureHash": "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",
+    "last_name": "Mazibuko",
+    "email": "sbumazi70@gmail.com",
+    "sessionId": "7b5f8f51-48e9-4655-b9d2-36ba3fcf9f1b",
+    "fieldsOriSequance": [
+      "E5mcNMuKIjZV12WAZkus",
+      "6mcYhCsgPT77viSA5jWb",
+      "2nq0c83hEH0MKz2l5mcE",
+      "bc4LhOHnMuRlX9e3a1h8",
+      "pwPhcFN9hagRV72sthTm",
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "button",
+      "header"
+    ],
+    "6mcYhCsgPT77viSA5jWb": "Nurse Practitioner",
+    "Timezone": "Africa/Johannesburg (GMT+02:00)",
+    "E5mcNMuKIjZV12WAZkus": "Healthcare provider",
+    "submissionId": "3634ceaf-a9df-4fba-8bbd-047fc21c5c93",
+    "first_name": "Sibusiso",
+    "ip": "41.116.54.157",
+    "eventData": {
+      "parentId": "JUs0su04vXPEzMJX1SXl",
+      "keyword": "120234319834300335",
+      "campaign": "MedWave Image Ads",
+      "source": "Social media",
+      "fbc": "fb.1.1762182743309.PAZXh0bgNhZW0BMABhZGlkAasoehdFK28BpzpETM-3OFEE0sAjgRVwjpy8cPjHOtQfitE6tkF0giaN0gFQG_mijQScTtNB_aem_Uj_QQW3jPnls72Y0IKjO2g",
+      "mediumId": "xRzJo5Fh3puwyrZNeGLx",
+      "timestamp": 1762182785003,
+      "documentURL": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&utm_id=120234319834310335&utm_content=120234319889470335&utm_term=120234319834300335&fbclid=PAZXh0bgNhZW0BMABhZGlkAasoehdFK28BpzpETM-3OFEE0sAjgRVwjpy8cPjHOtQfitE6tkF0giaN0gFQG_mijQScTtNB_aem_Uj_QQW3jPnls72Y0IKjO2g",
+      "contactSessionIds": {
+        "ids": [
+          "7b5f8f51-48e9-4655-b9d2-36ba3fcf9f1b"
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "utm_id": "120234319834310335",
+        "fbc_id": "120234319834300335",
+        "utm_medium": "LLA 1% (ZA) | Grouped",
+        "utm_content": "120234319889470335",
+        "h_ad_id": "120234319834320335",
+        "fbclid": "PAZXh0bgNhZW0BMABhZGlkAasoehdFK28BpzpETM-3OFEE0sAjgRVwjpy8cPjHOtQfitE6tkF0giaN0gFQG_mijQScTtNB_aem_Uj_QQW3jPnls72Y0IKjO2g",
+        "utm_source": "Matthys - 13102025 - ABOLANDER - Varied",
+        "utm_campaign": "MedWave Image Ads",
+        "utm_term": "120234319834300335"
+      },
+      "medium": "form",
+      "fingerprint": null,
+      "parentName": "",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&utm_id=120234319834310335&utm_content=120234319889470335&utm_term=120234319834300335&fbclid=PAZXh0bgNhZW0BMABhZGlkAasoehdFK28BpzpETM-3OFEE0sAjgRVwjpy8cPjHOtQfitE6tkF0giaN0gFQG_mijQScTtNB_aem_Uj_QQW3jPnls72Y0IKjO2g",
+        "title": "Discover MedWave™ For Medical Providers"
+      },
+      "fbEventId": "0fb46866-7766-4932-9748-f256777009df",
+      "pageVisitType": "funnel",
+      "referrer": "http://instagram.com",
+      "fbp": "fb.1.1762182743346.1197805754425397",
+      "domain": "specials.medwavegroup.com"
+    },
+    "formId": "xRzJo5Fh3puwyrZNeGLx"
+  },
+  "external": false,
+  "formId": "xRzJo5Fh3puwyrZNeGLx",
+  "email": "sbumazi70@gmail.com"
+}
+
+================================================================================
+
+RECORD 8
+--------------------------------------------------------------------------------
+Contact ID: OH7LnItGxvLiupW5cH1e
+Name: Hanlie de Wet
+Email: hanliedewet23@gmail.com
+Submission ID: 6905d9e03d321ed821508f1c
+Form ID: YeJfeoIzuBRGqgMeyl5n
+Source: Discovery Call With MedWave™
+Product Type: Unknown
+Created At: 2025-11-01T09:58:56.498Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Hanlie de Wet",
+  "contactId": "OH7LnItGxvLiupW5cH1e",
+  "id": "6905d9e03d321ed821508f1c",
+  "createdAt": "2025-11-01T09:58:56.498Z",
+  "others": {
+    "sessionFingerprint": "95858bc7-061b-4517-bf74-88f0c6b5f989",
+    "HQHwpiNw95e5qC9oiVyN": "Was dormant",
+    "phone": "+27662661244",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "QzH9F9BMT1pxizNR9UjP": [
+      "2-3 Months"
+    ],
+    "fieldsOriSequance": [
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "FEuEesOQ1tT7rCAtDaHR",
+      "HQHwpiNw95e5qC9oiVyN",
+      "0btZxJfv0KE0hSvR20Zw",
+      "mNbTo6CZlZuWelf9NH0h",
+      "Z2TNnzpsi1uXc5flcbnM",
+      "m6PaZnlkM84xqac7uExE",
+      "HoKgwZV8uZVkJIJB4z3g",
+      "QzH9F9BMT1pxizNR9UjP",
+      "DB3wjRqe8EyGseJ7RuzU",
+      "button",
+      "header"
+    ],
+    "last_name": "de Wet",
+    "email": "hanliedewet23@gmail.com",
+    "Z2TNnzpsi1uXc5flcbnM": "No",
+    "m6PaZnlkM84xqac7uExE": [
+      "No"
+    ],
+    "submissionId": "935bbe52-025b-4ac7-a68d-a2a37c8e7500",
+    "first_name": "Hanlie",
+    "HoKgwZV8uZVkJIJB4z3g": [
+      "All of the above"
+    ],
+    "ip": "102.66.181.169",
+    "dateFieldDetails": [],
+    "internalSource": {
+      "id": "6h4ylAsXMIse8KiHn83q",
+      "type": "calendars"
+    },
+    "0btZxJfv0KE0hSvR20Zw": "Since 2012 but dormant, aim for revival December 2025",
+    "formId": "YeJfeoIzuBRGqgMeyl5n",
+    "source": "Discovery Call With MedWave™",
+    "sessionId": "c77d9639-ce1a-4d6d-ad15-93e6319c70d5",
+    "signatureHash": "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",
+    "calendar_name": "Discovery Call With MedWave™",
+    "selected_slot": "2025-11-01T13:00:00+02:00",
+    "Timezone": "Africa/Johannesburg",
+    "mNbTo6CZlZuWelf9NH0h": "Tzaneen",
+    "FEuEesOQ1tT7rCAtDaHR": "Shariffa Skills Academy SA ",
+    "eventData": {
+      "parentId": "6h4ylAsXMIse8KiHn83q",
+      "keyword": "120234435129590335",
+      "campaign": "Obesity - Andries - DDM",
+      "source": "Social media",
+      "fbc": "",
+      "mediumId": "6h4ylAsXMIse8KiHn83q",
+      "timestamp": 1761991133536,
+      "documentURL": "https://api.leadconnectorhq.com/widget/bookings/team-medwave?utm_source=Matthys+-+15102025+-+ABOLEADFORMZA+(DDM)+-+Afrikaans&utm_medium=LLA+1%25+(ZA)+|+Doctors+[Grouped]+|+Afrikaans+(DDM)&utm_campaign=Obesity+-+Andries+-+DDM&fbc_id=120234435129590335&h_ad_id=120234435129760335&utm_id=120234435129520335&utm_content=120234435129760335&utm_term=120234435129590335",
+      "contactSessionIds": {
+        "ids": [
+          "c77d9639-ce1a-4d6d-ad15-93e6319c70d5"
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "utm_id": "120234435129520335",
+        "fbc_id": "120234435129590335",
+        "utm_medium": "LLA 1% (ZA) | Doctors [Grouped] | Afrikaans (DDM)",
+        "utm_content": "120234435129760335",
+        "h_ad_id": "120234435129760335",
+        "utm_source": "Matthys - 15102025 - ABOLEADFORMZA (DDM) - Afrikaans",
+        "utm_campaign": "Obesity - Andries - DDM",
+        "utm_term": "120234435129590335"
+      },
+      "medium": "calendar",
+      "fingerprint": null,
+      "parentName": "Discovery Call With MedWave™",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://api.leadconnectorhq.com/widget/bookings/team-medwave?utm_source=Matthys+-+15102025+-+ABOLEADFORMZA+(DDM)+-+Afrikaans&utm_medium=LLA+1%25+(ZA)+|+Doctors+[Grouped]+|+Afrikaans+(DDM)&utm_campaign=Obesity+-+Andries+-+DDM&fbc_id=120234435129590335&h_ad_id=120234435129760335&utm_id=120234435129520335&utm_content=120234435129760335&utm_term=120234435129590335",
+        "title": ""
+      },
+      "fbEventId": "a49192ab-ee50-4446-b61d-83279ab60745",
+      "pageVisitType": "calendar",
+      "referrer": "http://m.facebook.com",
+      "fbp": "",
+      "domain": "api.leadconnectorhq.com"
+    },
+    "DB3wjRqe8EyGseJ7RuzU": "Google Meet",
+    "selected_timezone": "Africa/Johannesburg"
+  },
+  "external": false,
+  "formId": "YeJfeoIzuBRGqgMeyl5n",
+  "email": "hanliedewet23@gmail.com"
+}
+
+================================================================================
+
+RECORD 9
+--------------------------------------------------------------------------------
+Contact ID: RKA6kuVyvOfl9BZpas0g
+Name: Stheh Thobeka Mshengu
+Email: serenityhealthclinic@outlook.com
+Submission ID: 6908258dd7645a7bea2c89e1
+Form ID: xRzJo5Fh3puwyrZNeGLx
+Source: Unknown
+Product Type: Unknown
+Created At: 2025-11-03T03:46:21.332Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Stheh Thobeka Mshengu",
+  "contactId": "RKA6kuVyvOfl9BZpas0g",
+  "id": "6908258dd7645a7bea2c89e1",
+  "createdAt": "2025-11-03T03:46:21.332Z",
+  "others": {
+    "2nq0c83hEH0MKz2l5mcE": "1-50",
+    "sessionFingerprint": "f25eba57-b12b-4949-afeb-2c3d96b13613",
+    "bc4LhOHnMuRlX9e3a1h8": "No",
+    "phone": "+27658742859",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "funneEventData": {
+      "funnel_step_id": "b51bb3f4-795e-482a-9d8f-132c2d5ace28",
+      "funnel_id": "Bkw1W4xxiKb1dE290YVI",
+      "page_id": "JUs0su04vXPEzMJX1SXl",
+      "domain_name": "specials.medwavegroup.com",
+      "event_type": "optin",
+      "page_url": "/0-for-60-3173"
+    },
+    "signatureHash": "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",
+    "last_name": "Mshengu",
+    "email": "serenityhealthclinic@outlook.com",
+    "sessionId": "dec04135-8455-41cb-a03d-b5ccc26b0ab0",
+    "fieldsOriSequance": [
+      "E5mcNMuKIjZV12WAZkus",
+      "6mcYhCsgPT77viSA5jWb",
+      "2nq0c83hEH0MKz2l5mcE",
+      "bc4LhOHnMuRlX9e3a1h8",
+      "pwPhcFN9hagRV72sthTm",
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "button",
+      "header"
+    ],
+    "6mcYhCsgPT77viSA5jWb": "Wellness Spa",
+    "pwPhcFN9hagRV72sthTm": "Serenity Health Clinic ",
+    "Timezone": "Africa/Johannesburg (GMT+02:00)",
+    "E5mcNMuKIjZV12WAZkus": "Healthcare provider",
+    "submissionId": "de6ebf05-4d5f-44cd-a481-daf8a11c331c",
+    "first_name": "Stheh Thobeka",
+    "ip": "197.184.78.129",
+    "eventData": {
+      "parentId": "JUs0su04vXPEzMJX1SXl",
+      "keyword": "120234319834300335",
+      "campaign": "MedWave Image Ads",
+      "source": "Social media",
+      "fbc": "fb.1.1762141451707.PAZXh0bgNhZW0BMABhZGlkAasoehdFK28Bp8T2FyE3h6uTt0sRnyg8OPNzvnkTokZA2C3lSlnqly8yjXNO8IZTo2IH9FZN_aem_mOU0B1_MCJ2tQ2BXsyaDNA",
+      "mediumId": "xRzJo5Fh3puwyrZNeGLx",
+      "timestamp": 1762141578420,
+      "documentURL": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&utm_id=120234319834310335&utm_content=120234319889470335&utm_term=120234319834300335&fbclid=PAZXh0bgNhZW0BMABhZGlkAasoehdFK28Bp8T2FyE3h6uTt0sRnyg8OPNzvnkTokZA2C3lSlnqly8yjXNO8IZTo2IH9FZN_aem_mOU0B1_MCJ2tQ2BXsyaDNA",
+      "contactSessionIds": {
+        "ids": [
+          "dec04135-8455-41cb-a03d-b5ccc26b0ab0"
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "utm_id": "120234319834310335",
+        "fbc_id": "120234319834300335",
+        "utm_medium": "LLA 1% (ZA) | Grouped",
+        "utm_content": "120234319889470335",
+        "h_ad_id": "120234319834320335",
+        "fbclid": "PAZXh0bgNhZW0BMABhZGlkAasoehdFK28Bp8T2FyE3h6uTt0sRnyg8OPNzvnkTokZA2C3lSlnqly8yjXNO8IZTo2IH9FZN_aem_mOU0B1_MCJ2tQ2BXsyaDNA",
+        "utm_source": "Matthys - 13102025 - ABOLANDER - Varied",
+        "utm_campaign": "MedWave Image Ads",
+        "utm_term": "120234319834300335"
+      },
+      "medium": "form",
+      "fingerprint": null,
+      "parentName": "",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&utm_id=120234319834310335&utm_content=120234319889470335&utm_term=120234319834300335&fbclid=PAZXh0bgNhZW0BMABhZGlkAasoehdFK28Bp8T2FyE3h6uTt0sRnyg8OPNzvnkTokZA2C3lSlnqly8yjXNO8IZTo2IH9FZN_aem_mOU0B1_MCJ2tQ2BXsyaDNA",
+        "title": "Discover MedWave™ For Medical Providers"
+      },
+      "fbEventId": "834e6cde-8005-4ff6-a74e-700316d12bf6",
+      "pageVisitType": "funnel",
+      "referrer": "http://instagram.com",
+      "fbp": "fb.1.1762141451748.472109347847468341",
+      "domain": "specials.medwavegroup.com"
+    },
+    "formId": "xRzJo5Fh3puwyrZNeGLx"
+  },
+  "external": false,
+  "formId": "xRzJo5Fh3puwyrZNeGLx",
+  "email": "serenityhealthclinic@outlook.com"
+}
+
+================================================================================
+
+RECORD 10
+--------------------------------------------------------------------------------
+Contact ID: YmZ5haXCRK3J2RtXeQYV
+Name: Vass Scoutaridis )
+Email: scoutaridis68@gmail.com
+Submission ID: 69065e41d7645a796728c937
+Form ID: xRzJo5Fh3puwyrZNeGLx
+Source: Unknown
+Product Type: Unknown
+Created At: 2025-11-01T19:23:45.418Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Vass Scoutaridis )",
+  "contactId": "YmZ5haXCRK3J2RtXeQYV",
+  "id": "69065e41d7645a796728c937",
+  "createdAt": "2025-11-01T19:23:45.418Z",
+  "others": {
+    "sessionFingerprint": "f8f4ff39-e832-4c11-beae-9355dca8240b",
+    "phone": "+27827124200",
+    "sessionId": "0dd001ad-ff10-45b4-9c45-80e0048b1e0f",
+    "funneEventData": {
+      "funnel_step_id": "b51bb3f4-795e-482a-9d8f-132c2d5ace28",
+      "funnel_id": "Bkw1W4xxiKb1dE290YVI",
+      "page_id": "JUs0su04vXPEzMJX1SXl",
+      "domain_name": "specials.medwavegroup.com",
+      "event_type": "optin",
+      "page_url": "/0-for-60-3173"
+    },
+    "signatureHash": "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",
+    "last_name": "Scoutaridis )",
+    "email": "scoutaridis68@gmail.com",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "fieldsOriSequance": [
+      "E5mcNMuKIjZV12WAZkus",
+      "6mcYhCsgPT77viSA5jWb",
+      "2nq0c83hEH0MKz2l5mcE",
+      "bc4LhOHnMuRlX9e3a1h8",
+      "pwPhcFN9hagRV72sthTm",
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "button",
+      "header"
+    ],
+    "Timezone": "Africa/Johannesburg (GMT+02:00)",
+    "E5mcNMuKIjZV12WAZkus": "Patient seeking treatment",
+    "submissionId": "2b2025ca-6505-419a-89ae-61ee61a35e24",
+    "first_name": "Vass",
+    "ip": "102.182.247.28",
+    "eventData": {
+      "parentId": "JUs0su04vXPEzMJX1SXl",
+      "mediumId": "xRzJo5Fh3puwyrZNeGLx",
+      "timestamp": 1762025024005,
+      "source": "Social media",
+      "fbc": "fb.1.1762024954777.IwY2xjawNzPUZleHRuA2FlbQIxMQABHkJ8wH-hF7gqerRo3zqHMQbtqtUtqJ0ueg9id26wUz7jheDYCj8AEaCcZrC6_aem_LuQylthNrOXbr6KxvcuXrQ",
+      "documentURL": "https://specials.medwavegroup.com/0-for-60-3173?fbclid=IwY2xjawNzPUZleHRuA2FlbQIxMQABHkJ8wH-hF7gqerRo3zqHMQbtqtUtqJ0ueg9id26wUz7jheDYCj8AEaCcZrC6_aem_LuQylthNrOXbr6KxvcuXrQ",
+      "contactSessionIds": {
+        "ids": [
+          "0dd001ad-ff10-45b4-9c45-80e0048b1e0f"
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "fbclid": "IwY2xjawNzPUZleHRuA2FlbQIxMQABHkJ8wH-hF7gqerRo3zqHMQbtqtUtqJ0ueg9id26wUz7jheDYCj8AEaCcZrC6_aem_LuQylthNrOXbr6KxvcuXrQ"
+      },
+      "medium": "form",
+      "fingerprint": null,
+      "parentName": "",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://specials.medwavegroup.com/0-for-60-3173?fbclid=IwY2xjawNzPUZleHRuA2FlbQIxMQABHkJ8wH-hF7gqerRo3zqHMQbtqtUtqJ0ueg9id26wUz7jheDYCj8AEaCcZrC6_aem_LuQylthNrOXbr6KxvcuXrQ",
+        "title": "Discover MedWave™ For Medical Providers"
+      },
+      "fbEventId": "7111a93c-3202-48d9-865d-63bc86c66646",
+      "pageVisitType": "funnel",
+      "referrer": "https://l.facebook.com",
+      "fbp": "fb.1.1762024954788.999609505287274231",
+      "domain": "specials.medwavegroup.com"
+    },
+    "formId": "xRzJo5Fh3puwyrZNeGLx"
+  },
+  "external": false,
+  "formId": "xRzJo5Fh3puwyrZNeGLx",
+  "email": "scoutaridis68@gmail.com"
+}
+
+================================================================================
+
+RECORD 11
+--------------------------------------------------------------------------------
+Contact ID: ZpfJtwYi283PeaN3ZtUZ
+Name: Bianca Vermaak 
+Email: bianca@lunarpropta.co.za
+Submission ID: 690acb49d7645aa88f3384db
+Form ID: xRzJo5Fh3puwyrZNeGLx
+Source: Unknown
+Product Type: Unknown
+Created At: 2025-11-05T03:58:01.216Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Bianca Vermaak ",
+  "contactId": "ZpfJtwYi283PeaN3ZtUZ",
+  "id": "690acb49d7645aa88f3384db",
+  "createdAt": "2025-11-05T03:58:01.216Z",
+  "others": {
+    "2nq0c83hEH0MKz2l5mcE": "1-50",
+    "sessionFingerprint": "a546bd2b-817a-4115-8a6d-f5fd5e18dd46",
+    "bc4LhOHnMuRlX9e3a1h8": "No",
+    "phone": "+27722155997",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "funneEventData": {
+      "funnel_step_id": "b51bb3f4-795e-482a-9d8f-132c2d5ace28",
+      "funnel_id": "Bkw1W4xxiKb1dE290YVI",
+      "page_id": "JUs0su04vXPEzMJX1SXl",
+      "domain_name": "specials.medwavegroup.com",
+      "event_type": "optin",
+      "page_url": "/0-for-60-3173"
+    },
+    "signatureHash": "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",
+    "last_name": "Vermaak ",
+    "email": "bianca@lunarpropta.co.za",
+    "sessionId": "9eaddb60-f604-4877-a809-129bb65df1ae",
+    "fieldsOriSequance": [
+      "E5mcNMuKIjZV12WAZkus",
+      "6mcYhCsgPT77viSA5jWb",
+      "2nq0c83hEH0MKz2l5mcE",
+      "bc4LhOHnMuRlX9e3a1h8",
+      "pwPhcFN9hagRV72sthTm",
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "button",
+      "header"
+    ],
+    "6mcYhCsgPT77viSA5jWb": "Wellness Spa",
+    "pwPhcFN9hagRV72sthTm": "Niche Wellness ",
+    "Timezone": "Africa/Johannesburg (GMT+02:00)",
+    "E5mcNMuKIjZV12WAZkus": "Healthcare provider",
+    "submissionId": "a84368ea-a4ed-41ea-80f8-7346df4614f1",
+    "first_name": "Bianca",
+    "ip": "105.228.22.33",
+    "eventData": {
+      "parentId": "JUs0su04vXPEzMJX1SXl",
+      "keyword": "120234319834300335",
+      "campaign": "MedWave Image Ads",
+      "source": "Social media",
+      "fbc": "fb.1.1762315018902.PAZXh0bgNhZW0BMABhZGlkAasoeha90v9zcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAacjDdp1OHFbnrBnSCdOgns3_bdX2aDuo5pVZuaUF5J64y2SUqAGQfADJMVCIQ_aem_1uLUWH7Bz_dC-qtyw-zDag",
+      "mediumId": "xRzJo5Fh3puwyrZNeGLx",
+      "timestamp": 1762315079349,
+      "documentURL": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&utm_id=120234319834310335&utm_content=120234319883550335&utm_term=120234319834300335&fbclid=PAZXh0bgNhZW0BMABhZGlkAasoeha90v9zcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAacjDdp1OHFbnrBnSCdOgns3_bdX2aDuo5pVZuaUF5J64y2SUqAGQfADJMVCIQ_aem_1uLUWH7Bz_dC-qtyw-zDag",
+      "contactSessionIds": {
+        "ids": [
+          "9eaddb60-f604-4877-a809-129bb65df1ae"
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "utm_id": "120234319834310335",
+        "fbc_id": "120234319834300335",
+        "utm_medium": "LLA 1% (ZA) | Grouped",
+        "utm_content": "120234319883550335",
+        "h_ad_id": "120234319834320335",
+        "fbclid": "PAZXh0bgNhZW0BMABhZGlkAasoeha90v9zcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAacjDdp1OHFbnrBnSCdOgns3_bdX2aDuo5pVZuaUF5J64y2SUqAGQfADJMVCIQ_aem_1uLUWH7Bz_dC-qtyw-zDag",
+        "utm_source": "Matthys - 13102025 - ABOLANDER - Varied",
+        "utm_campaign": "MedWave Image Ads",
+        "utm_term": "120234319834300335"
+      },
+      "medium": "form",
+      "fingerprint": null,
+      "parentName": "",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&utm_id=120234319834310335&utm_content=120234319883550335&utm_term=120234319834300335&fbclid=PAZXh0bgNhZW0BMABhZGlkAasoeha90v9zcnRjBmFwcF9pZA8xMjQwMjQ1NzQyODc0MTQAAacjDdp1OHFbnrBnSCdOgns3_bdX2aDuo5pVZuaUF5J64y2SUqAGQfADJMVCIQ_aem_1uLUWH7Bz_dC-qtyw-zDag",
+        "title": "Discover MedWave™ For Medical Providers"
+      },
+      "fbEventId": "232351f0-3a02-42fa-90b9-00a03fcf753b",
+      "pageVisitType": "funnel",
+      "referrer": null,
+      "fbp": "fb.1.1762315018904.962210849828494265",
+      "domain": "specials.medwavegroup.com"
+    },
+    "formId": "xRzJo5Fh3puwyrZNeGLx"
+  },
+  "external": false,
+  "formId": "xRzJo5Fh3puwyrZNeGLx",
+  "email": "bianca@lunarpropta.co.za"
+}
+
+================================================================================
+
+RECORD 12
+--------------------------------------------------------------------------------
+Contact ID: bZ1fykhut0YsSaLXOVaO
+Name: Jc Moolman 
+Email: braintrain100@gmail.com
+Submission ID: 690a62efd7645a4f4d3261ee
+Form ID: xRzJo5Fh3puwyrZNeGLx
+Source: Unknown
+Product Type: Unknown
+Created At: 2025-11-04T20:32:47.366Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Jc Moolman ",
+  "contactId": "bZ1fykhut0YsSaLXOVaO",
+  "id": "690a62efd7645a4f4d3261ee",
+  "createdAt": "2025-11-04T20:32:47.366Z",
+  "others": {
+    "sessionFingerprint": "f905dda0-e412-4eb8-ae1e-75d413508a9b",
+    "phone": "+27824390737",
+    "sessionId": "223042e0-4fdc-40ef-9562-8980cc765c02",
+    "funneEventData": {
+      "funnel_step_id": "b51bb3f4-795e-482a-9d8f-132c2d5ace28",
+      "funnel_id": "Bkw1W4xxiKb1dE290YVI",
+      "page_id": "JUs0su04vXPEzMJX1SXl",
+      "domain_name": "specials.medwavegroup.com",
+      "event_type": "optin",
+      "page_url": "/0-for-60-3173"
+    },
+    "signatureHash": "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",
+    "last_name": "Moolman ",
+    "email": "Braintrain100@gmail.com",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "fieldsOriSequance": [
+      "E5mcNMuKIjZV12WAZkus",
+      "6mcYhCsgPT77viSA5jWb",
+      "2nq0c83hEH0MKz2l5mcE",
+      "bc4LhOHnMuRlX9e3a1h8",
+      "pwPhcFN9hagRV72sthTm",
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "button",
+      "header"
+    ],
+    "Timezone": "Africa/Johannesburg (GMT+02:00)",
+    "E5mcNMuKIjZV12WAZkus": "Patient seeking treatment",
+    "submissionId": "227e5abb-9138-4ad5-b1d2-f7a76e17e8f1",
+    "first_name": "Jc",
+    "ip": "169.255.78.225",
+    "eventData": {
+      "parentId": "JUs0su04vXPEzMJX1SXl",
+      "keyword": "120234319834300335",
+      "campaign": "MedWave Image Ads",
+      "source": "Social media",
+      "fbc": "fb.1.1762286080206.IwZXh0bgNhZW0BMABhZGlkAasoeha4VL8BHp2QrNXH7vuczkEgnD_0jlhySrFRxv0yHhpRJHlDsJnrzweLkhqLXFWY8kT4_aem_dGnMTqlkKKOqX7mWHxSq1g",
+      "mediumId": "xRzJo5Fh3puwyrZNeGLx",
+      "timestamp": 1762288364256,
+      "documentURL": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&fbclid=IwZXh0bgNhZW0BMABhZGlkAasoeha4VL8BHp2QrNXH7vuczkEgnD_0jlhySrFRxv0yHhpRJHlDsJnrzweLkhqLXFWY8kT4_aem_dGnMTqlkKKOqX7mWHxSq1g&brid=dGnMTqlkKKOqX7mWHxSq1g&utm_id=120234319834310335&utm_content=120234319883540335&utm_term=120234319834300335",
+      "contactSessionIds": {
+        "ids": [
+          "f51bdcd7-83e1-45c8-a4c8-fbdcc0b2000e",
+          "223042e0-4fdc-40ef-9562-8980cc765c02"
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "utm_id": "120234319834310335",
+        "fbc_id": "120234319834300335",
+        "utm_medium": "LLA 1% (ZA) | Grouped",
+        "utm_content": "120234319883540335",
+        "h_ad_id": "120234319834320335",
+        "fbclid": "IwZXh0bgNhZW0BMABhZGlkAasoeha4VL8BHp2QrNXH7vuczkEgnD_0jlhySrFRxv0yHhpRJHlDsJnrzweLkhqLXFWY8kT4_aem_dGnMTqlkKKOqX7mWHxSq1g",
+        "brid": "dGnMTqlkKKOqX7mWHxSq1g",
+        "utm_source": "Matthys - 13102025 - ABOLANDER - Varied",
+        "utm_campaign": "MedWave Image Ads",
+        "utm_term": "120234319834300335"
+      },
+      "medium": "form",
+      "fingerprint": null,
+      "parentName": "",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&fbclid=IwZXh0bgNhZW0BMABhZGlkAasoeha4VL8BHp2QrNXH7vuczkEgnD_0jlhySrFRxv0yHhpRJHlDsJnrzweLkhqLXFWY8kT4_aem_dGnMTqlkKKOqX7mWHxSq1g&brid=dGnMTqlkKKOqX7mWHxSq1g&utm_id=120234319834310335&utm_content=120234319883540335&utm_term=120234319834300335",
+        "title": "Discover MedWave™ For Medical Providers"
+      },
+      "fbEventId": "70b487c4-56cf-4df9-8d08-9b0d5b45db82",
+      "pageVisitType": "funnel",
+      "referrer": "http://m.facebook.com",
+      "fbp": "fb.1.1762286080250.835728095138264182",
+      "domain": "specials.medwavegroup.com"
+    },
+    "formId": "xRzJo5Fh3puwyrZNeGLx"
+  },
+  "external": false,
+  "formId": "xRzJo5Fh3puwyrZNeGLx",
+  "email": "braintrain100@gmail.com"
+}
+
+================================================================================
+
+RECORD 13
+--------------------------------------------------------------------------------
+Contact ID: jULTc6dlvDZt1jTfEMRT
+Name: Pritesh Modi
+Email: info.drmodi@gmail.com
+Submission ID: 69072cbdcbfcae040b7cb9fd
+Form ID: xRzJo5Fh3puwyrZNeGLx
+Source: Unknown
+Product Type: Unknown
+Created At: 2025-11-02T10:04:45.568Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Pritesh Modi",
+  "contactId": "jULTc6dlvDZt1jTfEMRT",
+  "id": "69072cbdcbfcae040b7cb9fd",
+  "createdAt": "2025-11-02T10:04:45.568Z",
+  "others": {
+    "2nq0c83hEH0MKz2l5mcE": "1-50",
+    "sessionFingerprint": "640f4a0d-a94f-45ae-a103-cb4d999b7481",
+    "bc4LhOHnMuRlX9e3a1h8": "Yes",
+    "phone": "+27847676557",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "funneEventData": {
+      "funnel_step_id": "b51bb3f4-795e-482a-9d8f-132c2d5ace28",
+      "funnel_id": "Bkw1W4xxiKb1dE290YVI",
+      "page_id": "JUs0su04vXPEzMJX1SXl",
+      "domain_name": "specials.medwavegroup.com",
+      "event_type": "optin",
+      "page_url": "/0-for-60-3173"
+    },
+    "signatureHash": "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",
+    "last_name": "Modi",
+    "email": "info.drmodi@gmail.com",
+    "sessionId": "a8707918-4a01-40f7-8f0f-2627ecfdb869",
+    "fieldsOriSequance": [
+      "E5mcNMuKIjZV12WAZkus",
+      "6mcYhCsgPT77viSA5jWb",
+      "2nq0c83hEH0MKz2l5mcE",
+      "bc4LhOHnMuRlX9e3a1h8",
+      "pwPhcFN9hagRV72sthTm",
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "button",
+      "header"
+    ],
+    "6mcYhCsgPT77viSA5jWb": "Medical Doctor",
+    "pwPhcFN9hagRV72sthTm": "DR Modi ",
+    "Timezone": "Africa/Johannesburg (GMT+02:00)",
+    "E5mcNMuKIjZV12WAZkus": "Healthcare provider",
+    "submissionId": "dd1082e5-032c-4429-8132-3a24f237bd9d",
+    "first_name": "Pritesh",
+    "ip": "41.1.71.236",
+    "eventData": {
+      "parentId": "JUs0su04vXPEzMJX1SXl",
+      "keyword": "120234319834300335",
+      "campaign": "MedWave Image Ads",
+      "source": "Social media",
+      "fbc": "fb.1.1762077809204.PAZXh0bgNhZW0BMABhZGlkAasoehc-Jo8BpzftxYYur9NVwOWTzcJRj9wz-DC6liIDZRoUa63821SmyKt64l_8PrFnFxjI_aem_nBQlFN_xWnND09mTXquStw",
+      "mediumId": "xRzJo5Fh3puwyrZNeGLx",
+      "timestamp": 1762077882880,
+      "documentURL": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&utm_id=120234319834310335&utm_content=120234319885440335&utm_term=120234319834300335&fbclid=PAZXh0bgNhZW0BMABhZGlkAasoehc-Jo8BpzftxYYur9NVwOWTzcJRj9wz-DC6liIDZRoUa63821SmyKt64l_8PrFnFxjI_aem_nBQlFN_xWnND09mTXquStw",
+      "contactSessionIds": {
+        "ids": [
+          "a8707918-4a01-40f7-8f0f-2627ecfdb869"
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "utm_id": "120234319834310335",
+        "fbc_id": "120234319834300335",
+        "utm_medium": "LLA 1% (ZA) | Grouped",
+        "utm_content": "120234319885440335",
+        "h_ad_id": "120234319834320335",
+        "fbclid": "PAZXh0bgNhZW0BMABhZGlkAasoehc-Jo8BpzftxYYur9NVwOWTzcJRj9wz-DC6liIDZRoUa63821SmyKt64l_8PrFnFxjI_aem_nBQlFN_xWnND09mTXquStw",
+        "utm_source": "Matthys - 13102025 - ABOLANDER - Varied",
+        "utm_campaign": "MedWave Image Ads",
+        "utm_term": "120234319834300335"
+      },
+      "medium": "form",
+      "fingerprint": null,
+      "parentName": "",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&utm_id=120234319834310335&utm_content=120234319885440335&utm_term=120234319834300335&fbclid=PAZXh0bgNhZW0BMABhZGlkAasoehc-Jo8BpzftxYYur9NVwOWTzcJRj9wz-DC6liIDZRoUa63821SmyKt64l_8PrFnFxjI_aem_nBQlFN_xWnND09mTXquStw",
+        "title": "Discover MedWave™ For Medical Providers"
+      },
+      "fbEventId": "d5480cf2-e751-4b06-bd6a-1b08749a1995",
+      "pageVisitType": "funnel",
+      "referrer": "http://instagram.com",
+      "fbp": "fb.1.1762077809238.206382756430523480",
+      "domain": "specials.medwavegroup.com"
+    },
+    "formId": "xRzJo5Fh3puwyrZNeGLx"
+  },
+  "external": false,
+  "formId": "xRzJo5Fh3puwyrZNeGLx",
+  "email": "info.drmodi@gmail.com"
+}
+
+================================================================================
+
+RECORD 14
+--------------------------------------------------------------------------------
+Contact ID: maCP0ztQ5OVPwAJ5j17l
+Name: Sameeng  Onica
+Email: molwele.onica@gmail.com
+Submission ID: 69063f2e3d321e9bce517a1f
+Form ID: xRzJo5Fh3puwyrZNeGLx
+Source: Unknown
+Product Type: Unknown
+Created At: 2025-11-01T17:11:10.692Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Sameeng  Onica",
+  "contactId": "maCP0ztQ5OVPwAJ5j17l",
+  "id": "69063f2e3d321e9bce517a1f",
+  "createdAt": "2025-11-01T17:11:10.692Z",
+  "others": {
+    "2nq0c83hEH0MKz2l5mcE": "1-50",
+    "sessionFingerprint": "d9765e98-73a7-4298-98f2-ab744d0d95e2",
+    "bc4LhOHnMuRlX9e3a1h8": "No",
+    "phone": "+27793764584",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "funneEventData": {
+      "funnel_step_id": "b51bb3f4-795e-482a-9d8f-132c2d5ace28",
+      "funnel_id": "Bkw1W4xxiKb1dE290YVI",
+      "page_id": "JUs0su04vXPEzMJX1SXl",
+      "domain_name": "specials.medwavegroup.com",
+      "event_type": "optin",
+      "page_url": "/0-for-60-3173"
+    },
+    "signatureHash": "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",
+    "last_name": "Onica",
+    "email": "molwele.onica@gmail.com",
+    "sessionId": "0baf3c92-0ae1-4f6f-a8e1-2f4116bf73b2",
+    "fieldsOriSequance": [
+      "E5mcNMuKIjZV12WAZkus",
+      "6mcYhCsgPT77viSA5jWb",
+      "2nq0c83hEH0MKz2l5mcE",
+      "bc4LhOHnMuRlX9e3a1h8",
+      "pwPhcFN9hagRV72sthTm",
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "button",
+      "header"
+    ],
+    "6mcYhCsgPT77viSA5jWb": "Wellness Spa",
+    "pwPhcFN9hagRV72sthTm": "Essence health Bodywellness Spa ",
+    "Timezone": "Africa/Johannesburg (GMT+02:00)",
+    "E5mcNMuKIjZV12WAZkus": "Healthcare provider",
+    "submissionId": "b51184f6-b72c-47ff-b235-bcb39a435dfc",
+    "first_name": "Sameeng ",
+    "ip": "41.13.16.87",
+    "eventData": {
+      "parentId": "JUs0su04vXPEzMJX1SXl",
+      "keyword": "120234319834300335",
+      "campaign": "MedWave Image Ads",
+      "source": "Social media",
+      "fbc": "fb.1.1762016949214.IwZXh0bgNhZW0BMABhZGlkAasoeha90v8BHj6K8Bq_GezsAy8aiD_Qr66f3YcKvEfB240vuENBjmHbBJawhUVi4KI6C-_q_aem_ZJDfCcsYgcXwRwlgDmOerA",
+      "mediumId": "xRzJo5Fh3puwyrZNeGLx",
+      "timestamp": 1762017067245,
+      "documentURL": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&fbclid=IwZXh0bgNhZW0BMABhZGlkAasoeha90v8BHj6K8Bq_GezsAy8aiD_Qr66f3YcKvEfB240vuENBjmHbBJawhUVi4KI6C-_q_aem_ZJDfCcsYgcXwRwlgDmOerA&utm_id=120234319834310335&utm_content=120234319883550335&utm_term=120234319834300335",
+      "contactSessionIds": {
+        "ids": [
+          "0baf3c92-0ae1-4f6f-a8e1-2f4116bf73b2"
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "utm_id": "120234319834310335",
+        "fbc_id": "120234319834300335",
+        "utm_medium": "LLA 1% (ZA) | Grouped",
+        "utm_content": "120234319883550335",
+        "h_ad_id": "120234319834320335",
+        "fbclid": "IwZXh0bgNhZW0BMABhZGlkAasoeha90v8BHj6K8Bq_GezsAy8aiD_Qr66f3YcKvEfB240vuENBjmHbBJawhUVi4KI6C-_q_aem_ZJDfCcsYgcXwRwlgDmOerA",
+        "utm_source": "Matthys - 13102025 - ABOLANDER - Varied",
+        "utm_campaign": "MedWave Image Ads",
+        "utm_term": "120234319834300335"
+      },
+      "medium": "form",
+      "fingerprint": null,
+      "parentName": "",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://specials.medwavegroup.com/0-for-60-3173?utm_source=Matthys+-+13102025+-+ABOLANDER+-+Varied&utm_medium=LLA+1%25+(ZA)+|+Grouped&utm_campaign=MedWave+Image+Ads&fbc_id=120234319834300335&h_ad_id=120234319834320335&fbclid=IwZXh0bgNhZW0BMABhZGlkAasoeha90v8BHj6K8Bq_GezsAy8aiD_Qr66f3YcKvEfB240vuENBjmHbBJawhUVi4KI6C-_q_aem_ZJDfCcsYgcXwRwlgDmOerA&utm_id=120234319834310335&utm_content=120234319883550335&utm_term=120234319834300335",
+        "title": "Discover MedWave™ For Medical Providers"
+      },
+      "fbEventId": "51d459fb-4a7b-4eb0-a0a1-5065cf82a21f",
+      "pageVisitType": "funnel",
+      "referrer": "http://m.facebook.com",
+      "fbp": "fb.1.1762016949263.312287275613979106",
+      "domain": "specials.medwavegroup.com"
+    },
+    "formId": "xRzJo5Fh3puwyrZNeGLx"
+  },
+  "external": false,
+  "formId": "xRzJo5Fh3puwyrZNeGLx",
+  "email": "molwele.onica@gmail.com"
+}
+
+================================================================================
+
+RECORD 15
+--------------------------------------------------------------------------------
+Contact ID: sVUk5DGianz8gTJZJhxQ
+Name: Marinda Nel
+Email: lafemmeclinique@absamail.co.za
+Submission ID: 690777cb3d321e0de953d63e
+Form ID: xRzJo5Fh3puwyrZNeGLx
+Source: Unknown
+Product Type: Unknown
+Created At: 2025-11-02T15:24:59.898Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Marinda Nel",
+  "contactId": "sVUk5DGianz8gTJZJhxQ",
+  "id": "690777cb3d321e0de953d63e",
+  "createdAt": "2025-11-02T15:24:59.898Z",
+  "others": {
+    "2nq0c83hEH0MKz2l5mcE": "1-50",
+    "sessionFingerprint": "64f69eca-ebbe-4a7c-bdf7-60a52f7c5e66",
+    "bc4LhOHnMuRlX9e3a1h8": "Yes",
+    "phone": "+27824615630",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "funneEventData": {
+      "funnel_step_id": "b51bb3f4-795e-482a-9d8f-132c2d5ace28",
+      "funnel_id": "Bkw1W4xxiKb1dE290YVI",
+      "page_id": "JUs0su04vXPEzMJX1SXl",
+      "domain_name": "specials.medwavegroup.com",
+      "event_type": "optin",
+      "page_url": "/0-for-60-3173"
+    },
+    "signatureHash": "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",
+    "last_name": "Nel",
+    "email": "lafemmeclinique@absamail.co.za",
+    "sessionId": "7e27db9b-8e85-47fe-a1b0-b5d8073e61de",
+    "fieldsOriSequance": [
+      "E5mcNMuKIjZV12WAZkus",
+      "6mcYhCsgPT77viSA5jWb",
+      "2nq0c83hEH0MKz2l5mcE",
+      "bc4LhOHnMuRlX9e3a1h8",
+      "pwPhcFN9hagRV72sthTm",
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "button",
+      "header"
+    ],
+    "6mcYhCsgPT77viSA5jWb": "Other",
+    "pwPhcFN9hagRV72sthTm": "Marinda Nel @ LFC Wellness Centre",
+    "Timezone": "Africa/Johannesburg (GMT+02:00)",
+    "E5mcNMuKIjZV12WAZkus": "Healthcare provider",
+    "submissionId": "fb510ee4-9b1d-4d13-a393-b7cf3e8b0a7b",
+    "first_name": "Marinda",
+    "ip": "105.186.142.43",
+    "eventData": {
+      "parentId": "JUs0su04vXPEzMJX1SXl",
+      "mediumId": "xRzJo5Fh3puwyrZNeGLx",
+      "timestamp": 1762097097332,
+      "source": "Social media",
+      "fbc": "fb.1.1762096408413.IwY2xjawN0VGNleHRuA2FlbQIxMQABHlnKFUprUHz2df63TnXvq7OXNkKwbTmYngeWhatI7vWwKqqNG8GNnjtl7hZP_aem_xlm9BBgOOYy8TOpz4ceBhQ",
+      "documentURL": "https://specials.medwavegroup.com/0-for-60-3173?fbclid=IwY2xjawN0VGNleHRuA2FlbQIxMQABHlnKFUprUHz2df63TnXvq7OXNkKwbTmYngeWhatI7vWwKqqNG8GNnjtl7hZP_aem_xlm9BBgOOYy8TOpz4ceBhQ",
+      "contactSessionIds": {
+        "ids": [
+          "7e27db9b-8e85-47fe-a1b0-b5d8073e61de"
+        ]
+      },
+      "type": "page-visit",
+      "url_params": {
+        "fbclid": "IwY2xjawN0VGNleHRuA2FlbQIxMQABHlnKFUprUHz2df63TnXvq7OXNkKwbTmYngeWhatI7vWwKqqNG8GNnjtl7hZP_aem_xlm9BBgOOYy8TOpz4ceBhQ"
+      },
+      "medium": "form",
+      "fingerprint": null,
+      "parentName": "",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://specials.medwavegroup.com/0-for-60-3173?fbclid=IwY2xjawN0VGNleHRuA2FlbQIxMQABHlnKFUprUHz2df63TnXvq7OXNkKwbTmYngeWhatI7vWwKqqNG8GNnjtl7hZP_aem_xlm9BBgOOYy8TOpz4ceBhQ",
+        "title": "Discover MedWave™ For Medical Providers"
+      },
+      "fbEventId": "48c5c9b2-054f-4c7a-8112-151bfb2a3cef",
+      "pageVisitType": "funnel",
+      "referrer": "https://l.facebook.com",
+      "fbp": "fb.1.1762096408464.628570518685664440",
+      "domain": "specials.medwavegroup.com"
+    },
+    "formId": "xRzJo5Fh3puwyrZNeGLx"
+  },
+  "external": false,
+  "formId": "xRzJo5Fh3puwyrZNeGLx",
+  "email": "lafemmeclinique@absamail.co.za"
+}
+
+================================================================================
+
+RECORD 16
+--------------------------------------------------------------------------------
+Contact ID: u32c4kDuD0SUFm8CiYvR
+Name: oscar test
+Email: test@test.com
+Submission ID: 69135ca2cbfcae7e7b9aca21
+Form ID: YeJfeoIzuBRGqgMeyl5n
+Source: Discovery Call With MedWave™
+Product Type: Unknown
+Created At: 2025-11-11T15:56:18.859Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "oscar test",
+  "contactId": "u32c4kDuD0SUFm8CiYvR",
+  "id": "69135ca2cbfcae7e7b9aca21",
+  "createdAt": "2025-11-11T15:56:18.859Z",
+  "others": {
+    "sessionFingerprint": "68220846-5229-42bb-b4a3-23eee93c76f1",
+    "HQHwpiNw95e5qC9oiVyN": "test.com",
+    "phone": "+522397862344",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "QzH9F9BMT1pxizNR9UjP": [
+      "As soon as possible"
+    ],
+    "fieldsOriSequance": [
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "FEuEesOQ1tT7rCAtDaHR",
+      "HQHwpiNw95e5qC9oiVyN",
+      "0btZxJfv0KE0hSvR20Zw",
+      "mNbTo6CZlZuWelf9NH0h",
+      "Z2TNnzpsi1uXc5flcbnM",
+      "m6PaZnlkM84xqac7uExE",
+      "HoKgwZV8uZVkJIJB4z3g",
+      "QzH9F9BMT1pxizNR9UjP",
+      "DB3wjRqe8EyGseJ7RuzU",
+      "button",
+      "header"
+    ],
+    "last_name": "test",
+    "email": "test@test.com",
+    "Z2TNnzpsi1uXc5flcbnM": "Yes",
+    "m6PaZnlkM84xqac7uExE": [
+      "Yes"
+    ],
+    "submissionId": "50dc1a60-806e-4f76-8c29-4fc2ac66492d",
+    "first_name": "oscar",
+    "HoKgwZV8uZVkJIJB4z3g": [
+      "Weight Loss",
+      "All of the above"
+    ],
+    "ip": "2806:265:495:6b9:1aa:943a:354:fd42",
+    "dateFieldDetails": [],
+    "internalSource": {
+      "id": "6h4ylAsXMIse8KiHn83q",
+      "type": "calendars"
+    },
+    "0btZxJfv0KE0hSvR20Zw": "test",
+    "formId": "YeJfeoIzuBRGqgMeyl5n",
+    "source": "Discovery Call With MedWave™",
+    "sessionId": "1165d987-421c-40ec-b090-d2e57f236526",
+    "signatureHash": "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",
+    "calendar_name": "Discovery Call With MedWave™",
+    "selected_slot": "2026-02-03T01:00:00-06:00",
+    "Timezone": "America/Mexico_City",
+    "mNbTo6CZlZuWelf9NH0h": "test",
+    "FEuEesOQ1tT7rCAtDaHR": "test",
+    "eventData": {
+      "parentId": "6h4ylAsXMIse8KiHn83q",
+      "mediumId": "6h4ylAsXMIse8KiHn83q",
+      "timestamp": 1762876576820,
+      "source": "Referral",
+      "fbc": "",
+      "documentURL": "https://api.leadconnectorhq.com/widget/booking/6h4ylAsXMIse8KiHn83q",
+      "contactSessionIds": {
+        "ids": [
+          "1165d987-421c-40ec-b090-d2e57f236526"
+        ]
+      },
+      "type": "page-visit",
+      "fingerprint": null,
+      "medium": "calendar",
+      "parentName": "Discovery Call With MedWave™",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://api.leadconnectorhq.com/widget/booking/6h4ylAsXMIse8KiHn83q",
+        "title": ""
+      },
+      "fbEventId": "ecfe8367-fb85-4b71-8727-bab4926bb7a0",
+      "pageVisitType": "calendar",
+      "referrer": "https://app.medwavegroup.com",
+      "gaClientId": "GA1.1.1328713066.1762374172",
+      "fbp": "fb.1.1762369585256.424569545116032927",
+      "domain": "api.leadconnectorhq.com"
+    },
+    "DB3wjRqe8EyGseJ7RuzU": "Google Meet",
+    "selected_timezone": "America/Mexico_City"
+  },
+  "external": false,
+  "formId": "YeJfeoIzuBRGqgMeyl5n",
+  "email": "test@test.com"
+}
+
+================================================================================
+
+RECORD 17
+--------------------------------------------------------------------------------
+Contact ID: us5jBeUo2AXmjmwzWpJC
+Name: Azwitamisi Mavhungu
+Email: mavhunguazwitamisi398@gmail.com
+Submission ID: 690e5a81d7645a36fe3ca52f
+Form ID: YeJfeoIzuBRGqgMeyl5n
+Source: Discovery Call With MedWave™
+Product Type: Unknown
+Created At: 2025-11-07T20:45:53.542Z
+External: False
+Ad ID: None
+Attribution: None
+
+FULL SUBMISSION DATA:
+--------------------------------------------------------------------------------
+{
+  "name": "Azwitamisi Mavhungu",
+  "contactId": "us5jBeUo2AXmjmwzWpJC",
+  "id": "690e5a81d7645a36fe3ca52f",
+  "createdAt": "2025-11-07T20:45:53.542Z",
+  "others": {
+    "sessionFingerprint": "a328a965-b7d4-4731-8e77-d504a3ba415c",
+    "HQHwpiNw95e5qC9oiVyN": "Social Media",
+    "phone": "+27660104323",
+    "location_id": "QdLXaFEqrdF0JbVbpKLw",
+    "QzH9F9BMT1pxizNR9UjP": [
+      "1-2 Months"
+    ],
+    "fieldsOriSequance": [
+      "first_name",
+      "last_name",
+      "phone",
+      "email",
+      "FEuEesOQ1tT7rCAtDaHR",
+      "HQHwpiNw95e5qC9oiVyN",
+      "0btZxJfv0KE0hSvR20Zw",
+      "mNbTo6CZlZuWelf9NH0h",
+      "Z2TNnzpsi1uXc5flcbnM",
+      "m6PaZnlkM84xqac7uExE",
+      "HoKgwZV8uZVkJIJB4z3g",
+      "QzH9F9BMT1pxizNR9UjP",
+      "DB3wjRqe8EyGseJ7RuzU",
+      "button",
+      "header"
+    ],
+    "last_name": "Mavhungu",
+    "email": "mavhunguazwitamisi398@gmail.com",
+    "Z2TNnzpsi1uXc5flcbnM": "Yes",
+    "m6PaZnlkM84xqac7uExE": [
+      "No"
+    ],
+    "submissionId": "e11a2ae6-546d-4a9c-9ed3-9d7278b3c151",
+    "first_name": "Azwitamisi",
+    "HoKgwZV8uZVkJIJB4z3g": [
+      "All of the above"
+    ],
+    "ip": "41.13.94.90",
+    "dateFieldDetails": [],
+    "internalSource": {
+      "id": "6h4ylAsXMIse8KiHn83q",
+      "type": "calendars"
+    },
+    "0btZxJfv0KE0hSvR20Zw": "2 years",
+    "formId": "YeJfeoIzuBRGqgMeyl5n",
+    "source": "Discovery Call With MedWave™",
+    "sessionId": "5d285324-3c54-48aa-ac7e-cab069917e38",
+    "signatureHash": "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",
+    "calendar_name": "Discovery Call With MedWave™",
+    "selected_slot": "2025-11-10T11:00:00+02:00",
+    "Timezone": "Africa/Johannesburg",
+    "mNbTo6CZlZuWelf9NH0h": "SouthcAfrica",
+    "FEuEesOQ1tT7rCAtDaHR": "Mafhimavhuya General Trading",
+    "eventData": {
+      "parentId": "6h4ylAsXMIse8KiHn83q",
+      "mediumId": "6h4ylAsXMIse8KiHn83q",
+      "timestamp": 1762548349249,
+      "source": "Referral",
+      "fbc": "",
+      "documentURL": "https://api.leadconnectorhq.com/widget/bookings/team-medwave",
+      "contactSessionIds": {
+        "ids": [
+          "5d285324-3c54-48aa-ac7e-cab069917e38"
+        ]
+      },
+      "type": "page-visit",
+      "fingerprint": null,
+      "medium": "calendar",
+      "parentName": "Discovery Call With MedWave™",
+      "adSource": "",
+      "version": "v3",
+      "page": {
+        "url": "https://api.leadconnectorhq.com/widget/bookings/team-medwave",
+        "title": ""
+      },
+      "fbEventId": "8d1db7bd-b2fd-40dd-bd02-d45f962f92fe",
+      "pageVisitType": "calendar",
+      "referrer": "https://www.medwavegroup.com",
+      "fbp": "",
+      "domain": "api.leadconnectorhq.com"
+    },
+    "DB3wjRqe8EyGseJ7RuzU": "Google Meet",
+    "selected_timezone": "Africa/Johannesburg"
+  },
+  "external": false,
+  "formId": "YeJfeoIzuBRGqgMeyl5n",
+  "email": "mavhunguazwitamisi398@gmail.com"
+}
+
+================================================================================
+

@@ -1,0 +1,214 @@
+/Users/mac/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+
+====================================================================================================
+  GHL OPPORTUNITIES API DATA INSPECTOR
+====================================================================================================
+API Base URL: https://services.leadconnectorhq.com
+Location ID: QdLXaFEqrdF0JbVbpKLw
+API Version: 2021-07-28
+Timestamp: 2025-11-13 14:15:57
+
+====================================================================================================
+  FETCHING OPPORTUNITIES (Page 1, Limit 10)
+====================================================================================================
+
+✅ Found 10 opportunities (Total: 0)
+
+1. Dr Keshara Bawasa
+   ID: JayAAH4P6KGl6vxp1t6Z
+   Pipeline: fNSrQQofiOJzcszYP5mq
+   Stage: 8e93a0d2-7c69-45ee-b5d0-4326f82c04f7
+   Value: R 0.00
+
+2. Nirri Govender
+   ID: noog1Y40dxIWlzwGqMz2
+   Pipeline: fNSrQQofiOJzcszYP5mq
+   Stage: a2f8a8ac-5232-4d5c-97cb-f9c2909fd3fc
+   Value: R 0.00
+
+3. Bontle Goitsemodimo
+   ID: zgV4aIHvjYLLuD8NYiAO
+   Pipeline: XeAGJWRnUGJ5tuhXam2g
+   Stage: 0c0295b4-de16-41c1-94a2-e10ba396b55f
+   Value: R 0.00
+
+4. Tshimangadzo Mammba
+   ID: XAttvCrwSLkffHaSJIFo
+   Pipeline: fNSrQQofiOJzcszYP5mq
+   Stage: 44e04991-dd6a-47d4-89ec-89e534fe9cb2
+   Value: R 0.00
+
+5. Patricia Mathe 082 505 0811
+   ID: yOEPY3962zhVa6tgzGYf
+   Pipeline: DlVXHeiGr7QdN0mdn9zK
+   Stage: ae19342c-2479-45c5-ad7a-cc462f45734f
+   Value: R 0.00
+
+
+====================================================================================================
+  COMPLETE SEARCH RESPONSE STRUCTURE
+====================================================================================================
+
+📦 SEARCH RESPONSE KEYS:
+   - opportunities
+   - meta
+   - aggregations
+   - traceId
+
+====================================================================================================
+  SEARCHING FOR OPPORTUNITY WITH MONETARY VALUE
+====================================================================================================
+
+✅ Found 1 opportunities with monetary value
+
+1. Bev Gradidge
+   ID: Z6DwRpe9TEyOl8X56YVk
+   Value: R 25,000.00
+   Stage ID: c6fe9683-4682-4611-bae8-9227462cf1cc
+
+
+====================================================================================================
+  FETCHING SINGLE OPPORTUNITY: Z6DwRpe9TEyOl8X56YVk
+====================================================================================================
+
+📦 COMPLETE OPPORTUNITY DATA:
+{
+  "opportunity": {
+    "id": "Z6DwRpe9TEyOl8X56YVk",
+    "name": "Bev Gradidge",
+    "monetaryValue": 25000,
+    "pipelineId": "fcDizgcjCWEjzpQPXzOy",
+    "pipelineStageId": "c6fe9683-4682-4611-bae8-9227462cf1cc",
+    "assignedTo": "Yj7mjEZBYBC5CqF1dNL2",
+    "status": "open",
+    "lastStatusChangeAt": "2025-11-13T04:17:37.520Z",
+    "lastStageChangeAt": "2025-11-13T04:17:37.520Z",
+    "createdAt": "2025-11-13T04:17:37.520Z",
+    "updatedAt": "2025-11-13T04:17:38.183Z",
+    "contactId": "srKrKjdbJeF9LG5LEK5b",
+    "isAttribute": true,
+    "internalSource": {
+      "type": "CREATED",
+      "id": "bbaf0cc5-c6fa-4c19-bab0-b8f8d9400ae0",
+      "apiVersion": "2021-04-15",
+      "channel": "ISTIO_MESH",
+      "source": "WORKFLOW_NEW"
+    },
+    "locationId": "QdLXaFEqrdF0JbVbpKLw",
+    "lastActionDate": "2025-11-13T04:17:38.117Z",
+    "followers": [],
+    "contact": {
+      "id": "srKrKjdbJeF9LG5LEK5b",
+      "name": "Bev Gradidge",
+      "email": "soulsistersa22@gmail.com",
+      "phone": "+27823086112",
+      "tags": [
+        "karen website leads",
+        "andries leads booked - e",
+        "andries booked appointments",
+        "karen andries leads booked",
+        "andries-call-completed",
+        "andries dealz"
+      ],
+      "assignedTo": "Yj7mjEZBYBC5CqF1dNL2",
+      "followers": []
+    }
+  },
+  "traceId": "26ab0122-d7c1-4f64-ab98-86e1eeef6902"
+}
+
+====================================================================================================
+  OPPORTUNITY FIELD ANALYSIS
+====================================================================================================
+
+✅ AVAILABLE FIELDS:
+
+
+📦 OTHER FIELDS:
+   - opportunity (dict)
+   - traceId (str): 26ab0122-d7c1-4f64-ab98-86e1eeef6902
+
+====================================================================================================
+  SAMPLE OPPORTUNITY FROM SEARCH
+====================================================================================================
+
+📦 FIRST OPPORTUNITY (from search endpoint):
+{
+  "id": "JayAAH4P6KGl6vxp1t6Z",
+  "name": "Dr Keshara Bawasa",
+  "monetaryValue": 0,
+  "pipelineId": "fNSrQQofiOJzcszYP5mq",
+  "pipelineStageId": "8e93a0d2-7c69-45ee-b5d0-4326f82c04f7",
+  "pipelineStageUId": "8e93a0d2-7c69-45ee-b5d0-4326f82c04f7",
+  "assignedTo": "06QeKYnSfUBnRuD0tTGp",
+  "status": "open",
+  "source": "Referral from Juanita Jonssons workwear",
+  "lastStatusChangeAt": "2025-11-13T09:57:14.575Z",
+  "lastStageChangeAt": "2025-11-13T09:57:14.575Z",
+  "createdAt": "2025-11-13T09:57:14.575Z",
+  "updatedAt": "2025-11-13T09:57:14.575Z",
+  "indexVersion": 1,
+  "contactId": "1CVlBWmzA33P5dB9tCjB",
+  "locationId": "QdLXaFEqrdF0JbVbpKLw",
+  "customFields": [],
+  "lostReasonId": null,
+  "followers": [],
+  "relations": [
+    {
+      "associationId": "OPPORTUNITIES_CONTACTS_ASSOCIATION",
+      "relationId": "JayAAH4P6KGl6vxp1t6Z",
+      "primary": true,
+      "objectKey": "contact",
+      "recordId": "1CVlBWmzA33P5dB9tCjB",
+      "fullName": "Dr Keshara Bawasa",
+      "contactName": "Dr Keshara Bawasa",
+      "companyName": null,
+      "email": null,
+      "phone": "+27824438981",
+      "tags": [],
+      "attributed": null
+    }
+  ],
+  "contact": {
+    "id": "1CVlBWmzA33P5dB9tCjB",
+    "name": "Dr Keshara Bawasa",
+    "companyName": null,
+    "email": null,
+    "phone": "+27824438981",
+    "tags": [],
+    "score": []
+  },
+  "sort": [
+    1763027834575,
+    "1CVlBWmzA33P5dB9tCjB"
+  ],
+  "attributions": [
+    {
+      "utmSessionSource": "CRM UI",
+      "medium": "manual",
+      "isFirst": true
+    }
+  ]
+}
+
+====================================================================================================
+  DATA SUMMARY
+====================================================================================================
+
+✅ COMPLETE FIELD LIST:
+   - opportunity: dict
+   - traceId
+
+====================================================================================================
+  INSPECTION COMPLETE
+====================================================================================================
+
+✅ All available opportunity data has been retrieved and displayed
+📝 Review the complete payloads to see what data GHL API provides
+
+💡 KEY FINDINGS:
+   - Opportunity details include: pipeline, stage, contact, monetary value
+   - Attribution data may include: UTM parameters, source info
+   - Stage information returned as pipelineStageId (requires mapping)
+   - Monetary values stored in cents (divide by 100 for currency)
