@@ -135,8 +135,8 @@ class AdService {
     }
   }
 
-  /// Get ads with date-filtered totals from summary collection
-  /// Similar to AdSetService.getAdSetsWithDateFilteredTotals()
+  /// Get ads with date-filtered totals from summary collection ONLY
+  /// This method queries summary collection directly (not ads collection)
   Future<List<Ad>> getAdsWithDateFilteredTotals({
     required String campaignId,
     required String adSetId,
@@ -147,7 +147,9 @@ class AdService {
   }) async {
     try {
       if (kDebugMode) {
-        print('🔄 Loading ads with date-filtered totals for ad set $adSetId');
+        print(
+          '🔄 Loading ads with date-filtered totals for ad set $adSetId from SUMMARY collection',
+        );
         if (startDate != null || endDate != null) {
           print(
             '   📅 Date range: ${startDate?.toIso8601String() ?? "any"} to ${endDate?.toIso8601String() ?? "any"}',
@@ -155,29 +157,69 @@ class AdService {
         }
       }
 
-      // Get all ads for this ad set (without date filtering)
-      final snapshot = await _firestore
-          .collection('ads')
-          .where('adSetId', isEqualTo: adSetId)
-          .get();
+      // Ensure dates are provided
+      if (startDate == null || endDate == null) {
+        if (kDebugMode) {
+          print('   ⚠️ Start date or end date is null, returning empty list');
+        }
+        return [];
+      }
+
+      // Get ad IDs with activity in date range from summary collection
+      final adIds = await _summaryService.getAdIdsWithActivityInDateRange(
+        campaignId: campaignId,
+        adSetId: adSetId,
+        startDate: startDate,
+        endDate: endDate,
+      );
 
       if (kDebugMode) {
-        print('   📋 Found ${snapshot.docs.length} ads in ad set');
+        print(
+          '   📋 Found ${adIds.length} ads in ad set from SUMMARY collection',
+        );
+        if (adIds.isNotEmpty) {
+          print(
+            '   📋 Ad IDs: ${adIds.take(5).join(", ")}${adIds.length > 5 ? "..." : ""}',
+          );
+        }
       }
 
       List<Ad> adsWithDateFilteredTotals = [];
       int adsWithData = 0;
+      double totalSpendFromSummary = 0.0;
+      double totalSpendFromIncludedAds = 0.0;
+      List<String> adsSkipped = [];
+      List<String> adsIncluded = [];
 
-      for (var doc in snapshot.docs) {
-        final ad = Ad.fromFirestore(doc);
-        final adId = ad.adId;
-
+      // Get ad set and campaign metadata for building Ad objects
+      String adSetName = 'Unknown Ad Set';
+      String campaignName = 'Unknown Campaign';
+      try {
+        final adSetDoc = await _firestore
+            .collection('adSets')
+            .doc(adSetId)
+            .get();
+        if (adSetDoc.exists) {
+          final adSetData = adSetDoc.data();
+          adSetName = adSetData?['adSetName'] ?? adSetName;
+          campaignName = adSetData?['campaignName'] ?? campaignName;
+        }
+      } catch (e) {
         if (kDebugMode) {
-          print('   Calculating totals for ad: ${ad.adName}');
-          print('   🚀 Trying summary collection for ad $adId');
+          print('   ⚠️ Could not fetch ad set metadata: $e');
+        }
+      }
+
+      for (var adId in adIds) {
+        if (kDebugMode) {
+          print(
+            '   ┌─────────────────────────────────────────────────────────',
+          );
+          print('   │ Processing ad ID: $adId');
+          print('   │ Ad Set ID: $adSetId');
         }
 
-        // TRY SUMMARY COLLECTION FIRST (fast path - 1 query, no overlap issues)
+        // Get totals from summary collection
         final summaryTotals = await _summaryService
             .calculateAdTotalsFromSummary(
               campaignId: campaignId,
@@ -186,90 +228,183 @@ class AdService {
               endDate: endDate,
             );
 
-        Map<String, dynamic>? totals;
-
-        if (summaryTotals != null) {
+        if (summaryTotals == null) {
           if (kDebugMode) {
-            print('   ✅ Using SUMMARY collection (fast, accurate)');
+            print('   │ ❌ SKIPPING: totals is null (no data found in summary)');
+            print(
+              '   └─────────────────────────────────────────────────────────',
+            );
           }
-          totals = summaryTotals;
-        } else {
-          // FALLBACK: Calculate from weekly insights if summary data not available
-          if (kDebugMode) {
-            print('   ⚠️ No summary data, falling back to weeklyInsights');
-          }
-          totals = await _calculateAdTotalsFromWeeklyInsights(
-            adId: adId,
-            startDate: startDate,
-            endDate: endDate,
-          );
-        }
-
-        // Skip ads with no data in the date range
-        if (totals == null || totals['adsInRange'] == 0) {
-          if (kDebugMode) {
-            print('   ⏭️ Skipping ad $adId (no data in range)');
-          }
+          adsSkipped.add('$adId - null totals from summary');
           continue;
         }
 
-        // Create a new ad with updated totals
+        final weeksUsed = summaryTotals['adsInRange'] ?? 0;
+        if (weeksUsed == 0) {
+          if (kDebugMode) {
+            print('   │ ❌ SKIPPING: weeksUsed == 0 (no weeks matched)');
+            print(
+              '   └─────────────────────────────────────────────────────────',
+            );
+          }
+          adsSkipped.add('$adId - weeksUsed=0');
+          continue;
+        }
+
+        final spend = (summaryTotals['totalSpend'] as num?)?.toDouble() ?? 0.0;
+        totalSpendFromSummary += spend;
+
+        // Try to get ad metadata from ads collection (fallback - will migrate to fb_ads later)
+        String adName = 'Ad $adId';
+        String status = 'ACTIVE';
+        DateTime? lastUpdated;
+        DateTime? lastFacebookSync;
+        DateTime? lastGHLSync;
+        DateTime? createdAt;
+        String? firstInsightDate;
+        String? lastInsightDate;
+        String? dateStart;
+        String? dateStop;
+
+        try {
+          final adDoc = await _firestore.collection('ads').doc(adId).get();
+          if (adDoc.exists) {
+            final adData = adDoc.data();
+            adName = adData?['adName'] ?? adName;
+            status = adData?['status'] ?? status;
+            lastUpdated = (adData?['lastUpdated'] as Timestamp?)?.toDate();
+            lastFacebookSync = (adData?['lastFacebookSync'] as Timestamp?)
+                ?.toDate();
+            lastGHLSync = (adData?['lastGHLSync'] as Timestamp?)?.toDate();
+            createdAt = (adData?['createdAt'] as Timestamp?)?.toDate();
+            firstInsightDate = adData?['firstInsightDate'];
+            lastInsightDate = adData?['lastInsightDate'];
+            final fbStats = adData?['facebookStats'] as Map<String, dynamic>?;
+            dateStart = fbStats?['dateStart'];
+            dateStop = fbStats?['dateStop'];
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print(
+              '   │ ⚠️ Could not fetch ad metadata from ads collection: $e',
+            );
+            print('   │    Using defaults');
+          }
+        }
+
+        if (kDebugMode) {
+          print('   │ ✅ Using SUMMARY collection (fast, accurate)');
+          print('   │    Ad Name: $adName');
+          print('   │    Spend: \$${spend.toStringAsFixed(2)}');
+          print('   │    Weeks used: $weeksUsed');
+          print(
+            '   │    Impressions: ${summaryTotals['totalImpressions'] ?? 0}',
+          );
+          print('   │    Clicks: ${summaryTotals['totalClicks'] ?? 0}');
+        }
+
+        // Create a new ad with updated totals from summary
         // Calculate derived metrics
-        final profit = totals['totalCashAmount'] - totals['totalSpend'];
-        final cpl = totals['totalLeads'] > 0
-            ? totals['totalSpend'] / totals['totalLeads']
+        final profit =
+            summaryTotals['totalCashAmount'] - summaryTotals['totalSpend'];
+        final cpl = summaryTotals['totalLeads'] > 0
+            ? summaryTotals['totalSpend'] / summaryTotals['totalLeads']
             : 0.0;
-        final cpb = totals['totalBookings'] > 0
-            ? totals['totalSpend'] / totals['totalBookings']
+        final cpb = summaryTotals['totalBookings'] > 0
+            ? summaryTotals['totalSpend'] / summaryTotals['totalBookings']
             : 0.0;
-        final cpa = totals['totalDeposits'] > 0
-            ? totals['totalSpend'] / totals['totalDeposits']
+        final cpa = summaryTotals['totalDeposits'] > 0
+            ? summaryTotals['totalSpend'] / summaryTotals['totalDeposits']
             : 0.0;
 
         final updatedAd = Ad(
-          adId: ad.adId,
-          adName: ad.adName,
-          adSetId: ad.adSetId,
-          adSetName: ad.adSetName,
-          campaignId: ad.campaignId,
-          campaignName: ad.campaignName,
+          adId: adId,
+          adName: adName,
+          adSetId: adSetId,
+          adSetName: adSetName,
+          campaignId: campaignId,
+          campaignName: campaignName,
           facebookStats: FacebookStats(
-            spend: totals['totalSpend'],
-            impressions: totals['totalImpressions'],
-            clicks: totals['totalClicks'],
-            reach: totals['totalReach'],
-            cpm: totals['cpm'],
-            cpc: totals['cpc'],
-            ctr: totals['ctr'],
-            dateStart: ad.facebookStats.dateStart,
-            dateStop: ad.facebookStats.dateStop,
+            spend: summaryTotals['totalSpend'] ?? 0.0,
+            impressions: summaryTotals['totalImpressions'] ?? 0,
+            clicks: summaryTotals['totalClicks'] ?? 0,
+            reach: summaryTotals['totalReach'] ?? 0,
+            cpm: summaryTotals['cpm'] ?? 0.0,
+            cpc: summaryTotals['cpc'] ?? 0.0,
+            ctr: summaryTotals['ctr'] ?? 0.0,
+            dateStart: dateStart ?? '',
+            dateStop: dateStop ?? '',
           ),
           ghlStats: GHLStats(
-            leads: totals['totalLeads'],
-            bookings: totals['totalBookings'],
-            deposits: totals['totalDeposits'],
-            cashCollected: totals['totalCashCollected'],
-            cashAmount: totals['totalCashAmount'],
+            leads: summaryTotals['totalLeads'] ?? 0,
+            bookings: summaryTotals['totalBookings'] ?? 0,
+            deposits: summaryTotals['totalDeposits'] ?? 0,
+            cashCollected: summaryTotals['totalCashCollected'] ?? 0,
+            cashAmount: summaryTotals['totalCashAmount'] ?? 0.0,
           ),
           profit: profit,
           cpl: cpl,
           cpb: cpb,
           cpa: cpa,
-          status: ad.status,
-          lastUpdated: ad.lastUpdated,
-          createdAt: ad.createdAt,
-          firstInsightDate: ad.firstInsightDate,
-          lastInsightDate: ad.lastInsightDate,
-          lastFacebookSync: ad.lastFacebookSync,
-          lastGHLSync: ad.lastGHLSync,
+          status: status,
+          lastUpdated: lastUpdated,
+          createdAt: createdAt,
+          firstInsightDate: firstInsightDate,
+          lastInsightDate: lastInsightDate,
+          lastFacebookSync: lastFacebookSync,
+          lastGHLSync: lastGHLSync,
         );
 
         adsWithDateFilteredTotals.add(updatedAd);
         adsWithData++;
+        adsIncluded.add(
+          '$adId ($adName) - spend=\$${spend.toStringAsFixed(2)}',
+        );
+        totalSpendFromIncludedAds += spend;
+
+        if (kDebugMode) {
+          print('   │ ✅ INCLUDED in results');
+          print(
+            '   └─────────────────────────────────────────────────────────',
+          );
+        }
       }
 
       if (kDebugMode) {
-        print('   ✅ $adsWithData ads with data in range');
+        print(
+          '   ════════════════════════════════════════════════════════════',
+        );
+        print('   📊 AD FILTERING SUMMARY:');
+        print('   │ Total ads in SUMMARY collection: ${adIds.length}');
+        print('   │ Ads included: $adsWithData');
+        print('   │ Ads skipped: ${adsSkipped.length}');
+        print('   │');
+        print('   │ 💰 SPEND BREAKDOWN:');
+        print(
+          '   │    Total spend from all ads (summary): \$${totalSpendFromSummary.toStringAsFixed(2)}',
+        );
+        print(
+          '   │    Total spend from included ads: \$${totalSpendFromIncludedAds.toStringAsFixed(2)}',
+        );
+        print(
+          '   │    Missing spend: \$${(totalSpendFromSummary - totalSpendFromIncludedAds).toStringAsFixed(2)}',
+        );
+        print('   │');
+        if (adsIncluded.isNotEmpty) {
+          print('   │ ✅ INCLUDED ADS:');
+          for (var adInfo in adsIncluded) {
+            print('   │    - $adInfo');
+          }
+        }
+        if (adsSkipped.isNotEmpty) {
+          print('   │ ❌ SKIPPED ADS:');
+          for (var adInfo in adsSkipped) {
+            print('   │    - $adInfo');
+          }
+        }
+        print(
+          '   ════════════════════════════════════════════════════════════',
+        );
       }
 
       // Sort by the requested field

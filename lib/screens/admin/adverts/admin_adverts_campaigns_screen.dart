@@ -121,6 +121,53 @@ class _AdminAdvertsCampaignsScreenState
     }
   }
 
+  /// Build dynamic month filter items
+  List<DropdownMenuItem<String>> _buildMonthFilterItems() {
+    final now = DateTime.now();
+    final currentMonth = now.month;
+    final currentYear = now.year;
+
+    // Calculate months
+    final thisMonth = DateTime(currentYear, currentMonth);
+    final lastMonth = DateTime(currentYear, currentMonth - 1);
+    final twoMonthsAgo = DateTime(currentYear, currentMonth - 2);
+
+    // Format month names
+    String formatMonthName(DateTime date) {
+      const monthNames = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ];
+      return monthNames[date.month - 1];
+    }
+
+    return [
+      DropdownMenuItem(
+        value: 'thismonth',
+        child: Text('📅 This Month (${formatMonthName(thisMonth)})'),
+      ),
+      DropdownMenuItem(
+        value: 'lastmonth',
+        child: Text('📅 Last Month (${formatMonthName(lastMonth)})'),
+      ),
+      DropdownMenuItem(
+        value: '2monthsago',
+        child: Text('📅 2 Months Ago (${formatMonthName(twoMonthsAgo)})'),
+      ),
+      const DropdownMenuItem(value: 'last7days', child: Text('📅 Last 7 Days')),
+    ];
+  }
+
   /// Calculate date range based on filters
   Map<String, DateTime?> _calculateDateRangeForSplitCollections(
     String monthFilter,
@@ -136,6 +183,24 @@ class _AdminAdvertsCampaignsScreenState
         baseEnd = DateTime(
           now.year,
           now.month + 1,
+          1,
+        ).subtract(const Duration(seconds: 1));
+        break;
+      case 'lastmonth':
+        final lastMonth = DateTime(now.year, now.month - 1);
+        baseStart = DateTime(lastMonth.year, lastMonth.month, 1);
+        baseEnd = DateTime(
+          lastMonth.year,
+          lastMonth.month + 1,
+          1,
+        ).subtract(const Duration(seconds: 1));
+        break;
+      case '2monthsago':
+        final twoMonthsAgo = DateTime(now.year, now.month - 2);
+        baseStart = DateTime(twoMonthsAgo.year, twoMonthsAgo.month, 1);
+        baseEnd = DateTime(
+          twoMonthsAgo.year,
+          twoMonthsAgo.month + 1,
           1,
         ).subtract(const Duration(seconds: 1));
         break;
@@ -167,12 +232,17 @@ class _AdminAdvertsCampaignsScreenState
     final lastMonth = DateTime(now.year, now.month - 1);
     final lastMonthStr =
         '${lastMonth.year}-${lastMonth.month.toString().padLeft(2, '0')}';
+    final twoMonthsAgo = DateTime(now.year, now.month - 2);
+    final twoMonthsAgoStr =
+        '${twoMonthsAgo.year}-${twoMonthsAgo.month.toString().padLeft(2, '0')}';
 
     switch (filter) {
       case 'thismonth':
         return availableMonths.where((m) => m == currentMonth).toList();
       case 'lastmonth':
         return availableMonths.where((m) => m == lastMonthStr).toList();
+      case '2monthsago':
+        return availableMonths.where((m) => m == twoMonthsAgoStr).toList();
       case 'last3months':
         return availableMonths.take(3).toList();
       case 'last6months':
@@ -401,16 +471,7 @@ class _AdminAdvertsCampaignsScreenState
             underline: const SizedBox(),
             icon: const Icon(Icons.arrow_drop_down, size: 20),
             style: TextStyle(fontSize: 13, color: Colors.grey[800]),
-            items: const [
-              DropdownMenuItem(
-                value: 'thismonth',
-                child: Text('📅 This Month'),
-              ),
-              DropdownMenuItem(
-                value: 'last7days',
-                child: Text('📅 Last 7 Days'),
-              ),
-            ],
+            items: _buildMonthFilterItems(),
             onChanged: (value) {
               if (value != null) {
                 if (kDebugMode) {

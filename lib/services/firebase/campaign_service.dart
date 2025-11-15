@@ -649,7 +649,7 @@ class CampaignService {
   }
 
   /// Get campaigns with date-filtered totals (accurate, on-the-fly calculation)
-  /// This method calculates metrics specific to the date range using summary collection
+  /// This method queries summary collection ONLY (not campaigns collection)
   /// Perfect for "This Month" and "Last 7 Days" filters
   Future<List<Campaign>> getCampaignsWithDateFilteredTotals({
     DateTime? startDate,
@@ -660,37 +660,136 @@ class CampaignService {
   }) async {
     try {
       if (kDebugMode) {
-        print('🔄 Getting campaigns with date-filtered totals...');
+        print(
+          '🔄 Getting campaigns with date-filtered totals from SUMMARY collection...',
+        );
         print('   Start: ${startDate?.toIso8601String() ?? "any"}');
         print('   End: ${endDate?.toIso8601String() ?? "any"}');
       }
 
-      // First, get campaigns that have activity in the date range
-      final campaigns = await getCampaignsByDateRange(
-        startDate: startDate,
-        endDate: endDate,
-        limit: limit * 2, // Fetch more to account for filtering
-        orderBy: 'lastUpdated', // Use simple order first
-        descending: true,
-      );
-
-      if (kDebugMode) {
-        print('   Found ${campaigns.length} campaigns in date range');
+      // Ensure dates are provided
+      if (startDate == null || endDate == null) {
+        if (kDebugMode) {
+          print('   ⚠️ Start date or end date is null, returning empty list');
+        }
+        return [];
       }
 
-      // Calculate date-range-specific totals for each campaign
+      // Get campaigns with activity in date range from summary collection
+      final campaignsMap = await _summaryService
+          .getCampaignsWithActivityInDateRange(
+            startDate: startDate,
+            endDate: endDate,
+          );
+
+      if (kDebugMode) {
+        print(
+          '   Found ${campaignsMap.length} campaigns with activity in date range',
+        );
+      }
+
+      // Calculate date-range-specific totals for each campaign from summary
       List<Campaign> campaignsWithFilteredTotals = [];
 
-      for (var campaign in campaigns) {
+      for (var entry in campaignsMap.entries) {
+        final campaignId = entry.key;
+        final campaignName = entry.value;
+
         if (kDebugMode) {
-          print('   Calculating totals for: ${campaign.campaignName}');
+          print('   Calculating totals for: $campaignName');
         }
 
+        // Get totals from summary collection
         final totals = await calculateCampaignTotalsForDateRange(
-          campaignId: campaign.campaignId,
+          campaignId: campaignId,
           startDate: startDate,
           endDate: endDate,
         );
+
+        // Get date ranges from summary collection by fetching the document
+        String? firstAdDate;
+        String? lastAdDate;
+        int adSetCount = 0;
+
+        try {
+          final summaryDoc = await _firestore
+              .collection('summary')
+              .doc(campaignId)
+              .get();
+
+          if (summaryDoc.exists) {
+            final data = summaryDoc.data();
+            final weeksMap = data?['weeks'] as Map<String, dynamic>?;
+
+            if (weeksMap != null && weeksMap.isNotEmpty) {
+              // Extract dates from week IDs (format: "2025-11-03_2025-11-09")
+              List<DateTime> weekStartDates = [];
+              List<DateTime> weekEndDates = [];
+
+              for (var weekId in weeksMap.keys) {
+                try {
+                  final parts = weekId.split('_');
+                  if (parts.length == 2) {
+                    final startParts = parts[0].split('-');
+                    final endParts = parts[1].split('-');
+
+                    if (startParts.length == 3 && endParts.length == 3) {
+                      final weekStart = DateTime(
+                        int.parse(startParts[0]),
+                        int.parse(startParts[1]),
+                        int.parse(startParts[2]),
+                      );
+                      final weekEnd = DateTime(
+                        int.parse(endParts[0]),
+                        int.parse(endParts[1]),
+                        int.parse(endParts[2]),
+                      );
+
+                      // Check if week overlaps with date range (startDate and endDate are already validated above)
+                      if (!(weekEnd.isBefore(startDate) ||
+                          weekStart.isAfter(endDate))) {
+                        weekStartDates.add(weekStart);
+                        weekEndDates.add(weekEnd);
+                      }
+                    }
+                  }
+                } catch (e) {
+                  // Skip invalid week IDs
+                  continue;
+                }
+              }
+
+              // Calculate first and last dates
+              if (weekStartDates.isNotEmpty) {
+                weekStartDates.sort();
+                weekEndDates.sort();
+                final earliest = weekStartDates.first;
+                final latest = weekEndDates.last;
+
+                firstAdDate =
+                    '${earliest.year}-${earliest.month.toString().padLeft(2, '0')}-${earliest.day.toString().padLeft(2, '0')}';
+                lastAdDate =
+                    '${latest.year}-${latest.month.toString().padLeft(2, '0')}-${latest.day.toString().padLeft(2, '0')}';
+              }
+
+              // Count unique ad sets across all weeks
+              final adSetIds = <String>{};
+              for (var weekData in weeksMap.values) {
+                if (weekData is Map<String, dynamic>) {
+                  final adSetsMap = weekData['adSets'] as Map<String, dynamic>?;
+                  if (adSetsMap != null) {
+                    adSetIds.addAll(adSetsMap.keys);
+                  }
+                }
+              }
+              adSetCount = adSetIds.length;
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('   ⚠️ Error getting dates from summary: $e');
+          }
+        }
 
         // Calculate conversion rates
         final leadToBookingRate = totals['totalLeads'] > 0
@@ -703,37 +802,40 @@ class CampaignService {
             ? (totals['totalCashCollected'] / totals['totalDeposits']) * 100
             : 0.0;
 
-        // Create a new campaign with date-filtered totals
+        // Create a new campaign with date-filtered totals from summary only
         final updatedCampaign = Campaign(
-          campaignId: campaign.campaignId,
-          campaignName: campaign.campaignName,
-          status: campaign.status,
-          totalSpend: totals['totalSpend'],
-          totalImpressions: totals['totalImpressions'],
-          totalClicks: totals['totalClicks'],
-          totalReach: totals['totalReach'],
-          avgCPM: totals['cpm'],
-          avgCPC: totals['cpc'],
-          avgCTR: totals['ctr'],
-          totalLeads: totals['totalLeads'],
-          totalBookings: totals['totalBookings'],
-          totalDeposits: totals['totalDeposits'],
-          totalCashCollected: totals['totalCashCollected'],
-          totalCashAmount: totals['totalCashAmount'],
-          totalProfit: totals['totalProfit'],
-          cpl: totals['cpl'],
-          cpb: totals['cpb'],
-          cpa: totals['cpa'],
-          roi: totals['roi'],
+          campaignId: campaignId,
+          campaignName: campaignName,
+          status: 'UNKNOWN', // Not available in summary, use default
+          totalSpend: totals['totalSpend'] ?? 0.0,
+          totalImpressions: totals['totalImpressions'] ?? 0,
+          totalClicks: totals['totalClicks'] ?? 0,
+          totalReach: totals['totalReach'] ?? 0,
+          avgCPM: totals['cpm'] ?? 0.0,
+          avgCPC: totals['cpc'] ?? 0.0,
+          avgCTR: totals['ctr'] ?? 0.0,
+          totalLeads: totals['totalLeads'] ?? 0,
+          totalBookings: totals['totalBookings'] ?? 0,
+          totalDeposits: totals['totalDeposits'] ?? 0,
+          totalCashCollected: totals['totalCashCollected'] ?? 0,
+          totalCashAmount: totals['totalCashAmount'] ?? 0.0,
+          totalProfit: totals['totalProfit'] ?? 0.0,
+          cpl: totals['cpl'] ?? 0.0,
+          cpb: totals['cpb'] ?? 0.0,
+          cpa: totals['cpa'] ?? 0.0,
+          roi: totals['roi'] ?? 0.0,
           leadToBookingRate: leadToBookingRate,
           bookingToDepositRate: bookingToDepositRate,
           depositToCashRate: depositToCashRate,
-          adSetCount: campaign.adSetCount,
-          adCount: totals['adsInRange'],
-          firstAdDate: campaign.firstAdDate,
-          lastAdDate: campaign.lastAdDate,
-          lastUpdated: campaign.lastUpdated,
-          createdAt: campaign.createdAt,
+          adSetCount: adSetCount,
+          adCount: totals['adsInRange'] ?? 0,
+          firstAdDate: firstAdDate,
+          lastAdDate: lastAdDate,
+          // Timestamps not available in summary, use null
+          lastUpdated: null,
+          lastFacebookSync: null,
+          lastGHLSync: null,
+          createdAt: null,
         );
 
         // Include all campaigns that were found in the date range
@@ -786,7 +888,7 @@ class CampaignService {
 
       if (kDebugMode) {
         print(
-          '✅ Returning ${campaignsWithFilteredTotals.length} campaigns with date-filtered totals',
+          '✅ Returning ${campaignsWithFilteredTotals.length} campaigns with date-filtered totals from SUMMARY',
         );
       }
 

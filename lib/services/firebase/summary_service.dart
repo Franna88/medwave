@@ -125,29 +125,87 @@ class SummaryService {
           }
         }
 
-        // Extract GHL Data
-        final ghlData = campaignData['ghlData'] as Map<String, dynamic>?;
-        if (ghlData != null) {
-          final weekLeads = (ghlData['leads'] as num?)?.toInt() ?? 0;
-          final weekBookings =
-              (ghlData['bookedAppointments'] as num?)?.toInt() ?? 0;
-          final weekDeposits = (ghlData['deposits'] as num?)?.toInt() ?? 0;
-          final weekCashCollected =
-              (ghlData['cashCollected'] as num?)?.toInt() ?? 0;
-          final weekCashAmount =
-              (ghlData['cashAmount'] as num?)?.toDouble() ?? 0;
+        // Calculate GHL Data from opportunities (aggregate from ad-level)
+        // Get all ads in this campaign from this week
+        final adsMap = weekData['ads'] as Map<String, dynamic>?;
+        if (adsMap != null) {
+          // Parse weekId to get week start/end dates
+          DateTime? weekStartDate;
+          DateTime? weekEndDate;
+          try {
+            final parts = weekId.split('_');
+            if (parts.length == 2) {
+              final startParts = parts[0].split('-');
+              final endParts = parts[1].split('-');
+              if (startParts.length == 3 && endParts.length == 3) {
+                weekStartDate = DateTime(
+                  int.parse(startParts[0]),
+                  int.parse(startParts[1]),
+                  int.parse(startParts[2]),
+                );
+                weekEndDate = DateTime(
+                  int.parse(endParts[0]),
+                  int.parse(endParts[1]),
+                  int.parse(endParts[2]),
+                  23,
+                  59,
+                  59,
+                  999,
+                );
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('      ⚠️ Error parsing week dates: $e');
+            }
+          }
 
-          totalLeads += weekLeads;
-          totalBookings += weekBookings;
-          totalDeposits += weekDeposits;
-          totalCashCollected += weekCashCollected;
-          totalCashAmount += weekCashAmount;
+          if (weekStartDate != null && weekEndDate != null) {
+            // Get counts from campaignData ghlData
+            final ghlData = campaignData['ghlData'] as Map<String, dynamic>?;
+            final weekLeads = (ghlData?['leads'] as num?)?.toInt() ?? 0;
+            final weekBookings =
+                (ghlData?['bookedAppointments'] as num?)?.toInt() ?? 0;
+            final weekDeposits = (ghlData?['deposits'] as num?)?.toInt() ?? 0;
+            final weekCashCollected =
+                (ghlData?['cashCollected'] as num?)?.toInt() ?? 0;
 
-          if (kDebugMode) {
-            print(
-              '      GHL: leads=$weekLeads, bookings=$weekBookings, '
-              'deposits=$weekDeposits, cashAmount=\$${weekCashAmount.toStringAsFixed(2)}',
-            );
+            double weekCashAmount = 0.0;
+
+            // Iterate through all ads in this week (they all belong to the campaign)
+            // Only sum cashAmount from opportunities
+            for (var adEntry in adsMap.entries) {
+              final adId = adEntry.key;
+
+              if (kDebugMode) {
+                print('      Processing ad $adId for campaign');
+              }
+
+              // Fetch cashAmount for this ad from opportunities
+              final ghlMetrics = await _calculateAdGHLMetricsFromOpportunities(
+                adId,
+                weekId,
+                weekStartDate,
+                weekEndDate,
+              );
+
+              weekCashAmount += (ghlMetrics['cashAmount'] as double?) ?? 0.0;
+            }
+
+            // Aggregate to totals - counts from ghlData, cashAmount from opportunities
+            totalLeads += weekLeads;
+            totalBookings += weekBookings;
+            totalDeposits += weekDeposits;
+            totalCashCollected += weekCashCollected;
+            totalCashAmount += weekCashAmount;
+
+            if (kDebugMode) {
+              print(
+                '      GHL: leads=$weekLeads (from ghlData), bookings=$weekBookings (from ghlData), '
+                'deposits=$weekDeposits (from ghlData), '
+                'cashAmount=\$${weekCashAmount.toStringAsFixed(2)} (from opportunities)',
+              );
+            }
           }
         }
 
@@ -259,6 +317,211 @@ class SummaryService {
     }
   }
 
+  /// Extract utmAdId from opportunity attributions array
+  /// Priority: h_ad_id → utmAdId → adId
+  String? _extractUtmAdIdFromAttributions(dynamic attributions) {
+    if (attributions == null) return null;
+
+    // Check if attributions is a list
+    final attributionsList = attributions is List<dynamic>
+        ? attributions
+        : null;
+    if (attributionsList == null || attributionsList.isEmpty) return null;
+
+    // Find last attribution (most recent)
+    Map<String, dynamic>? lastAttribution;
+    for (var attr in attributionsList) {
+      if (attr is Map<String, dynamic>) {
+        if (attr['isLast'] == true) {
+          lastAttribution = attr;
+          break;
+        }
+      }
+    }
+
+    // If no isLast found, use the last item
+    if (lastAttribution == null && attributionsList.isNotEmpty) {
+      final last = attributionsList.last;
+      if (last is Map<String, dynamic>) {
+        lastAttribution = last;
+      }
+    }
+
+    if (lastAttribution == null) return null;
+
+    // Extract ad ID in priority order
+    final adId =
+        lastAttribution['h_ad_id'] as String? ??
+        lastAttribution['hAdId'] as String? ??
+        lastAttribution['utmAdId'] as String? ??
+        lastAttribution['adId'] as String?;
+
+    return adId?.toString().trim();
+  }
+
+  /// Check if opportunity dateRange overlaps with a week
+  /// Week ID format: "2025-10-27_2025-11-02"
+  /// dateRange format: {start: "2025-10-15T08:36:41.369Z", end: "2025-10-31T23:59:59.999Z"}
+  bool _opportunityDateRangeOverlapsWeek(
+    String weekId,
+    Map<String, dynamic>? dateRange,
+  ) {
+    if (dateRange == null) return false;
+
+    try {
+      // Parse week ID to get week start/end
+      final parts = weekId.split('_');
+      if (parts.length != 2) return false;
+
+      final startParts = parts[0].split('-');
+      final endParts = parts[1].split('-');
+
+      if (startParts.length != 3 || endParts.length != 3) return false;
+
+      final weekStart = DateTime(
+        int.parse(startParts[0]),
+        int.parse(startParts[1]),
+        int.parse(startParts[2]),
+      );
+      final weekEnd = DateTime(
+        int.parse(endParts[0]),
+        int.parse(endParts[1]),
+        int.parse(endParts[2]),
+        23,
+        59,
+        59,
+        999,
+      );
+
+      // Parse opportunity dateRange
+      DateTime? oppStart;
+      DateTime? oppEnd;
+
+      final startStr = dateRange['start'];
+      final endStr = dateRange['end'];
+
+      if (startStr != null) {
+        if (startStr is String) {
+          oppStart = DateTime.tryParse(startStr);
+        } else if (startStr is Timestamp) {
+          oppStart = startStr.toDate();
+        }
+      }
+
+      if (endStr != null) {
+        if (endStr is String) {
+          oppEnd = DateTime.tryParse(endStr);
+        } else if (endStr is Timestamp) {
+          oppEnd = endStr.toDate();
+        }
+      }
+
+      if (oppStart == null || oppEnd == null) return false;
+
+      // Check for overlap: week starts before opp ends AND week ends after opp starts
+      final overlaps =
+          !weekStart.isAfter(oppEnd) && !weekEnd.isBefore(oppStart);
+
+      return overlaps;
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Error checking dateRange overlap: $e');
+      }
+      return false;
+    }
+  }
+
+  /// Calculate GHL cashAmount for an ad from opportunities collection
+  /// Matches opportunities by utmAdId from attributions and verifies dateRange overlap
+  /// ONLY calculates cashAmount from monetaryValue - other stats come from ghlData
+  Future<Map<String, dynamic>> _calculateAdGHLMetricsFromOpportunities(
+    String adId,
+    String weekId,
+    DateTime weekStart,
+    DateTime weekEnd,
+  ) async {
+    double cashAmount = 0.0;
+
+    int opportunitiesChecked = 0;
+    int opportunitiesMatched = 0;
+    int opportunitiesDateMatched = 0;
+    int opportunitiesWithValue = 0;
+
+    try {
+      if (kDebugMode) {
+        print('   │    🔍 Fetching opportunities for ad $adId in week $weekId');
+      }
+
+      // Query opportunities - try to optimize with date range if possible
+      // Since Firestore may not support nested map queries, we'll query all and filter
+      Query query = _firestore
+          .collection('ghl_opportunities')
+          .orderBy('createdAt', descending: true);
+
+      final snapshot = await query.get();
+
+      if (kDebugMode) {
+        print(
+          '   │    📋 Found ${snapshot.docs.length} total opportunities to check',
+        );
+      }
+
+      for (var doc in snapshot.docs) {
+        opportunitiesChecked++;
+
+        final oppData = doc.data() as Map<String, dynamic>?;
+        if (oppData == null) continue;
+
+        // Extract attributions and check utmAdId match
+        final attributions = oppData['attributions'] as dynamic;
+        final extractedAdId = _extractUtmAdIdFromAttributions(attributions);
+
+        if (extractedAdId != adId) {
+          continue;
+        }
+
+        opportunitiesMatched++;
+
+        // Check dateRange overlap
+        final dateRange = oppData['dateRange'] as Map<String, dynamic>?;
+        if (!_opportunityDateRangeOverlapsWeek(weekId, dateRange)) {
+          continue;
+        }
+
+        opportunitiesDateMatched++;
+
+        // Extract monetary value - this is the ONLY thing we need
+        final monetaryValue =
+            (oppData['monetaryValue'] as num?)?.toDouble() ?? 0.0;
+
+        if (monetaryValue > 0) {
+          cashAmount += monetaryValue;
+          opportunitiesWithValue++;
+        }
+      }
+
+      if (kDebugMode) {
+        print('   │    📊 Opportunity matching results:');
+        print('   │       Checked: $opportunitiesChecked');
+        print('   │       Matched adId: $opportunitiesMatched');
+        print('   │       Matched dateRange: $opportunitiesDateMatched');
+        print(
+          '   │       Opportunities with monetaryValue > 0: $opportunitiesWithValue',
+        );
+        print(
+          '   │       Total cashAmount: \$${cashAmount.toStringAsFixed(2)}',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('   │    ❌ Error fetching opportunities: $e');
+      }
+    }
+
+    // Return ONLY cashAmount - other metrics come from ghlData in summary
+    return {'cashAmount': cashAmount};
+  }
+
   Future<Map<String, dynamic>?> calculateAdSetTotalsFromSummary({
     required String campaignId,
     required String adSetId,
@@ -343,23 +606,94 @@ class SummaryService {
           totalReach += weekReach;
         }
 
-        // Extract GHL Data
-        final ghlData = adSetData['ghlData'] as Map<String, dynamic>?;
-        if (ghlData != null) {
-          final weekLeads = (ghlData['leads'] as num?)?.toInt() ?? 0;
-          final weekBookings =
-              (ghlData['bookedAppointments'] as num?)?.toInt() ?? 0;
-          final weekDeposits = (ghlData['deposits'] as num?)?.toInt() ?? 0;
-          final weekCashCollected =
-              (ghlData['cashCollected'] as num?)?.toInt() ?? 0;
-          final weekCashAmount =
-              (ghlData['cashAmount'] as num?)?.toDouble() ?? 0;
+        // Calculate GHL Data from opportunities (aggregate from ad-level)
+        // Get all ads in this ad set from this week
+        final adsMap = weekData['ads'] as Map<String, dynamic>?;
+        if (adsMap != null) {
+          // Parse weekId to get week start/end dates
+          DateTime? weekStartDate;
+          DateTime? weekEndDate;
+          try {
+            final parts = weekId.split('_');
+            if (parts.length == 2) {
+              final startParts = parts[0].split('-');
+              final endParts = parts[1].split('-');
+              if (startParts.length == 3 && endParts.length == 3) {
+                weekStartDate = DateTime(
+                  int.parse(startParts[0]),
+                  int.parse(startParts[1]),
+                  int.parse(startParts[2]),
+                );
+                weekEndDate = DateTime(
+                  int.parse(endParts[0]),
+                  int.parse(endParts[1]),
+                  int.parse(endParts[2]),
+                  23,
+                  59,
+                  59,
+                  999,
+                );
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('   ⚠️ Error parsing week dates: $e');
+            }
+          }
 
-          totalLeads += weekLeads;
-          totalBookings += weekBookings;
-          totalDeposits += weekDeposits;
-          totalCashCollected += weekCashCollected;
-          totalCashAmount += weekCashAmount;
+          if (weekStartDate != null && weekEndDate != null) {
+            // Get counts from adSetData ghlData
+            final ghlData = adSetData['ghlData'] as Map<String, dynamic>?;
+            final weekLeads = (ghlData?['leads'] as num?)?.toInt() ?? 0;
+            final weekBookings =
+                (ghlData?['bookedAppointments'] as num?)?.toInt() ?? 0;
+            final weekDeposits = (ghlData?['deposits'] as num?)?.toInt() ?? 0;
+            final weekCashCollected =
+                (ghlData?['cashCollected'] as num?)?.toInt() ?? 0;
+
+            double weekCashAmount = 0.0;
+
+            // Iterate through all ads in this week and filter by adSetId
+            // Only sum cashAmount from opportunities
+            for (var adEntry in adsMap.entries) {
+              final adId = adEntry.key;
+              final adData = adEntry.value as Map<String, dynamic>?;
+
+              // Check if this ad belongs to the ad set
+              final adAdSetId = adData?['adSetId'] as String?;
+              if (adAdSetId != adSetId) continue;
+
+              if (kDebugMode) {
+                print('   │    Processing ad $adId for ad set $adSetId');
+              }
+
+              // Fetch cashAmount for this ad from opportunities
+              final ghlMetrics = await _calculateAdGHLMetricsFromOpportunities(
+                adId,
+                weekId,
+                weekStartDate,
+                weekEndDate,
+              );
+
+              weekCashAmount += (ghlMetrics['cashAmount'] as double?) ?? 0.0;
+            }
+
+            // Aggregate to totals - counts from ghlData, cashAmount from opportunities
+            totalLeads += weekLeads;
+            totalBookings += weekBookings;
+            totalDeposits += weekDeposits;
+            totalCashCollected += weekCashCollected;
+            totalCashAmount += weekCashAmount;
+
+            if (kDebugMode) {
+              print(
+                '   │    💰 Ad set GHL metrics for week: leads=$weekLeads (from ghlData), '
+                'bookings=$weekBookings (from ghlData), '
+                'deposits=$weekDeposits (from ghlData), '
+                'cash=\$${weekCashAmount.toStringAsFixed(2)} (from opportunities)',
+              );
+            }
+          }
         }
 
         weeksUsed++;
@@ -452,7 +786,17 @@ class SummaryService {
 
       // Get the weeks map
       final weeksMap = data['weeks'] as Map<String, dynamic>?;
-      if (weeksMap == null || weeksMap.isEmpty) return null;
+      if (weeksMap == null || weeksMap.isEmpty) {
+        if (kDebugMode) {
+          print('   ⚠️ No weeks map in summary document');
+        }
+        return null;
+      }
+
+      if (kDebugMode) {
+        print('   📋 Found ${weeksMap.length} weeks in summary document');
+        print('   🔍 Looking for ad ID: $adId');
+      }
 
       double totalSpend = 0;
       int totalImpressions = 0;
@@ -464,29 +808,73 @@ class SummaryService {
       int totalCashCollected = 0;
       double totalCashAmount = 0;
       int weeksUsed = 0;
+      int weeksChecked = 0;
+      int weeksWithOverlap = 0;
+      int weeksWithAdsMap = 0;
+      int weeksWithAdFound = 0;
 
       // Iterate through each week in the map
       for (var weekEntry in weeksMap.entries) {
         final weekId = weekEntry.key;
         final weekData = weekEntry.value as Map<String, dynamic>?;
+        weeksChecked++;
 
-        if (weekData == null) continue;
-
-        // Check if this week overlaps with the date range
-        if (!_weekIdOverlapsWithDateRange(weekId, startDate, endDate)) {
+        if (weekData == null) {
+          if (kDebugMode) {
+            print('   ⚠️ Week $weekId has null weekData');
+          }
           continue;
         }
 
+        // Check if this week overlaps with the date range
+        final overlaps = _weekIdOverlapsWithDateRange(
+          weekId,
+          startDate,
+          endDate,
+        );
+        if (!overlaps) {
+          if (kDebugMode) {
+            print('   ⏭️ Week $weekId does NOT overlap with date range');
+          }
+          continue;
+        }
+        weeksWithOverlap++;
+
         // Access the ads map within this week
         final adsMap = weekData['ads'] as Map<String, dynamic>?;
-        if (adsMap == null) continue;
+        if (adsMap == null) {
+          if (kDebugMode) {
+            print('   ⚠️ Week $weekId has no ads map');
+          }
+          continue;
+        }
+        weeksWithAdsMap++;
+
+        if (kDebugMode) {
+          final adIdsInWeek = adsMap.keys.toList();
+          print('   📅 Week $weekId overlaps with date range');
+          print(
+            '   │    Found ${adIdsInWeek.length} ads in this week\'s ads map',
+          );
+          print(
+            '   │    Ad IDs in week: ${adIdsInWeek.take(5).join(", ")}${adIdsInWeek.length > 5 ? "..." : ""}',
+          );
+          print('   │    Looking for: $adId');
+        }
 
         // Get data for this specific ad
         final adData = adsMap[adId] as Map<String, dynamic>?;
-        if (adData == null) continue;
+        if (adData == null) {
+          if (kDebugMode) {
+            print('   │    ❌ Ad $adId NOT FOUND in this week\'s ads map');
+          }
+          continue;
+        }
+        weeksWithAdFound++;
+        weeksUsed++;
 
         if (kDebugMode) {
-          print('   📅 Processing week: $weekId for ad $adId');
+          print('   │    ✅ Ad $adId FOUND in this week\'s ads map');
         }
 
         // Extract Facebook Insights
@@ -502,33 +890,105 @@ class SummaryService {
           totalImpressions += weekImpressions;
           totalClicks += weekClicks;
           totalReach += weekReach;
+
+          if (kDebugMode) {
+            print(
+              '   │    💰 Week data: spend=\$${weekSpend.toStringAsFixed(2)}, impressions=$weekImpressions, clicks=$weekClicks',
+            );
+            print(
+              '   │    📊 Running totals: spend=\$${totalSpend.toStringAsFixed(2)}, impressions=$totalImpressions',
+            );
+          }
+        } else {
+          if (kDebugMode) {
+            print('   │    ⚠️ No facebookInsights in adData for this week');
+          }
         }
 
-        // Extract GHL Data
-        final ghlData = adData['ghlData'] as Map<String, dynamic>?;
-        if (ghlData != null) {
-          final weekLeads = (ghlData['leads'] as num?)?.toInt() ?? 0;
-          final weekBookings =
-              (ghlData['bookedAppointments'] as num?)?.toInt() ?? 0;
-          final weekDeposits = (ghlData['deposits'] as num?)?.toInt() ?? 0;
-          final weekCashCollected =
-              (ghlData['cashCollected'] as num?)?.toInt() ?? 0;
-          final weekCashAmount =
-              (ghlData['cashAmount'] as num?)?.toDouble() ?? 0;
+        // Calculate GHL Data from opportunities (real-time lookup)
+        // Parse weekId to get week start/end dates
+        DateTime weekStartDate;
+        DateTime weekEndDate;
+        try {
+          final parts = weekId.split('_');
+          if (parts.length == 2) {
+            final startParts = parts[0].split('-');
+            final endParts = parts[1].split('-');
+            if (startParts.length == 3 && endParts.length == 3) {
+              weekStartDate = DateTime(
+                int.parse(startParts[0]),
+                int.parse(startParts[1]),
+                int.parse(startParts[2]),
+              );
+              weekEndDate = DateTime(
+                int.parse(endParts[0]),
+                int.parse(endParts[1]),
+                int.parse(endParts[2]),
+                23,
+                59,
+                59,
+                999,
+              );
 
-          totalLeads += weekLeads;
-          totalBookings += weekBookings;
-          totalDeposits += weekDeposits;
-          totalCashCollected += weekCashCollected;
-          totalCashAmount += weekCashAmount;
+              // Fetch GHL metrics from opportunities
+              final ghlMetrics = await _calculateAdGHLMetricsFromOpportunities(
+                adId,
+                weekId,
+                weekStartDate,
+                weekEndDate,
+              );
+
+              final weekLeads = (ghlMetrics['leads'] as int?) ?? 0;
+              final weekBookings =
+                  (ghlMetrics['bookedAppointments'] as int?) ?? 0;
+              final weekDeposits = (ghlMetrics['deposits'] as int?) ?? 0;
+              final weekCashCollected =
+                  (ghlMetrics['cashCollected'] as int?) ?? 0;
+              final weekCashAmount =
+                  (ghlMetrics['cashAmount'] as double?) ?? 0.0;
+
+              totalLeads += weekLeads;
+              totalBookings += weekBookings;
+              totalDeposits += weekDeposits;
+              totalCashCollected += weekCashCollected;
+              totalCashAmount += weekCashAmount;
+
+              if (kDebugMode) {
+                print(
+                  '   │    💰 GHL metrics: leads=$weekLeads, bookings=$weekBookings, '
+                  'deposits=$weekDeposits, cash=\$${weekCashAmount.toStringAsFixed(2)}',
+                );
+              }
+            }
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print(
+              '   │    ⚠️ Error parsing week dates or fetching GHL metrics: $e',
+            );
+          }
         }
 
         weeksUsed++;
       }
 
+      if (kDebugMode) {
+        print('   ───────────────────────────────────────────────────────────');
+        print('   📊 AD SUMMARY SEARCH RESULTS:');
+        print('   │ Weeks checked: $weeksChecked');
+        print('   │ Weeks with overlap: $weeksWithOverlap');
+        print('   │ Weeks with ads map: $weeksWithAdsMap');
+        print('   │ Weeks with ad found: $weeksWithAdFound');
+        print('   │ Weeks used (final): $weeksUsed');
+        print('   ───────────────────────────────────────────────────────────');
+      }
+
       if (weeksUsed == 0) {
         if (kDebugMode) {
-          print('   ⚠️ No weeks matched for ad $adId');
+          print('   ❌ RESULT: No weeks matched for ad $adId');
+          print(
+            '   │    Reason: Ad not found in any overlapping week\'s ads map',
+          );
         }
         return null;
       }
@@ -548,10 +1008,13 @@ class SummaryService {
       final cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
 
       if (kDebugMode) {
-        print(
-          '   ✅ Ad totals: spend=\$${totalSpend.toStringAsFixed(2)}, '
-          'leads=$totalLeads, profit=\$${totalProfit.toStringAsFixed(2)}',
-        );
+        print('   ✅ RESULT: Ad totals calculated');
+        print('   │    Spend: \$${totalSpend.toStringAsFixed(2)}');
+        print('   │    Impressions: $totalImpressions');
+        print('   │    Clicks: $totalClicks');
+        print('   │    Leads: $totalLeads');
+        print('   │    Profit: \$${totalProfit.toStringAsFixed(2)}');
+        print('   │    Weeks used: $weeksUsed');
       }
 
       return {
@@ -884,31 +1347,99 @@ class SummaryService {
 
       // Collect all unique ad IDs from weeks that overlap with date range
       final adIds = <String>{};
+      int weeksChecked = 0;
+      int weeksWithOverlap = 0;
+      int weeksWithAdsMap = 0;
+      int adsFoundTotal = 0;
 
       for (var weekEntry in weeksMap.entries) {
         final weekId = weekEntry.key;
+        weeksChecked++;
 
         if (!_weekIdOverlapsWithDateRange(weekId, startDate, endDate)) {
+          if (kDebugMode) {
+            print('   ⏭️ Week $weekId does NOT overlap with date range');
+          }
+          continue;
+        }
+        weeksWithOverlap++;
+
+        final weekData = weekEntry.value as Map<String, dynamic>?;
+        if (weekData == null) {
+          if (kDebugMode) {
+            print('   ⚠️ Week $weekId has null weekData');
+          }
           continue;
         }
 
-        final weekData = weekEntry.value as Map<String, dynamic>?;
-        if (weekData == null) continue;
-
         final adsMap = weekData['ads'] as Map<String, dynamic>?;
-        if (adsMap != null) {
-          // Filter ads by ad set ID
-          for (var adEntry in adsMap.entries) {
-            final adData = adEntry.value as Map<String, dynamic>?;
-            if (adData != null && adData['adSetId'] == adSetId) {
-              adIds.add(adEntry.key);
+        if (adsMap == null) {
+          if (kDebugMode) {
+            print('   ⚠️ Week $weekId has no ads map');
+          }
+          continue;
+        }
+        weeksWithAdsMap++;
+
+        if (kDebugMode) {
+          final allAdIds = adsMap.keys.toList();
+          print('   📅 Week $weekId overlaps with date range');
+          print(
+            '   │    Found ${allAdIds.length} total ads in this week\'s ads map',
+          );
+          print('   │    Looking for ads in ad set: $adSetId');
+        }
+
+        // Filter ads by ad set ID
+        int adsFoundInWeek = 0;
+        for (var adEntry in adsMap.entries) {
+          final adId = adEntry.key;
+          final adData = adEntry.value as Map<String, dynamic>?;
+
+          if (adData == null) {
+            if (kDebugMode) {
+              print('   │    ⚠️ Ad $adId has null adData');
+            }
+            continue;
+          }
+
+          final adDataAdSetId = adData['adSetId'];
+          if (adDataAdSetId == adSetId) {
+            adIds.add(adId);
+            adsFoundInWeek++;
+            adsFoundTotal++;
+
+            if (kDebugMode) {
+              print('   │    ✅ Ad $adId belongs to ad set $adSetId');
+            }
+          } else {
+            if (kDebugMode) {
+              print(
+                '   │    ⏭️ Ad $adId belongs to ad set $adDataAdSetId (not $adSetId)',
+              );
             }
           }
+        }
+
+        if (kDebugMode) {
+          print(
+            '   │    Found $adsFoundInWeek ads for ad set $adSetId in this week',
+          );
         }
       }
 
       if (kDebugMode) {
-        print('   ✅ Found ${adIds.length} ads with activity');
+        print('   ───────────────────────────────────────────────────────────');
+        print('   📊 AD ID SEARCH RESULTS:');
+        print('   │ Weeks checked: $weeksChecked');
+        print('   │ Weeks with overlap: $weeksWithOverlap');
+        print('   │ Weeks with ads map: $weeksWithAdsMap');
+        print('   │ Total ads found for ad set: $adsFoundTotal');
+        print('   │ Unique ad IDs: ${adIds.length}');
+        print('   ───────────────────────────────────────────────────────────');
+        print(
+          '   ✅ Found ${adIds.length} unique ads with activity in ad set $adSetId',
+        );
       }
 
       return adIds.toList();
