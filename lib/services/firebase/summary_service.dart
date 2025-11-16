@@ -170,26 +170,19 @@ class SummaryService {
             final weekCashCollected =
                 (ghlData?['cashCollected'] as num?)?.toInt() ?? 0;
 
+            // BATCH PROCESSING: Fetch cash amounts for ALL ads in this week at once
+            final adIds = adsMap.keys.toSet();
+            final adCashAmounts = await _fetchCashAmountsForAdsInWeek(
+              adIds,
+              weekId,
+              weekStartDate,
+              weekEndDate,
+            );
+
+            // Sum up cash amounts for this week
             double weekCashAmount = 0.0;
-
-            // Iterate through all ads in this week (they all belong to the campaign)
-            // Only sum cashAmount from opportunities
-            for (var adEntry in adsMap.entries) {
-              final adId = adEntry.key;
-
-              if (kDebugMode) {
-                print('      Processing ad $adId for campaign');
-              }
-
-              // Fetch cashAmount for this ad from opportunities
-              final ghlMetrics = await _calculateAdGHLMetricsFromOpportunities(
-                adId,
-                weekId,
-                weekStartDate,
-                weekEndDate,
-              );
-
-              weekCashAmount += (ghlMetrics['cashAmount'] as double?) ?? 0.0;
+            for (var cashAmount in adCashAmounts.values) {
+              weekCashAmount += cashAmount;
             }
 
             // Aggregate to totals - counts from ghlData, cashAmount from opportunities
@@ -431,6 +424,68 @@ class SummaryService {
     }
   }
 
+  /// Fetch cash amounts for multiple ads in a week (BATCH PROCESSING)
+  /// Fetches opportunities ONCE per week and distributes to multiple ads
+  Future<Map<String, double>> _fetchCashAmountsForAdsInWeek(
+    Set<String> adIds,
+    String weekId,
+    DateTime weekStart,
+    DateTime weekEnd,
+  ) async {
+    final Map<String, double> adCashAmounts = {};
+    for (var adId in adIds) {
+      adCashAmounts[adId] = 0.0;
+    }
+
+    if (adIds.isEmpty) {
+      return adCashAmounts;
+    }
+
+    try {
+      // Fetch opportunities ONCE
+      Query query = _firestore
+          .collection('ghl_opportunities')
+          .orderBy('createdAt', descending: true);
+
+      final snapshot = await query.get();
+
+      // Process opportunities once and distribute to ads
+      for (var doc in snapshot.docs) {
+        final oppData = doc.data() as Map<String, dynamic>?;
+        if (oppData == null) continue;
+
+        // Extract attributions and get adId
+        final attributions = oppData['attributions'] as dynamic;
+        final extractedAdId = _extractUtmAdIdFromAttributions(attributions);
+
+        if (extractedAdId == null || !adIds.contains(extractedAdId)) {
+          continue; // Not one of our ads
+        }
+
+        // Check dateRange overlap
+        final dateRange = oppData['dateRange'] as Map<String, dynamic>?;
+        if (!_opportunityDateRangeOverlapsWeek(weekId, dateRange)) {
+          continue;
+        }
+
+        // Extract monetary value
+        final monetaryValue =
+            (oppData['monetaryValue'] as num?)?.toDouble() ?? 0.0;
+
+        if (monetaryValue > 0) {
+          adCashAmounts[extractedAdId] =
+              (adCashAmounts[extractedAdId] ?? 0.0) + monetaryValue;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('   │    ❌ Error batch fetching opportunities: $e');
+      }
+    }
+
+    return adCashAmounts;
+  }
+
   /// Calculate GHL cashAmount for an ad from opportunities collection
   /// Matches opportunities by utmAdId from attributions and verifies dateRange overlap
   /// ONLY calculates cashAmount from monetaryValue - other stats come from ghlData
@@ -651,31 +706,31 @@ class SummaryService {
             final weekCashCollected =
                 (ghlData?['cashCollected'] as num?)?.toInt() ?? 0;
 
-            double weekCashAmount = 0.0;
-
-            // Iterate through all ads in this week and filter by adSetId
-            // Only sum cashAmount from opportunities
+            // Collect ad IDs that belong to this ad set
+            final adIdsInAdSet = <String>{};
             for (var adEntry in adsMap.entries) {
               final adId = adEntry.key;
               final adData = adEntry.value as Map<String, dynamic>?;
-
-              // Check if this ad belongs to the ad set
               final adAdSetId = adData?['adSetId'] as String?;
-              if (adAdSetId != adSetId) continue;
-
-              if (kDebugMode) {
-                print('   │    Processing ad $adId for ad set $adSetId');
+              if (adAdSetId == adSetId) {
+                adIdsInAdSet.add(adId);
               }
+            }
 
-              // Fetch cashAmount for this ad from opportunities
-              final ghlMetrics = await _calculateAdGHLMetricsFromOpportunities(
-                adId,
+            // BATCH PROCESSING: Fetch cash amounts for ALL ads in this ad set at once
+            double weekCashAmount = 0.0;
+            if (adIdsInAdSet.isNotEmpty) {
+              final adCashAmounts = await _fetchCashAmountsForAdsInWeek(
+                adIdsInAdSet,
                 weekId,
                 weekStartDate,
                 weekEndDate,
               );
 
-              weekCashAmount += (ghlMetrics['cashAmount'] as double?) ?? 0.0;
+              // Sum up cash amounts for this ad set
+              for (var cashAmount in adCashAmounts.values) {
+                weekCashAmount += cashAmount;
+              }
             }
 
             // Aggregate to totals - counts from ghlData, cashAmount from opportunities
@@ -1200,6 +1255,7 @@ class SummaryService {
   Future<Map<String, String>> getCampaignsWithActivityInDateRange({
     required DateTime startDate,
     required DateTime endDate,
+    String countryFilter = 'all',
   }) async {
     try {
       if (kDebugMode) {
@@ -1215,6 +1271,21 @@ class SummaryService {
 
       for (final doc in snapshot.docs) {
         final data = doc.data();
+
+        // Country filtering based on usaAds flag
+        final usaAds = data['usaAds'] as bool?;
+        bool matchesCountry = true;
+
+        if (countryFilter == 'usa') {
+          matchesCountry = usaAds == true;
+        } else if (countryFilter == 'sa') {
+          // South Africa: either field missing or explicitly false
+          matchesCountry = usaAds != true;
+        }
+
+        if (!matchesCountry) {
+          continue;
+        }
         final weeksMap = data['weeks'] as Map<String, dynamic>?;
 
         if (weeksMap == null || weeksMap.isEmpty) continue;

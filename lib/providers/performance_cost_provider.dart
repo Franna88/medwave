@@ -33,9 +33,10 @@ class PerformanceCostProvider extends ChangeNotifier {
   List<perf_data.AdPerformanceData> _adPerformanceData = [];
   List<perf_data.AdPerformanceWithProduct> _adPerformanceWithProducts = [];
 
-  // Month management
+  // Month & filter management
   List<String> _availableMonths = [];
   List<String> _selectedMonths = [];
+  String _countryFilter = 'all'; // 'all' | 'usa' | 'sa'
 
   DateTime? _filterStartDate;
   DateTime? _filterEndDate;
@@ -53,6 +54,7 @@ class PerformanceCostProvider extends ChangeNotifier {
       _adPerformanceWithProducts;
   List<String> get availableMonths => _availableMonths;
   List<String> get selectedMonths => _selectedMonths;
+  String get countryFilter => _countryFilter;
   DateTime? get filterStartDate => _filterStartDate;
   DateTime? get filterEndDate => _filterEndDate;
   bool get isLoading => _isLoading;
@@ -307,8 +309,10 @@ class PerformanceCostProvider extends ChangeNotifier {
     List<String> months, {
     DateTime? startDate,
     DateTime? endDate,
+    String? countryFilter,
   }) async {
     _selectedMonths = months;
+    _countryFilter = countryFilter ?? _countryFilter;
 
     if (USE_SPLIT_COLLECTIONS) {
       // NEW: Split collections - Load campaigns with date range query
@@ -317,10 +321,15 @@ class PerformanceCostProvider extends ChangeNotifier {
         print(
           '   - Date range: ${startDate?.toIso8601String() ?? "any"} to ${endDate?.toIso8601String() ?? "any"}',
         );
+        print('   - Country filter: $_countryFilter');
       }
 
       // Call the new loadCampaignsWithDateRange method
-      await loadCampaignsWithDateRange(startDate: startDate, endDate: endDate);
+      await loadCampaignsWithDateRange(
+        startDate: startDate,
+        endDate: endDate,
+        country: _countryFilter,
+      );
 
       return;
     }
@@ -1176,6 +1185,7 @@ class PerformanceCostProvider extends ChangeNotifier {
     int limit = 100,
     String orderBy = 'totalProfit',
     bool descending = true,
+    String country = 'all',
   }) async {
     _isLoading = true;
     _error = null;
@@ -1187,6 +1197,7 @@ class PerformanceCostProvider extends ChangeNotifier {
         print('   - Start date: ${startDate?.toIso8601String() ?? "any"}');
         print('   - End date: ${endDate?.toIso8601String() ?? "any"}');
         print('   - Order by: $orderBy (${descending ? "desc" : "asc"})');
+        print('   - Country: $country');
         print(
           '   ⏳ Calculating date-specific metrics using summary collection...',
         );
@@ -1200,6 +1211,7 @@ class PerformanceCostProvider extends ChangeNotifier {
         limit: limit,
         orderBy: orderBy,
         descending: descending,
+        countryFilter: country,
       );
 
       _filterStartDate = startDate;

@@ -18,6 +18,7 @@ class AdminAdvertsCampaignsScreen extends StatefulWidget {
 class _AdminAdvertsCampaignsScreenState
     extends State<AdminAdvertsCampaignsScreen> {
   String _monthFilter = 'thismonth';
+  String _countryFilter = 'all'; // 'all' | 'usa' | 'sa'
 
   @override
   void initState() {
@@ -82,6 +83,7 @@ class _AdminAdvertsCampaignsScreenState
       months,
       startDate: dateRange['start'],
       endDate: dateRange['end'],
+      countryFilter: _countryFilter,
     );
 
     if (!ghlProvider.isInitialized) {
@@ -114,6 +116,7 @@ class _AdminAdvertsCampaignsScreenState
       [], // Empty months list for split collections
       startDate: dateRange['start'],
       endDate: dateRange['end'],
+      countryFilter: _countryFilter,
     );
 
     if (!ghlProvider.isInitialized) {
@@ -475,13 +478,59 @@ class _AdminAdvertsCampaignsScreenState
             onChanged: (value) {
               if (value != null) {
                 if (kDebugMode) {
-                  print('🔄 FILTER CHANGED: $_monthFilter → $value');
+                  print('🔄 MONTH FILTER CHANGED: $_monthFilter → $value');
                 }
                 setState(() {
                   _monthFilter = value;
                 });
 
                 // Call appropriate loading method based on schema
+                if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
+                  _loadDataWithFiltersNew();
+                } else {
+                  _loadDataWithFilters();
+                }
+              }
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Country filter
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButton<String>(
+            value: _countryFilter,
+            underline: const SizedBox(),
+            icon: const Icon(Icons.arrow_drop_down, size: 20),
+            style: TextStyle(fontSize: 13, color: Colors.grey[800]),
+            items: const [
+              DropdownMenuItem(
+                value: 'all',
+                child: Text('🌍 All'),
+              ),
+              DropdownMenuItem(
+                value: 'sa',
+                child: Text('🇿🇦 South Africa'),
+              ),
+              DropdownMenuItem(
+                value: 'usa',
+                child: Text('🇺🇸 USA'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                if (kDebugMode) {
+                  print('🔄 COUNTRY FILTER CHANGED: $_countryFilter → $value');
+                }
+                setState(() {
+                  _countryFilter = value;
+                });
+
+                // Reload with new country filter
                 if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
                   _loadDataWithFiltersNew();
                 } else {

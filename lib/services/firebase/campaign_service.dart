@@ -657,6 +657,7 @@ class CampaignService {
     int limit = 100,
     String orderBy = 'totalProfit',
     bool descending = true,
+    String countryFilter = 'all',
   }) async {
     try {
       if (kDebugMode) {
@@ -665,6 +666,7 @@ class CampaignService {
         );
         print('   Start: ${startDate?.toIso8601String() ?? "any"}');
         print('   End: ${endDate?.toIso8601String() ?? "any"}');
+        print('   Country filter: $countryFilter');
       }
 
       // Ensure dates are provided
@@ -680,6 +682,7 @@ class CampaignService {
           .getCampaignsWithActivityInDateRange(
             startDate: startDate,
             endDate: endDate,
+            countryFilter: countryFilter,
           );
 
       if (kDebugMode) {
