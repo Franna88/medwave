@@ -1081,6 +1081,10 @@ class _DrillDownModalState extends State<_DrillDownModal> {
   }
 
   Widget _buildChartsView(List<MetricComparison> metrics) {
+    final filteredMetrics = metrics
+        .where((metric) => metric.label != 'Impressions')
+        .toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1092,12 +1096,12 @@ class _DrillDownModalState extends State<_DrillDownModal> {
         ),
         const SizedBox(height: 16),
         ComparisonBarChart(
-          metricComparisons: metrics,
+          metricComparisons: filteredMetrics,
           countryFilter: widget.countryFilter,
         ),
         const SizedBox(height: 32),
         ComparisonKpiTable(
-          metricComparisons: metrics,
+          metricComparisons: filteredMetrics,
           countryFilter: widget.countryFilter,
         ),
       ],
