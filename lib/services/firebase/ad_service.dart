@@ -135,8 +135,8 @@ class AdService {
     }
   }
 
-  /// Get ads with date-filtered totals from summary collection
-  /// Similar to AdSetService.getAdSetsWithDateFilteredTotals()
+  /// Get ads with date-filtered totals from summary collection ONLY
+  /// This method queries summary collection directly (not ads collection)
   Future<List<Ad>> getAdsWithDateFilteredTotals({
     required String campaignId,
     required String adSetId,
@@ -147,7 +147,9 @@ class AdService {
   }) async {
     try {
       if (kDebugMode) {
-        print('🔄 Loading ads with date-filtered totals for ad set $adSetId');
+        print(
+          '🔄 Loading ads with date-filtered totals for ad set $adSetId from SUMMARY collection',
+        );
         if (startDate != null || endDate != null) {
           print(
             '   📅 Date range: ${startDate?.toIso8601String() ?? "any"} to ${endDate?.toIso8601String() ?? "any"}',
@@ -155,121 +157,82 @@ class AdService {
         }
       }
 
-      // Get all ads for this ad set (without date filtering)
-      final snapshot = await _firestore
-          .collection('ads')
-          .where('adSetId', isEqualTo: adSetId)
-          .get();
-
-      if (kDebugMode) {
-        print('   📋 Found ${snapshot.docs.length} ads in ad set');
+      // Ensure dates are provided
+      if (startDate == null || endDate == null) {
+        if (kDebugMode) {
+          print('   ⚠️ Start date or end date is null, returning empty list');
+        }
+        return [];
       }
 
+      // OPTIMIZED: Get ads with pre-calculated totals (SINGLE FETCH)
+      // This reduces Firestore reads from 2+M to 1 (where M = number of ads)
+      final adsData = await _summaryService.getAdsWithCalculatedTotals(
+        campaignId: campaignId,
+        adSetId: adSetId,
+        startDate: startDate,
+        endDate: endDate,
+      );
+
+      if (kDebugMode) {
+        print(
+          '   ✅ Received ${adsData.length} ads with pre-calculated totals',
+        );
+      }
+
+      // Build Ad objects from pre-calculated data
       List<Ad> adsWithDateFilteredTotals = [];
-      int adsWithData = 0;
 
-      for (var doc in snapshot.docs) {
-        final ad = Ad.fromFirestore(doc);
-        final adId = ad.adId;
+      for (var adData in adsData) {
+        final totals = adData['totals'] as Map<String, dynamic>;
 
-        if (kDebugMode) {
-          print('   Calculating totals for ad: ${ad.adName}');
-          print('   🚀 Trying summary collection for ad $adId');
-        }
+        // Skip ads with no activity
+        if (totals['adsInRange'] == 0) continue;
 
-        // TRY SUMMARY COLLECTION FIRST (fast path - 1 query, no overlap issues)
-        final summaryTotals = await _summaryService
-            .calculateAdTotalsFromSummary(
-              campaignId: campaignId,
-              adId: adId,
-              startDate: startDate,
-              endDate: endDate,
-            );
-
-        Map<String, dynamic>? totals;
-
-        if (summaryTotals != null) {
-          if (kDebugMode) {
-            print('   ✅ Using SUMMARY collection (fast, accurate)');
-          }
-          totals = summaryTotals;
-        } else {
-          // FALLBACK: Calculate from weekly insights if summary data not available
-          if (kDebugMode) {
-            print('   ⚠️ No summary data, falling back to weeklyInsights');
-          }
-          totals = await _calculateAdTotalsFromWeeklyInsights(
-            adId: adId,
-            startDate: startDate,
-            endDate: endDate,
-          );
-        }
-
-        // Skip ads with no data in the date range
-        if (totals == null || totals['adsInRange'] == 0) {
-          if (kDebugMode) {
-            print('   ⏭️ Skipping ad $adId (no data in range)');
-          }
-          continue;
-        }
-
-        // Create a new ad with updated totals
-        // Calculate derived metrics
-        final profit = totals['totalCashAmount'] - totals['totalSpend'];
-        final cpl = totals['totalLeads'] > 0
-            ? totals['totalSpend'] / totals['totalLeads']
-            : 0.0;
-        final cpb = totals['totalBookings'] > 0
-            ? totals['totalSpend'] / totals['totalBookings']
-            : 0.0;
-        final cpa = totals['totalDeposits'] > 0
-            ? totals['totalSpend'] / totals['totalDeposits']
-            : 0.0;
-
-        final updatedAd = Ad(
-          adId: ad.adId,
-          adName: ad.adName,
-          adSetId: ad.adSetId,
-          adSetName: ad.adSetName,
-          campaignId: ad.campaignId,
-          campaignName: ad.campaignName,
+        final ad = Ad(
+          adId: adData['adId'] as String,
+          adName: adData['adName'] as String,
+          adSetId: adSetId,
+          adSetName: adData['adSetName'] as String,
+          campaignId: campaignId,
+          campaignName: adData['campaignName'] as String,
           facebookStats: FacebookStats(
-            spend: totals['totalSpend'],
-            impressions: totals['totalImpressions'],
-            clicks: totals['totalClicks'],
-            reach: totals['totalReach'],
-            cpm: totals['cpm'],
-            cpc: totals['cpc'],
-            ctr: totals['ctr'],
-            dateStart: ad.facebookStats.dateStart,
-            dateStop: ad.facebookStats.dateStop,
+            spend: totals['totalSpend'] ?? 0.0,
+            impressions: totals['totalImpressions'] ?? 0,
+            clicks: totals['totalClicks'] ?? 0,
+            reach: totals['totalReach'] ?? 0,
+            cpm: totals['cpm'] ?? 0.0,
+            cpc: totals['cpc'] ?? 0.0,
+            ctr: totals['ctr'] ?? 0.0,
+            dateStart: adData['firstInsightDate'] as String? ?? '',
+            dateStop: adData['lastInsightDate'] as String? ?? '',
           ),
           ghlStats: GHLStats(
-            leads: totals['totalLeads'],
-            bookings: totals['totalBookings'],
-            deposits: totals['totalDeposits'],
-            cashCollected: totals['totalCashCollected'],
-            cashAmount: totals['totalCashAmount'],
+            leads: totals['totalLeads'] ?? 0,
+            bookings: totals['totalBookings'] ?? 0,
+            deposits: totals['totalDeposits'] ?? 0,
+            cashCollected: totals['totalCashCollected'] ?? 0,
+            cashAmount: totals['totalCashAmount'] ?? 0.0,
           ),
-          profit: profit,
-          cpl: cpl,
-          cpb: cpb,
-          cpa: cpa,
-          status: ad.status,
-          lastUpdated: ad.lastUpdated,
-          createdAt: ad.createdAt,
-          firstInsightDate: ad.firstInsightDate,
-          lastInsightDate: ad.lastInsightDate,
-          lastFacebookSync: ad.lastFacebookSync,
-          lastGHLSync: ad.lastGHLSync,
+          profit: totals['totalProfit'] ?? 0.0,
+          cpl: totals['cpl'] ?? 0.0,
+          cpb: totals['cpb'] ?? 0.0,
+          cpa: totals['cpa'] ?? 0.0,
+          status: 'ACTIVE', // Default status, not available in summary
+          // Optional fields - not available in summary, use null
+          lastUpdated: null,
+          createdAt: null,
+          firstInsightDate: adData['firstInsightDate'] as String?,
+          lastInsightDate: adData['lastInsightDate'] as String?,
+          lastFacebookSync: null,
+          lastGHLSync: null,
         );
 
-        adsWithDateFilteredTotals.add(updatedAd);
-        adsWithData++;
+        adsWithDateFilteredTotals.add(ad);
       }
 
       if (kDebugMode) {
-        print('   ✅ $adsWithData ads with data in range');
+        print('   ✅ ${adsWithDateFilteredTotals.length} ads with data in range');
       }
 
       // Sort by the requested field

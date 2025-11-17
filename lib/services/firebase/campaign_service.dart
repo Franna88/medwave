@@ -648,49 +648,55 @@ class CampaignService {
     }
   }
 
-  /// Get campaigns with date-filtered totals (accurate, on-the-fly calculation)
-  /// This method calculates metrics specific to the date range using summary collection
-  /// Perfect for "This Month" and "Last 7 Days" filters
   Future<List<Campaign>> getCampaignsWithDateFilteredTotals({
     DateTime? startDate,
     DateTime? endDate,
     int limit = 100,
     String orderBy = 'totalProfit',
     bool descending = true,
+    String countryFilter = 'all',
   }) async {
     try {
       if (kDebugMode) {
-        print('🔄 Getting campaigns with date-filtered totals...');
+        print(
+          '🔄 Getting campaigns with date-filtered totals from SUMMARY collection...',
+        );
         print('   Start: ${startDate?.toIso8601String() ?? "any"}');
         print('   End: ${endDate?.toIso8601String() ?? "any"}');
+        print('   Country filter: $countryFilter');
       }
 
-      // First, get campaigns that have activity in the date range
-      final campaigns = await getCampaignsByDateRange(
-        startDate: startDate,
-        endDate: endDate,
-        limit: limit * 2, // Fetch more to account for filtering
-        orderBy: 'lastUpdated', // Use simple order first
-        descending: true,
-      );
+      // Ensure dates are provided
+      if (startDate == null || endDate == null) {
+        if (kDebugMode) {
+          print('   ⚠️ Start date or end date is null, returning empty list');
+        }
+        return [];
+      }
+
+      final campaignsData = await _summaryService
+          .getCampaignsWithCalculatedTotals(
+            startDate: startDate,
+            endDate: endDate,
+            countryFilter: countryFilter,
+          );
 
       if (kDebugMode) {
-        print('   Found ${campaigns.length} campaigns in date range');
+        print(
+          '   ✅ Received ${campaignsData.length} campaigns with pre-calculated totals',
+        );
       }
 
-      // Calculate date-range-specific totals for each campaign
+      // Build Campaign objects from pre-calculated data
       List<Campaign> campaignsWithFilteredTotals = [];
 
-      for (var campaign in campaigns) {
-        if (kDebugMode) {
-          print('   Calculating totals for: ${campaign.campaignName}');
-        }
-
-        final totals = await calculateCampaignTotalsForDateRange(
-          campaignId: campaign.campaignId,
-          startDate: startDate,
-          endDate: endDate,
-        );
+      for (var campaignData in campaignsData) {
+        final campaignId = campaignData['campaignId'] as String;
+        final campaignName = campaignData['campaignName'] as String;
+        final totals = campaignData['totals'] as Map<String, dynamic>;
+        final firstAdDate = campaignData['firstAdDate'] as String?;
+        final lastAdDate = campaignData['lastAdDate'] as String?;
+        final adSetCount = campaignData['adSetCount'] as int;
 
         // Calculate conversion rates
         final leadToBookingRate = totals['totalLeads'] > 0
@@ -703,43 +709,43 @@ class CampaignService {
             ? (totals['totalCashCollected'] / totals['totalDeposits']) * 100
             : 0.0;
 
-        // Create a new campaign with date-filtered totals
-        final updatedCampaign = Campaign(
-          campaignId: campaign.campaignId,
-          campaignName: campaign.campaignName,
-          status: campaign.status,
-          totalSpend: totals['totalSpend'],
-          totalImpressions: totals['totalImpressions'],
-          totalClicks: totals['totalClicks'],
-          totalReach: totals['totalReach'],
-          avgCPM: totals['cpm'],
-          avgCPC: totals['cpc'],
-          avgCTR: totals['ctr'],
-          totalLeads: totals['totalLeads'],
-          totalBookings: totals['totalBookings'],
-          totalDeposits: totals['totalDeposits'],
-          totalCashCollected: totals['totalCashCollected'],
-          totalCashAmount: totals['totalCashAmount'],
-          totalProfit: totals['totalProfit'],
-          cpl: totals['cpl'],
-          cpb: totals['cpb'],
-          cpa: totals['cpa'],
-          roi: totals['roi'],
+        // Create Campaign object with all pre-calculated data
+        final campaign = Campaign(
+          campaignId: campaignId,
+          campaignName: campaignName,
+          status: 'UNKNOWN', // Not available in summary, use default
+          totalSpend: totals['totalSpend'] ?? 0.0,
+          totalImpressions: totals['totalImpressions'] ?? 0,
+          totalClicks: totals['totalClicks'] ?? 0,
+          totalReach: totals['totalReach'] ?? 0,
+          avgCPM: totals['cpm'] ?? 0.0,
+          avgCPC: totals['cpc'] ?? 0.0,
+          avgCTR: totals['ctr'] ?? 0.0,
+          totalLeads: totals['totalLeads'] ?? 0,
+          totalBookings: totals['totalBookings'] ?? 0,
+          totalDeposits: totals['totalDeposits'] ?? 0,
+          totalCashCollected: totals['totalCashCollected'] ?? 0,
+          totalCashAmount: totals['totalCashAmount'] ?? 0.0,
+          totalProfit: totals['totalProfit'] ?? 0.0,
+          cpl: totals['cpl'] ?? 0.0,
+          cpb: totals['cpb'] ?? 0.0,
+          cpa: totals['cpa'] ?? 0.0,
+          roi: totals['roi'] ?? 0.0,
           leadToBookingRate: leadToBookingRate,
           bookingToDepositRate: bookingToDepositRate,
           depositToCashRate: depositToCashRate,
-          adSetCount: campaign.adSetCount,
-          adCount: totals['adsInRange'],
-          firstAdDate: campaign.firstAdDate,
-          lastAdDate: campaign.lastAdDate,
-          lastUpdated: campaign.lastUpdated,
-          createdAt: campaign.createdAt,
+          adSetCount: adSetCount,
+          adCount: campaignData['adCount'] ?? 0,
+          firstAdDate: firstAdDate,
+          lastAdDate: lastAdDate,
+          // Timestamps not available in summary, use null
+          lastUpdated: null,
+          lastFacebookSync: null,
+          lastGHLSync: null,
+          createdAt: null,
         );
 
-        // Include all campaigns that were found in the date range
-        // Even if they have $0 spend in this specific period, they should appear
-        // This shows campaigns that ran during the period with their period-specific metrics
-        campaignsWithFilteredTotals.add(updatedCampaign);
+        campaignsWithFilteredTotals.add(campaign);
       }
 
       if (kDebugMode) {
@@ -786,7 +792,7 @@ class CampaignService {
 
       if (kDebugMode) {
         print(
-          '✅ Returning ${campaignsWithFilteredTotals.length} campaigns with date-filtered totals',
+          '✅ Returning ${campaignsWithFilteredTotals.length} campaigns with date-filtered totals from SUMMARY',
         );
       }
 

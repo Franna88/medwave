@@ -18,6 +18,7 @@ class AdminAdvertsCampaignsScreen extends StatefulWidget {
 class _AdminAdvertsCampaignsScreenState
     extends State<AdminAdvertsCampaignsScreen> {
   String _monthFilter = 'thismonth';
+  String _countryFilter = 'sa'; // 'all' | 'usa' | 'sa'
 
   @override
   void initState() {
@@ -82,6 +83,7 @@ class _AdminAdvertsCampaignsScreenState
       months,
       startDate: dateRange['start'],
       endDate: dateRange['end'],
+      countryFilter: _countryFilter,
     );
 
     if (!ghlProvider.isInitialized) {
@@ -114,11 +116,59 @@ class _AdminAdvertsCampaignsScreenState
       [], // Empty months list for split collections
       startDate: dateRange['start'],
       endDate: dateRange['end'],
+      countryFilter: _countryFilter,
     );
 
     if (!ghlProvider.isInitialized) {
       await ghlProvider.initialize();
     }
+  }
+
+  /// Build dynamic month filter items
+  List<DropdownMenuItem<String>> _buildMonthFilterItems() {
+    final now = DateTime.now();
+    final currentMonth = now.month;
+    final currentYear = now.year;
+
+    // Calculate months
+    final thisMonth = DateTime(currentYear, currentMonth);
+    final lastMonth = DateTime(currentYear, currentMonth - 1);
+    final twoMonthsAgo = DateTime(currentYear, currentMonth - 2);
+
+    // Format month names
+    String formatMonthName(DateTime date) {
+      const monthNames = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ];
+      return monthNames[date.month - 1];
+    }
+
+    return [
+      DropdownMenuItem(
+        value: 'thismonth',
+        child: Text('📅 This Month (${formatMonthName(thisMonth)})'),
+      ),
+      DropdownMenuItem(
+        value: 'lastmonth',
+        child: Text('📅 Last Month (${formatMonthName(lastMonth)})'),
+      ),
+      DropdownMenuItem(
+        value: '2monthsago',
+        child: Text('📅 2 Months Ago (${formatMonthName(twoMonthsAgo)})'),
+      ),
+      const DropdownMenuItem(value: 'last7days', child: Text('📅 Last 7 Days')),
+    ];
   }
 
   /// Calculate date range based on filters
@@ -136,6 +186,24 @@ class _AdminAdvertsCampaignsScreenState
         baseEnd = DateTime(
           now.year,
           now.month + 1,
+          1,
+        ).subtract(const Duration(seconds: 1));
+        break;
+      case 'lastmonth':
+        final lastMonth = DateTime(now.year, now.month - 1);
+        baseStart = DateTime(lastMonth.year, lastMonth.month, 1);
+        baseEnd = DateTime(
+          lastMonth.year,
+          lastMonth.month + 1,
+          1,
+        ).subtract(const Duration(seconds: 1));
+        break;
+      case '2monthsago':
+        final twoMonthsAgo = DateTime(now.year, now.month - 2);
+        baseStart = DateTime(twoMonthsAgo.year, twoMonthsAgo.month, 1);
+        baseEnd = DateTime(
+          twoMonthsAgo.year,
+          twoMonthsAgo.month + 1,
           1,
         ).subtract(const Duration(seconds: 1));
         break;
@@ -167,12 +235,17 @@ class _AdminAdvertsCampaignsScreenState
     final lastMonth = DateTime(now.year, now.month - 1);
     final lastMonthStr =
         '${lastMonth.year}-${lastMonth.month.toString().padLeft(2, '0')}';
+    final twoMonthsAgo = DateTime(now.year, now.month - 2);
+    final twoMonthsAgoStr =
+        '${twoMonthsAgo.year}-${twoMonthsAgo.month.toString().padLeft(2, '0')}';
 
     switch (filter) {
       case 'thismonth':
         return availableMonths.where((m) => m == currentMonth).toList();
       case 'lastmonth':
         return availableMonths.where((m) => m == lastMonthStr).toList();
+      case '2monthsago':
+        return availableMonths.where((m) => m == twoMonthsAgoStr).toList();
       case 'last3months':
         return availableMonths.take(3).toList();
       case 'last6months':
@@ -323,6 +396,7 @@ class _AdminAdvertsCampaignsScreenState
                     child: ThreeColumnCampaignView(
                       ads: [], // Not used when USE_SPLIT_COLLECTIONS is true
                       provider: perfProvider,
+                      countryFilter: _countryFilter,
                     ),
                   ),
               ],
@@ -401,26 +475,54 @@ class _AdminAdvertsCampaignsScreenState
             underline: const SizedBox(),
             icon: const Icon(Icons.arrow_drop_down, size: 20),
             style: TextStyle(fontSize: 13, color: Colors.grey[800]),
-            items: const [
-              DropdownMenuItem(
-                value: 'thismonth',
-                child: Text('📅 This Month'),
-              ),
-              DropdownMenuItem(
-                value: 'last7days',
-                child: Text('📅 Last 7 Days'),
-              ),
-            ],
+            items: _buildMonthFilterItems(),
             onChanged: (value) {
               if (value != null) {
                 if (kDebugMode) {
-                  print('🔄 FILTER CHANGED: $_monthFilter → $value');
+                  print('🔄 MONTH FILTER CHANGED: $_monthFilter → $value');
                 }
                 setState(() {
                   _monthFilter = value;
                 });
 
                 // Call appropriate loading method based on schema
+                if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
+                  _loadDataWithFiltersNew();
+                } else {
+                  _loadDataWithFilters();
+                }
+              }
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Country filter
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButton<String>(
+            value: _countryFilter,
+            underline: const SizedBox(),
+            icon: const Icon(Icons.arrow_drop_down, size: 20),
+            style: TextStyle(fontSize: 13, color: Colors.grey[800]),
+            items: const [
+              DropdownMenuItem(value: 'all', child: Text('🌍 All')),
+              DropdownMenuItem(value: 'sa', child: Text('🇿🇦 South Africa')),
+              DropdownMenuItem(value: 'usa', child: Text('🇺🇸 USA')),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                if (kDebugMode) {
+                  print('🔄 COUNTRY FILTER CHANGED: $_countryFilter → $value');
+                }
+                setState(() {
+                  _countryFilter = value;
+                });
+
+                // Reload with new country filter
                 if (PerformanceCostProvider.USE_SPLIT_COLLECTIONS) {
                   _loadDataWithFiltersNew();
                 } else {

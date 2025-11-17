@@ -117,7 +117,10 @@ class AdComparison {
 /// Helper class to calculate date ranges for time periods
 class TimePeriodCalculator {
   /// Calculate date ranges for a time period
-  static Map<String, DateTime> calculateDateRanges(TimePeriod period) {
+  static Map<String, DateTime> calculateDateRanges(
+    TimePeriod period, {
+    DateTime? selectedMonth,
+  }) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
@@ -154,6 +157,51 @@ class TimePeriodCalculator {
         };
 
       case TimePeriod.THIS_MONTH:
+        // If a specific month is selected, use that month instead of current month
+        if (selectedMonth != null) {
+          // Selected month: first day to last day of the month
+          final selectedMonthStart = DateTime(
+            selectedMonth.year,
+            selectedMonth.month,
+            1,
+          );
+          final selectedMonthEnd = DateTime(
+            selectedMonth.year,
+            selectedMonth.month + 1,
+            0,
+            23,
+            59,
+            59,
+          );
+
+          // Previous month: full previous month
+          final previousMonthDate = DateTime(
+            selectedMonth.year,
+            selectedMonth.month - 1,
+            1,
+          );
+          final previousMonthStart = DateTime(
+            previousMonthDate.year,
+            previousMonthDate.month,
+            1,
+          );
+          final previousMonthEnd = DateTime(
+            previousMonthDate.year,
+            previousMonthDate.month + 1,
+            0,
+            23,
+            59,
+            59,
+          );
+
+          return {
+            'currentStart': selectedMonthStart,
+            'currentEnd': selectedMonthEnd,
+            'previousStart': previousMonthStart,
+            'previousEnd': previousMonthEnd,
+          };
+        }
+
         // This month: first day of current month to today
         final thisMonthStart = DateTime(now.year, now.month, 1);
         final thisMonthEnd = today;

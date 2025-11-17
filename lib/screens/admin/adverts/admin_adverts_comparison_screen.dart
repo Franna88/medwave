@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../../models/comparison/comparison_models.dart';
 import '../../../models/comparison/comparison_list_models.dart';
 import '../../../services/comparison_service.dart';
 import '../../../theme/app_theme.dart';
+import '../../../utils/currency_formatter.dart';
+import '../../../widgets/charts/comparison_bar_chart.dart';
+import '../../../widgets/charts/comparison_kpi_table.dart';
 
-/// Campaign Comparison Screen - Drill-down analysis
-/// Select a campaign, view comparison, then drill into ad sets and ads
 class AdminAdvertsComparisonScreen extends StatefulWidget {
   const AdminAdvertsComparisonScreen({Key? key}) : super(key: key);
 
@@ -20,6 +22,8 @@ class _AdminAdvertsComparisonScreenState
 
   // State
   TimePeriod _selectedTimePeriod = TimePeriod.THIS_MONTH;
+  String _countryFilter = 'sa'; // 'all' | 'usa' | 'sa'
+  String _monthFilter = 'thismonth'; // 'thismonth' | 'lastmonth' | '2monthsago'
   bool _isLoading = false;
   String? _error;
 
@@ -44,8 +48,16 @@ class _AdminAdvertsComparisonScreenState
     try {
       print('🔄 Loading campaign comparisons for $_selectedTimePeriod...');
 
+      // Calculate selected month if THIS_MONTH period is selected
+      DateTime? selectedMonth;
+      if (_selectedTimePeriod == TimePeriod.THIS_MONTH) {
+        selectedMonth = _getSelectedMonthDateTime();
+      }
+
       final comparisons = await _comparisonService.getAllCampaignsComparison(
         _selectedTimePeriod,
+        countryFilter: _countryFilter,
+        selectedMonth: selectedMonth,
       );
 
       print('✅ Loaded ${comparisons.length} campaign comparisons');
@@ -66,6 +78,21 @@ class _AdminAdvertsComparisonScreenState
     }
   }
 
+  /// Get DateTime for the selected month filter
+  DateTime? _getSelectedMonthDateTime() {
+    final now = DateTime.now();
+    switch (_monthFilter) {
+      case 'thismonth':
+        return DateTime(now.year, now.month, 1);
+      case 'lastmonth':
+        return DateTime(now.year, now.month - 1, 1);
+      case '2monthsago':
+        return DateTime(now.year, now.month - 2, 1);
+      default:
+        return null; // Use current month
+    }
+  }
+
   void _onTimePeriodChanged(TimePeriod? newPeriod) {
     if (newPeriod != null && newPeriod != _selectedTimePeriod) {
       setState(() {
@@ -76,6 +103,12 @@ class _AdminAdvertsComparisonScreenState
   }
 
   void _openCampaignModal(CampaignComparison campaignComparison) {
+    // Calculate selected month if THIS_MONTH period is selected
+    DateTime? selectedMonth;
+    if (_selectedTimePeriod == TimePeriod.THIS_MONTH) {
+      selectedMonth = _getSelectedMonthDateTime();
+    }
+
     showDialog(
       context: context,
       builder: (context) => _DrillDownModal(
@@ -83,6 +116,8 @@ class _AdminAdvertsComparisonScreenState
         campaignName: campaignComparison.campaignName,
         timePeriod: _selectedTimePeriod,
         comparisonService: _comparisonService,
+        countryFilter: _countryFilter,
+        selectedMonth: selectedMonth,
       ),
     );
   }
@@ -123,8 +158,15 @@ class _AdminAdvertsComparisonScreenState
   }
 
   Widget _buildHeader() {
+    // Calculate selected month if THIS_MONTH period is selected
+    DateTime? selectedMonth;
+    if (_selectedTimePeriod == TimePeriod.THIS_MONTH) {
+      selectedMonth = _getSelectedMonthDateTime();
+    }
+
     final dateRanges = TimePeriodCalculator.calculateDateRanges(
       _selectedTimePeriod,
+      selectedMonth: selectedMonth,
     );
     final currentRange = TimePeriodCalculator.formatDateRange(
       dateRanges['currentStart']!,
@@ -199,24 +241,105 @@ class _AdminAdvertsComparisonScreenState
             ],
           ),
           const SizedBox(height: 12),
-          // Period toggle
-          SegmentedButton<TimePeriod>(
-            segments: const [
-              ButtonSegment(
-                value: TimePeriod.THIS_WEEK,
-                label: Text('This Week vs Last Week'),
-                icon: Icon(Icons.calendar_view_week),
+          // Period toggle, Month filter, and Country filter
+          Row(
+            children: [
+              Expanded(
+                child: SegmentedButton<TimePeriod>(
+                  segments: const [
+                    ButtonSegment(
+                      value: TimePeriod.THIS_WEEK,
+                      label: Text('This Week vs Last Week'),
+                      icon: Icon(Icons.calendar_view_week),
+                    ),
+                    ButtonSegment(
+                      value: TimePeriod.THIS_MONTH,
+                      label: Text('This Month vs Last Month'),
+                      icon: Icon(Icons.calendar_month),
+                    ),
+                  ],
+                  selected: {_selectedTimePeriod},
+                  onSelectionChanged: (Set<TimePeriod> newSelection) {
+                    _onTimePeriodChanged(newSelection.first);
+                  },
+                ),
               ),
-              ButtonSegment(
-                value: TimePeriod.THIS_MONTH,
-                label: Text('This Month vs Last Month'),
-                icon: Icon(Icons.calendar_month),
+              const SizedBox(width: 12),
+              // Month filter (only show when THIS_MONTH is selected)
+              if (_selectedTimePeriod == TimePeriod.THIS_MONTH)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButton<String>(
+                    value: _monthFilter,
+                    underline: const SizedBox(),
+                    icon: const Icon(Icons.arrow_drop_down, size: 20),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[800]),
+                    items: _buildMonthFilterItems(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        if (kDebugMode) {
+                          print(
+                            '🔄 MONTH FILTER CHANGED: $_monthFilter → $value',
+                          );
+                        }
+                        setState(() {
+                          _monthFilter = value;
+                        });
+                        // Reload comparisons with new month filter
+                        _loadComparisons();
+                      }
+                    },
+                  ),
+                ),
+              if (_selectedTimePeriod == TimePeriod.THIS_MONTH)
+                const SizedBox(width: 12),
+              // Country filter
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButton<String>(
+                  value: _countryFilter,
+                  underline: const SizedBox(),
+                  icon: const Icon(Icons.arrow_drop_down, size: 20),
+                  style: TextStyle(fontSize: 13, color: Colors.grey[800]),
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('🌍 All')),
+                    DropdownMenuItem(
+                      value: 'sa',
+                      child: Text('🇿🇦 South Africa'),
+                    ),
+                    DropdownMenuItem(value: 'usa', child: Text('🇺🇸 USA')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      if (kDebugMode) {
+                        print(
+                          '🔄 COUNTRY FILTER CHANGED: $_countryFilter → $value',
+                        );
+                      }
+                      setState(() {
+                        _countryFilter = value;
+                      });
+                      // Reload comparisons with new country filter
+                      _loadComparisons();
+                    }
+                  },
+                ),
               ),
             ],
-            selected: {_selectedTimePeriod},
-            onSelectionChanged: (Set<TimePeriod> newSelection) {
-              _onTimePeriodChanged(newSelection.first);
-            },
           ),
         ],
       ),
@@ -273,7 +396,10 @@ class _AdminAdvertsComparisonScreenState
                   Expanded(
                     child: _buildMetricPreview(
                       'Previous Spend',
-                      '\$${comparison.dataset1.getMetric('totalSpend').toStringAsFixed(0)}',
+                      CurrencyFormatter.formatCurrency(
+                        comparison.dataset1.getMetric('totalSpend'),
+                        _countryFilter,
+                      ),
                       Icons.arrow_back,
                       Colors.blue,
                     ),
@@ -282,7 +408,10 @@ class _AdminAdvertsComparisonScreenState
                   Expanded(
                     child: _buildMetricPreview(
                       'Current Spend',
-                      '\$${comparison.dataset2.getMetric('totalSpend').toStringAsFixed(0)}',
+                      CurrencyFormatter.formatCurrency(
+                        comparison.dataset2.getMetric('totalSpend'),
+                        _countryFilter,
+                      ),
                       Icons.arrow_forward,
                       Colors.green,
                     ),
@@ -413,6 +542,52 @@ class _AdminAdvertsComparisonScreenState
       ),
     );
   }
+
+  /// Build month filter dropdown items
+  List<DropdownMenuItem<String>> _buildMonthFilterItems() {
+    final now = DateTime.now();
+    final currentMonth = now.month;
+    final currentYear = now.year;
+
+    // Calculate months
+    final thisMonth = DateTime(currentYear, currentMonth);
+    final lastMonth = DateTime(currentYear, currentMonth - 1);
+    final twoMonthsAgo = DateTime(currentYear, currentMonth - 2);
+
+    // Format month names
+    String formatMonthName(DateTime date) {
+      const monthNames = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ];
+      return monthNames[date.month - 1];
+    }
+
+    return [
+      DropdownMenuItem(
+        value: 'thismonth',
+        child: Text('📅 This Month (${formatMonthName(thisMonth)})'),
+      ),
+      DropdownMenuItem(
+        value: 'lastmonth',
+        child: Text('📅 Last Month (${formatMonthName(lastMonth)})'),
+      ),
+      DropdownMenuItem(
+        value: '2monthsago',
+        child: Text('📅 2 Months Ago (${formatMonthName(twoMonthsAgo)})'),
+      ),
+    ];
+  }
 }
 
 // ============================================================================
@@ -424,12 +599,16 @@ class _DrillDownModal extends StatefulWidget {
   final String campaignName;
   final TimePeriod timePeriod;
   final ComparisonService comparisonService;
+  final String countryFilter;
+  final DateTime? selectedMonth;
 
   const _DrillDownModal({
     required this.campaignId,
     required this.campaignName,
     required this.timePeriod,
     required this.comparisonService,
+    this.countryFilter = 'all',
+    this.selectedMonth,
   });
 
   @override
@@ -476,10 +655,13 @@ class _DrillDownModalState extends State<_DrillDownModal> {
       final campaignComp = await widget.comparisonService.getCampaignComparison(
         widget.campaignId,
         _timePeriod,
+        countryFilter: widget.countryFilter,
+        selectedMonth: widget.selectedMonth,
       );
       final adSets = await widget.comparisonService.getCampaignAdSetsComparison(
         widget.campaignId,
         _timePeriod,
+        selectedMonth: widget.selectedMonth,
       );
 
       if (!mounted) return;
@@ -529,6 +711,7 @@ class _DrillDownModalState extends State<_DrillDownModal> {
       final ads = await widget.comparisonService.getAdSetAdsComparison(
         adSetComp.adSetId,
         _timePeriod,
+        selectedMonth: widget.selectedMonth,
       );
 
       print('🔍 UI DEBUG: Received ${ads.length} ads from service');
@@ -612,10 +795,12 @@ class _DrillDownModalState extends State<_DrillDownModal> {
         final adSetComp = await widget.comparisonService.getAdSetComparison(
           _selectedAdSetId!,
           _timePeriod,
+          selectedMonth: widget.selectedMonth,
         );
         final ads = await widget.comparisonService.getAdSetAdsComparison(
           _selectedAdSetId!,
           _timePeriod,
+          selectedMonth: widget.selectedMonth,
         );
 
         if (!mounted) return;
@@ -655,6 +840,7 @@ class _DrillDownModalState extends State<_DrillDownModal> {
         final adComp = await widget.comparisonService.getAdComparison(
           _selectedAdId!,
           _timePeriod,
+          selectedMonth: widget.selectedMonth,
         );
 
         if (!mounted) return;
@@ -968,7 +1154,7 @@ class _DrillDownModalState extends State<_DrillDownModal> {
               ],
             ),
             const SizedBox(height: 24),
-            _buildMetricsGrid(comparison.metricComparisons),
+            _buildChartsView(comparison.metricComparisons),
           ],
         ),
       ),
@@ -1005,7 +1191,10 @@ class _DrillDownModalState extends State<_DrillDownModal> {
           ),
           const SizedBox(height: 8),
           Text(
-            '\$${dataset.getMetric('totalSpend').toStringAsFixed(2)}',
+            CurrencyFormatter.formatCurrency(
+              dataset.getMetric('totalSpend'),
+              widget.countryFilter,
+            ),
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           Text(
@@ -1017,87 +1206,31 @@ class _DrillDownModalState extends State<_DrillDownModal> {
     );
   }
 
-  Widget _buildMetricsGrid(List<MetricComparison> metrics) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: metrics.map((metric) => _buildMetricChip(metric)).toList(),
-    );
-  }
+  Widget _buildChartsView(List<MetricComparison> metrics) {
+    final filteredMetrics = metrics
+        .where((metric) => metric.label != 'Impressions')
+        .toList();
 
-  Widget _buildMetricChip(MetricComparison metric) {
-    final changePercent = metric.changePercent;
-    final absChangePercent = changePercent.abs();
-
-    // Check if change is effectively 0% (within 0.1% threshold)
-    final isZeroChange = absChangePercent < 0.1;
-
-    Color color;
-    Widget changeIndicator;
-
-    if (isZeroChange) {
-      color = Colors.grey;
-      changeIndicator = Text(
-        '0.0%',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: color,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Performance Comparison',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
-      );
-    } else {
-      // Non-zero change: determine if good or bad
-      final isPositive = changePercent >= 0;
-      final isGoodChange =
-          (isPositive && metric.isGoodWhenUp) ||
-          (!isPositive && !metric.isGoodWhenUp);
-
-      color = isGoodChange ? Colors.green : Colors.red;
-
-      changeIndicator = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-            size: 16,
-            color: color,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '${absChangePercent.toStringAsFixed(1)}%',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            metric.label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 4),
-          changeIndicator,
-          const SizedBox(height: 2),
-          Text(
-            '${metric.previousValue.toStringAsFixed(1)} → ${metric.currentValue.toStringAsFixed(1)}',
-            style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-          ),
-        ],
-      ),
+        const SizedBox(height: 16),
+        ComparisonBarChart(
+          metricComparisons: filteredMetrics,
+          countryFilter: widget.countryFilter,
+        ),
+        const SizedBox(height: 32),
+        ComparisonKpiTable(
+          metricComparisons: filteredMetrics,
+          countryFilter: widget.countryFilter,
+        ),
+      ],
     );
   }
 
@@ -1125,7 +1258,7 @@ class _DrillDownModalState extends State<_DrillDownModal> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Spend: \$${adSet.currentSpend.toStringAsFixed(2)}',
+                      'Spend: ${CurrencyFormatter.formatCurrency(adSet.currentSpend, widget.countryFilter)}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
@@ -1165,7 +1298,7 @@ class _DrillDownModalState extends State<_DrillDownModal> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Spend: \$${ad.currentSpend.toStringAsFixed(2)}',
+                      'Spend: ${CurrencyFormatter.formatCurrency(ad.currentSpend, widget.countryFilter)}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],

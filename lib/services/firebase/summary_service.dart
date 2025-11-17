@@ -125,29 +125,67 @@ class SummaryService {
           }
         }
 
-        // Extract GHL Data
-        final ghlData = campaignData['ghlData'] as Map<String, dynamic>?;
-        if (ghlData != null) {
-          final weekLeads = (ghlData['leads'] as num?)?.toInt() ?? 0;
-          final weekBookings =
-              (ghlData['bookedAppointments'] as num?)?.toInt() ?? 0;
-          final weekDeposits = (ghlData['deposits'] as num?)?.toInt() ?? 0;
-          final weekCashCollected =
-              (ghlData['cashCollected'] as num?)?.toInt() ?? 0;
-          final weekCashAmount =
-              (ghlData['cashAmount'] as num?)?.toDouble() ?? 0;
+        // Calculate GHL Data from opportunities (aggregate from ad-level)
+        // Get all ads in this campaign from this week
+        final adsMap = weekData['ads'] as Map<String, dynamic>?;
+        if (adsMap != null) {
+          // Parse weekId to get week start/end dates
+          DateTime? weekStartDate;
+          DateTime? weekEndDate;
+          try {
+            final parts = weekId.split('_');
+            if (parts.length == 2) {
+              final startParts = parts[0].split('-');
+              final endParts = parts[1].split('-');
+              if (startParts.length == 3 && endParts.length == 3) {
+                weekStartDate = DateTime(
+                  int.parse(startParts[0]),
+                  int.parse(startParts[1]),
+                  int.parse(startParts[2]),
+                );
+                weekEndDate = DateTime(
+                  int.parse(endParts[0]),
+                  int.parse(endParts[1]),
+                  int.parse(endParts[2]),
+                  23,
+                  59,
+                  59,
+                  999,
+                );
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('      ⚠️ Error parsing week dates: $e');
+            }
+          }
 
-          totalLeads += weekLeads;
-          totalBookings += weekBookings;
-          totalDeposits += weekDeposits;
-          totalCashCollected += weekCashCollected;
-          totalCashAmount += weekCashAmount;
+          if (weekStartDate != null && weekEndDate != null) {
+            // Get all GHL metrics from campaignData ghlData
+            final ghlData = campaignData['ghlData'] as Map<String, dynamic>?;
+            final weekLeads = (ghlData?['leads'] as num?)?.toInt() ?? 0;
+            final weekBookings =
+                (ghlData?['bookedAppointments'] as num?)?.toInt() ?? 0;
+            final weekDeposits = (ghlData?['deposits'] as num?)?.toInt() ?? 0;
+            final weekCashCollected =
+                (ghlData?['cashCollected'] as num?)?.toInt() ?? 0;
+            final weekCashAmount =
+                (ghlData?['cashAmount'] as num?)?.toDouble() ?? 0.0;
 
-          if (kDebugMode) {
-            print(
-              '      GHL: leads=$weekLeads, bookings=$weekBookings, '
-              'deposits=$weekDeposits, cashAmount=\$${weekCashAmount.toStringAsFixed(2)}',
-            );
+            // Aggregate to totals - all metrics from ghlData
+            totalLeads += weekLeads;
+            totalBookings += weekBookings;
+            totalDeposits += weekDeposits;
+            totalCashCollected += weekCashCollected;
+            totalCashAmount += weekCashAmount;
+
+            if (kDebugMode) {
+              print(
+                '      GHL: leads=$weekLeads, bookings=$weekBookings, '
+                'deposits=$weekDeposits, cashAmount=\$${weekCashAmount.toStringAsFixed(2)} '
+                '(all from ghlData)',
+              );
+            }
           }
         }
 
@@ -343,23 +381,79 @@ class SummaryService {
           totalReach += weekReach;
         }
 
-        // Extract GHL Data
-        final ghlData = adSetData['ghlData'] as Map<String, dynamic>?;
-        if (ghlData != null) {
-          final weekLeads = (ghlData['leads'] as num?)?.toInt() ?? 0;
-          final weekBookings =
-              (ghlData['bookedAppointments'] as num?)?.toInt() ?? 0;
-          final weekDeposits = (ghlData['deposits'] as num?)?.toInt() ?? 0;
-          final weekCashCollected =
-              (ghlData['cashCollected'] as num?)?.toInt() ?? 0;
-          final weekCashAmount =
-              (ghlData['cashAmount'] as num?)?.toDouble() ?? 0;
+        // Calculate GHL Data from opportunities (aggregate from ad-level)
+        // Get all ads in this ad set from this week
+        final adsMap = weekData['ads'] as Map<String, dynamic>?;
+        if (adsMap != null) {
+          // Parse weekId to get week start/end dates
+          DateTime? weekStartDate;
+          DateTime? weekEndDate;
+          try {
+            final parts = weekId.split('_');
+            if (parts.length == 2) {
+              final startParts = parts[0].split('-');
+              final endParts = parts[1].split('-');
+              if (startParts.length == 3 && endParts.length == 3) {
+                weekStartDate = DateTime(
+                  int.parse(startParts[0]),
+                  int.parse(startParts[1]),
+                  int.parse(startParts[2]),
+                );
+                weekEndDate = DateTime(
+                  int.parse(endParts[0]),
+                  int.parse(endParts[1]),
+                  int.parse(endParts[2]),
+                  23,
+                  59,
+                  59,
+                  999,
+                );
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('   ⚠️ Error parsing week dates: $e');
+            }
+          }
 
-          totalLeads += weekLeads;
-          totalBookings += weekBookings;
-          totalDeposits += weekDeposits;
-          totalCashCollected += weekCashCollected;
-          totalCashAmount += weekCashAmount;
+          if (weekStartDate != null && weekEndDate != null) {
+            // Get counts from adSetData ghlData
+            final ghlData = adSetData['ghlData'] as Map<String, dynamic>?;
+            final weekLeads = (ghlData?['leads'] as num?)?.toInt() ?? 0;
+            final weekBookings =
+                (ghlData?['bookedAppointments'] as num?)?.toInt() ?? 0;
+            final weekDeposits = (ghlData?['deposits'] as num?)?.toInt() ?? 0;
+            final weekCashCollected =
+                (ghlData?['cashCollected'] as num?)?.toInt() ?? 0;
+
+            // Aggregate cashAmount from ads that belong to this ad set
+            double weekCashAmount = 0.0;
+            for (var adEntry in adsMap.entries) {
+              final adData = adEntry.value as Map<String, dynamic>?;
+              final adAdSetId = adData?['adSetId'] as String?;
+              if (adAdSetId == adSetId) {
+                final adGhlData = adData?['ghlData'] as Map<String, dynamic>?;
+                final adCashAmount =
+                    (adGhlData?['cashAmount'] as num?)?.toDouble() ?? 0.0;
+                weekCashAmount += adCashAmount;
+              }
+            }
+
+            // Aggregate to totals - counts from ad set ghlData, cashAmount from ads
+            totalLeads += weekLeads;
+            totalBookings += weekBookings;
+            totalDeposits += weekDeposits;
+            totalCashCollected += weekCashCollected;
+            totalCashAmount += weekCashAmount;
+
+            if (kDebugMode) {
+              print(
+                '   │    💰 Ad set GHL metrics for week: leads=$weekLeads, '
+                'bookings=$weekBookings, deposits=$weekDeposits (from ad set ghlData), '
+                'cash=\$${weekCashAmount.toStringAsFixed(2)} (aggregated from ads)',
+              );
+            }
+          }
         }
 
         weeksUsed++;
@@ -452,7 +546,17 @@ class SummaryService {
 
       // Get the weeks map
       final weeksMap = data['weeks'] as Map<String, dynamic>?;
-      if (weeksMap == null || weeksMap.isEmpty) return null;
+      if (weeksMap == null || weeksMap.isEmpty) {
+        if (kDebugMode) {
+          print('   ⚠️ No weeks map in summary document');
+        }
+        return null;
+      }
+
+      if (kDebugMode) {
+        print('   📋 Found ${weeksMap.length} weeks in summary document');
+        print('   🔍 Looking for ad ID: $adId');
+      }
 
       double totalSpend = 0;
       int totalImpressions = 0;
@@ -464,29 +568,73 @@ class SummaryService {
       int totalCashCollected = 0;
       double totalCashAmount = 0;
       int weeksUsed = 0;
+      int weeksChecked = 0;
+      int weeksWithOverlap = 0;
+      int weeksWithAdsMap = 0;
+      int weeksWithAdFound = 0;
 
       // Iterate through each week in the map
       for (var weekEntry in weeksMap.entries) {
         final weekId = weekEntry.key;
         final weekData = weekEntry.value as Map<String, dynamic>?;
+        weeksChecked++;
 
-        if (weekData == null) continue;
-
-        // Check if this week overlaps with the date range
-        if (!_weekIdOverlapsWithDateRange(weekId, startDate, endDate)) {
+        if (weekData == null) {
+          if (kDebugMode) {
+            print('   ⚠️ Week $weekId has null weekData');
+          }
           continue;
         }
 
+        // Check if this week overlaps with the date range
+        final overlaps = _weekIdOverlapsWithDateRange(
+          weekId,
+          startDate,
+          endDate,
+        );
+        if (!overlaps) {
+          if (kDebugMode) {
+            print('   ⏭️ Week $weekId does NOT overlap with date range');
+          }
+          continue;
+        }
+        weeksWithOverlap++;
+
         // Access the ads map within this week
         final adsMap = weekData['ads'] as Map<String, dynamic>?;
-        if (adsMap == null) continue;
+        if (adsMap == null) {
+          if (kDebugMode) {
+            print('   ⚠️ Week $weekId has no ads map');
+          }
+          continue;
+        }
+        weeksWithAdsMap++;
+
+        if (kDebugMode) {
+          final adIdsInWeek = adsMap.keys.toList();
+          print('   📅 Week $weekId overlaps with date range');
+          print(
+            '   │    Found ${adIdsInWeek.length} ads in this week\'s ads map',
+          );
+          print(
+            '   │    Ad IDs in week: ${adIdsInWeek.take(5).join(", ")}${adIdsInWeek.length > 5 ? "..." : ""}',
+          );
+          print('   │    Looking for: $adId');
+        }
 
         // Get data for this specific ad
         final adData = adsMap[adId] as Map<String, dynamic>?;
-        if (adData == null) continue;
+        if (adData == null) {
+          if (kDebugMode) {
+            print('   │    ❌ Ad $adId NOT FOUND in this week\'s ads map');
+          }
+          continue;
+        }
+        weeksWithAdFound++;
+        weeksUsed++;
 
         if (kDebugMode) {
-          print('   📅 Processing week: $weekId for ad $adId');
+          print('   │    ✅ Ad $adId FOUND in this week\'s ads map');
         }
 
         // Extract Facebook Insights
@@ -502,33 +650,67 @@ class SummaryService {
           totalImpressions += weekImpressions;
           totalClicks += weekClicks;
           totalReach += weekReach;
+
+          if (kDebugMode) {
+            print(
+              '   │    💰 Week data: spend=\$${weekSpend.toStringAsFixed(2)}, impressions=$weekImpressions, clicks=$weekClicks',
+            );
+            print(
+              '   │    📊 Running totals: spend=\$${totalSpend.toStringAsFixed(2)}, impressions=$totalImpressions',
+            );
+          }
+        } else {
+          if (kDebugMode) {
+            print('   │    ⚠️ No facebookInsights in adData for this week');
+          }
         }
 
-        // Extract GHL Data
+        // Get all GHL metrics from adData ghlData
         final ghlData = adData['ghlData'] as Map<String, dynamic>?;
-        if (ghlData != null) {
-          final weekLeads = (ghlData['leads'] as num?)?.toInt() ?? 0;
-          final weekBookings =
-              (ghlData['bookedAppointments'] as num?)?.toInt() ?? 0;
-          final weekDeposits = (ghlData['deposits'] as num?)?.toInt() ?? 0;
-          final weekCashCollected =
-              (ghlData['cashCollected'] as num?)?.toInt() ?? 0;
-          final weekCashAmount =
-              (ghlData['cashAmount'] as num?)?.toDouble() ?? 0;
+        final weekLeads = (ghlData?['leads'] as num?)?.toInt() ?? 0;
+        final weekBookings =
+            (ghlData?['bookedAppointments'] as num?)?.toInt() ?? 0;
+        final weekDeposits = (ghlData?['deposits'] as num?)?.toInt() ?? 0;
+        final weekCashCollected =
+            (ghlData?['cashCollected'] as num?)?.toInt() ?? 0;
+        final weekCashAmount =
+            (ghlData?['cashAmount'] as num?)?.toDouble() ?? 0.0;
 
-          totalLeads += weekLeads;
-          totalBookings += weekBookings;
-          totalDeposits += weekDeposits;
-          totalCashCollected += weekCashCollected;
-          totalCashAmount += weekCashAmount;
+        // Aggregate to totals - all metrics from ghlData
+        totalLeads += weekLeads;
+        totalBookings += weekBookings;
+        totalDeposits += weekDeposits;
+        totalCashCollected += weekCashCollected;
+        totalCashAmount += weekCashAmount;
+
+        if (kDebugMode) {
+          print(
+            '   │    💰 Ad GHL metrics for week: leads=$weekLeads, '
+            'bookings=$weekBookings, deposits=$weekDeposits, '
+            'cash=\$${weekCashAmount.toStringAsFixed(2)} (all from ghlData)',
+          );
         }
 
         weeksUsed++;
       }
 
+      if (kDebugMode) {
+        print('   ───────────────────────────────────────────────────────────');
+        print('   📊 AD SUMMARY SEARCH RESULTS:');
+        print('   │ Weeks checked: $weeksChecked');
+        print('   │ Weeks with overlap: $weeksWithOverlap');
+        print('   │ Weeks with ads map: $weeksWithAdsMap');
+        print('   │ Weeks with ad found: $weeksWithAdFound');
+        print('   │ Weeks used (final): $weeksUsed');
+        print('   ───────────────────────────────────────────────────────────');
+      }
+
       if (weeksUsed == 0) {
         if (kDebugMode) {
-          print('   ⚠️ No weeks matched for ad $adId');
+          print('   ❌ RESULT: No weeks matched for ad $adId');
+          print(
+            '   │    Reason: Ad not found in any overlapping week\'s ads map',
+          );
         }
         return null;
       }
@@ -548,10 +730,13 @@ class SummaryService {
       final cpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
 
       if (kDebugMode) {
-        print(
-          '   ✅ Ad totals: spend=\$${totalSpend.toStringAsFixed(2)}, '
-          'leads=$totalLeads, profit=\$${totalProfit.toStringAsFixed(2)}',
-        );
+        print('   ✅ RESULT: Ad totals calculated');
+        print('   │    Spend: \$${totalSpend.toStringAsFixed(2)}');
+        print('   │    Impressions: $totalImpressions');
+        print('   │    Clicks: $totalClicks');
+        print('   │    Leads: $totalLeads');
+        print('   │    Profit: \$${totalProfit.toStringAsFixed(2)}');
+        print('   │    Weeks used: $weeksUsed');
       }
 
       return {
@@ -737,6 +922,7 @@ class SummaryService {
   Future<Map<String, String>> getCampaignsWithActivityInDateRange({
     required DateTime startDate,
     required DateTime endDate,
+    String countryFilter = 'all',
   }) async {
     try {
       if (kDebugMode) {
@@ -752,6 +938,21 @@ class SummaryService {
 
       for (final doc in snapshot.docs) {
         final data = doc.data();
+
+        // Country filtering based on usaAds flag
+        final usaAds = data['usaAds'] as bool?;
+        bool matchesCountry = true;
+
+        if (countryFilter == 'usa') {
+          matchesCountry = usaAds == true;
+        } else if (countryFilter == 'sa') {
+          // South Africa: either field missing or explicitly false
+          matchesCountry = usaAds != true;
+        }
+
+        if (!matchesCountry) {
+          continue;
+        }
         final weeksMap = data['weeks'] as Map<String, dynamic>?;
 
         if (weeksMap == null || weeksMap.isEmpty) continue;
@@ -782,6 +983,792 @@ class SummaryService {
         print('❌ Error fetching campaigns: $e');
       }
       return {};
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getCampaignsWithCalculatedTotals({
+    required DateTime startDate,
+    required DateTime endDate,
+    String countryFilter = 'all',
+  }) async {
+    try {
+      if (kDebugMode) {
+        print(
+          '🚀 OPTIMIZED: Fetching campaigns with calculated totals (single pass)',
+        );
+        print(
+          '   Date range: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}',
+        );
+        print('   Country filter: $countryFilter');
+      }
+
+      // Fetch ALL summary documents ONCE
+      final snapshot = await _firestore.collection('summary').get();
+
+      if (kDebugMode) {
+        print('   📦 Fetched ${snapshot.docs.length} summary documents');
+      }
+
+      List<Map<String, dynamic>> campaigns = [];
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+
+        // 1. Country filter check
+        final usaAds = data['usaAds'] as bool?;
+        if (countryFilter == 'usa' && usaAds != true) continue;
+        if (countryFilter == 'sa' && usaAds == true) continue;
+
+        final weeksMap = data['weeks'] as Map<String, dynamic>?;
+        if (weeksMap == null || weeksMap.isEmpty) continue;
+
+        // 2. Calculate totals inline (same logic as calculateCampaignTotalsFromSummary)
+        double totalSpend = 0;
+        int totalImpressions = 0;
+        int totalClicks = 0;
+        int totalReach = 0;
+        int totalLeads = 0;
+        int totalBookings = 0;
+        int totalDeposits = 0;
+        int totalCashCollected = 0;
+        double totalCashAmount = 0;
+        int weeksUsed = 0;
+
+        // 3. Extract date ranges and ad set count
+        List<DateTime> weekStartDates = [];
+        List<DateTime> weekEndDates = [];
+        Set<String> adSetIds = {};
+        Set<String> adIds = {};
+
+        for (var weekEntry in weeksMap.entries) {
+          final weekId = weekEntry.key;
+
+          // Check if week overlaps with date range
+          if (!_weekIdOverlapsWithDateRange(weekId, startDate, endDate)) {
+            continue;
+          }
+
+          final weekData = weekEntry.value as Map<String, dynamic>?;
+          if (weekData == null) continue;
+
+          // Parse week dates for firstAdDate/lastAdDate
+          try {
+            final parts = weekId.split('_');
+            if (parts.length == 2) {
+              final startParts = parts[0].split('-');
+              final endParts = parts[1].split('-');
+
+              if (startParts.length == 3 && endParts.length == 3) {
+                final weekStart = DateTime(
+                  int.parse(startParts[0]),
+                  int.parse(startParts[1]),
+                  int.parse(startParts[2]),
+                );
+                final weekEnd = DateTime(
+                  int.parse(endParts[0]),
+                  int.parse(endParts[1]),
+                  int.parse(endParts[2]),
+                );
+                weekStartDates.add(weekStart);
+                weekEndDates.add(weekEnd);
+              }
+            }
+          } catch (e) {
+            // Skip invalid week IDs
+          }
+
+          // Collect ad set IDs
+          final adSetsMap = weekData['adSets'] as Map<String, dynamic>?;
+          if (adSetsMap != null) {
+            adSetIds.addAll(adSetsMap.keys);
+          }
+
+          // Collect unique ad IDs from all ads in this week
+          final adsMap = weekData['ads'] as Map<String, dynamic>?;
+          if (adsMap != null) {
+            adIds.addAll(adsMap.keys);
+          }
+
+          // Aggregate Facebook metrics from campaign data
+          final campaignData = weekData['campaign'] as Map<String, dynamic>?;
+          if (campaignData != null) {
+            final fbInsights =
+                campaignData['facebookInsights'] as Map<String, dynamic>?;
+            if (fbInsights != null) {
+              totalSpend += (fbInsights['spend'] as num?)?.toDouble() ?? 0.0;
+              totalImpressions +=
+                  (fbInsights['impressions'] as num?)?.toInt() ?? 0;
+              totalClicks += (fbInsights['clicks'] as num?)?.toInt() ?? 0;
+              totalReach += (fbInsights['reach'] as num?)?.toInt() ?? 0;
+            }
+
+            // Aggregate GHL metrics from campaign ghlData
+            final ghlData = campaignData['ghlData'] as Map<String, dynamic>?;
+            if (ghlData != null) {
+              totalLeads += (ghlData['leads'] as num?)?.toInt() ?? 0;
+              totalBookings +=
+                  (ghlData['bookedAppointments'] as num?)?.toInt() ?? 0;
+              totalDeposits += (ghlData['deposits'] as num?)?.toInt() ?? 0;
+              totalCashCollected +=
+                  (ghlData['cashCollected'] as num?)?.toInt() ?? 0;
+              totalCashAmount +=
+                  (ghlData['cashAmount'] as num?)?.toDouble() ?? 0.0;
+            }
+          }
+
+          weeksUsed++;
+        }
+
+        // Only add campaign if it has activity in the date range
+        if (weeksUsed == 0) continue;
+
+        // Calculate derived metrics
+        final totalProfit = totalCashAmount - totalSpend;
+        final cpl = totalLeads > 0 ? totalSpend / totalLeads : 0.0;
+        final cpb = totalBookings > 0 ? totalSpend / totalBookings : 0.0;
+        final cpa = totalDeposits > 0 ? totalSpend / totalDeposits : 0.0;
+        final roi = totalSpend > 0 ? (totalProfit / totalSpend) * 100 : 0.0;
+        final ctr = totalImpressions > 0
+            ? (totalClicks / totalImpressions) * 100
+            : 0.0;
+        final cpm = totalImpressions > 0
+            ? (totalSpend / totalImpressions) * 1000
+            : 0.0;
+        final cpc = totalClicks > 0 ? totalSpend / totalClicks : 0.0;
+
+        // Calculate first and last ad dates
+        String? firstAdDate;
+        String? lastAdDate;
+        if (weekStartDates.isNotEmpty) {
+          weekStartDates.sort();
+          weekEndDates.sort();
+          final earliest = weekStartDates.first;
+          final latest = weekEndDates.last;
+
+          firstAdDate =
+              '${earliest.year}-${earliest.month.toString().padLeft(2, '0')}-${earliest.day.toString().padLeft(2, '0')}';
+          lastAdDate =
+              '${latest.year}-${latest.month.toString().padLeft(2, '0')}-${latest.day.toString().padLeft(2, '0')}';
+        }
+
+        campaigns.add({
+          'campaignId': doc.id,
+          'campaignName': data['campaignName'] as String? ?? 'Unknown Campaign',
+          'totals': {
+            'totalSpend': totalSpend,
+            'totalImpressions': totalImpressions,
+            'totalClicks': totalClicks,
+            'totalReach': totalReach,
+            'totalLeads': totalLeads,
+            'totalBookings': totalBookings,
+            'totalDeposits': totalDeposits,
+            'totalCashCollected': totalCashCollected,
+            'totalCashAmount': totalCashAmount,
+            'totalProfit': totalProfit,
+            'cpl': cpl,
+            'cpb': cpb,
+            'cpa': cpa,
+            'roi': roi,
+            'ctr': ctr,
+            'cpm': cpm,
+            'cpc': cpc,
+            'adsInRange': weeksUsed,
+          },
+          'firstAdDate': firstAdDate,
+          'lastAdDate': lastAdDate,
+          'adSetCount': adSetIds.length,
+          'adCount': adIds.length,
+        });
+      }
+
+      if (kDebugMode) {
+        print(
+          '   ✅ Found ${campaigns.length} campaigns with calculated totals',
+        );
+      }
+
+      return campaigns;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error in getCampaignsWithCalculatedTotals: $e');
+      }
+      return [];
+    }
+  }
+
+  /// OPTIMIZED: Get ad sets with all calculated totals in ONE pass
+  /// Fetches campaign summary document ONCE and calculates all ad set totals inline
+  /// Reduces Firestore reads from 1+N to 1 (where N = number of ad sets)
+  Future<List<Map<String, dynamic>>> getAdSetsWithCalculatedTotals({
+    required String campaignId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print(
+          '🚀 OPTIMIZED: Fetching ad sets with calculated totals (single pass)',
+        );
+        print('   Campaign: $campaignId');
+        print(
+          '   Date range: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}',
+        );
+      }
+
+      // Fetch campaign summary document ONCE
+      final summaryDoc = await _firestore
+          .collection('summary')
+          .doc(campaignId)
+          .get();
+
+      if (!summaryDoc.exists) {
+        if (kDebugMode) {
+          print('   ⚠️ No summary document found for campaign $campaignId');
+        }
+        return [];
+      }
+
+      final data = summaryDoc.data();
+      if (data == null) return [];
+
+      final campaignName =
+          data['campaignName'] as String? ?? 'Unknown Campaign';
+      final weeksMap = data['weeks'] as Map<String, dynamic>?;
+      if (weeksMap == null || weeksMap.isEmpty) return [];
+
+      // Map to store ad set data: adSetId -> {totals, metadata, dates, adIds}
+      final Map<String, Map<String, dynamic>> adSetsMap = {};
+
+      // Iterate through all weeks
+      for (var weekEntry in weeksMap.entries) {
+        final weekId = weekEntry.key;
+        final weekData = weekEntry.value as Map<String, dynamic>?;
+
+        if (weekData == null) continue;
+
+        // Check if week overlaps with date range
+        if (!_weekIdOverlapsWithDateRange(weekId, startDate, endDate)) {
+          continue;
+        }
+
+        // Parse week dates for firstAdDate/lastAdDate
+        DateTime? weekStartDate;
+        DateTime? weekEndDate;
+        try {
+          final parts = weekId.split('_');
+          if (parts.length == 2) {
+            final startParts = parts[0].split('-');
+            final endParts = parts[1].split('-');
+            if (startParts.length == 3 && endParts.length == 3) {
+              weekStartDate = DateTime(
+                int.parse(startParts[0]),
+                int.parse(startParts[1]),
+                int.parse(startParts[2]),
+              );
+              weekEndDate = DateTime(
+                int.parse(endParts[0]),
+                int.parse(endParts[1]),
+                int.parse(endParts[2]),
+              );
+            }
+          }
+        } catch (e) {
+          // Skip invalid week IDs
+        }
+
+        // Get ad sets map for this week
+        final weekAdSetsMap = weekData['adSets'] as Map<String, dynamic>?;
+        if (weekAdSetsMap == null) continue;
+
+        // Get ads map for aggregating cashAmount
+        final adsMap = weekData['ads'] as Map<String, dynamic>?;
+
+        // Process each ad set in this week
+        for (var adSetEntry in weekAdSetsMap.entries) {
+          final adSetId = adSetEntry.key;
+          final adSetData = adSetEntry.value as Map<String, dynamic>?;
+          if (adSetData == null) continue;
+
+          // Initialize ad set if not seen before
+          if (!adSetsMap.containsKey(adSetId)) {
+            final adSetName =
+                adSetData['adSetName'] as String? ?? 'Unknown Ad Set';
+            adSetsMap[adSetId] = {
+              'adSetId': adSetId,
+              'adSetName': adSetName,
+              'campaignId': campaignId,
+              'campaignName': campaignName,
+              'totalSpend': 0.0,
+              'totalImpressions': 0,
+              'totalClicks': 0,
+              'totalReach': 0,
+              'totalLeads': 0,
+              'totalBookings': 0,
+              'totalDeposits': 0,
+              'totalCashCollected': 0,
+              'totalCashAmount': 0.0,
+              'weekStartDates': <DateTime>[],
+              'weekEndDates': <DateTime>[],
+              'adIds': <String>{},
+            };
+          }
+
+          final adSetTotals = adSetsMap[adSetId]!;
+
+          // Collect ad IDs for this ad set from ALL ads (not just when aggregating cash)
+          if (adsMap != null) {
+            for (var adEntry in adsMap.entries) {
+              final adData = adEntry.value as Map<String, dynamic>?;
+              final adAdSetId = adData?['adSetId'] as String?;
+              if (adAdSetId == adSetId) {
+                final adId = adEntry.key;
+                (adSetTotals['adIds'] as Set<String>).add(adId);
+              }
+            }
+          }
+
+          // Aggregate Facebook metrics
+          final fbInsights =
+              adSetData['facebookInsights'] as Map<String, dynamic>?;
+          if (fbInsights != null) {
+            adSetTotals['totalSpend'] =
+                (adSetTotals['totalSpend'] as double) +
+                ((fbInsights['spend'] as num?)?.toDouble() ?? 0.0);
+            adSetTotals['totalImpressions'] =
+                (adSetTotals['totalImpressions'] as int) +
+                ((fbInsights['impressions'] as num?)?.toInt() ?? 0);
+            adSetTotals['totalClicks'] =
+                (adSetTotals['totalClicks'] as int) +
+                ((fbInsights['clicks'] as num?)?.toInt() ?? 0);
+            adSetTotals['totalReach'] =
+                (adSetTotals['totalReach'] as int) +
+                ((fbInsights['reach'] as num?)?.toInt() ?? 0);
+          }
+
+          // Aggregate GHL metrics (counts from ad set, cashAmount from ads)
+          if (weekStartDate != null && weekEndDate != null) {
+            final ghlData = adSetData['ghlData'] as Map<String, dynamic>?;
+            if (ghlData != null) {
+              adSetTotals['totalLeads'] =
+                  (adSetTotals['totalLeads'] as int) +
+                  ((ghlData['leads'] as num?)?.toInt() ?? 0);
+              adSetTotals['totalBookings'] =
+                  (adSetTotals['totalBookings'] as int) +
+                  ((ghlData['bookedAppointments'] as num?)?.toInt() ?? 0);
+              adSetTotals['totalDeposits'] =
+                  (adSetTotals['totalDeposits'] as int) +
+                  ((ghlData['deposits'] as num?)?.toInt() ?? 0);
+              adSetTotals['totalCashCollected'] =
+                  (adSetTotals['totalCashCollected'] as int) +
+                  ((ghlData['cashCollected'] as num?)?.toInt() ?? 0);
+            }
+
+            // Aggregate cashAmount from ads that belong to this ad set
+            if (adsMap != null) {
+              double weekCashAmount = 0.0;
+              for (var adEntry in adsMap.entries) {
+                final adData = adEntry.value as Map<String, dynamic>?;
+                final adAdSetId = adData?['adSetId'] as String?;
+                if (adAdSetId == adSetId) {
+                  final adGhlData = adData?['ghlData'] as Map<String, dynamic>?;
+                  final adCashAmount =
+                      (adGhlData?['cashAmount'] as num?)?.toDouble() ?? 0.0;
+                  weekCashAmount += adCashAmount;
+                }
+              }
+              adSetTotals['totalCashAmount'] =
+                  (adSetTotals['totalCashAmount'] as double) + weekCashAmount;
+            }
+          }
+
+          // Collect dates
+          if (weekStartDate != null) {
+            (adSetTotals['weekStartDates'] as List<DateTime>).add(
+              weekStartDate,
+            );
+          }
+          if (weekEndDate != null) {
+            (adSetTotals['weekEndDates'] as List<DateTime>).add(weekEndDate);
+          }
+        }
+      }
+
+      // Convert map to list and calculate derived metrics
+      List<Map<String, dynamic>> adSets = [];
+
+      for (var adSetEntry in adSetsMap.entries) {
+        final adSetData = adSetEntry.value;
+
+        // Skip ad sets with no activity
+        if ((adSetData['weekStartDates'] as List).isEmpty) continue;
+
+        final totalSpend = adSetData['totalSpend'] as double;
+        final totalImpressions = adSetData['totalImpressions'] as int;
+        final totalClicks = adSetData['totalClicks'] as int;
+        final totalReach = adSetData['totalReach'] as int;
+        final totalLeads = adSetData['totalLeads'] as int;
+        final totalBookings = adSetData['totalBookings'] as int;
+        final totalDeposits = adSetData['totalDeposits'] as int;
+        final totalCashCollected = adSetData['totalCashCollected'] as int;
+        final totalCashAmount = adSetData['totalCashAmount'] as double;
+        final adIds = adSetData['adIds'] as Set<String>;
+
+        // Calculate derived metrics
+        final totalProfit = totalCashAmount - totalSpend;
+        final cpl = totalLeads > 0 ? totalSpend / totalLeads : 0.0;
+        final cpb = totalBookings > 0 ? totalSpend / totalBookings : 0.0;
+        final cpa = totalDeposits > 0 ? totalSpend / totalDeposits : 0.0;
+        final roi = totalSpend > 0 ? (totalProfit / totalSpend) * 100 : 0.0;
+        final ctr = totalImpressions > 0
+            ? (totalClicks / totalImpressions) * 100
+            : 0.0;
+        final cpm = totalImpressions > 0
+            ? (totalSpend / totalImpressions) * 1000
+            : 0.0;
+        final cpc = totalClicks > 0 ? totalSpend / totalClicks : 0.0;
+
+        // Calculate first and last ad dates
+        final weekStartDates = adSetData['weekStartDates'] as List<DateTime>;
+        final weekEndDates = adSetData['weekEndDates'] as List<DateTime>;
+
+        String? firstAdDate;
+        String? lastAdDate;
+        if (weekStartDates.isNotEmpty) {
+          weekStartDates.sort();
+          weekEndDates.sort();
+          final earliest = weekStartDates.first;
+          final latest = weekEndDates.last;
+
+          firstAdDate =
+              '${earliest.year}-${earliest.month.toString().padLeft(2, '0')}-${earliest.day.toString().padLeft(2, '0')}';
+          lastAdDate =
+              '${latest.year}-${latest.month.toString().padLeft(2, '0')}-${latest.day.toString().padLeft(2, '0')}';
+        }
+
+        adSets.add({
+          'adSetId': adSetData['adSetId'],
+          'adSetName': adSetData['adSetName'],
+          'campaignId': campaignId,
+          'campaignName': campaignName,
+          'totals': {
+            'totalSpend': totalSpend,
+            'totalImpressions': totalImpressions,
+            'totalClicks': totalClicks,
+            'totalReach': totalReach,
+            'totalLeads': totalLeads,
+            'totalBookings': totalBookings,
+            'totalDeposits': totalDeposits,
+            'totalCashCollected': totalCashCollected,
+            'totalCashAmount': totalCashAmount,
+            'totalProfit': totalProfit,
+            'cpl': cpl,
+            'cpb': cpb,
+            'cpa': cpa,
+            'roi': roi,
+            'ctr': ctr,
+            'cpm': cpm,
+            'cpc': cpc,
+            'adsInRange': weekStartDates.length,
+          },
+          'firstAdDate': firstAdDate,
+          'lastAdDate': lastAdDate,
+          'adCount': adIds.length,
+        });
+      }
+
+      if (kDebugMode) {
+        print('   ✅ Found ${adSets.length} ad sets with calculated totals');
+      }
+
+      return adSets;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error in getAdSetsWithCalculatedTotals: $e');
+      }
+      return [];
+    }
+  }
+
+  /// OPTIMIZED: Get ads with all calculated totals in ONE pass
+  /// Fetches campaign summary document ONCE and calculates all ad totals inline
+  /// Reduces Firestore reads from 2+M to 1 (where M = number of ads)
+  Future<List<Map<String, dynamic>>> getAdsWithCalculatedTotals({
+    required String campaignId,
+    required String adSetId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      if (kDebugMode) {
+        print(
+          '🚀 OPTIMIZED: Fetching ads with calculated totals (single pass)',
+        );
+        print('   Campaign: $campaignId');
+        print('   Ad Set: $adSetId');
+        print(
+          '   Date range: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}',
+        );
+      }
+
+      // Fetch campaign summary document ONCE
+      final summaryDoc = await _firestore
+          .collection('summary')
+          .doc(campaignId)
+          .get();
+
+      if (!summaryDoc.exists) {
+        if (kDebugMode) {
+          print('   ⚠️ No summary document found for campaign $campaignId');
+        }
+        return [];
+      }
+
+      final data = summaryDoc.data();
+      if (data == null) return [];
+
+      final campaignName =
+          data['campaignName'] as String? ?? 'Unknown Campaign';
+      final weeksMap = data['weeks'] as Map<String, dynamic>?;
+      if (weeksMap == null || weeksMap.isEmpty) return [];
+
+      // Get ad set name from first week that has this ad set
+      String? adSetName;
+      for (var weekEntry in weeksMap.entries) {
+        final weekData = weekEntry.value as Map<String, dynamic>?;
+        final adSetsMap = weekData?['adSets'] as Map<String, dynamic>?;
+        final adSetData = adSetsMap?[adSetId] as Map<String, dynamic>?;
+        if (adSetData != null) {
+          adSetName = adSetData['adSetName'] as String? ?? 'Unknown Ad Set';
+          break;
+        }
+      }
+      adSetName ??= 'Unknown Ad Set';
+
+      // Map to store ad data: adId -> {totals, metadata, dates}
+      final Map<String, Map<String, dynamic>> adsMap = {};
+
+      // Iterate through all weeks
+      for (var weekEntry in weeksMap.entries) {
+        final weekId = weekEntry.key;
+        final weekData = weekEntry.value as Map<String, dynamic>?;
+
+        if (weekData == null) continue;
+
+        // Check if week overlaps with date range
+        if (!_weekIdOverlapsWithDateRange(weekId, startDate, endDate)) {
+          continue;
+        }
+
+        // Parse week dates for firstInsightDate/lastInsightDate
+        DateTime? weekStartDate;
+        DateTime? weekEndDate;
+        try {
+          final parts = weekId.split('_');
+          if (parts.length == 2) {
+            final startParts = parts[0].split('-');
+            final endParts = parts[1].split('-');
+            if (startParts.length == 3 && endParts.length == 3) {
+              weekStartDate = DateTime(
+                int.parse(startParts[0]),
+                int.parse(startParts[1]),
+                int.parse(startParts[2]),
+              );
+              weekEndDate = DateTime(
+                int.parse(endParts[0]),
+                int.parse(endParts[1]),
+                int.parse(endParts[2]),
+                23,
+                59,
+                59,
+                999,
+              );
+            }
+          }
+        } catch (e) {
+          // Skip invalid week IDs
+        }
+
+        // Get ads map for this week
+        final weekAdsMap = weekData['ads'] as Map<String, dynamic>?;
+        if (weekAdsMap == null) continue;
+
+        // Process each ad in this week
+        for (var adEntry in weekAdsMap.entries) {
+          final adId = adEntry.key;
+          final adData = adEntry.value as Map<String, dynamic>?;
+          if (adData == null) continue;
+
+          // Check if ad belongs to this ad set
+          final adAdSetId = adData['adSetId'] as String?;
+          if (adAdSetId != adSetId) continue;
+
+          // Initialize ad if not seen before
+          if (!adsMap.containsKey(adId)) {
+            final adName = adData['adName'] as String? ?? 'Unknown Ad';
+            adsMap[adId] = {
+              'adId': adId,
+              'adName': adName,
+              'adSetId': adSetId,
+              'adSetName': adSetName,
+              'campaignId': campaignId,
+              'campaignName': campaignName,
+              'totalSpend': 0.0,
+              'totalImpressions': 0,
+              'totalClicks': 0,
+              'totalReach': 0,
+              'totalLeads': 0,
+              'totalBookings': 0,
+              'totalDeposits': 0,
+              'totalCashCollected': 0,
+              'totalCashAmount': 0.0,
+              'weekStartDates': <DateTime>[],
+              'weekEndDates': <DateTime>[],
+            };
+          }
+
+          final adTotals = adsMap[adId]!;
+
+          // Aggregate Facebook metrics
+          final fbInsights =
+              adData['facebookInsights'] as Map<String, dynamic>?;
+          if (fbInsights != null) {
+            adTotals['totalSpend'] =
+                (adTotals['totalSpend'] as double) +
+                ((fbInsights['spend'] as num?)?.toDouble() ?? 0.0);
+            adTotals['totalImpressions'] =
+                (adTotals['totalImpressions'] as int) +
+                ((fbInsights['impressions'] as num?)?.toInt() ?? 0);
+            adTotals['totalClicks'] =
+                (adTotals['totalClicks'] as int) +
+                ((fbInsights['clicks'] as num?)?.toInt() ?? 0);
+            adTotals['totalReach'] =
+                (adTotals['totalReach'] as int) +
+                ((fbInsights['reach'] as num?)?.toInt() ?? 0);
+          }
+
+          // Aggregate GHL metrics from ad ghlData
+          final ghlData = adData['ghlData'] as Map<String, dynamic>?;
+          if (ghlData != null) {
+            adTotals['totalLeads'] =
+                (adTotals['totalLeads'] as int) +
+                ((ghlData['leads'] as num?)?.toInt() ?? 0);
+            adTotals['totalBookings'] =
+                (adTotals['totalBookings'] as int) +
+                ((ghlData['bookedAppointments'] as num?)?.toInt() ?? 0);
+            adTotals['totalDeposits'] =
+                (adTotals['totalDeposits'] as int) +
+                ((ghlData['deposits'] as num?)?.toInt() ?? 0);
+            adTotals['totalCashCollected'] =
+                (adTotals['totalCashCollected'] as int) +
+                ((ghlData['cashCollected'] as num?)?.toInt() ?? 0);
+            adTotals['totalCashAmount'] =
+                (adTotals['totalCashAmount'] as double) +
+                ((ghlData['cashAmount'] as num?)?.toDouble() ?? 0.0);
+          }
+
+          // Collect dates
+          if (weekStartDate != null) {
+            (adTotals['weekStartDates'] as List<DateTime>).add(weekStartDate);
+          }
+          if (weekEndDate != null) {
+            (adTotals['weekEndDates'] as List<DateTime>).add(weekEndDate);
+          }
+        }
+      }
+
+      // Convert map to list and calculate derived metrics
+      List<Map<String, dynamic>> ads = [];
+
+      for (var adEntry in adsMap.entries) {
+        final adData = adEntry.value;
+
+        // Skip ads with no activity
+        if ((adData['weekStartDates'] as List).isEmpty) continue;
+
+        final totalSpend = adData['totalSpend'] as double;
+        final totalImpressions = adData['totalImpressions'] as int;
+        final totalClicks = adData['totalClicks'] as int;
+        final totalReach = adData['totalReach'] as int;
+        final totalLeads = adData['totalLeads'] as int;
+        final totalBookings = adData['totalBookings'] as int;
+        final totalDeposits = adData['totalDeposits'] as int;
+        final totalCashCollected = adData['totalCashCollected'] as int;
+        final totalCashAmount = adData['totalCashAmount'] as double;
+
+        // Calculate derived metrics
+        final totalProfit = totalCashAmount - totalSpend;
+        final cpl = totalLeads > 0 ? totalSpend / totalLeads : 0.0;
+        final cpb = totalBookings > 0 ? totalSpend / totalBookings : 0.0;
+        final cpa = totalDeposits > 0 ? totalSpend / totalDeposits : 0.0;
+        final roi = totalSpend > 0 ? (totalProfit / totalSpend) * 100 : 0.0;
+        final ctr = totalImpressions > 0
+            ? (totalClicks / totalImpressions) * 100
+            : 0.0;
+        final cpm = totalImpressions > 0
+            ? (totalSpend / totalImpressions) * 1000
+            : 0.0;
+        final cpc = totalClicks > 0 ? totalSpend / totalClicks : 0.0;
+
+        // Calculate first and last insight dates
+        final weekStartDates = adData['weekStartDates'] as List<DateTime>;
+        final weekEndDates = adData['weekEndDates'] as List<DateTime>;
+
+        String? firstInsightDate;
+        String? lastInsightDate;
+        if (weekStartDates.isNotEmpty) {
+          weekStartDates.sort();
+          weekEndDates.sort();
+          final earliest = weekStartDates.first;
+          final latest = weekEndDates.last;
+
+          firstInsightDate =
+              '${earliest.year}-${earliest.month.toString().padLeft(2, '0')}-${earliest.day.toString().padLeft(2, '0')}';
+          lastInsightDate =
+              '${latest.year}-${latest.month.toString().padLeft(2, '0')}-${latest.day.toString().padLeft(2, '0')}';
+        }
+
+        ads.add({
+          'adId': adData['adId'],
+          'adName': adData['adName'],
+          'adSetId': adSetId,
+          'adSetName': adSetName,
+          'campaignId': campaignId,
+          'campaignName': campaignName,
+          'totals': {
+            'totalSpend': totalSpend,
+            'totalImpressions': totalImpressions,
+            'totalClicks': totalClicks,
+            'totalReach': totalReach,
+            'totalLeads': totalLeads,
+            'totalBookings': totalBookings,
+            'totalDeposits': totalDeposits,
+            'totalCashCollected': totalCashCollected,
+            'totalCashAmount': totalCashAmount,
+            'totalProfit': totalProfit,
+            'cpl': cpl,
+            'cpb': cpb,
+            'cpa': cpa,
+            'roi': roi,
+            'ctr': ctr,
+            'cpm': cpm,
+            'cpc': cpc,
+            'adsInRange': weekStartDates.length,
+          },
+          'firstInsightDate': firstInsightDate,
+          'lastInsightDate': lastInsightDate,
+        });
+      }
+
+      if (kDebugMode) {
+        print('   ✅ Found ${ads.length} ads with calculated totals');
+      }
+
+      return ads;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error in getAdsWithCalculatedTotals: $e');
+      }
+      return [];
     }
   }
 
@@ -884,31 +1871,99 @@ class SummaryService {
 
       // Collect all unique ad IDs from weeks that overlap with date range
       final adIds = <String>{};
+      int weeksChecked = 0;
+      int weeksWithOverlap = 0;
+      int weeksWithAdsMap = 0;
+      int adsFoundTotal = 0;
 
       for (var weekEntry in weeksMap.entries) {
         final weekId = weekEntry.key;
+        weeksChecked++;
 
         if (!_weekIdOverlapsWithDateRange(weekId, startDate, endDate)) {
+          if (kDebugMode) {
+            print('   ⏭️ Week $weekId does NOT overlap with date range');
+          }
+          continue;
+        }
+        weeksWithOverlap++;
+
+        final weekData = weekEntry.value as Map<String, dynamic>?;
+        if (weekData == null) {
+          if (kDebugMode) {
+            print('   ⚠️ Week $weekId has null weekData');
+          }
           continue;
         }
 
-        final weekData = weekEntry.value as Map<String, dynamic>?;
-        if (weekData == null) continue;
-
         final adsMap = weekData['ads'] as Map<String, dynamic>?;
-        if (adsMap != null) {
-          // Filter ads by ad set ID
-          for (var adEntry in adsMap.entries) {
-            final adData = adEntry.value as Map<String, dynamic>?;
-            if (adData != null && adData['adSetId'] == adSetId) {
-              adIds.add(adEntry.key);
+        if (adsMap == null) {
+          if (kDebugMode) {
+            print('   ⚠️ Week $weekId has no ads map');
+          }
+          continue;
+        }
+        weeksWithAdsMap++;
+
+        if (kDebugMode) {
+          final allAdIds = adsMap.keys.toList();
+          print('   📅 Week $weekId overlaps with date range');
+          print(
+            '   │    Found ${allAdIds.length} total ads in this week\'s ads map',
+          );
+          print('   │    Looking for ads in ad set: $adSetId');
+        }
+
+        // Filter ads by ad set ID
+        int adsFoundInWeek = 0;
+        for (var adEntry in adsMap.entries) {
+          final adId = adEntry.key;
+          final adData = adEntry.value as Map<String, dynamic>?;
+
+          if (adData == null) {
+            if (kDebugMode) {
+              print('   │    ⚠️ Ad $adId has null adData');
+            }
+            continue;
+          }
+
+          final adDataAdSetId = adData['adSetId'];
+          if (adDataAdSetId == adSetId) {
+            adIds.add(adId);
+            adsFoundInWeek++;
+            adsFoundTotal++;
+
+            if (kDebugMode) {
+              print('   │    ✅ Ad $adId belongs to ad set $adSetId');
+            }
+          } else {
+            if (kDebugMode) {
+              print(
+                '   │    ⏭️ Ad $adId belongs to ad set $adDataAdSetId (not $adSetId)',
+              );
             }
           }
+        }
+
+        if (kDebugMode) {
+          print(
+            '   │    Found $adsFoundInWeek ads for ad set $adSetId in this week',
+          );
         }
       }
 
       if (kDebugMode) {
-        print('   ✅ Found ${adIds.length} ads with activity');
+        print('   ───────────────────────────────────────────────────────────');
+        print('   📊 AD ID SEARCH RESULTS:');
+        print('   │ Weeks checked: $weeksChecked');
+        print('   │ Weeks with overlap: $weeksWithOverlap');
+        print('   │ Weeks with ads map: $weeksWithAdsMap');
+        print('   │ Total ads found for ad set: $adsFoundTotal');
+        print('   │ Unique ad IDs: ${adIds.length}');
+        print('   ───────────────────────────────────────────────────────────');
+        print(
+          '   ✅ Found ${adIds.length} unique ads with activity in ad set $adSetId',
+        );
       }
 
       return adIds.toList();

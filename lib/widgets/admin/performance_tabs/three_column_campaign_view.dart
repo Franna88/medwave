@@ -5,16 +5,19 @@ import '../../../models/performance/campaign_aggregate.dart';
 import '../../../models/performance/ad_set_aggregate.dart';
 import '../../../providers/performance_cost_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../utils/currency_formatter.dart';
 
 /// Three-column view: Campaigns → Ad Sets → Ads
 class ThreeColumnCampaignView extends StatefulWidget {
   final List<AdPerformanceWithProduct> ads;
   final PerformanceCostProvider provider;
+  final String countryFilter;
 
   const ThreeColumnCampaignView({
     super.key,
     required this.ads,
     required this.provider,
+    this.countryFilter = 'all',
   });
 
   @override
@@ -442,7 +445,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
                     Expanded(
                       child: _buildHeaderMetric(
                         'Total Spend',
-                        '\$${totalSpend.toStringAsFixed(0)}',
+                        CurrencyFormatter.formatCurrency(
+                          totalSpend,
+                          widget.countryFilter,
+                        ),
                         Colors.blue,
                       ),
                     ),
@@ -450,7 +456,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
                     Expanded(
                       child: _buildHeaderMetric(
                         'Total Profit',
-                        '\$${totalProfit.toStringAsFixed(0)}',
+                        CurrencyFormatter.formatCurrency(
+                          totalProfit,
+                          widget.countryFilter,
+                        ),
                         totalProfit >= 0 ? Colors.green : Colors.red,
                       ),
                     ),
@@ -560,7 +569,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
                       Expanded(
                         child: _buildHeaderMetric(
                           'Total Spend',
-                          '\$${totalSpend.toStringAsFixed(0)}',
+                          CurrencyFormatter.formatCurrency(
+                            totalSpend,
+                            widget.countryFilter,
+                          ),
                           Colors.blue,
                         ),
                       ),
@@ -568,7 +580,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
                       Expanded(
                         child: _buildHeaderMetric(
                           'Total Profit',
-                          '\$${totalProfit.toStringAsFixed(0)}',
+                          CurrencyFormatter.formatCurrency(
+                            totalProfit,
+                            widget.countryFilter,
+                          ),
                           totalProfit >= 0 ? Colors.green : Colors.red,
                         ),
                       ),
@@ -678,7 +693,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
                       Expanded(
                         child: _buildHeaderMetric(
                           'Total Spend',
-                          '\$${totalSpend.toStringAsFixed(0)}',
+                          CurrencyFormatter.formatCurrency(
+                            totalSpend,
+                            widget.countryFilter,
+                          ),
                           Colors.blue,
                         ),
                       ),
@@ -686,7 +704,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
                       Expanded(
                         child: _buildHeaderMetric(
                           'Total Profit',
-                          '\$${totalProfit.toStringAsFixed(0)}',
+                          CurrencyFormatter.formatCurrency(
+                            totalProfit,
+                            widget.countryFilter,
+                          ),
                           totalProfit >= 0 ? Colors.green : Colors.red,
                         ),
                       ),
@@ -818,7 +839,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
               _buildMetricsGrid([
                 _MetricData(
                   'FB Spend',
-                  '\$${campaign.totalFbSpend.toStringAsFixed(0)}',
+                  CurrencyFormatter.formatCurrency(
+                    campaign.totalFbSpend,
+                    widget.countryFilter,
+                  ),
                   Colors.blue,
                 ),
                 _MetricData(
@@ -841,22 +865,36 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
               _buildMetricsGrid([
                 _MetricData(
                   'Cash',
-                  '\$${campaign.totalCashAmount.toStringAsFixed(0)}',
+                  CurrencyFormatter.formatCurrency(
+                    campaign.totalCashAmount,
+                    widget.countryFilter,
+                  ),
                   Colors.green,
                 ),
                 _MetricData(
                   'CPL',
-                  '\$${campaign.cpl.toStringAsFixed(2)}',
+                  CurrencyFormatter.formatCurrency(
+                    campaign.cpl,
+                    widget.countryFilter,
+                    decimals: 2,
+                  ),
                   Colors.indigo,
                 ),
                 _MetricData(
                   'CPB',
-                  '\$${campaign.cpb.toStringAsFixed(2)}',
+                  CurrencyFormatter.formatCurrency(
+                    campaign.cpb,
+                    widget.countryFilter,
+                    decimals: 2,
+                  ),
                   Colors.pink,
                 ),
                 _MetricData(
                   'Profit',
-                  '\$${campaign.totalProfit.toStringAsFixed(0)}',
+                  CurrencyFormatter.formatCurrency(
+                    campaign.totalProfit,
+                    widget.countryFilter,
+                  ),
                   campaign.isProfitable ? Colors.green : Colors.red,
                   bold: true,
                 ),
@@ -925,7 +963,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
               _buildMetricsGrid([
                 _MetricData(
                   'FB Spend',
-                  '\$${adSet.totalFbSpend.toStringAsFixed(0)}',
+                  CurrencyFormatter.formatCurrency(
+                    adSet.totalFbSpend,
+                    widget.countryFilter,
+                  ),
                   Colors.blue,
                 ),
                 _MetricData(
@@ -948,22 +989,36 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
               _buildMetricsGrid([
                 _MetricData(
                   'Cash',
-                  '\$${adSet.totalCashAmount.toStringAsFixed(0)}',
+                  CurrencyFormatter.formatCurrency(
+                    adSet.totalCashAmount,
+                    widget.countryFilter,
+                  ),
                   Colors.green,
                 ),
                 _MetricData(
                   'CPL',
-                  '\$${adSet.cpl.toStringAsFixed(2)}',
+                  CurrencyFormatter.formatCurrency(
+                    adSet.cpl,
+                    widget.countryFilter,
+                    decimals: 2,
+                  ),
                   Colors.indigo,
                 ),
                 _MetricData(
                   'CPB',
-                  '\$${adSet.cpb.toStringAsFixed(2)}',
+                  CurrencyFormatter.formatCurrency(
+                    adSet.cpb,
+                    widget.countryFilter,
+                    decimals: 2,
+                  ),
                   Colors.pink,
                 ),
                 _MetricData(
                   'Profit',
-                  '\$${adSet.totalProfit.toStringAsFixed(0)}',
+                  CurrencyFormatter.formatCurrency(
+                    adSet.totalProfit,
+                    widget.countryFilter,
+                  ),
                   adSet.isProfitable ? Colors.green : Colors.red,
                   bold: true,
                 ),
@@ -1004,7 +1059,10 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
             _buildMetricsGrid([
               _MetricData(
                 'FB Spend',
-                '\$${ad.facebookStats.spend.toStringAsFixed(0)}',
+                CurrencyFormatter.formatCurrency(
+                  ad.facebookStats.spend,
+                  widget.countryFilter,
+                ),
                 Colors.blue,
               ),
               _MetricData(
@@ -1027,18 +1085,36 @@ class _ThreeColumnCampaignViewState extends State<ThreeColumnCampaignView> {
             _buildMetricsGrid([
               _MetricData(
                 'Cash',
-                '\$${(ad.ghlStats?.cashAmount ?? 0).toStringAsFixed(0)}',
+                CurrencyFormatter.formatCurrency(
+                  ad.ghlStats?.cashAmount ?? 0,
+                  widget.countryFilter,
+                ),
                 Colors.green,
               ),
               _MetricData(
                 'CPL',
-                '\$${ad.cpl.toStringAsFixed(2)}',
+                CurrencyFormatter.formatCurrency(
+                  ad.cpl,
+                  widget.countryFilter,
+                  decimals: 2,
+                ),
                 Colors.indigo,
               ),
-              _MetricData('CPB', '\$${ad.cpb.toStringAsFixed(2)}', Colors.pink),
+              _MetricData(
+                'CPB',
+                CurrencyFormatter.formatCurrency(
+                  ad.cpb,
+                  widget.countryFilter,
+                  decimals: 2,
+                ),
+                Colors.pink,
+              ),
               _MetricData(
                 'Profit',
-                '\$${ad.profit.toStringAsFixed(0)}',
+                CurrencyFormatter.formatCurrency(
+                  ad.profit,
+                  widget.countryFilter,
+                ),
                 ad.profit >= 0 ? Colors.green : Colors.red,
                 bold: true,
               ),

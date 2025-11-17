@@ -595,13 +595,21 @@ class ComparisonService {
 
   /// Get all campaigns with comparisons for a time period
   Future<List<CampaignComparison>> getAllCampaignsComparison(
-    TimePeriod timePeriod,
-  ) async {
+    TimePeriod timePeriod, {
+    String countryFilter = 'all',
+    DateTime? selectedMonth,
+  }) async {
     try {
       if (timePeriod == TimePeriod.THIS_MONTH) {
-        return await _getAllCampaignsMonthComparison();
+        return await _getAllCampaignsMonthComparison(
+          countryFilter: countryFilter,
+          selectedMonth: selectedMonth,
+        );
       } else {
-        return await _getAllCampaignsDateRangeComparison(timePeriod);
+        return await _getAllCampaignsDateRangeComparison(
+          timePeriod,
+          countryFilter: countryFilter,
+        );
       }
     } catch (e) {
       print('Error getting all campaigns comparison: $e');
@@ -610,10 +618,14 @@ class ComparisonService {
   }
 
   /// Get campaigns comparison using summary collection (optimized with parallel processing)
-  /// Uses same campaign filtering as campaign screen (getCampaignsByDateRange)
-  Future<List<CampaignComparison>> _getAllCampaignsMonthComparison() async {
+  /// Uses same campaign filtering as campaign screen (getCampaignsWithDateFilteredTotals)
+  Future<List<CampaignComparison>> _getAllCampaignsMonthComparison({
+    String countryFilter = 'all',
+    DateTime? selectedMonth,
+  }) async {
     final dateRanges = TimePeriodCalculator.calculateDateRanges(
       TimePeriod.THIS_MONTH,
+      selectedMonth: selectedMonth,
     );
     final currentStart = dateRanges['currentStart']!;
     final currentEnd = dateRanges['currentEnd']!;
@@ -631,10 +643,11 @@ class ComparisonService {
     }
 
     // Get campaigns that ran in the current month (same filtering as campaign screen)
-    final campaigns = await _campaignService.getCampaignsByDateRange(
+    final campaigns = await _campaignService.getCampaignsWithDateFilteredTotals(
       startDate: currentStart,
       endDate: currentEnd,
       limit: 200, // Fetch enough to account for filtering
+      countryFilter: countryFilter,
     );
 
     if (kDebugMode) {
@@ -725,10 +738,11 @@ class ComparisonService {
   }
 
   /// Get campaigns comparison using summary collection for date ranges (THIS_WEEK) - optimized
-  /// Uses same campaign filtering as campaign screen (getCampaignsByDateRange)
+  /// Uses same campaign filtering as campaign screen (getCampaignsWithDateFilteredTotals)
   Future<List<CampaignComparison>> _getAllCampaignsDateRangeComparison(
-    TimePeriod timePeriod,
-  ) async {
+    TimePeriod timePeriod, {
+    String countryFilter = 'all',
+  }) async {
     final dateRanges = TimePeriodCalculator.calculateDateRanges(timePeriod);
     final currentStart = dateRanges['currentStart']!;
     final currentEnd = dateRanges['currentEnd']!;
@@ -746,10 +760,11 @@ class ComparisonService {
     }
 
     // Get campaigns that ran in the current period (same filtering as campaign screen)
-    final campaigns = await _campaignService.getCampaignsByDateRange(
+    final campaigns = await _campaignService.getCampaignsWithDateFilteredTotals(
       startDate: currentStart,
       endDate: currentEnd,
       limit: 200, // Fetch enough to account for filtering
+      countryFilter: countryFilter,
     );
 
     if (kDebugMode) {
@@ -842,11 +857,15 @@ class ComparisonService {
   /// Get ad sets for a campaign with comparisons
   Future<List<AdSetComparison>> getCampaignAdSetsComparison(
     String campaignId,
-    TimePeriod timePeriod,
-  ) async {
+    TimePeriod timePeriod, {
+    DateTime? selectedMonth,
+  }) async {
     try {
       if (timePeriod == TimePeriod.THIS_MONTH) {
-        return await _getAdSetsMonthComparison(campaignId);
+        return await _getAdSetsMonthComparison(
+          campaignId,
+          selectedMonth: selectedMonth,
+        );
       } else {
         return await _getAdSetsDateRangeComparison(campaignId, timePeriod);
       }
@@ -859,10 +878,12 @@ class ComparisonService {
   /// Get ad sets comparison using summary collection
   /// Uses same pattern as campaign screen: fetch all ad sets first, then calculate metrics
   Future<List<AdSetComparison>> _getAdSetsMonthComparison(
-    String campaignId,
-  ) async {
+    String campaignId, {
+    DateTime? selectedMonth,
+  }) async {
     final dateRanges = TimePeriodCalculator.calculateDateRanges(
       TimePeriod.THIS_MONTH,
+      selectedMonth: selectedMonth,
     );
     final currentStart = dateRanges['currentStart']!;
     final currentEnd = dateRanges['currentEnd']!;
@@ -1117,13 +1138,19 @@ class ComparisonService {
   /// Returns the campaign's performance comparison for the selected time period
   Future<CampaignComparison?> getCampaignComparison(
     String campaignId,
-    TimePeriod timePeriod,
-  ) async {
+    TimePeriod timePeriod, {
+    String countryFilter = 'all',
+    DateTime? selectedMonth,
+  }) async {
     try {
       print('📊 Fetching comparison for campaign: $campaignId');
 
       // Get all campaigns comparison and find the one we need
-      final allComparisons = await getAllCampaignsComparison(timePeriod);
+      final allComparisons = await getAllCampaignsComparison(
+        timePeriod,
+        countryFilter: countryFilter,
+        selectedMonth: selectedMonth,
+      );
 
       final comparison = allComparisons.firstWhere(
         (c) => c.campaignId == campaignId,
@@ -1142,8 +1169,9 @@ class ComparisonService {
   /// Returns the ad set's performance comparison for the selected time period
   Future<AdSetComparison?> getAdSetComparison(
     String adSetId,
-    TimePeriod timePeriod,
-  ) async {
+    TimePeriod timePeriod, {
+    DateTime? selectedMonth,
+  }) async {
     try {
       print('📊 Fetching comparison for ad set: $adSetId');
 
@@ -1162,6 +1190,7 @@ class ComparisonService {
       final allAdSets = await getCampaignAdSetsComparison(
         campaignId,
         timePeriod,
+        selectedMonth: selectedMonth,
       );
 
       final comparison = allAdSets.firstWhere(
@@ -1182,8 +1211,9 @@ class ComparisonService {
   /// Returns a list of ad comparisons for the selected time period
   Future<List<AdComparison>> getAdSetAdsComparison(
     String adSetId,
-    TimePeriod timePeriod,
-  ) async {
+    TimePeriod timePeriod, {
+    DateTime? selectedMonth,
+  }) async {
     try {
       if (kDebugMode) {
         print('📊 Fetching ads comparison for ad set: $adSetId');
@@ -1201,7 +1231,11 @@ class ComparisonService {
       }
 
       if (timePeriod == TimePeriod.THIS_MONTH) {
-        return await _getAdsMonthComparison(campaignId, adSetId);
+        return await _getAdsMonthComparison(
+          campaignId,
+          adSetId,
+          selectedMonth: selectedMonth,
+        );
       } else {
         return await _getAdsDateRangeComparison(
           campaignId,
@@ -1221,8 +1255,9 @@ class ComparisonService {
   /// Returns the ad's performance comparison for the selected time period
   Future<AdComparison?> getAdComparison(
     String adId,
-    TimePeriod timePeriod,
-  ) async {
+    TimePeriod timePeriod, {
+    DateTime? selectedMonth,
+  }) async {
     try {
       print('📊 Fetching comparison for ad: $adId');
 
@@ -1239,7 +1274,11 @@ class ComparisonService {
       }
 
       // Get all ads for this ad set
-      final allAds = await getAdSetAdsComparison(adSetId, timePeriod);
+      final allAds = await getAdSetAdsComparison(
+        adSetId,
+        timePeriod,
+        selectedMonth: selectedMonth,
+      );
 
       final comparison = allAds.firstWhere(
         (a) => a.adId == adId,
@@ -1258,10 +1297,12 @@ class ComparisonService {
   /// Uses same pattern as campaign screen: fetch all ads first, then calculate metrics
   Future<List<AdComparison>> _getAdsMonthComparison(
     String campaignId,
-    String adSetId,
-  ) async {
+    String adSetId, {
+    DateTime? selectedMonth,
+  }) async {
     final dateRanges = TimePeriodCalculator.calculateDateRanges(
       TimePeriod.THIS_MONTH,
+      selectedMonth: selectedMonth,
     );
     final currentStart = dateRanges['currentStart']!;
     final currentEnd = dateRanges['currentEnd']!;
