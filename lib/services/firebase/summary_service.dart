@@ -486,97 +486,6 @@ class SummaryService {
     return adCashAmounts;
   }
 
-  /// Calculate GHL cashAmount for an ad from opportunities collection
-  /// Matches opportunities by utmAdId from attributions and verifies dateRange overlap
-  /// ONLY calculates cashAmount from monetaryValue - other stats come from ghlData
-  Future<Map<String, dynamic>> _calculateAdGHLMetricsFromOpportunities(
-    String adId,
-    String weekId,
-    DateTime weekStart,
-    DateTime weekEnd,
-  ) async {
-    double cashAmount = 0.0;
-
-    int opportunitiesChecked = 0;
-    int opportunitiesMatched = 0;
-    int opportunitiesDateMatched = 0;
-    int opportunitiesWithValue = 0;
-
-    try {
-      if (kDebugMode) {
-        print('   │    🔍 Fetching opportunities for ad $adId in week $weekId');
-      }
-
-      // Query opportunities - try to optimize with date range if possible
-      // Since Firestore may not support nested map queries, we'll query all and filter
-      Query query = _firestore
-          .collection('ghl_opportunities')
-          .orderBy('createdAt', descending: true);
-
-      final snapshot = await query.get();
-
-      if (kDebugMode) {
-        print(
-          '   │    📋 Found ${snapshot.docs.length} total opportunities to check',
-        );
-      }
-
-      for (var doc in snapshot.docs) {
-        opportunitiesChecked++;
-
-        final oppData = doc.data() as Map<String, dynamic>?;
-        if (oppData == null) continue;
-
-        // Extract attributions and check utmAdId match
-        final attributions = oppData['attributions'] as dynamic;
-        final extractedAdId = _extractUtmAdIdFromAttributions(attributions);
-
-        if (extractedAdId != adId) {
-          continue;
-        }
-
-        opportunitiesMatched++;
-
-        // Check dateRange overlap
-        final dateRange = oppData['dateRange'] as Map<String, dynamic>?;
-        if (!_opportunityDateRangeOverlapsWeek(weekId, dateRange)) {
-          continue;
-        }
-
-        opportunitiesDateMatched++;
-
-        // Extract monetary value - this is the ONLY thing we need
-        final monetaryValue =
-            (oppData['monetaryValue'] as num?)?.toDouble() ?? 0.0;
-
-        if (monetaryValue > 0) {
-          cashAmount += monetaryValue;
-          opportunitiesWithValue++;
-        }
-      }
-
-      if (kDebugMode) {
-        print('   │    📊 Opportunity matching results:');
-        print('   │       Checked: $opportunitiesChecked');
-        print('   │       Matched adId: $opportunitiesMatched');
-        print('   │       Matched dateRange: $opportunitiesDateMatched');
-        print(
-          '   │       Opportunities with monetaryValue > 0: $opportunitiesWithValue',
-        );
-        print(
-          '   │       Total cashAmount: \$${cashAmount.toStringAsFixed(2)}',
-        );
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('   │    ❌ Error fetching opportunities: $e');
-      }
-    }
-
-    // Return ONLY cashAmount - other metrics come from ghlData in summary
-    return {'cashAmount': cashAmount};
-  }
-
   Future<Map<String, dynamic>?> calculateAdSetTotalsFromSummary({
     required String campaignId,
     required String adSetId,
@@ -960,10 +869,10 @@ class SummaryService {
           }
         }
 
-        // Calculate GHL Data from opportunities (real-time lookup)
+        // Calculate GHL Data from opportunities (batch processing)
         // Parse weekId to get week start/end dates
-        DateTime weekStartDate;
-        DateTime weekEndDate;
+        DateTime? weekStartDate;
+        DateTime? weekEndDate;
         try {
           final parts = weekId.split('_');
           if (parts.length == 2) {
@@ -984,42 +893,50 @@ class SummaryService {
                 59,
                 999,
               );
-
-              // Fetch GHL metrics from opportunities
-              final ghlMetrics = await _calculateAdGHLMetricsFromOpportunities(
-                adId,
-                weekId,
-                weekStartDate,
-                weekEndDate,
-              );
-
-              final weekLeads = (ghlMetrics['leads'] as int?) ?? 0;
-              final weekBookings =
-                  (ghlMetrics['bookedAppointments'] as int?) ?? 0;
-              final weekDeposits = (ghlMetrics['deposits'] as int?) ?? 0;
-              final weekCashCollected =
-                  (ghlMetrics['cashCollected'] as int?) ?? 0;
-              final weekCashAmount =
-                  (ghlMetrics['cashAmount'] as double?) ?? 0.0;
-
-              totalLeads += weekLeads;
-              totalBookings += weekBookings;
-              totalDeposits += weekDeposits;
-              totalCashCollected += weekCashCollected;
-              totalCashAmount += weekCashAmount;
-
-              if (kDebugMode) {
-                print(
-                  '   │    💰 GHL metrics: leads=$weekLeads, bookings=$weekBookings, '
-                  'deposits=$weekDeposits, cash=\$${weekCashAmount.toStringAsFixed(2)}',
-                );
-              }
             }
           }
         } catch (e) {
           if (kDebugMode) {
+            print('   │    ⚠️ Error parsing week dates: $e');
+          }
+        }
+
+        if (weekStartDate != null && weekEndDate != null) {
+          // Get counts from adData ghlData
+          final ghlData = adData['ghlData'] as Map<String, dynamic>?;
+          final weekLeads = (ghlData?['leads'] as num?)?.toInt() ?? 0;
+          final weekBookings =
+              (ghlData?['bookedAppointments'] as num?)?.toInt() ?? 0;
+          final weekDeposits = (ghlData?['deposits'] as num?)?.toInt() ?? 0;
+          final weekCashCollected =
+              (ghlData?['cashCollected'] as num?)?.toInt() ?? 0;
+
+          // BATCH PROCESSING: Fetch cash amount for this ad using batch method
+          double weekCashAmount = 0.0;
+          final adIds = <String>{adId};
+          final adCashAmounts = await _fetchCashAmountsForAdsInWeek(
+            adIds,
+            weekId,
+            weekStartDate,
+            weekEndDate,
+          );
+
+          // Get cash amount for this specific ad
+          weekCashAmount = adCashAmounts[adId] ?? 0.0;
+
+          // Aggregate to totals - counts from ghlData, cashAmount from opportunities
+          totalLeads += weekLeads;
+          totalBookings += weekBookings;
+          totalDeposits += weekDeposits;
+          totalCashCollected += weekCashCollected;
+          totalCashAmount += weekCashAmount;
+
+          if (kDebugMode) {
             print(
-              '   │    ⚠️ Error parsing week dates or fetching GHL metrics: $e',
+              '   │    💰 Ad GHL metrics for week: leads=$weekLeads (from ghlData), '
+              'bookings=$weekBookings (from ghlData), '
+              'deposits=$weekDeposits (from ghlData), '
+              'cash=\$${weekCashAmount.toStringAsFixed(2)} (from opportunities)',
             );
           }
         }

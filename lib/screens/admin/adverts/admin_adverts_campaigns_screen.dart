@@ -18,7 +18,7 @@ class AdminAdvertsCampaignsScreen extends StatefulWidget {
 class _AdminAdvertsCampaignsScreenState
     extends State<AdminAdvertsCampaignsScreen> {
   String _monthFilter = 'thismonth';
-  String _countryFilter = 'all'; // 'all' | 'usa' | 'sa'
+  String _countryFilter = 'sa'; // 'all' | 'usa' | 'sa'
 
   @override
   void initState() {
@@ -396,6 +396,7 @@ class _AdminAdvertsCampaignsScreenState
                     child: ThreeColumnCampaignView(
                       ads: [], // Not used when USE_SPLIT_COLLECTIONS is true
                       provider: perfProvider,
+                      countryFilter: _countryFilter,
                     ),
                   ),
               ],
@@ -508,18 +509,9 @@ class _AdminAdvertsCampaignsScreenState
             icon: const Icon(Icons.arrow_drop_down, size: 20),
             style: TextStyle(fontSize: 13, color: Colors.grey[800]),
             items: const [
-              DropdownMenuItem(
-                value: 'all',
-                child: Text('🌍 All'),
-              ),
-              DropdownMenuItem(
-                value: 'sa',
-                child: Text('🇿🇦 South Africa'),
-              ),
-              DropdownMenuItem(
-                value: 'usa',
-                child: Text('🇺🇸 USA'),
-              ),
+              DropdownMenuItem(value: 'all', child: Text('🌍 All')),
+              DropdownMenuItem(value: 'sa', child: Text('🇿🇦 South Africa')),
+              DropdownMenuItem(value: 'usa', child: Text('🇺🇸 USA')),
             ],
             onChanged: (value) {
               if (value != null) {

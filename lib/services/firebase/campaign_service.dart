@@ -648,9 +648,6 @@ class CampaignService {
     }
   }
 
-  /// Get campaigns with date-filtered totals (accurate, on-the-fly calculation)
-  /// This method queries summary collection ONLY (not campaigns collection)
-  /// Perfect for "This Month" and "Last 7 Days" filters
   Future<List<Campaign>> getCampaignsWithDateFilteredTotals({
     DateTime? startDate,
     DateTime? endDate,
