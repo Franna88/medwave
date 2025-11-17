@@ -595,13 +595,17 @@ class ComparisonService {
 
   /// Get all campaigns with comparisons for a time period
   Future<List<CampaignComparison>> getAllCampaignsComparison(
-    TimePeriod timePeriod,
-  ) async {
+    TimePeriod timePeriod, {
+    String countryFilter = 'all',
+  }) async {
     try {
       if (timePeriod == TimePeriod.THIS_MONTH) {
-        return await _getAllCampaignsMonthComparison();
+        return await _getAllCampaignsMonthComparison(countryFilter: countryFilter);
       } else {
-        return await _getAllCampaignsDateRangeComparison(timePeriod);
+        return await _getAllCampaignsDateRangeComparison(
+          timePeriod,
+          countryFilter: countryFilter,
+        );
       }
     } catch (e) {
       print('Error getting all campaigns comparison: $e');
@@ -610,8 +614,10 @@ class ComparisonService {
   }
 
   /// Get campaigns comparison using summary collection (optimized with parallel processing)
-  /// Uses same campaign filtering as campaign screen (getCampaignsByDateRange)
-  Future<List<CampaignComparison>> _getAllCampaignsMonthComparison() async {
+  /// Uses same campaign filtering as campaign screen (getCampaignsWithDateFilteredTotals)
+  Future<List<CampaignComparison>> _getAllCampaignsMonthComparison({
+    String countryFilter = 'all',
+  }) async {
     final dateRanges = TimePeriodCalculator.calculateDateRanges(
       TimePeriod.THIS_MONTH,
     );
@@ -631,10 +637,11 @@ class ComparisonService {
     }
 
     // Get campaigns that ran in the current month (same filtering as campaign screen)
-    final campaigns = await _campaignService.getCampaignsByDateRange(
+    final campaigns = await _campaignService.getCampaignsWithDateFilteredTotals(
       startDate: currentStart,
       endDate: currentEnd,
       limit: 200, // Fetch enough to account for filtering
+      countryFilter: countryFilter,
     );
 
     if (kDebugMode) {
@@ -725,10 +732,11 @@ class ComparisonService {
   }
 
   /// Get campaigns comparison using summary collection for date ranges (THIS_WEEK) - optimized
-  /// Uses same campaign filtering as campaign screen (getCampaignsByDateRange)
+  /// Uses same campaign filtering as campaign screen (getCampaignsWithDateFilteredTotals)
   Future<List<CampaignComparison>> _getAllCampaignsDateRangeComparison(
-    TimePeriod timePeriod,
-  ) async {
+    TimePeriod timePeriod, {
+    String countryFilter = 'all',
+  }) async {
     final dateRanges = TimePeriodCalculator.calculateDateRanges(timePeriod);
     final currentStart = dateRanges['currentStart']!;
     final currentEnd = dateRanges['currentEnd']!;
@@ -746,10 +754,11 @@ class ComparisonService {
     }
 
     // Get campaigns that ran in the current period (same filtering as campaign screen)
-    final campaigns = await _campaignService.getCampaignsByDateRange(
+    final campaigns = await _campaignService.getCampaignsWithDateFilteredTotals(
       startDate: currentStart,
       endDate: currentEnd,
       limit: 200, // Fetch enough to account for filtering
+      countryFilter: countryFilter,
     );
 
     if (kDebugMode) {
@@ -1117,13 +1126,17 @@ class ComparisonService {
   /// Returns the campaign's performance comparison for the selected time period
   Future<CampaignComparison?> getCampaignComparison(
     String campaignId,
-    TimePeriod timePeriod,
-  ) async {
+    TimePeriod timePeriod, {
+    String countryFilter = 'all',
+  }) async {
     try {
       print('📊 Fetching comparison for campaign: $campaignId');
 
       // Get all campaigns comparison and find the one we need
-      final allComparisons = await getAllCampaignsComparison(timePeriod);
+      final allComparisons = await getAllCampaignsComparison(
+        timePeriod,
+        countryFilter: countryFilter,
+      );
 
       final comparison = allComparisons.firstWhere(
         (c) => c.campaignId == campaignId,
