@@ -23,6 +23,7 @@ class _AdminAdvertsComparisonScreenState
   // State
   TimePeriod _selectedTimePeriod = TimePeriod.THIS_MONTH;
   String _countryFilter = 'sa'; // 'all' | 'usa' | 'sa'
+  String _monthFilter = 'thismonth'; // 'thismonth' | 'lastmonth' | '2monthsago'
   bool _isLoading = false;
   String? _error;
 
@@ -47,9 +48,16 @@ class _AdminAdvertsComparisonScreenState
     try {
       print('🔄 Loading campaign comparisons for $_selectedTimePeriod...');
 
+      // Calculate selected month if THIS_MONTH period is selected
+      DateTime? selectedMonth;
+      if (_selectedTimePeriod == TimePeriod.THIS_MONTH) {
+        selectedMonth = _getSelectedMonthDateTime();
+      }
+
       final comparisons = await _comparisonService.getAllCampaignsComparison(
         _selectedTimePeriod,
         countryFilter: _countryFilter,
+        selectedMonth: selectedMonth,
       );
 
       print('✅ Loaded ${comparisons.length} campaign comparisons');
@@ -70,6 +78,21 @@ class _AdminAdvertsComparisonScreenState
     }
   }
 
+  /// Get DateTime for the selected month filter
+  DateTime? _getSelectedMonthDateTime() {
+    final now = DateTime.now();
+    switch (_monthFilter) {
+      case 'thismonth':
+        return DateTime(now.year, now.month, 1);
+      case 'lastmonth':
+        return DateTime(now.year, now.month - 1, 1);
+      case '2monthsago':
+        return DateTime(now.year, now.month - 2, 1);
+      default:
+        return null; // Use current month
+    }
+  }
+
   void _onTimePeriodChanged(TimePeriod? newPeriod) {
     if (newPeriod != null && newPeriod != _selectedTimePeriod) {
       setState(() {
@@ -80,6 +103,12 @@ class _AdminAdvertsComparisonScreenState
   }
 
   void _openCampaignModal(CampaignComparison campaignComparison) {
+    // Calculate selected month if THIS_MONTH period is selected
+    DateTime? selectedMonth;
+    if (_selectedTimePeriod == TimePeriod.THIS_MONTH) {
+      selectedMonth = _getSelectedMonthDateTime();
+    }
+
     showDialog(
       context: context,
       builder: (context) => _DrillDownModal(
@@ -88,6 +117,7 @@ class _AdminAdvertsComparisonScreenState
         timePeriod: _selectedTimePeriod,
         comparisonService: _comparisonService,
         countryFilter: _countryFilter,
+        selectedMonth: selectedMonth,
       ),
     );
   }
@@ -128,8 +158,15 @@ class _AdminAdvertsComparisonScreenState
   }
 
   Widget _buildHeader() {
+    // Calculate selected month if THIS_MONTH period is selected
+    DateTime? selectedMonth;
+    if (_selectedTimePeriod == TimePeriod.THIS_MONTH) {
+      selectedMonth = _getSelectedMonthDateTime();
+    }
+
     final dateRanges = TimePeriodCalculator.calculateDateRanges(
       _selectedTimePeriod,
+      selectedMonth: selectedMonth,
     );
     final currentRange = TimePeriodCalculator.formatDateRange(
       dateRanges['currentStart']!,
@@ -204,7 +241,7 @@ class _AdminAdvertsComparisonScreenState
             ],
           ),
           const SizedBox(height: 12),
-          // Period toggle and Country filter
+          // Period toggle, Month filter, and Country filter
           Row(
             children: [
               Expanded(
@@ -228,6 +265,41 @@ class _AdminAdvertsComparisonScreenState
                 ),
               ),
               const SizedBox(width: 12),
+              // Month filter (only show when THIS_MONTH is selected)
+              if (_selectedTimePeriod == TimePeriod.THIS_MONTH)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButton<String>(
+                    value: _monthFilter,
+                    underline: const SizedBox(),
+                    icon: const Icon(Icons.arrow_drop_down, size: 20),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[800]),
+                    items: _buildMonthFilterItems(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        if (kDebugMode) {
+                          print(
+                            '🔄 MONTH FILTER CHANGED: $_monthFilter → $value',
+                          );
+                        }
+                        setState(() {
+                          _monthFilter = value;
+                        });
+                        // Reload comparisons with new month filter
+                        _loadComparisons();
+                      }
+                    },
+                  ),
+                ),
+              if (_selectedTimePeriod == TimePeriod.THIS_MONTH)
+                const SizedBox(width: 12),
               // Country filter
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -470,6 +542,52 @@ class _AdminAdvertsComparisonScreenState
       ),
     );
   }
+
+  /// Build month filter dropdown items
+  List<DropdownMenuItem<String>> _buildMonthFilterItems() {
+    final now = DateTime.now();
+    final currentMonth = now.month;
+    final currentYear = now.year;
+
+    // Calculate months
+    final thisMonth = DateTime(currentYear, currentMonth);
+    final lastMonth = DateTime(currentYear, currentMonth - 1);
+    final twoMonthsAgo = DateTime(currentYear, currentMonth - 2);
+
+    // Format month names
+    String formatMonthName(DateTime date) {
+      const monthNames = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ];
+      return monthNames[date.month - 1];
+    }
+
+    return [
+      DropdownMenuItem(
+        value: 'thismonth',
+        child: Text('📅 This Month (${formatMonthName(thisMonth)})'),
+      ),
+      DropdownMenuItem(
+        value: 'lastmonth',
+        child: Text('📅 Last Month (${formatMonthName(lastMonth)})'),
+      ),
+      DropdownMenuItem(
+        value: '2monthsago',
+        child: Text('📅 2 Months Ago (${formatMonthName(twoMonthsAgo)})'),
+      ),
+    ];
+  }
 }
 
 // ============================================================================
@@ -482,6 +600,7 @@ class _DrillDownModal extends StatefulWidget {
   final TimePeriod timePeriod;
   final ComparisonService comparisonService;
   final String countryFilter;
+  final DateTime? selectedMonth;
 
   const _DrillDownModal({
     required this.campaignId,
@@ -489,6 +608,7 @@ class _DrillDownModal extends StatefulWidget {
     required this.timePeriod,
     required this.comparisonService,
     this.countryFilter = 'all',
+    this.selectedMonth,
   });
 
   @override
@@ -536,10 +656,12 @@ class _DrillDownModalState extends State<_DrillDownModal> {
         widget.campaignId,
         _timePeriod,
         countryFilter: widget.countryFilter,
+        selectedMonth: widget.selectedMonth,
       );
       final adSets = await widget.comparisonService.getCampaignAdSetsComparison(
         widget.campaignId,
         _timePeriod,
+        selectedMonth: widget.selectedMonth,
       );
 
       if (!mounted) return;
@@ -589,6 +711,7 @@ class _DrillDownModalState extends State<_DrillDownModal> {
       final ads = await widget.comparisonService.getAdSetAdsComparison(
         adSetComp.adSetId,
         _timePeriod,
+        selectedMonth: widget.selectedMonth,
       );
 
       print('🔍 UI DEBUG: Received ${ads.length} ads from service');
@@ -672,10 +795,12 @@ class _DrillDownModalState extends State<_DrillDownModal> {
         final adSetComp = await widget.comparisonService.getAdSetComparison(
           _selectedAdSetId!,
           _timePeriod,
+          selectedMonth: widget.selectedMonth,
         );
         final ads = await widget.comparisonService.getAdSetAdsComparison(
           _selectedAdSetId!,
           _timePeriod,
+          selectedMonth: widget.selectedMonth,
         );
 
         if (!mounted) return;
@@ -715,6 +840,7 @@ class _DrillDownModalState extends State<_DrillDownModal> {
         final adComp = await widget.comparisonService.getAdComparison(
           _selectedAdId!,
           _timePeriod,
+          selectedMonth: widget.selectedMonth,
         );
 
         if (!mounted) return;

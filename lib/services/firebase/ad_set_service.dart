@@ -111,97 +111,71 @@ class AdSetService {
         }
       }
 
-      // Get all ad sets for this campaign (without date filtering)
-      final snapshot = await _firestore
-          .collection('adSets')
-          .where('campaignId', isEqualTo: campaignId)
-          .get();
-
-      if (kDebugMode) {
-        print('   📋 Found ${snapshot.docs.length} ad sets in campaign');
+      // Ensure dates are provided
+      if (startDate == null || endDate == null) {
+        if (kDebugMode) {
+          print('   ⚠️ Start date or end date is null, returning empty list');
+        }
+        return [];
       }
 
+      // OPTIMIZED: Get ad sets with pre-calculated totals (SINGLE FETCH)
+      // This reduces Firestore reads from 1+N to 1 (where N = number of ad sets)
+      final adSetsData = await _summaryService.getAdSetsWithCalculatedTotals(
+        campaignId: campaignId,
+        startDate: startDate,
+        endDate: endDate,
+      );
+
+      if (kDebugMode) {
+        print(
+          '   ✅ Received ${adSetsData.length} ad sets with pre-calculated totals',
+        );
+      }
+
+      // Build AdSet objects from pre-calculated data
       List<AdSet> adSetsWithDateFilteredTotals = [];
-      int adSetsWithData = 0;
 
-      for (var doc in snapshot.docs) {
-        final adSet = AdSet.fromFirestore(doc);
-        final adSetId = adSet.adSetId;
+      for (var adSetData in adSetsData) {
+        final totals = adSetData['totals'] as Map<String, dynamic>;
 
-        if (kDebugMode) {
-          print('   Calculating totals for ad set: ${adSet.adSetName}');
-          print('   🚀 Trying summary collection for ad set $adSetId');
-        }
+        // Only include ad sets with activity
+        if (totals['adsInRange'] == 0) continue;
 
-        // TRY SUMMARY COLLECTION FIRST (fast path - 1 query, no overlap issues)
-        final summaryTotals = await _summaryService
-            .calculateAdSetTotalsFromSummary(
-              campaignId: campaignId,
-              adSetId: adSetId,
-              startDate: startDate,
-              endDate: endDate,
-            );
-
-        Map<String, dynamic> totals;
-
-        if (summaryTotals != null) {
-          if (kDebugMode) {
-            print('   ✅ Using SUMMARY collection (fast, accurate)');
-          }
-          totals = summaryTotals;
-        } else {
-          // FALLBACK: Use old method if summary data not available
-          if (kDebugMode) {
-            print(
-              '   ⚠️ No summary data, falling back to on-the-fly calculation',
-            );
-          }
-          totals = await calculateAdSetTotalsForDateRange(
-            adSetId: adSetId,
-            startDate: startDate,
-            endDate: endDate,
-          );
-        }
-
-        // Create a new ad set with updated totals
-        final updatedAdSet = AdSet(
-          adSetId: adSet.adSetId,
-          adSetName: adSet.adSetName,
-          campaignId: adSet.campaignId,
-          campaignName: adSet.campaignName,
-          totalSpend: totals['totalSpend'],
-          totalImpressions: totals['totalImpressions'],
-          totalClicks: totals['totalClicks'],
-          totalReach: totals['totalReach'],
-          avgCPM: totals['cpm'],
-          avgCPC: totals['cpc'],
-          avgCTR: totals['ctr'],
-          totalLeads: totals['totalLeads'],
-          totalBookings: totals['totalBookings'],
-          totalDeposits: totals['totalDeposits'],
-          totalCashCollected: totals['totalCashCollected'],
-          totalCashAmount: totals['totalCashAmount'],
-          totalProfit: totals['totalProfit'],
-          cpl: totals['cpl'],
-          cpb: totals['cpb'],
-          cpa: totals['cpa'],
-          adCount: totals['adsInRange'],
-          lastUpdated: adSet.lastUpdated,
-          createdAt: adSet.createdAt,
-          firstAdDate: adSet.firstAdDate,
-          lastAdDate: adSet.lastAdDate,
+        final adSet = AdSet(
+          adSetId: adSetData['adSetId'] as String,
+          adSetName: adSetData['adSetName'] as String,
+          campaignId: campaignId,
+          campaignName: adSetData['campaignName'] as String,
+          totalSpend: totals['totalSpend'] ?? 0.0,
+          totalImpressions: totals['totalImpressions'] ?? 0,
+          totalClicks: totals['totalClicks'] ?? 0,
+          totalReach: totals['totalReach'] ?? 0,
+          avgCPM: totals['cpm'] ?? 0.0,
+          avgCPC: totals['cpc'] ?? 0.0,
+          avgCTR: totals['ctr'] ?? 0.0,
+          totalLeads: totals['totalLeads'] ?? 0,
+          totalBookings: totals['totalBookings'] ?? 0,
+          totalDeposits: totals['totalDeposits'] ?? 0,
+          totalCashCollected: totals['totalCashCollected'] ?? 0,
+          totalCashAmount: totals['totalCashAmount'] ?? 0.0,
+          totalProfit: totals['totalProfit'] ?? 0.0,
+          cpl: totals['cpl'] ?? 0.0,
+          cpb: totals['cpb'] ?? 0.0,
+          cpa: totals['cpa'] ?? 0.0,
+          adCount: adSetData['adCount'] ?? 0,
+          // Optional fields - not available in summary, use null
+          lastUpdated: null,
+          createdAt: null,
+          firstAdDate: adSetData['firstAdDate'] as String?,
+          lastAdDate: adSetData['lastAdDate'] as String?,
         );
 
-        // Include all ad sets that have weeks overlapping with the date range
-        // Even if they have $0 spend (per user requirement)
-        if (totals['adsInRange'] > 0) {
-          adSetsWithDateFilteredTotals.add(updatedAdSet);
-          adSetsWithData++;
-        }
+        adSetsWithDateFilteredTotals.add(adSet);
       }
 
       if (kDebugMode) {
-        print('   ✅ $adSetsWithData ad sets with data in range');
+        print('   ✅ ${adSetsWithDateFilteredTotals.length} ad sets with data in range');
       }
 
       // Sort by the requested field

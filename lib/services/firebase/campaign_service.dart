@@ -735,7 +735,7 @@ class CampaignService {
           bookingToDepositRate: bookingToDepositRate,
           depositToCashRate: depositToCashRate,
           adSetCount: adSetCount,
-          adCount: totals['adsInRange'] ?? 0,
+          adCount: campaignData['adCount'] ?? 0,
           firstAdDate: firstAdDate,
           lastAdDate: lastAdDate,
           // Timestamps not available in summary, use null
