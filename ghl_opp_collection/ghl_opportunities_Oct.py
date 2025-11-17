@@ -342,3 +342,4 @@ def fetch_all_october_opportunities():
 if __name__ == '__main__':
     fetch_all_october_opportunities()
 
+

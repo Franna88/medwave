@@ -344,3 +344,4 @@ def fetch_ads_with_activity():
 if __name__ == '__main__':
     fetch_ads_with_activity()
 
+
