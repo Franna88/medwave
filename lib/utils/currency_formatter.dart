@@ -2,7 +2,7 @@
 class CurrencyFormatter {
   // Static USD to ZAR exchange rate
   // TODO: Make this dynamic in the future
-  static const double usdToZarRate = 17.5;
+  static const double usdToZarRate = 1;
 
   /// Convert USD amount to ZAR
   static double convertToZAR(double usdAmount) {
