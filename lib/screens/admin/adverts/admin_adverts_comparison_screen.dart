@@ -366,8 +366,14 @@ class _AdminAdvertsComparisonScreenState
   Widget _buildCampaignCard(CampaignComparison campaignComparison) {
     final comparison = campaignComparison.comparison;
     final profitChange = campaignComparison.profitChange;
-    final isPositive = profitChange >= 0;
-    final profitColor = isPositive ? Colors.green : Colors.red;
+    final Color profitColor;
+    if (profitChange > 0) {
+      profitColor = Colors.green;
+    } else if (profitChange == 0) {
+      profitColor = Colors.grey;
+    } else {
+      profitColor = Colors.red;
+    }
 
     return Card(
       elevation: 2,
@@ -430,7 +436,11 @@ class _AdminAdvertsComparisonScreenState
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      isPositive ? Icons.trending_up : Icons.trending_down,
+                      profitChange > 0
+                          ? Icons.trending_up
+                          : profitChange == 0
+                          ? Icons.remove
+                          : Icons.trending_down,
                       size: 16,
                       color: profitColor,
                     ),
