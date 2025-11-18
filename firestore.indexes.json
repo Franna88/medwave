@@ -1,98 +1,6 @@
 {
   "indexes": [
     {
-      "collectionGroup": "sessions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "patientId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "sessionNumber",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "testflight_requests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "email",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "requestedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "opportunityStageHistory",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "opportunityId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "opportunityStageHistory",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "pipelineId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "opportunityStageHistory",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "campaignName",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "stageCategory",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "opportunityStageHistory",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "pipelineId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "stageCategory",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "adPerformance",
       "queryScope": "COLLECTION",
       "fields": [
@@ -103,8 +11,13 @@
         {
           "fieldPath": "lastUpdated",
           "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "adPerformance",
@@ -117,8 +30,112 @@
         {
           "fieldPath": "lastUpdated",
           "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "ads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "adSetId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "facebookStats.spend",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "adSets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "campaignId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastUpdated",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "adSets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "campaignId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "totalProfit",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "advertData",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "campaignId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastUpdated",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "appointments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "patientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "practitionerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "startTime",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "appointments",
@@ -131,8 +148,13 @@
         {
           "fieldPath": "startTime",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "appointments",
@@ -149,36 +171,70 @@
         {
           "fieldPath": "endTime",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "advertData",
+      "collectionGroup": "campaigns",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "campaignId",
+          "fieldPath": "firstAdDate",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "totalProfit",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "campaigns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "lastAdDate",
           "order": "ASCENDING"
         },
         {
           "fieldPath": "lastUpdated",
           "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "opportunityStageHistory",
+      "collectionGroup": "campaigns",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "facebookAdId",
+          "fieldPath": "lastAdDate",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "timestamp",
-          "order": "ASCENDING"
+          "fieldPath": "totalProfit",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
       "collectionGroup": "campaigns",
@@ -191,177 +247,278 @@
         {
           "fieldPath": "lastUpdated",
           "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "campaigns",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "totalProfit",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "campaigns",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "totalSpend",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "adSets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "campaignId",
-          "order": "ASCENDING"
         },
         {
-          "fieldPath": "totalProfit",
+          "fieldPath": "__name__",
           "order": "DESCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "adSets",
+      "collectionGroup": "ghl_opportunities",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "campaignId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "lastUpdated",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "ads",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "adSetId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "facebookStats.spend",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "ads",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "campaignId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "lastUpdated",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "ghlOpportunities",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "adId",
+          "fieldPath": "createdAt",
           "order": "ASCENDING"
         },
         {
           "fieldPath": "createdAt",
           "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "ghlOpportunities",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "campaignId",
-          "order": "ASCENDING"
         },
         {
-          "fieldPath": "createdAt",
+          "fieldPath": "__name__",
           "order": "DESCENDING"
         }
-      ]
+      ],
+      "density": "SPARSE_ALL"
     },
     {
-      "collectionGroup": "ghlOpportunities",
+      "collectionGroup": "opportunityStageHistory",
       "queryScope": "COLLECTION",
       "fields": [
+        {
+          "fieldPath": "campaignName",
+          "order": "ASCENDING"
+        },
         {
           "fieldPath": "stageCategory",
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "opportunityStageHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "facebookAdId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "opportunityStageHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "facebookAdId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "opportunityStageHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "opportunityId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "opportunityStageHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "pipelineId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "stageCategory",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "opportunityStageHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "pipelineId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "practitionerApplications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "approvedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "patientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sessionNumber",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "patientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "sessionNumber",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "testflight_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "email",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "requestedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "accountStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "role",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "createdAt",
           "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "ghlOpportunityMapping",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "assignedAdId",
-          "order": "ASCENDING"
         },
         {
-          "fieldPath": "assignedAt",
+          "fieldPath": "__name__",
           "order": "DESCENDING"
         }
-      ]
-    },
+      ],
+      "density": "SPARSE_ALL"
+    }
+  ],
+  "fieldOverrides": [
     {
-      "collectionGroup": "campaignMetricsHistory",
-      "queryScope": "COLLECTION",
-      "fields": [
+      "collectionGroup": "weeklyInsights",
+      "fieldPath": "dateStart",
+      "ttl": false,
+      "indexes": [
         {
-          "fieldPath": "campaignId",
-          "order": "ASCENDING"
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
         },
         {
-          "fieldPath": "year",
-          "order": "ASCENDING"
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
         },
         {
-          "fieldPath": "month",
-          "order": "ASCENDING"
+          "arrayConfig": "CONTAINS",
+          "queryScope": "COLLECTION"
         },
         {
-          "fieldPath": "week",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "campaignMetricsHistory",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "campaignId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
         }
       ]
     }
-  ],
-  "fieldOverrides": []
+  ]
 }
