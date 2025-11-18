@@ -666,12 +666,244 @@ class CampaignService {
         print('   Country filter: $countryFilter');
       }
 
-      // Ensure dates are provided
+      // Handle "All" case (no date filtering) - use ONLY summary collection
       if (startDate == null || endDate == null) {
         if (kDebugMode) {
-          print('   ⚠️ Start date or end date is null, returning empty list');
+          print(
+            '   📋 No date range specified, loading all campaigns from SUMMARY collection',
+          );
         }
-        return [];
+
+        // Query summary collection directly and calculate lifetime totals from all weeks
+        final summarySnapshot = await _firestore.collection('summary').get();
+
+        if (kDebugMode) {
+          print(
+            '   📦 Fetched ${summarySnapshot.docs.length} summary documents',
+          );
+        }
+
+        List<Campaign> allTimeCampaigns = [];
+
+        for (final doc in summarySnapshot.docs) {
+          final data = doc.data();
+
+          // 1. Country filter check
+          final usaAds = data['usaAds'] as bool?;
+          if (countryFilter == 'usa' && usaAds != true) continue;
+          if (countryFilter == 'sa' && usaAds == true) continue;
+
+          final weeksMap = data['weeks'] as Map<String, dynamic>?;
+          if (weeksMap == null || weeksMap.isEmpty) continue;
+
+          // 2. Calculate lifetime totals from ALL weeks (no date filtering)
+          double totalSpend = 0;
+          int totalImpressions = 0;
+          int totalClicks = 0;
+          int totalReach = 0;
+          int totalLeads = 0;
+          int totalBookings = 0;
+          int totalDeposits = 0;
+          int totalCashCollected = 0;
+          double totalCashAmount = 0;
+
+          // 3. Extract date ranges and ad set count
+          List<DateTime> weekStartDates = [];
+          List<DateTime> weekEndDates = [];
+          Set<String> adSetIds = {};
+          Set<String> adIds = {};
+
+          for (var weekEntry in weeksMap.entries) {
+            final weekData = weekEntry.value as Map<String, dynamic>?;
+            if (weekData == null) continue;
+
+            // Parse week dates for firstAdDate/lastAdDate
+            try {
+              final weekId = weekEntry.key;
+              final parts = weekId.split('_');
+              if (parts.length == 2) {
+                final startParts = parts[0].split('-');
+                final endParts = parts[1].split('-');
+
+                if (startParts.length == 3 && endParts.length == 3) {
+                  final weekStart = DateTime(
+                    int.parse(startParts[0]),
+                    int.parse(startParts[1]),
+                    int.parse(startParts[2]),
+                  );
+                  final weekEnd = DateTime(
+                    int.parse(endParts[0]),
+                    int.parse(endParts[1]),
+                    int.parse(endParts[2]),
+                  );
+                  weekStartDates.add(weekStart);
+                  weekEndDates.add(weekEnd);
+                }
+              }
+            } catch (e) {
+              // Skip invalid week IDs
+            }
+
+            // Collect ad set IDs
+            final adSetsMap = weekData['adSets'] as Map<String, dynamic>?;
+            if (adSetsMap != null) {
+              adSetIds.addAll(adSetsMap.keys);
+            }
+
+            // Collect unique ad IDs from all ads in this week
+            final adsMap = weekData['ads'] as Map<String, dynamic>?;
+            if (adsMap != null) {
+              adIds.addAll(adsMap.keys);
+            }
+
+            // Aggregate Facebook metrics from campaign data
+            final campaignData = weekData['campaign'] as Map<String, dynamic>?;
+            if (campaignData != null) {
+              final fbInsights =
+                  campaignData['facebookInsights'] as Map<String, dynamic>?;
+              if (fbInsights != null) {
+                totalSpend += (fbInsights['spend'] as num?)?.toDouble() ?? 0.0;
+                totalImpressions +=
+                    (fbInsights['impressions'] as num?)?.toInt() ?? 0;
+                totalClicks += (fbInsights['clicks'] as num?)?.toInt() ?? 0;
+                totalReach += (fbInsights['reach'] as num?)?.toInt() ?? 0;
+              }
+
+              // Aggregate GHL metrics from campaign ghlData
+              final ghlData = campaignData['ghlData'] as Map<String, dynamic>?;
+              if (ghlData != null) {
+                totalLeads += (ghlData['leads'] as num?)?.toInt() ?? 0;
+                totalBookings +=
+                    (ghlData['bookedAppointments'] as num?)?.toInt() ?? 0;
+                totalDeposits += (ghlData['deposits'] as num?)?.toInt() ?? 0;
+                totalCashCollected +=
+                    (ghlData['cashCollected'] as num?)?.toInt() ?? 0;
+                totalCashAmount +=
+                    (ghlData['cashAmount'] as num?)?.toDouble() ?? 0.0;
+              }
+            }
+          }
+
+          // Calculate derived metrics
+          final totalProfit = totalCashAmount - totalSpend;
+          final cpl = totalLeads > 0 ? totalSpend / totalLeads : 0.0;
+          final cpb = totalBookings > 0 ? totalSpend / totalBookings : 0.0;
+          final cpa = totalDeposits > 0 ? totalSpend / totalDeposits : 0.0;
+          final roi = totalSpend > 0 ? (totalProfit / totalSpend) * 100 : 0.0;
+          final ctr = totalImpressions > 0
+              ? (totalClicks / totalImpressions) * 100
+              : 0.0;
+          final cpm = totalImpressions > 0
+              ? (totalSpend / totalImpressions) * 1000
+              : 0.0;
+          final cpc = totalClicks > 0 ? totalSpend / totalClicks : 0.0;
+
+          // Calculate first and last ad dates
+          String? firstAdDate;
+          String? lastAdDate;
+          if (weekStartDates.isNotEmpty) {
+            weekStartDates.sort();
+            weekEndDates.sort();
+            final earliest = weekStartDates.first;
+            final latest = weekEndDates.last;
+
+            firstAdDate =
+                '${earliest.year}-${earliest.month.toString().padLeft(2, '0')}-${earliest.day.toString().padLeft(2, '0')}';
+            lastAdDate =
+                '${latest.year}-${latest.month.toString().padLeft(2, '0')}-${latest.day.toString().padLeft(2, '0')}';
+          }
+
+          // Calculate conversion rates
+          final leadToBookingRate = totalLeads > 0
+              ? (totalBookings / totalLeads) * 100
+              : 0.0;
+          final bookingToDepositRate = totalBookings > 0
+              ? (totalDeposits / totalBookings) * 100
+              : 0.0;
+          final depositToCashRate = totalDeposits > 0
+              ? (totalCashCollected / totalDeposits) * 100
+              : 0.0;
+
+          // Create Campaign object with lifetime totals
+          final campaign = Campaign(
+            campaignId: doc.id,
+            campaignName: data['campaignName'] as String? ?? 'Unknown Campaign',
+            status: 'UNKNOWN', // Not available in summary, use default
+            totalSpend: totalSpend,
+            totalImpressions: totalImpressions,
+            totalClicks: totalClicks,
+            totalReach: totalReach,
+            avgCPM: cpm,
+            avgCPC: cpc,
+            avgCTR: ctr,
+            totalLeads: totalLeads,
+            totalBookings: totalBookings,
+            totalDeposits: totalDeposits,
+            totalCashCollected: totalCashCollected,
+            totalCashAmount: totalCashAmount,
+            totalProfit: totalProfit,
+            cpl: cpl,
+            cpb: cpb,
+            cpa: cpa,
+            roi: roi,
+            leadToBookingRate: leadToBookingRate,
+            bookingToDepositRate: bookingToDepositRate,
+            depositToCashRate: depositToCashRate,
+            adSetCount: adSetIds.length,
+            adCount: adIds.length,
+            firstAdDate: firstAdDate,
+            lastAdDate: lastAdDate,
+            // Timestamps not available in summary, use null
+            lastUpdated: null,
+            lastFacebookSync: null,
+            lastGHLSync: null,
+            createdAt: null,
+          );
+
+          allTimeCampaigns.add(campaign);
+        }
+
+        // Sort by the requested field
+        allTimeCampaigns.sort((a, b) {
+          dynamic aValue, bValue;
+          switch (orderBy) {
+            case 'totalSpend':
+              aValue = a.totalSpend;
+              bValue = b.totalSpend;
+              break;
+            case 'totalProfit':
+              aValue = a.totalProfit;
+              bValue = b.totalProfit;
+              break;
+            case 'totalLeads':
+              aValue = a.totalLeads;
+              bValue = b.totalLeads;
+              break;
+            case 'roi':
+              aValue = a.roi;
+              bValue = b.roi;
+              break;
+            default:
+              aValue = a.totalProfit;
+              bValue = b.totalProfit;
+          }
+
+          final comparison = (aValue as num).compareTo(bValue as num);
+          return descending ? -comparison : comparison;
+        });
+
+        // Apply limit
+        if (limit > 0 && allTimeCampaigns.length > limit) {
+          allTimeCampaigns = allTimeCampaigns.take(limit).toList();
+        }
+
+        if (kDebugMode) {
+          print(
+            '   ✅ Loaded ${allTimeCampaigns.length} campaigns from SUMMARY (all time, country: $countryFilter)',
+          );
+        }
+
+        return allTimeCampaigns;
       }
 
       final campaignsData = await _summaryService

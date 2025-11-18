@@ -168,6 +168,7 @@ class _AdminAdvertsCampaignsScreenState
         child: Text('📅 2 Months Ago (${formatMonthName(twoMonthsAgo)})'),
       ),
       const DropdownMenuItem(value: 'last7days', child: Text('📅 Last 7 Days')),
+      const DropdownMenuItem(value: 'all', child: Text('📅 All Campaigns')),
     ];
   }
 
@@ -211,6 +212,10 @@ class _AdminAdvertsCampaignsScreenState
         baseStart = today.subtract(const Duration(days: 6));
         baseEnd = today;
         break;
+      case 'all':
+        baseStart = null;
+        baseEnd = null;
+        break;
       default:
         baseStart = DateTime(now.year, now.month, 1);
         baseEnd = DateTime(
@@ -252,6 +257,8 @@ class _AdminAdvertsCampaignsScreenState
         return availableMonths.take(6).toList();
       case 'allmonths':
         return availableMonths;
+      case 'all':
+        return []; // No month filtering when 'all' is selected
       default:
         // Check if it's a specific month (e.g., "2025-10")
         if (availableMonths.contains(filter)) {
@@ -268,6 +275,11 @@ class _AdminAdvertsCampaignsScreenState
     String dateFilter,
     List<String> selectedMonths,
   ) {
+    // If 'all' is selected, return null dates (no date filtering)
+    if (monthFilter == 'all') {
+      return {'start': null, 'end': null};
+    }
+
     // First, get the base date range from the month filter
     DateTime? monthStart;
     DateTime? monthEnd;
