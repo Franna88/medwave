@@ -10,7 +10,6 @@ import '../../theme/app_theme.dart';
 import 'widgets/appointment_card.dart';
 import 'widgets/add_appointment_dialog.dart';
 import 'widgets/appointment_details_dialog.dart';
-import '../payments/payment_qr_dialog.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -179,11 +178,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               onStatusChanged: (status) {
                                 appointmentProvider.updateAppointmentStatus(
                                   appointment.id,
-                                  status,
-                                );
-                              },
-                              onPaymentRequested: () => _showPaymentQR(appointment),
+                              status,
                             );
+                          },
+                        );
                           },
                         ),
                         const SizedBox(height: 100), // Add bottom padding for FAB
@@ -540,56 +538,4 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  void _showPaymentQR(Appointment appointment) async {
-    // Check if session fees are enabled
-    final userProfileProvider = context.read<UserProfileProvider>();
-    final settings = userProfileProvider.appSettings;
-
-    if (!settings.sessionFeeEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Session fees are not enabled. Please configure in Settings.'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-      return;
-    }
-
-    if (settings.defaultSessionFee <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please set a default session fee in Settings.'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-      return;
-    }
-
-    // Get patient email from PatientProvider
-    final patientProvider = context.read<PatientProvider>();
-    final patient = patientProvider.patients.firstWhere(
-      (p) => p.id == appointment.patientId,
-      orElse: () => throw Exception('Patient not found'),
-    );
-
-    if (patient.email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Patient email not found. Please update patient profile.'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-      return;
-    }
-
-    // Show payment QR dialog directly as a popup
-    showDialog(
-      context: context,
-      builder: (context) => PaymentQRDialog(
-        appointment: appointment,
-        amount: settings.defaultSessionFee,
-        patientEmail: patient.email,
-      ),
-    );
-  }
 }

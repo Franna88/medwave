@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/responsive_utils.dart';
+import '../support/contact_support_dialog.dart';
 
 class PendingApprovalScreen extends StatefulWidget {
   const PendingApprovalScreen({super.key});
@@ -70,13 +71,17 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen>
 
   void _refreshStatus() async {
     final authProvider = context.read<AuthProvider>();
-    // Trigger a reload of user profile to check for approval status changes
-    if (authProvider.user != null) {
-      // This would typically trigger a profile refresh
-      // The auth provider should automatically listen for changes
-      setState(() {
-        // Force a rebuild to check latest status
-      });
+    // Manually refresh user profile to check for approval status changes
+    await authProvider.refreshUserProfile();
+    
+    // Show a brief confirmation
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Status refreshed'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -503,7 +508,10 @@ class _PendingApprovalScreenState extends State<PendingApprovalScreen>
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () {
-                      // Support contact functionality coming soon
+                      showDialog(
+                        context: context,
+                        builder: (context) => const ContactSupportDialog(),
+                      );
                     },
                     child: const Text('Contact Support'),
                   ),

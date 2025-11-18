@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/admin_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/enhanced_photo_viewer.dart';
 
 class AdminProviderApprovalsScreen extends StatefulWidget {
   const AdminProviderApprovalsScreen({super.key});
@@ -357,6 +359,12 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
                     _buildDetailRow('User ID', practitioner['uid'] as String? ?? practitioner['id'] as String? ?? 'N/A'),
                     if (daysSince > 0)
                       _buildDetailRow('Registered', '$daysSince days ago'),
+                    
+                    // Verification Documents Section
+                    const SizedBox(height: 24),
+                    const Divider(thickness: 2),
+                    const SizedBox(height: 16),
+                    _buildVerificationDocumentsSection(practitioner),
                   ],
                 ),
               ),
@@ -551,6 +559,203 @@ class _AdminProviderApprovalsScreenState extends State<AdminProviderApprovalsScr
         );
       }
     }
+  }
+
+  // Build verification documents section
+  Widget _buildVerificationDocumentsSection(Map<String, dynamic> practitioner) {
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('users')
+          .doc(practitioner['uid'] as String? ?? practitioner['id'] as String?)
+          .get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const Text('Unable to load verification documents');
+        }
+        
+        final userData = snapshot.data!.data() as Map<String, dynamic>?;
+        final idDocuments = (userData?['idDocumentUrls'] as List<dynamic>?)?.cast<String>() ?? [];
+        final practiceImages = (userData?['practiceImageUrls'] as List<dynamic>?)?.cast<String>() ?? [];
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Verification Documents',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // ID Documents
+            _buildDocumentSubsection(
+              'ID Documents',
+              idDocuments,
+              Icons.badge,
+              AppTheme.primaryColor,
+              isRequired: true,
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Practice Images
+            _buildDocumentSubsection(
+              'Practice Images',
+              practiceImages,
+              Icons.business,
+              AppTheme.infoColor,
+              isRequired: false,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDocumentSubsection(
+    String title,
+    List<String> documents,
+    IconData icon,
+    Color color,
+    {required bool isRequired}
+  ) {
+    if (documents.isEmpty && !isRequired) {
+      return Row(
+        children: [
+          Icon(icon, color: Colors.grey, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            '$title: None uploaded',
+            style: const TextStyle(color: Colors.grey),
+          ),
+        ],
+      );
+    }
+    
+    if (documents.isEmpty && isRequired) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.errorColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.errorColor),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning, color: AppTheme.errorColor, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '⚠️ No $title uploaded (Required)',
+                style: const TextStyle(
+                  color: AppTheme.errorColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              '$title (${documents.length})',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: documents.asMap().entries.map((entry) {
+            return GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => EnhancedPhotoViewer(
+                      photoUrls: documents,
+                      initialIndex: entry.key,
+                      photoLabels: documents.asMap().entries.map((e) => 
+                        '$title ${e.key + 1}'
+                      ).toList(),
+                      enableComparison: false,
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: color, width: 2),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.network(
+                    entry.value,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      debugPrint('❌ Error loading image: $error');
+                      debugPrint('Image URL: ${entry.value}');
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => EnhancedPhotoViewer(
+                  photoUrls: documents,
+                  photoLabels: documents.asMap().entries.map((e) => 
+                    '$title ${e.key + 1}'
+                  ).toList(),
+                  enableComparison: false,
+                ),
+              ),
+            );
+          },
+          icon: const Icon(Icons.open_in_full, size: 16),
+          label: Text('View All $title'),
+        ),
+      ],
+    );
   }
 
 }

@@ -34,6 +34,15 @@ class UserProfile {
   // App Settings
   final UserSettings settings;
   
+  // Profile Information
+  final String? photoUrl; // Firebase Storage URL for profile photo
+  
+  // Verification Documents
+  final List<String> idDocumentUrls; // ID document images (mandatory)
+  final List<String> practiceImageUrls; // Practice/facility images (optional)
+  final DateTime? idDocumentUploadedAt; // When ID was uploaded
+  final DateTime? practiceImageUploadedAt; // When practice images were uploaded
+  
   // Metadata
   final DateTime createdAt;
   final DateTime? lastUpdated;
@@ -88,6 +97,11 @@ class UserProfile {
     this.licenseVerificationDate,
     required this.professionalReferences,
     required this.settings,
+    this.photoUrl,
+    this.idDocumentUrls = const [],
+    this.practiceImageUrls = const [],
+    this.idDocumentUploadedAt,
+    this.practiceImageUploadedAt,
     required this.createdAt,
     this.lastUpdated,
     this.lastLogin,
@@ -155,6 +169,15 @@ class UserProfile {
           ?.map((ref) => ProfessionalReference.fromMap(ref))
           .toList() ?? [],
       settings: UserSettings.fromMap(data['settings'] ?? {}),
+      photoUrl: data['photoUrl'],
+      idDocumentUrls: (data['idDocumentUrls'] as List<dynamic>?)
+          ?.map((url) => url.toString())
+          .toList() ?? [],
+      practiceImageUrls: (data['practiceImageUrls'] as List<dynamic>?)
+          ?.map((url) => url.toString())
+          .toList() ?? [],
+      idDocumentUploadedAt: data['idDocumentUploadedAt']?.toDate(),
+      practiceImageUploadedAt: data['practiceImageUploadedAt']?.toDate(),
       createdAt: data['createdAt']?.toDate() ?? DateTime.now(),
       lastUpdated: data['lastUpdated']?.toDate(),
       lastLogin: data['lastLogin']?.toDate(),
@@ -204,6 +227,11 @@ class UserProfile {
       'licenseVerificationDate': licenseVerificationDate != null ? Timestamp.fromDate(licenseVerificationDate!) : null,
       'professionalReferences': professionalReferences.map((ref) => ref.toMap()).toList(),
       'settings': settings.toMap(),
+      'photoUrl': photoUrl,
+      'idDocumentUrls': idDocumentUrls,
+      'practiceImageUrls': practiceImageUrls,
+      'idDocumentUploadedAt': idDocumentUploadedAt != null ? Timestamp.fromDate(idDocumentUploadedAt!) : null,
+      'practiceImageUploadedAt': practiceImageUploadedAt != null ? Timestamp.fromDate(practiceImageUploadedAt!) : null,
       'createdAt': Timestamp.fromDate(createdAt),
       'lastUpdated': lastUpdated != null ? Timestamp.fromDate(lastUpdated!) : FieldValue.serverTimestamp(),
       'lastLogin': lastLogin != null ? Timestamp.fromDate(lastLogin!) : null,
@@ -252,6 +280,10 @@ class UserProfile {
     DateTime? licenseVerificationDate,
     List<ProfessionalReference>? professionalReferences,
     UserSettings? settings,
+    List<String>? idDocumentUrls,
+    List<String>? practiceImageUrls,
+    DateTime? idDocumentUploadedAt,
+    DateTime? practiceImageUploadedAt,
     DateTime? lastUpdated,
     DateTime? lastLogin,
     String? role,
@@ -298,6 +330,10 @@ class UserProfile {
       licenseVerificationDate: licenseVerificationDate ?? this.licenseVerificationDate,
       professionalReferences: professionalReferences ?? this.professionalReferences,
       settings: settings ?? this.settings,
+      idDocumentUrls: idDocumentUrls ?? this.idDocumentUrls,
+      practiceImageUrls: practiceImageUrls ?? this.practiceImageUrls,
+      idDocumentUploadedAt: idDocumentUploadedAt ?? this.idDocumentUploadedAt,
+      practiceImageUploadedAt: practiceImageUploadedAt ?? this.practiceImageUploadedAt,
       createdAt: createdAt,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       lastLogin: lastLogin ?? this.lastLogin,

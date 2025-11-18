@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import '../../models/practitioner_application.dart';
 import '../../models/admin/admin_user.dart';
+import '../emailjs_service.dart';
 
 /// Firebase service for admin operations
 /// Handles fetching practitioner data, approvals, and analytics for admin users
@@ -100,14 +102,42 @@ class AdminService {
   /// Approve a real practitioner (update isApproved in users collection)
   static Future<void> approveRealPractitioner(String userId) async {
     try {
+      // First, get practitioner details for email
+      final userDoc = await _usersCollection.doc(userId).get();
+      final userData = userDoc.data() as Map<String, dynamic>?;
+      
+      // Update approval status
       await _usersCollection.doc(userId).update({
         'isApproved': true,
+        'accountStatus': 'approved', // This is the field that login checks
+        'approvalDate': FieldValue.serverTimestamp(),
         'approvedAt': FieldValue.serverTimestamp(),
         'approvedBy': _auth.currentUser?.uid,
       });
 
       if (kDebugMode) {
         print('✅ ADMIN SERVICE: Approved practitioner $userId');
+      }
+      
+      // Send approval email to practitioner
+      // Do this asynchronously without blocking
+      if (userData != null) {
+        final practitionerName = '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
+        final practitionerEmail = userData['email'] as String?;
+        
+        if (practitionerEmail != null && practitionerEmail.isNotEmpty) {
+          EmailJSService.sendPractitionerApprovalEmail(
+            practitionerName: practitionerName.isNotEmpty ? practitionerName : 'Practitioner',
+            practitionerEmail: practitionerEmail,
+            approvalDate: DateFormat('MMMM d, yyyy').format(DateTime.now()),
+          ).catchError((error) {
+            if (kDebugMode) {
+              print('⚠️ Failed to send approval email: $error');
+            }
+            // Don't throw - email failure shouldn't block approval
+            return false;
+          });
+        }
       }
     } catch (e) {
       if (kDebugMode) {
@@ -122,6 +152,7 @@ class AdminService {
     try {
       await _usersCollection.doc(userId).update({
         'isApproved': false,
+        'accountStatus': 'rejected', // Update account status as well
         'rejectedAt': FieldValue.serverTimestamp(),
         'rejectedBy': _auth.currentUser?.uid,
         'rejectionReason': reason,

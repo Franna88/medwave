@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/responsive_utils.dart';
+import '../../services/verification_document_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -43,6 +45,11 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
   final _licenseNumberFocusNode = FocusNode();
   final _yearsOfExperienceFocusNode = FocusNode();
   final _practiceLocationFocusNode = FocusNode();
+  
+  // Verification Documents
+  List<XFile> _idDocuments = [];
+  List<XFile> _practiceImages = [];
+  final _verificationService = VerificationDocumentService();
   
   // Form Controllers - Location Information
   final _addressController = TextEditingController();
@@ -258,6 +265,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
       return false;
     }
     
+    // Validate ID documents (mandatory)
+    if (_idDocuments.isEmpty) {
+      _showError('Please upload at least one ID document. This is required for verification.');
+      return false;
+    }
+    
     return true;
   }
 
@@ -303,6 +316,12 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
     
     debugPrint('Starting signup process...');
     
+    // Prepare verification documents for upload
+    // These will be uploaded in AuthProvider after user creation
+    debugPrint('📤 Preparing verification documents...');
+    debugPrint('📄 ID documents to upload: ${_idDocuments.length}');
+    debugPrint('🏢 Practice images to upload: ${_practiceImages.length}');
+    
     final signupData = {
       // Personal Information
       'firstName': _firstNameController.text.trim(),
@@ -324,6 +343,10 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
       'city': _cityController.text.trim(),
       'address': _addressController.text.trim(),
       'postalCode': _postalCodeController.text.trim(),
+      
+      // Verification Documents (will be uploaded after user creation)
+      'idDocuments': _idDocuments,
+      'practiceImages': _practiceImages,
     };
 
     debugPrint('Calling authProvider.signup with email: ${signupData['email']}');
@@ -421,14 +444,14 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
             onPressed: () {
               Navigator.of(context).pop();
               if (isAutoApproved) {
-                // If auto-approved, go directly to dashboard
-                context.go('/');
+                // If auto-approved, go to email verification first
+                context.go('/verify-email');
               } else {
-                // If pending approval, go to login
-                context.go('/login');
+                // If pending approval, go to email verification
+                context.go('/verify-email');
               }
             },
-            child: Text(isAutoApproved ? 'Start Using MedWave' : 'Go to Login'),
+            child: const Text('Verify Email'),
           ),
         ],
       ),
@@ -1095,6 +1118,14 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
               prefixIcon: Icon(Icons.location_on),
             ),
           ),
+          const SizedBox(height: 32),
+          
+          // ID Document Upload Section
+          _buildIdDocumentSection(),
+          const SizedBox(height: 24),
+          
+          // Practice Image Upload Section
+          _buildPracticeImageSection(),
         ],
       ),
     );
@@ -1355,6 +1386,313 @@ class _SignupScreenState extends State<SignupScreen> with TickerProviderStateMix
         return 'Location';
       default:
         return '';
+    }
+  }
+
+  // ID Document Upload Section
+  Widget _buildIdDocumentSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _idDocuments.isEmpty ? AppTheme.errorColor.withOpacity(0.3) : AppTheme.borderColor,
+          width: _idDocuments.isEmpty ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.badge,
+                color: _idDocuments.isEmpty ? AppTheme.errorColor : AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ID Document (Required) *',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Upload clear photo(s) of your professional ID or license',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.secondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Upload buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _idDocuments.length < 3 ? () => _pickIdDocument(fromCamera: false) : null,
+                  icon: const Icon(Icons.photo_library, size: 20),
+                  label: const Text('Gallery'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _idDocuments.length < 3 ? () => _pickIdDocument(fromCamera: true) : null,
+                  icon: const Icon(Icons.camera_alt, size: 20),
+                  label: const Text('Camera'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          // Display selected documents
+          if (_idDocuments.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _idDocuments.asMap().entries.map((entry) {
+                return _buildDocumentThumbnail(
+                  entry.value,
+                  () => setState(() => _idDocuments.removeAt(entry.key)),
+                );
+              }).toList(),
+            ),
+          ],
+          
+          // Limit indicator
+          const SizedBox(height: 8),
+          Text(
+            '${_idDocuments.length}/3 documents uploaded',
+            style: TextStyle(
+              fontSize: 12,
+              color: _idDocuments.isEmpty ? AppTheme.errorColor : AppTheme.secondaryColor,
+              fontWeight: _idDocuments.isEmpty ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Practice Image Upload Section
+  Widget _buildPracticeImageSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.business,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Practice/Facility Image (Optional)',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textColor,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Upload photo(s) of your practice or workplace',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.secondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Upload buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _practiceImages.length < 5 ? () => _pickPracticeImage(fromCamera: false) : null,
+                  icon: const Icon(Icons.photo_library, size: 20),
+                  label: const Text('Gallery'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _practiceImages.length < 5 ? () => _pickPracticeImage(fromCamera: true) : null,
+                  icon: const Icon(Icons.camera_alt, size: 20),
+                  label: const Text('Camera'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          // Display selected images
+          if (_practiceImages.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _practiceImages.asMap().entries.map((entry) {
+                return _buildDocumentThumbnail(
+                  entry.value,
+                  () => setState(() => _practiceImages.removeAt(entry.key)),
+                );
+              }).toList(),
+            ),
+          ],
+          
+          // Limit indicator
+          const SizedBox(height: 8),
+          Text(
+            '${_practiceImages.length}/5 images uploaded',
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppTheme.secondaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build document thumbnail with remove button
+  Widget _buildDocumentThumbnail(XFile file, VoidCallback onRemove) {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.borderColor, width: 2),
+      ),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.network(
+              file.path,
+              width: 80,
+              height: 80,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                // For local files, use a placeholder
+                return Container(
+                  color: AppTheme.cardColor,
+                  child: const Icon(
+                    Icons.image,
+                    color: AppTheme.primaryColor,
+                    size: 32,
+                  ),
+                );
+              },
+            ),
+          ),
+          Positioned(
+            top: -4,
+            right: -4,
+            child: IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: AppTheme.errorColor,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+              onPressed: onRemove,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Pick ID document
+  Future<void> _pickIdDocument({required bool fromCamera}) async {
+    try {
+      final XFile? image = await _verificationService.pickImage(fromCamera: fromCamera);
+      if (image != null) {
+        setState(() {
+          _idDocuments.add(image);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    }
+  }
+
+  // Pick practice image
+  Future<void> _pickPracticeImage({required bool fromCamera}) async {
+    try {
+      final XFile? image = await _verificationService.pickImage(fromCamera: fromCamera);
+      if (image != null) {
+        setState(() {
+          _practiceImages.add(image);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
     }
   }
 }

@@ -34,6 +34,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'screens/auth/pending_approval_screen.dart';
+import 'screens/auth/email_verification_screen.dart';
 import 'screens/download/download_app_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
@@ -267,6 +268,11 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       path: '/pending-approval',
       name: 'pending-approval',
       builder: (context, state) => const PendingApprovalScreen(),
+    ),
+    GoRoute(
+      path: '/verify-email',
+      name: 'verify-email',
+      builder: (context, state) => const EmailVerificationScreen(),
     ),
     
     // Main app routes (protected)

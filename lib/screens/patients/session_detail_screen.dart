@@ -4,11 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../models/patient.dart';
-import '../../models/payment.dart';
 import '../../theme/app_theme.dart';
 import '../ai/ai_report_chat_screen.dart';
 import '../../services/firebase/patient_service.dart';
-import '../../services/paystack_service.dart';
 import '../../services/wound_management_service.dart';
 import '../../services/ai/ai_report_service_factory.dart';
 import '../../widgets/wound_progress_card.dart';
@@ -41,8 +39,6 @@ with TickerProviderStateMixin {
   bool _isLoadingSessions = true;
   bool _isMultiWound = false;
   int _expandedWoundIndex = 0;
-  Payment? _payment;
-  bool _isLoadingPayment = false;
 
   @override
   void initState() {
@@ -50,7 +46,6 @@ with TickerProviderStateMixin {
     _isMultiWound = WoundManagementService.hasMultipleWounds(widget.patient);
     _tabController = TabController(length: _isMultiWound ? 4 : 3, vsync: this);
     _loadAllSessions();
-    _loadPaymentInfo();
   }
 
   @override
@@ -113,35 +108,6 @@ with TickerProviderStateMixin {
     } else {
       print('❌ DEBUG: No previous session found');
       print('🔍 DEBUG: Available session numbers: ${_allSessions.map((s) => s.sessionNumber).toList()}');
-    }
-  }
-
-  Future<void> _loadPaymentInfo() async {
-    if (widget.session.paymentId == null) {
-      return; // No payment associated with this session
-    }
-
-    setState(() {
-      _isLoadingPayment = true;
-    });
-
-    try {
-      final paystackService = PaystackService();
-      final payment = await paystackService.getPayment(widget.session.paymentId!);
-      
-      if (mounted) {
-        setState(() {
-          _payment = payment;
-          _isLoadingPayment = false;
-        });
-      }
-    } catch (e) {
-      print('❌ DEBUG: Error loading payment: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingPayment = false;
-        });
-      }
     }
   }
 

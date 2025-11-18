@@ -16,6 +16,11 @@ class EmailJSService {
   static const String _bookingConfirmationTemplateId = 'template_fa05nmm';
   static const String _appointmentConfirmedTemplateId = 'template_a49n84w';
   static const String _bookingReminderTemplateId = 'template_2wi1x28';
+  static const String _practitionerRegistrationTemplateId = 'template_vn12cfj'; // Admin notification - Practitioner Applied
+  static const String _practitionerApprovalTemplateId = 'template_qnmopr1'; // Practitioner approval notification - Application Approved
+  
+  // Admin email for notifications
+  static const String _adminEmail = 'info@barefootbytes.com'; // TODO: Update with actual superadmin email
 
   /// Send booking confirmation email
   static Future<bool> sendBookingConfirmation({
@@ -156,6 +161,96 @@ class EmailJSService {
   static String generateConfirmationLink(String appointmentId) {
     // For now, using the Cloud Function we created earlier
     return 'https://us-central1-medx-ai.cloudfunctions.net/confirmAppointmentViaEmail?id=$appointmentId';
+  }
+
+  /// Send practitioner registration notification to admin
+  static Future<bool> sendPractitionerRegistrationNotification({
+    required String practitionerName,
+    required String practitionerEmail,
+    required String specialization,
+    required String licenseNumber,
+    required String country,
+    required String registrationDate,
+  }) async {
+    try {
+      debugPrint('📧 Sending practitioner registration notification to admin');
+      debugPrint('📧 Admin email: $_adminEmail');
+      
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _practitionerRegistrationTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            'to_email': _adminEmail, // EmailJS standard recipient field
+            'to_name': 'MedWave Admin',
+            'admin_email': _adminEmail,
+            'practitioner_name': practitionerName,
+            'practitioner_email': practitionerEmail,
+            'specialization': specialization,
+            'license_number': licenseNumber,
+            'country': country,
+            'registration_date': registrationDate,
+            'admin_dashboard_link': 'http://localhost:52961/#/admin/approvals', // Local dev URL
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ Practitioner registration notification sent successfully');
+        return true;
+      } else {
+        debugPrint('❌ Failed to send practitioner registration notification: ${response.body}');
+        return false;
+      }
+    } catch (error) {
+      debugPrint('❌ Error sending practitioner registration notification: $error');
+      return false;
+    }
+  }
+
+  /// Send practitioner approval email
+  static Future<bool> sendPractitionerApprovalEmail({
+    required String practitionerName,
+    required String practitionerEmail,
+    required String approvalDate,
+  }) async {
+    try {
+      debugPrint('📧 Sending practitioner approval email to $practitionerEmail');
+      
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _practitionerApprovalTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            'to_email': practitionerEmail, // EmailJS standard recipient field
+            'to_name': practitionerName,
+            'practitioner_name': practitionerName,
+            'practitioner_email': practitionerEmail,
+            'approval_date': approvalDate,
+            'login_link': 'http://localhost:52961/#/login', // Local dev URL
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ Practitioner approval email sent successfully');
+        return true;
+      } else {
+        debugPrint('❌ Failed to send practitioner approval email: ${response.body}');
+        return false;
+      }
+    } catch (error) {
+      debugPrint('❌ Error sending practitioner approval email: $error');
+      return false;
+    }
   }
 }
 

@@ -1,24 +1,31 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import '../models/user_profile.dart';
 import '../utils/role_manager.dart';
+import '../services/verification_document_service.dart';
+import '../services/emailjs_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final VerificationDocumentService _verificationService = VerificationDocumentService();
   
   User? _user;
   UserProfile? _userProfile;
   bool _isLoading = false;
   String? _errorMessage;
+  StreamSubscription<DocumentSnapshot>? _userProfileSubscription;
   
   // Feature flag for development - allows switching between mock and Firebase
   static const bool _useFirebase = true; // Firebase is now configured!
   
   // Feature flag for auto-approval during development/testing
   // Set to true for testing, false for production approval workflow
-  static const bool _autoApprovePractitioners = true; // Enable for testing
+  static const bool _autoApprovePractitioners = false; // Disabled for production - require admin approval
   
   // Mock data for development
   bool _mockAuthenticated = false;
@@ -73,13 +80,34 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('Auth state changed: user=${user?.email}, uid=${user?.uid}');
       _user = user;
       if (user != null) {
-        await _loadUserProfile();
+        _setupUserProfileListener(user.uid);
       } else {
         _userProfile = null;
       }
       _isLoading = false; // Auth state has been determined
       notifyListeners();
     });
+  }
+  
+  void _setupUserProfileListener(String userId) {
+    // Cancel any existing subscription
+    _userProfileSubscription?.cancel();
+    
+    // Listen to real-time updates of the user profile
+    _userProfileSubscription = _firestore.collection('users').doc(userId).snapshots().listen(
+      (doc) {
+        if (doc.exists) {
+          _userProfile = UserProfile.fromFirestore(doc);
+          debugPrint('User profile updated: ${_userProfile?.accountStatus}, canAccessApp: $canAccessApp');
+          notifyListeners();
+        } else {
+          debugPrint('User profile document does not exist');
+        }
+      },
+      onError: (e) {
+        debugPrint('Error listening to user profile: $e');
+      },
+    );
   }
   
   void _setLoading(bool loading) {
@@ -142,11 +170,56 @@ class AuthProvider extends ChangeNotifier {
       );
       
       if (credential.user != null) {
+        // Send email verification
+        await credential.user!.sendEmailVerification();
+        debugPrint('Email verification sent to: ${credential.user!.email}');
+        
+        // Upload verification documents
+        List<String> idDocumentUrls = [];
+        List<String> practiceImageUrls = [];
+        
+        if (signupData['idDocuments'] != null && (signupData['idDocuments'] as List).isNotEmpty) {
+          debugPrint('📤 Uploading ID documents...');
+          idDocumentUrls = await _verificationService.uploadIdDocuments(
+            credential.user!.uid,
+            signupData['idDocuments'] as List<XFile>,
+          );
+          debugPrint('✅ Uploaded ${idDocumentUrls.length} ID documents');
+        }
+        
+        if (signupData['practiceImages'] != null && (signupData['practiceImages'] as List).isNotEmpty) {
+          debugPrint('📤 Uploading practice images...');
+          practiceImageUrls = await _verificationService.uploadPracticeImages(
+            credential.user!.uid,
+            signupData['practiceImages'] as List<XFile>,
+          );
+          debugPrint('✅ Uploaded ${practiceImageUrls.length} practice images');
+        }
+        
+        // Add document URLs to signup data
+        signupData['idDocumentUrls'] = idDocumentUrls;
+        signupData['practiceImageUrls'] = practiceImageUrls;
+        
         // Create user profile in Firestore
         await _createUserProfile(credential.user!.uid, signupData);
         
         // Create practitioner application
         await _createPractitionerApplication(credential.user!.uid, signupData);
+        
+        // Send email notification to admin about new practitioner registration
+        // Do this asynchronously without blocking - failures shouldn't stop signup
+        EmailJSService.sendPractitionerRegistrationNotification(
+          practitionerName: '${signupData['firstName']} ${signupData['lastName']}',
+          practitionerEmail: signupData['email'],
+          specialization: signupData['specialization'] ?? 'N/A',
+          licenseNumber: signupData['licenseNumber'] ?? 'N/A',
+          country: signupData['countryName'] ?? signupData['country'] ?? 'N/A',
+          registrationDate: DateFormat('MMMM d, yyyy').format(DateTime.now()),
+        ).catchError((error) {
+          debugPrint('⚠️ Failed to send admin notification email: $error');
+          // Don't throw - email failure shouldn't block signup
+          return false;
+        });
         
         // If auto-approval is enabled, set user and load profile immediately
         if (_autoApprovePractitioners) {
@@ -181,11 +254,32 @@ class AuthProvider extends ChangeNotifier {
     }
     
     try {
+      // Cancel user profile subscription
+      await _userProfileSubscription?.cancel();
+      _userProfileSubscription = null;
+      
       await _auth.signOut();
       _userProfile = null;
       _setError(null);
     } catch (e) {
       _setError('Failed to sign out. Please try again.');
+    }
+  }
+  
+  /// Manually refresh user profile (useful for "Refresh Status" button)
+  Future<void> refreshUserProfile() async {
+    if (_user == null) return;
+    
+    try {
+      debugPrint('Manually refreshing user profile...');
+      final doc = await _firestore.collection('users').doc(_user!.uid).get();
+      if (doc.exists) {
+        _userProfile = UserProfile.fromFirestore(doc);
+        debugPrint('User profile refreshed: ${_userProfile?.accountStatus}, canAccessApp: $canAccessApp');
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error refreshing user profile: $e');
     }
   }
   
@@ -255,6 +349,15 @@ class AuthProvider extends ChangeNotifier {
       'role': 'practitioner',
       'licenseVerified': _autoApprovePractitioners ? true : false,
       'professionalReferences': [],
+      // Verification documents
+      'idDocumentUrls': signupData['idDocumentUrls'] ?? [],
+      'practiceImageUrls': signupData['practiceImageUrls'] ?? [],
+      'idDocumentUploadedAt': (signupData['idDocumentUrls'] as List?)?.isNotEmpty == true 
+          ? FieldValue.serverTimestamp() 
+          : null,
+      'practiceImageUploadedAt': (signupData['practiceImageUrls'] as List?)?.isNotEmpty == true 
+          ? FieldValue.serverTimestamp() 
+          : null,
       'settings': {
         'notificationsEnabled': true,
         'darkModeEnabled': false,
@@ -443,5 +546,11 @@ class AuthProvider extends ChangeNotifier {
     _mockEmail = null;
     _mockUserName = null;
     notifyListeners();
+  }
+  
+  @override
+  void dispose() {
+    _userProfileSubscription?.cancel();
+    super.dispose();
   }
 }

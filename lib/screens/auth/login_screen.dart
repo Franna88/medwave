@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/responsive_utils.dart';
+import 'forgot_password_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -420,7 +421,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                   const Spacer(),
                                   TextButton(
                                     onPressed: () {
-                                      // Navigate to forgot password
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => const ForgotPasswordDialog(),
+                                      );
                                     },
                                     child: const Text(
                                       'Forgot Password?',
@@ -740,7 +744,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                               const Spacer(),
                               TextButton(
                                 onPressed: () {
-                                  // Navigate to forgot password
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => const ForgotPasswordDialog(),
+                                  );
                                 },
                                 child: const Text(
                                   'Forgot Password?',
