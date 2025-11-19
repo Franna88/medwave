@@ -65,6 +65,7 @@ import 'providers/gohighlevel_provider.dart';
 import 'services/firebase/fcm_service.dart';
 import 'services/web_image_service.dart';
 import 'utils/responsive_utils.dart';
+import 'services/firebase/app_settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,6 +86,10 @@ void main() async {
 
   // Configure web image caching
   WebImageService.configureWebImageCache();
+
+  // Initialize app settings with defaults if they don't exist
+  final appSettingsService = AppSettingsService();
+  await appSettingsService.initializeDefaultSettings();
 
   runApp(const MedWaveApp());
 }

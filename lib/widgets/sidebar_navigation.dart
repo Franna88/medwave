@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/role_manager.dart';
 import '../providers/auth_provider.dart';
+import '../services/firebase/app_settings_service.dart';
+import '../models/app_settings.dart';
 
 class SidebarNavigation extends StatefulWidget {
   const SidebarNavigation({super.key});
@@ -14,6 +16,7 @@ class SidebarNavigation extends StatefulWidget {
 
 class _SidebarNavigationState extends State<SidebarNavigation> {
   final Set<String> _expandedItems = {};
+  final AppSettingsService _settingsService = AppSettingsService();
 
   @override
   Widget build(BuildContext context) {
@@ -101,26 +104,39 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
     final authProvider = context.watch<AuthProvider>();
     final userRole = authProvider.userRole;
     
-    // Get role-based navigation items
-    final roleNavItems = RoleManager.getNavigationItems(userRole);
-    
-    // Auto-expand items if a sub-route is active
-    for (final roleItem in roleNavItems) {
-      if (roleItem.hasSubItems) {
-        for (final subItem in roleItem.subItems!) {
-          if (currentLocation.startsWith(subItem.route)) {
-            _expandedItems.add(roleItem.route);
-            break;
+    // Use StreamBuilder to watch for feature settings changes
+    return StreamBuilder<AppFeatureSettings>(
+      stream: _settingsService.watchFeatureSettings(),
+      initialData: AppFeatureSettings(), // Default values
+      builder: (context, snapshot) {
+        final settings = snapshot.data ?? AppFeatureSettings();
+        
+        // Get role-based navigation items with feature flags
+        final roleNavItems = RoleManager.getNavigationItems(
+          userRole,
+          showForms: settings.showFormsInNavbar,
+          showLeads: settings.showLeadsInNavbar,
+        );
+        
+        // Auto-expand items if a sub-route is active
+        for (final roleItem in roleNavItems) {
+          if (roleItem.hasSubItems) {
+            for (final subItem in roleItem.subItems!) {
+              if (currentLocation.startsWith(subItem.route)) {
+                _expandedItems.add(roleItem.route);
+                break;
+              }
+            }
           }
         }
-      }
-    }
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: roleNavItems.map((roleItem) {
-        return _buildNavigationItemWithSubItems(context, roleItem, currentLocation);
-      }).toList(),
+        return ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          children: roleNavItems.map((roleItem) {
+            return _buildNavigationItemWithSubItems(context, roleItem, currentLocation);
+          }).toList(),
+        );
+      },
     );
   }
 

@@ -84,7 +84,12 @@ class RoleManager {
   }
 
   /// Get role-specific navigation items
-  static List<NavigationItem> getNavigationItems(UserRole role) {
+  /// Optional parameters allow filtering based on feature flags
+  static List<NavigationItem> getNavigationItems(
+    UserRole role, {
+    bool showForms = true,
+    bool showLeads = true,
+  }) {
     switch (role) {
       case UserRole.superAdmin:
       case UserRole.countryAdmin:
@@ -147,9 +152,19 @@ class RoleManager {
               'admin_panel_settings',
             ),
             NavigationItem('Report Builder', '/admin/report-builder', 'build'),
-            NavigationItem('Forms', '/admin/forms', 'description'),
-            NavigationItem('Leads', '/admin/leads', 'people_outline'),
           ]);
+
+          // Add Forms and Leads based on feature flags
+          if (showForms) {
+            adminItems.add(
+              NavigationItem('Forms', '/admin/forms', 'description'),
+            );
+          }
+          if (showLeads) {
+            adminItems.add(
+              NavigationItem('Leads', '/admin/leads', 'people_outline'),
+            );
+          }
         }
 
         return adminItems;
