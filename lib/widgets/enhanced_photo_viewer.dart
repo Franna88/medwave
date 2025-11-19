@@ -27,7 +27,8 @@ class _EnhancedPhotoViewerState extends State<EnhancedPhotoViewer> {
   late int _currentIndex;
   bool _isComparisonMode = false;
   int? _comparisonIndex;
-  final TransformationController _transformationController = TransformationController();
+  final TransformationController _transformationController =
+      TransformationController();
 
   @override
   void initState() {
@@ -67,7 +68,7 @@ class _EnhancedPhotoViewerState extends State<EnhancedPhotoViewer> {
         elevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.close, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -77,7 +78,9 @@ class _EnhancedPhotoViewerState extends State<EnhancedPhotoViewer> {
         actions: [
           if (widget.enableComparison && widget.photoUrls.length > 1)
             IconButton(
-              icon: Icon(_isComparisonMode ? Icons.compare : Icons.compare_outlined),
+              icon: Icon(
+                _isComparisonMode ? Icons.compare : Icons.compare_outlined,
+              ),
               onPressed: _toggleComparisonMode,
               tooltip: 'Compare Photos',
             ),
@@ -104,7 +107,8 @@ class _EnhancedPhotoViewerState extends State<EnhancedPhotoViewer> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (widget.photoLabels != null && widget.photoLabels!.length > _currentIndex)
+                if (widget.photoLabels != null &&
+                    widget.photoLabels!.length > _currentIndex)
                   Text(
                     widget.photoLabels![_currentIndex],
                     style: const TextStyle(
@@ -114,7 +118,8 @@ class _EnhancedPhotoViewerState extends State<EnhancedPhotoViewer> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                if (widget.photoTimestamps != null && widget.photoTimestamps!.length > _currentIndex) ...[
+                if (widget.photoTimestamps != null &&
+                    widget.photoTimestamps!.length > _currentIndex) ...[
                   const SizedBox(height: 4),
                   Text(
                     _formatTimestamp(widget.photoTimestamps![_currentIndex]),
@@ -175,13 +180,10 @@ class _EnhancedPhotoViewerState extends State<EnhancedPhotoViewer> {
             ],
           ),
         ),
-        
+
         // Divider
-        Container(
-          width: 2,
-          color: Colors.white.withOpacity(0.5),
-        ),
-        
+        Container(width: 2, color: Colors.white.withOpacity(0.5)),
+
         // Comparison photo
         Expanded(
           child: Column(
@@ -246,9 +248,7 @@ class _EnhancedPhotoViewerState extends State<EnhancedPhotoViewer> {
           loadingBuilder: (context, child, loadingProgress) {
             if (loadingProgress == null) return child;
             return const Center(
-              child: CircularProgressIndicator(
-                color: AppTheme.primaryColor,
-              ),
+              child: CircularProgressIndicator(color: AppTheme.primaryColor),
             );
           },
           errorBuilder: (context, error, stackTrace) {
@@ -266,10 +266,7 @@ class _EnhancedPhotoViewerState extends State<EnhancedPhotoViewer> {
                   SizedBox(height: 16),
                   Text(
                     'Failed to load photo',
-                    style: TextStyle(
-                      color: Colors.white54,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(color: Colors.white54, fontSize: 16),
                   ),
                 ],
               ),
@@ -291,7 +288,7 @@ class _EnhancedPhotoViewerState extends State<EnhancedPhotoViewer> {
         itemBuilder: (context, index) {
           final isSelected = index == _currentIndex;
           final isComparison = _isComparisonMode && index == _comparisonIndex;
-          
+
           return GestureDetector(
             onTap: () {
               if (_isComparisonMode) {
@@ -314,8 +311,8 @@ class _EnhancedPhotoViewerState extends State<EnhancedPhotoViewer> {
                   color: isSelected
                       ? AppTheme.primaryColor
                       : isComparison
-                          ? AppTheme.successColor
-                          : Colors.transparent,
+                      ? AppTheme.successColor
+                      : Colors.transparent,
                   width: 3,
                 ),
                 borderRadius: BorderRadius.circular(8),
@@ -369,4 +366,3 @@ class _EnhancedPhotoViewerState extends State<EnhancedPhotoViewer> {
     }
   }
 }
-
