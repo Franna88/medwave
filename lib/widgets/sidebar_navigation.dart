@@ -299,6 +299,10 @@ class _SidebarNavigationState extends State<SidebarNavigation> {
         return filled ? Icons.inventory : Icons.inventory_outlined;
       case 'timeline':
         return filled ? Icons.timeline : Icons.timeline_outlined;
+      case 'description':
+        return filled ? Icons.description : Icons.description_outlined;
+      case 'people_outline':
+        return filled ? Icons.people : Icons.people_outline;
       default:
         return filled ? Icons.circle : Icons.circle_outlined;
     }

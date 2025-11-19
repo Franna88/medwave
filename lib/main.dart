@@ -55,6 +55,9 @@ import 'screens/admin/adverts/admin_adverts_products_screen.dart';
 import 'screens/admin/adverts/admin_adverts_timeline_screen.dart';
 import 'screens/admin/admin_user_management_screen.dart';
 import 'screens/admin/admin_report_builder_screen.dart';
+import 'screens/admin/admin_forms_screen.dart';
+import 'screens/admin/forms/form_builder_screen.dart';
+import 'screens/admin/admin_leads_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/admin_provider.dart';
@@ -410,6 +413,24 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           path: '/admin/report-builder',
           name: 'admin-report-builder',
           builder: (context, state) => const AdminReportBuilderScreen(),
+        ),
+        GoRoute(
+          path: '/admin/forms',
+          name: 'admin-forms',
+          builder: (context, state) => const AdminFormsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/forms/builder/:formId',
+          name: 'form-builder',
+          builder: (context, state) {
+            final formId = state.pathParameters['formId']!;
+            return FormBuilderScreen(formId: formId);
+          },
+        ),
+        GoRoute(
+          path: '/admin/leads',
+          name: 'admin-leads',
+          builder: (context, state) => const AdminLeadsScreen(),
         ),
       ],
     ),

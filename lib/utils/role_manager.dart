@@ -147,6 +147,8 @@ class RoleManager {
               'admin_panel_settings',
             ),
             NavigationItem('Report Builder', '/admin/report-builder', 'build'),
+            NavigationItem('Forms', '/admin/forms', 'description'),
+            NavigationItem('Leads', '/admin/leads', 'people_outline'),
           ]);
         }
 
