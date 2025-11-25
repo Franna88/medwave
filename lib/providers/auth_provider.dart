@@ -89,11 +89,64 @@ class AuthProvider extends ChangeNotifier {
     });
   }
   
-  void _setupUserProfileListener(String userId) {
+  void _setupUserProfileListener(String userId) async {
     // Cancel any existing subscription
     _userProfileSubscription?.cancel();
     
-    // Listen to real-time updates of the user profile
+    // First check if this is an admin user
+    try {
+      final adminQuery = await _firestore.collection('adminUsers')
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+      
+      if (adminQuery.docs.isNotEmpty) {
+        // This is an admin user - create a UserProfile from admin data
+        final adminDoc = adminQuery.docs.first;
+        final adminData = adminDoc.data();
+        
+        _userProfile = UserProfile(
+          id: userId,
+          email: adminData['email'] ?? '',
+          firstName: adminData['firstName'] ?? '',
+          lastName: adminData['lastName'] ?? '',
+          phoneNumber: '',
+          licenseNumber: '',
+          specialization: 'Administrator',
+          yearsOfExperience: 0,
+          practiceLocation: adminData['country'] ?? '',
+          country: adminData['country'] ?? '',
+          countryName: adminData['countryName'] ?? '',
+          province: '',
+          city: '',
+          address: '',
+          postalCode: '',
+          accountStatus: 'approved', // Admin users are always approved
+          role: adminData['role'] ?? 'super_admin',
+          licenseVerified: true,
+          professionalReferences: [],
+          totalPatients: 0,
+          totalSessions: 0,
+          settings: UserSettings(
+            notificationsEnabled: true,
+            darkModeEnabled: false,
+            biometricEnabled: false,
+            language: 'en',
+            timezone: 'UTC',
+          ),
+          createdAt: (adminData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          lastLogin: DateTime.now(),
+        );
+        
+        debugPrint('Admin user profile loaded: ${_userProfile?.role}, canAccessApp: $canAccessApp');
+        notifyListeners();
+        return;
+      }
+    } catch (e) {
+      debugPrint('Error checking admin users: $e');
+    }
+    
+    // Not an admin user, listen to regular user profile
     _userProfileSubscription = _firestore.collection('users').doc(userId).snapshots().listen(
       (doc) {
         if (doc.exists) {
@@ -129,20 +182,18 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(true);
       _setError(null);
       
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
-      // Update last login time
-      if (credential.user != null) {
-        await _firestore.collection('users').doc(credential.user!.uid).update({
-          'lastLogin': FieldValue.serverTimestamp(),
-          'lastActivityDate': FieldValue.serverTimestamp(),
-        });
-      }
+      // Add 30-second timeout to prevent indefinite loading
+      await Future.any([
+        Future.delayed(const Duration(seconds: 30)).then((_) {
+          throw TimeoutException('Login request timed out. Please check your internet connection and try again.');
+        }),
+        _performLogin(email, password),
+      ]);
       
       return true;
+    } on TimeoutException catch (e) {
+      _setError(e.message ?? 'Request timed out. Please try again.');
+      return false;
     } on FirebaseAuthException catch (e) {
       _setError(_getAuthErrorMessage(e));
       return false;
@@ -151,6 +202,32 @@ class AuthProvider extends ChangeNotifier {
       return false;
     } finally {
       _setLoading(false);
+    }
+  }
+  
+  Future<void> _performLogin(String email, String password) async {
+    final credential = await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    
+    // Update last login time with separate timeout - don't fail login if this fails
+    if (credential.user != null) {
+      try {
+        await _firestore.collection('users').doc(credential.user!.uid).update({
+          'lastLogin': FieldValue.serverTimestamp(),
+          'lastActivityDate': FieldValue.serverTimestamp(),
+        }).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            debugPrint('⚠️ Firestore lastLogin update timed out - continuing anyway');
+            return;
+          },
+        );
+      } catch (e) {
+        debugPrint('⚠️ Failed to update lastLogin timestamp: $e');
+        // Continue anyway - login succeeded, timestamp update is not critical
+      }
     }
   }
   

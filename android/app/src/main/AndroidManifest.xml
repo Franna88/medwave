@@ -1,19 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <!-- Permissions for camera (medical wound documentation) -->
-    <!-- Note: We do NOT use MANAGE_EXTERNAL_STORAGE - we use app-private storage + Share API -->
-    <!-- Note: READ_MEDIA_IMAGES removed - using Android Photo Picker for limited access (Google Play policy) -->
+    <!-- Google Play Photo and Video Permissions Policy Compliance:
+         - We use Android Photo Picker (built into image_picker plugin for Android 13+)
+         - For Android 12 and below, we use scoped storage with limited access
+         - READ_MEDIA_IMAGES/VIDEO permissions explicitly removed per Google Play policy
+         - App only needs one-time/infrequent access for wound photo documentation -->
     <uses-permission android:name="android.permission.CAMERA" />
     
-    <!-- Explicitly REMOVE permissions added by image_picker plugin (Google Play policy compliance) -->
+    <!-- Explicitly REMOVE broad media permissions added by image_picker plugin -->
+    <!-- This complies with Google Play's Photo and Video Permissions policy -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove" />
-    
-    <!-- Legacy storage permissions for older Android versions -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
-        android:maxSdkVersion="28" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
-        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" tools:node="remove" />
     
     <!-- Camera feature (optional but recommended) -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />

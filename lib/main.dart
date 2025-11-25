@@ -51,8 +51,6 @@ import 'screens/admin/adverts/admin_adverts_campaigns_screen.dart';
 import 'screens/admin/adverts/admin_adverts_campaigns_old_screen.dart';
 import 'screens/admin/adverts/admin_adverts_comparison_screen.dart';
 import 'screens/admin/adverts/admin_adverts_ads_screen.dart';
-import 'screens/admin/adverts/admin_adverts_products_screen.dart';
-import 'screens/admin/adverts/admin_adverts_timeline_screen.dart';
 import 'screens/admin/admin_user_management_screen.dart';
 import 'screens/admin/admin_report_builder_screen.dart';
 import 'screens/admin/admin_forms_screen.dart';
@@ -388,19 +386,9 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
               builder: (context, state) => const AdminAdvertsAdsScreen(),
             ),
             GoRoute(
-              path: 'timeline',
-              name: 'admin-adverts-timeline',
-              builder: (context, state) => const AdminAdvertsTimelineScreen(),
-            ),
-            GoRoute(
               path: 'comparison',
               name: 'admin-adverts-comparison',
               builder: (context, state) => const AdminAdvertsComparisonScreen(),
-            ),
-            GoRoute(
-              path: 'products',
-              name: 'admin-adverts-products',
-              builder: (context, state) => const AdminAdvertsProductsScreen(),
             ),
           ],
         ),

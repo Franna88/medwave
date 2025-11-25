@@ -657,6 +657,7 @@ class AdminProvider extends ChangeNotifier {
   /// Create a new admin user (Super Admin only)
   Future<bool> createAdminUser({
     required String email,
+    required String password,
     required String firstName,
     required String lastName,
     required AdminRole role,
@@ -671,6 +672,7 @@ class AdminProvider extends ChangeNotifier {
 
       await AdminService.createAdminUser(
         email: email,
+        password: password,
         firstName: firstName,
         lastName: lastName,
         role: role,

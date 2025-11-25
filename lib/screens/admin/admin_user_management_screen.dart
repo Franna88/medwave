@@ -734,6 +734,8 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
   void _showCreateAdminUserDialog(BuildContext context, AuthProvider authProvider) {
     final formKey = GlobalKey<FormState>();
     final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
     final firstNameController = TextEditingController();
     final lastNameController = TextEditingController();
     final notesController = TextEditingController();
@@ -779,6 +781,30 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                     validator: (value) {
                       if (value?.isEmpty == true) return 'Required';
                       if (!value!.contains('@')) return 'Invalid email';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: passwordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      border: OutlineInputBorder(),
+                    ),
+                    obscureText: true,
+                    validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: confirmPasswordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm Password',
+                      border: OutlineInputBorder(),
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value?.isEmpty == true) return 'Required';
+                      if (value != passwordController.text) return 'Passwords do not match';
                       return null;
                     },
                   ),
@@ -851,6 +877,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                   
                   final success = await context.read<AdminProvider>().createAdminUser(
                     email: emailController.text.trim(),
+                    password: passwordController.text,
                     firstName: firstNameController.text.trim(),
                     lastName: lastNameController.text.trim(),
                     role: selectedRole,
@@ -860,7 +887,14 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                     notes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
                   );
 
+                  if (!context.mounted) return;
+
                   if (success) {
+                    // Reload the admin users list to show the new user
+                    await context.read<AdminProvider>().loadAdminUsers();
+                    
+                    if (!context.mounted) return;
+                    
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Admin user ${firstNameController.text} ${lastNameController.text} created successfully'),
@@ -868,10 +902,12 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                       ),
                     );
                   } else {
+                    final errorMessage = context.read<AdminProvider>().error ?? 'Failed to create admin user';
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Failed to create admin user'),
+                      SnackBar(
+                        content: Text(errorMessage),
                         backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 5),
                       ),
                     );
                   }

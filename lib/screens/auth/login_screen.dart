@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -26,6 +27,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   bool _rememberMe = false;
+  Timer? _safetyTimer;
   
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -73,6 +75,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _emailFocusNode.dispose();
     _passwordFocusNode.dispose();
     _animationController.dispose();
+    _safetyTimer?.cancel();
     super.dispose();
   }
 
@@ -86,11 +89,33 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       _isLoading = true;
     });
 
+    // Safety timer - force reset loading state after 35 seconds as last resort
+    // This should never trigger if the provider timeout works correctly
+    _safetyTimer?.cancel();
+    _safetyTimer = Timer(const Duration(seconds: 35), () {
+      if (mounted && _isLoading) {
+        debugPrint('⚠️ Safety timeout triggered - forcing loading state reset');
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login request timed out. Please check your connection and try again.'),
+            backgroundColor: AppTheme.errorColor,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    });
+
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.login(
       _emailController.text,
       _passwordController.text,
     );
+
+    // Cancel safety timer since login completed
+    _safetyTimer?.cancel();
 
     if (mounted) {
       setState(() {
@@ -101,9 +126,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         // Navigate to main app
         context.go('/');
       } else {
+        // Show error from auth provider if available
+        final errorMessage = authProvider.errorMessage ?? 'Invalid email or password';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid email or password'),
+          SnackBar(
+            content: Text(errorMessage),
             backgroundColor: AppTheme.errorColor,
           ),
         );

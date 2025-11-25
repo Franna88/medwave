@@ -451,3 +451,4 @@ def fetch_new_ads_for_november():
 if __name__ == '__main__':
     fetch_new_ads_for_november()
 
+

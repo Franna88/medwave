@@ -466,6 +466,7 @@ class AdminService {
   /// Create a new admin user (Super Admin only)
   static Future<String> createAdminUser({
     required String email,
+    required String password,
     required String firstName,
     required String lastName,
     required AdminRole role,
@@ -478,7 +479,7 @@ class AdminService {
       // Create Firebase Auth user first
       final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
-        password: _generateTemporaryPassword(), // Generate a temporary password
+        password: password,
       );
 
       final String userId = userCredential.user!.uid;
