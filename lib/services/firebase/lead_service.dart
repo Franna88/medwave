@@ -455,16 +455,11 @@ class LeadService {
     required String firstStageId,
   }) async {
     try {
-      // Extract required fields from form answers
       final firstName = formAnswers['firstName']?.toString() ?? '';
       final lastName = formAnswers['lastName']?.toString() ?? '';
       final email = formAnswers['email']?.toString() ?? '';
       final phone = formAnswers['phone']?.toString() ?? '';
-
-      // Get source from UTM or default to "organic"
       final source = submission.attribution?.utmSource ?? 'organic';
-
-      // Extract UTM tracking data
       final attribution = submission.attribution;
 
       final now = DateTime.now();
@@ -504,10 +499,6 @@ class LeadService {
       );
 
       final leadId = await createLead(newLead);
-
-      if (kDebugMode) {
-        print('Created lead $leadId from form submission ${submission.submissionId}');
-      }
 
       return leadId;
     } catch (e) {

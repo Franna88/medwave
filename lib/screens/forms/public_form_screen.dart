@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
+import 'dart:html' as html;
 import '../../models/form/lead_form.dart';
 import '../../models/form/form_submission.dart';
 import '../../services/firebase/form_service.dart';
@@ -44,8 +46,37 @@ class _PublicFormScreenState extends State<PublicFormScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Extract UTM parameters from URL
-      final queryParams = Uri.base.queryParameters;
+      Map<String, String> queryParams = {};
+      String? fullUrl;
+
+      if (kIsWeb) {
+        try {
+          fullUrl = html.window.location.href;
+          final uri = Uri.parse(fullUrl);
+
+          if (uri.fragment.isNotEmpty && uri.fragment.contains('?')) {
+            final fragmentParts = uri.fragment.split('?');
+            if (fragmentParts.length > 1) {
+              final fragmentQuery = fragmentParts[1];
+              final fragmentUri = Uri.parse('http://dummy.com?$fragmentQuery');
+              queryParams = Map<String, String>.from(
+                fragmentUri.queryParameters,
+              );
+            }
+          } else {
+            queryParams = Map<String, String>.from(uri.queryParameters);
+          }
+
+          if (queryParams.isEmpty) {
+            queryParams = Map<String, String>.from(Uri.base.queryParameters);
+          }
+        } catch (e) {
+          queryParams = Uri.base.queryParameters;
+        }
+      } else {
+        queryParams = Uri.base.queryParameters;
+      }
+
       _utmAttribution = UtmTracker.extractUtmParams(queryParams);
 
       // Fetch form
@@ -88,7 +119,6 @@ class _PublicFormScreenState extends State<PublicFormScreen> {
     try {
       final now = DateTime.now();
 
-      // Create FormSubmission
       final submission = FormSubmission(
         submissionId: '',
         formId: _form!.formId,

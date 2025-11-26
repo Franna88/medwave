@@ -103,6 +103,47 @@ class LeadDetailDialog extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
 
+                    // UTM Tracking Information (if available)
+                    if (lead.utmCampaign != null || lead.utmAdset != null || lead.utmAd != null)
+                      _buildSection(
+                        'Campaign Tracking',
+                        Icons.track_changes,
+                        [
+                          if (lead.utmCampaign != null)
+                            _buildInfoRow(
+                              Icons.campaign,
+                              'Campaign',
+                              lead.utmCampaign!,
+                            ),
+                          if (lead.utmAdset != null)
+                            _buildInfoRow(
+                              Icons.group_work,
+                              'Ad Set',
+                              lead.utmAdset!,
+                            ),
+                          if (lead.utmAd != null)
+                            _buildInfoRow(
+                              Icons.image,
+                              'Ad Name',
+                              lead.utmAd!,
+                            ),
+                          if (lead.utmSource != null)
+                            _buildInfoRow(
+                              Icons.source,
+                              'UTM Source',
+                              lead.utmSource!,
+                            ),
+                          if (lead.utmMedium != null)
+                            _buildInfoRow(
+                              Icons.trending_up,
+                              'UTM Medium',
+                              lead.utmMedium!,
+                            ),
+                        ],
+                      ),
+                    if (lead.utmCampaign != null || lead.utmAdset != null || lead.utmAd != null)
+                      const SizedBox(height: 24),
+
                     // Current Status
                     _buildSection(
                       'Current Status',
