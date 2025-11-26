@@ -40,6 +40,7 @@ import 'screens/profile_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/notifications/notification_preferences_screen.dart';
 import 'screens/web/mobile_warning_screen.dart';
+import 'screens/forms/public_form_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_provider_management_screen.dart';
 import 'screens/admin/admin_provider_approvals_screen.dart';
@@ -198,7 +199,8 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         currentPath.startsWith('/login') || 
         currentPath.startsWith('/signup') ||
         currentPath.startsWith('/download-app') ||
-        currentPath.startsWith('/mobile-warning');
+        currentPath.startsWith('/mobile-warning') ||
+        currentPath.startsWith('/fb-form');
     
     // Wait for auth to initialize (but allow public routes through)
     if (authProvider.isLoading) {
@@ -262,6 +264,15 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       path: '/download-app',
       name: 'download-app',
       builder: (context, state) => const DownloadAppScreen(),
+    ),
+    // Public Facebook form (no authentication required)
+    GoRoute(
+      path: '/fb-form/:formId',
+      name: 'fb-form',
+      builder: (context, state) {
+        final formId = state.pathParameters['formId']!;
+        return PublicFormScreen(formId: formId);
+      },
     ),
     // Authentication routes
     GoRoute(

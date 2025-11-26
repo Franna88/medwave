@@ -27,6 +27,17 @@ class Lead {
   final DateTime? bookingDate; // Quick reference
   final String? bookingStatus; // Quick reference
   final String? convertedToAppointmentId; // Set when moved to Sales stream
+  final String? submissionId; // Link to FormSubmission
+  // UTM tracking fields
+  final String? utmSource;
+  final String? utmMedium;
+  final String? utmCampaign;
+  final String? utmCampaignId;
+  final String? utmAdset;
+  final String? utmAdsetId;
+  final String? utmAd;
+  final String? utmAdId;
+  final String? fbclid;
 
   Lead({
     required this.id,
@@ -53,6 +64,16 @@ class Lead {
     this.bookingDate,
     this.bookingStatus,
     this.convertedToAppointmentId,
+    this.submissionId,
+    this.utmSource,
+    this.utmMedium,
+    this.utmCampaign,
+    this.utmCampaignId,
+    this.utmAdset,
+    this.utmAdsetId,
+    this.utmAd,
+    this.utmAdId,
+    this.fbclid,
   });
 
   /// Get full name
@@ -118,6 +139,16 @@ class Lead {
       bookingDate: (map['bookingDate'] as Timestamp?)?.toDate(),
       bookingStatus: map['bookingStatus']?.toString(),
       convertedToAppointmentId: map['convertedToAppointmentId']?.toString(),
+      submissionId: map['submissionId']?.toString(),
+      utmSource: map['utmSource']?.toString(),
+      utmMedium: map['utmMedium']?.toString(),
+      utmCampaign: map['utmCampaign']?.toString(),
+      utmCampaignId: map['utmCampaignId']?.toString(),
+      utmAdset: map['utmAdset']?.toString(),
+      utmAdsetId: map['utmAdsetId']?.toString(),
+      utmAd: map['utmAd']?.toString(),
+      utmAdId: map['utmAdId']?.toString(),
+      fbclid: map['fbclid']?.toString(),
     );
   }
 
@@ -146,6 +177,16 @@ class Lead {
       'bookingDate': bookingDate != null ? Timestamp.fromDate(bookingDate!) : null,
       'bookingStatus': bookingStatus,
       'convertedToAppointmentId': convertedToAppointmentId,
+      'submissionId': submissionId,
+      'utmSource': utmSource,
+      'utmMedium': utmMedium,
+      'utmCampaign': utmCampaign,
+      'utmCampaignId': utmCampaignId,
+      'utmAdset': utmAdset,
+      'utmAdsetId': utmAdsetId,
+      'utmAd': utmAd,
+      'utmAdId': utmAdId,
+      'fbclid': fbclid,
     };
   }
 
@@ -174,6 +215,16 @@ class Lead {
     DateTime? bookingDate,
     String? bookingStatus,
     String? convertedToAppointmentId,
+    String? submissionId,
+    String? utmSource,
+    String? utmMedium,
+    String? utmCampaign,
+    String? utmCampaignId,
+    String? utmAdset,
+    String? utmAdsetId,
+    String? utmAd,
+    String? utmAdId,
+    String? fbclid,
   }) {
     return Lead(
       id: id ?? this.id,
@@ -200,6 +251,16 @@ class Lead {
       bookingDate: bookingDate ?? this.bookingDate,
       bookingStatus: bookingStatus ?? this.bookingStatus,
       convertedToAppointmentId: convertedToAppointmentId ?? this.convertedToAppointmentId,
+      submissionId: submissionId ?? this.submissionId,
+      utmSource: utmSource ?? this.utmSource,
+      utmMedium: utmMedium ?? this.utmMedium,
+      utmCampaign: utmCampaign ?? this.utmCampaign,
+      utmCampaignId: utmCampaignId ?? this.utmCampaignId,
+      utmAdset: utmAdset ?? this.utmAdset,
+      utmAdsetId: utmAdsetId ?? this.utmAdsetId,
+      utmAd: utmAd ?? this.utmAd,
+      utmAdId: utmAdId ?? this.utmAdId,
+      fbclid: fbclid ?? this.fbclid,
     );
   }
 }

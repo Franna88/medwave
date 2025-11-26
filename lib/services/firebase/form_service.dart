@@ -183,6 +183,31 @@ class FormService {
       return false;
     }
 
+    // Check for required fields (firstName, lastName, email, phone)
+    final requiredFieldIds = {'firstName', 'lastName', 'email', 'phone'};
+    final questionIds = firstColumn.questions
+        .map((q) => q.questionId)
+        .toSet();
+
+    for (final requiredId in requiredFieldIds) {
+      if (!questionIds.contains(requiredId)) {
+        if (kDebugMode) {
+          print('Validation failed: Required field "$requiredId" is missing');
+        }
+        return false;
+      }
+    }
+
+    // Validate that required fields are marked as required
+    for (final question in firstColumn.questions) {
+      if (requiredFieldIds.contains(question.questionId) && !question.required) {
+        if (kDebugMode) {
+          print('Validation failed: Required field "${question.questionId}" must be marked as required');
+        }
+        return false;
+      }
+    }
+
     // Validate each column
     for (final column in form.columns) {
       // Check if column has questions
