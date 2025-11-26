@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_performance/firebase_performance.dart';
@@ -72,16 +74,14 @@ import 'services/firebase/app_settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   // Initialize Firebase Analytics
   FirebaseAnalytics.instance;
-  
-    // Initialize Firebase Performance
+
+  // Initialize Firebase Performance
   FirebasePerformance.instance;
 
   // Initialize Firebase Cloud Messaging
@@ -93,6 +93,11 @@ void main() async {
   // Initialize app settings with defaults if they don't exist
   final appSettingsService = AppSettingsService();
   await appSettingsService.initializeDefaultSettings();
+
+  // Configure path-based URL strategy for web (removes # from URLs)
+  if (kIsWeb) {
+    setUrlStrategy(PathUrlStrategy());
+  }
 
   runApp(const MedWaveApp());
 }
@@ -106,8 +111,14 @@ class MedWaveApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PatientProvider()),
-        ChangeNotifierProvider(create: (_) => NotificationProvider()..loadNotifications()..initializeFCM()),
-        ChangeNotifierProvider(create: (_) => AppointmentProvider()..loadAppointments()),
+        ChangeNotifierProvider(
+          create: (_) => NotificationProvider()
+            ..loadNotifications()
+            ..initializeFCM(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => AppointmentProvider()..loadAppointments(),
+        ),
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         // Admin provider for superadmin functionality
         ChangeNotifierProvider(create: (_) => AdminProvider()),
@@ -118,44 +129,8 @@ class MedWaveApp extends StatelessWidget {
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
-          // Show loading screen while auth is initializing
-          if (authProvider.isLoading) {
-            return MaterialApp(
-              title: 'MedX AI',
-              theme: AppTheme.lightTheme,
-              debugShowCheckedModeBanner: false,
-              home: Scaffold(
-                backgroundColor: Colors.white,
-                body: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // MedX Ai branded splash image
-                      Expanded(
-                        child: Container(
-                          width: double.infinity,
-                          decoration: const BoxDecoration(
-                            image: DecorationImage(
-                              image: AssetImage('images/medwave_spash.jpeg'),
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Loading indicator at the bottom
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 50.0),
-                        child: CircularProgressIndicator(
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-
+          // Always use MaterialApp.router so GoRouter can handle initial routes
+          // The redirect logic will handle showing appropriate content during loading
           return MaterialApp.router(
             title: 'MedX AI',
             theme: AppTheme.lightTheme,
@@ -173,43 +148,57 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
   // initialLocation: '/welcome',
   redirect: (context, state) {
     final currentPath = state.uri.path;
-    
-    debugPrint('Router redirect: currentPath=$currentPath, isAuthenticated=${authProvider.isAuthenticated}, canAccessApp=${authProvider.canAccessApp}, isLoading=${authProvider.isLoading}');
-    
+
+    debugPrint(
+      'Router redirect: currentPath=$currentPath, isAuthenticated=${authProvider.isAuthenticated}, canAccessApp=${authProvider.canAccessApp}, isLoading=${authProvider.isLoading}',
+    );
+
+    // Explicitly allow /fb-form routes - always accessible regardless of authentication status
+    if (currentPath.startsWith('/fb-form')) {
+      return null; // Always allow access to public forms
+    }
+
     // Check for mobile browser warning on web platform
-    if (ResponsiveUtils.isWeb() && 
-        ResponsiveUtils.shouldShowMobileWarning(context) && 
+    if (ResponsiveUtils.isWeb() &&
+        ResponsiveUtils.shouldShowMobileWarning(context) &&
         currentPath != '/mobile-warning') {
       return '/mobile-warning';
     }
-    
+
     // Block session creation routes on web platform, but allow viewing
     if (ResponsiveUtils.shouldRestrictSessions()) {
       // Block session creation and wound selection (conducting sessions)
-      if ((currentPath.contains('/session') && !currentPath.contains('/sessions/')) ||  // '/session' but not '/sessions/:id'
+      if ((currentPath.contains('/session') &&
+              !currentPath.contains(
+                '/sessions/',
+              )) || // '/session' but not '/sessions/:id'
           currentPath.contains('/wound-selection') ||
           currentPath.contains('/case-history')) {
         return '/'; // Redirect to dashboard
       }
       // Note: Allow session viewing routes like '/sessions/:sessionId' to pass through
     }
-    
+
     // Allow access to public routes immediately, even while loading
-    final isPublicRoute = currentPath.startsWith('/welcome') || 
-        currentPath.startsWith('/login') || 
+    final isPublicRoute =
+        currentPath.startsWith('/welcome') ||
+        currentPath.startsWith('/login') ||
         currentPath.startsWith('/signup') ||
         currentPath.startsWith('/download-app') ||
         currentPath.startsWith('/mobile-warning') ||
-        currentPath.startsWith('/fb-form');
-    
-    // Wait for auth to initialize (but allow public routes through)
+        currentPath.startsWith('/fb-form') ||
+        currentPath.startsWith('/verify-email');
+
+    // Wait for auth to initialize - preserve current route during loading
+    // This prevents redirecting authenticated users away from their current page on reload
     if (authProvider.isLoading) {
       if (isPublicRoute) {
         return null; // Allow public routes while loading
       }
+      // Preserve current route while auth is loading (prevents redirect on page reload)
       return null; // Stay on current route while loading
     }
-    
+
     // If user is not authenticated, allow access to public routes only
     if (!authProvider.isAuthenticated) {
       if (isPublicRoute) {
@@ -218,35 +207,37 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       // Redirect root or any protected route to welcome
       return '/welcome';
     }
-    
+
     // If user is authenticated but not approved, redirect to pending approval
+    // Exception: Allow public routes like /fb-form, /verify-email
     if (authProvider.isAuthenticated && !authProvider.canAccessApp) {
-      if (currentPath != '/pending-approval') {
+      if (currentPath != '/pending-approval' &&
+          currentPath != '/verify-email' &&
+          !currentPath.startsWith('/fb-form')) {
         return '/pending-approval';
       }
       return null;
     }
-    
-    // If user is authenticated and approved, redirect away from auth screens
+
+    // If user is authenticated and approved, redirect away from auth screens only
+    // Don't redirect from their current protected route (preserves route on reload)
     if (authProvider.isAuthenticated && authProvider.canAccessApp) {
+      // Only redirect if they're on an auth screen, not from their current working route
       if (currentPath == '/' ||
-          currentPath == '/welcome' || 
-          currentPath == '/login' || 
-          currentPath == '/signup' || 
+          currentPath == '/welcome' ||
+          currentPath == '/login' ||
+          currentPath == '/signup' ||
           currentPath == '/pending-approval') {
         // Redirect to role-appropriate dashboard
         return authProvider.dashboardRoute;
       }
     }
-    
-    return null; // No redirect needed
+
+    return null; // No redirect needed - preserve current route
   },
   routes: [
     // Root route - global redirect will handle where to go
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const WelcomeScreen(),
-    ),
+    GoRoute(path: '/', builder: (context, state) => const WelcomeScreen()),
     // Mobile warning screen (web only)
     GoRoute(
       path: '/mobile-warning',
@@ -295,7 +286,7 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       name: 'verify-email',
       builder: (context, state) => const EmailVerificationScreen(),
     ),
-    
+
     // Main app routes (protected)
     ShellRoute(
       builder: (context, state, child) => MainScreen(child: child),
@@ -337,11 +328,12 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
             GoRoute(
               path: 'preferences',
               name: 'notification-preferences',
-              builder: (context, state) => const NotificationPreferencesScreen(),
+              builder: (context, state) =>
+                  const NotificationPreferencesScreen(),
             ),
           ],
         ),
-        
+
         // Admin routes - protected by role-based access control
         GoRoute(
           path: '/admin/dashboard',
@@ -393,7 +385,8 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
             GoRoute(
               path: 'campaigns-old',
               name: 'admin-adverts-campaigns-old',
-              builder: (context, state) => const AdminAdvertsCampaignsOldScreen(),
+              builder: (context, state) =>
+                  const AdminAdvertsCampaignsOldScreen(),
             ),
             GoRoute(
               path: 'ads',
@@ -517,68 +510,73 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         return PatientCaseHistoryScreen(patientId: patientId);
       },
     ),
-              GoRoute(
-            path: '/patients/:patientId/multi-wound-case-history',
-            name: 'multi-wound-case-history',
-            builder: (context, state) {
-              final patientId = state.pathParameters['patientId']!;
-              return MultiWoundCaseHistoryScreen(patientId: patientId);
-            },
-          ),
-          GoRoute(
-            path: '/patients/:patientId/weight-case-history',
-            name: 'weight-case-history',
-            builder: (context, state) {
-              final patientId = state.pathParameters['patientId']!;
-              return WeightCaseHistoryScreen(patientId: patientId);
-            },
-          ),
-          GoRoute(
-            path: '/patients/:patientId/pain-case-history',
-            name: 'pain-case-history',
-            builder: (context, state) {
-              final patientId = state.pathParameters['patientId']!;
-              return PainCaseHistoryScreen(patientId: patientId);
-            },
-          ),
-          GoRoute(
-            path: '/patients/:patientId/sessions/:sessionId/enhanced-ai-chat',
-            name: 'enhanced-ai-chat',
-            builder: (context, state) {
-              final patientId = state.pathParameters['patientId']!;
-              final sessionId = state.pathParameters['sessionId']!;
-              final extra = state.extra as Map<String, dynamic>?;
-              
-              if (extra == null || extra['patient'] == null || extra['session'] == null) {
-                // Fallback - redirect to patient profile
-                return const Scaffold(
-                  body: Center(
-                    child: Text('Invalid session data. Please try again.'),
-                  ),
-                );
-              }
-              
-              return EnhancedAIReportChatScreen(
-                patientId: patientId,
-                sessionId: sessionId,
-                patient: extra['patient'] as Patient,
-                session: extra['session'] as Session,
-              );
-            },
-          ),
+    GoRoute(
+      path: '/patients/:patientId/multi-wound-case-history',
+      name: 'multi-wound-case-history',
+      builder: (context, state) {
+        final patientId = state.pathParameters['patientId']!;
+        return MultiWoundCaseHistoryScreen(patientId: patientId);
+      },
+    ),
+    GoRoute(
+      path: '/patients/:patientId/weight-case-history',
+      name: 'weight-case-history',
+      builder: (context, state) {
+        final patientId = state.pathParameters['patientId']!;
+        return WeightCaseHistoryScreen(patientId: patientId);
+      },
+    ),
+    GoRoute(
+      path: '/patients/:patientId/pain-case-history',
+      name: 'pain-case-history',
+      builder: (context, state) {
+        final patientId = state.pathParameters['patientId']!;
+        return PainCaseHistoryScreen(patientId: patientId);
+      },
+    ),
+    GoRoute(
+      path: '/patients/:patientId/sessions/:sessionId/enhanced-ai-chat',
+      name: 'enhanced-ai-chat',
+      builder: (context, state) {
+        final patientId = state.pathParameters['patientId']!;
+        final sessionId = state.pathParameters['sessionId']!;
+        final extra = state.extra as Map<String, dynamic>?;
+
+        if (extra == null ||
+            extra['patient'] == null ||
+            extra['session'] == null) {
+          // Fallback - redirect to patient profile
+          return const Scaffold(
+            body: Center(
+              child: Text('Invalid session data. Please try again.'),
+            ),
+          );
+        }
+
+        return EnhancedAIReportChatScreen(
+          patientId: patientId,
+          sessionId: sessionId,
+          patient: extra['patient'] as Patient,
+          session: extra['session'] as Session,
+        );
+      },
+    ),
     GoRoute(
       path: '/patients/:patientId/session',
       name: 'session-logging',
       builder: (context, state) {
         final patientId = state.pathParameters['patientId']!;
-        
+
         // Get patient and route based on treatment type
-        final patientProvider = Provider.of<PatientProvider>(context, listen: false);
+        final patientProvider = Provider.of<PatientProvider>(
+          context,
+          listen: false,
+        );
         final patient = patientProvider.patients.firstWhere(
           (p) => p.id == patientId,
           orElse: () => throw Exception('Patient not found'),
         );
-        
+
         // Route to appropriate session screen based on treatment type
         switch (patient.treatmentType) {
           case TreatmentType.weight:
@@ -633,4 +631,3 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
     ),
   ],
 );
-
