@@ -56,6 +56,10 @@ import 'screens/admin/admin_report_builder_screen.dart';
 import 'screens/admin/admin_forms_screen.dart';
 import 'screens/admin/forms/form_builder_screen.dart';
 import 'screens/admin/admin_leads_screen.dart';
+import 'screens/admin/streams/marketing_stream_screen.dart';
+import 'screens/admin/streams/sales_stream_screen.dart';
+import 'screens/admin/streams/operations_stream_screen.dart';
+import 'screens/admin/streams/support_stream_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/admin_provider.dart';
@@ -424,6 +428,40 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           path: '/admin/leads',
           name: 'admin-leads',
           builder: (context, state) => const AdminLeadsScreen(),
+        ),
+        // Streams routes
+        GoRoute(
+          path: '/admin/streams',
+          name: 'admin-streams',
+          redirect: (context, state) {
+            // Redirect base route to marketing
+            if (state.uri.path == '/admin/streams') {
+              return '/admin/streams/marketing';
+            }
+            return null; // Allow sub-routes to proceed
+          },
+          routes: [
+            GoRoute(
+              path: 'marketing',
+              name: 'admin-streams-marketing',
+              builder: (context, state) => const MarketingStreamScreen(),
+            ),
+            GoRoute(
+              path: 'sales',
+              name: 'admin-streams-sales',
+              builder: (context, state) => const SalesStreamScreen(),
+            ),
+            GoRoute(
+              path: 'operations',
+              name: 'admin-streams-operations',
+              builder: (context, state) => const OperationsStreamScreen(),
+            ),
+            GoRoute(
+              path: 'support',
+              name: 'admin-streams-support',
+              builder: (context, state) => const SupportStreamScreen(),
+            ),
+          ],
         ),
       ],
     ),

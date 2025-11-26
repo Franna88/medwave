@@ -144,15 +144,42 @@ class RoleManager {
             NavigationItem('Report Builder', '/admin/report-builder', 'build'),
           ]);
 
-          // Add Forms and Leads based on feature flags
+          // Add Forms and Streams based on feature flags
           if (showForms) {
             adminItems.add(
               NavigationItem('Forms', '/admin/forms', 'description'),
             );
           }
           if (showLeads) {
+            // Replace single Leads with Streams section
             adminItems.add(
-              NavigationItem('Leads', '/admin/leads', 'people_outline'),
+              NavigationItem(
+                'Streams',
+                '/admin/streams/marketing',
+                'stream',
+                subItems: [
+                  NavigationSubItem(
+                    'Marketing',
+                    '/admin/streams/marketing',
+                    'campaign',
+                  ),
+                  NavigationSubItem(
+                    'Sales',
+                    '/admin/streams/sales',
+                    'attach_money',
+                  ),
+                  NavigationSubItem(
+                    'Operations',
+                    '/admin/streams/operations',
+                    'local_shipping',
+                  ),
+                  NavigationSubItem(
+                    'Support',
+                    '/admin/streams/support',
+                    'support_agent',
+                  ),
+                ],
+              ),
             );
           }
         }

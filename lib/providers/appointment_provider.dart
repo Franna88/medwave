@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../models/appointment.dart';
-import '../services/firebase/appointment_service.dart';
+import '../services/firebase/practitioner_appointment_service.dart';
 import '../services/emailjs_service.dart';
 
 class AppointmentProvider with ChangeNotifier {

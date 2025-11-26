@@ -2,10 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../../models/leads/lead.dart';
 import '../../models/leads/lead_note.dart';
+import '../../models/streams/appointment.dart' as models;
+import 'sales_appointment_service.dart';
 
 /// Service for managing leads in Firebase
 class LeadService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SalesAppointmentService _appointmentService = SalesAppointmentService();
 
   /// Get all leads
   Future<List<Lead>> getAllLeads({
@@ -218,6 +221,15 @@ class LeadService {
       );
 
       await updateLead(updatedLead);
+
+      // Check if we need to convert to Appointment (final stage in Marketing)
+      if (newStage == 'booking') {
+        await convertToAppointment(
+          leadId: leadId,
+          userId: userId,
+          userName: userName,
+        );
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Error moving lead to stage: $e');
@@ -355,6 +367,79 @@ class LeadService {
     } catch (e) {
       if (kDebugMode) {
         print('Error getting lead counts by stage: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Convert lead to appointment (when reaching "Booking" stage)
+  Future<String> convertToAppointment({
+    required String leadId,
+    required String userId,
+    String? userName,
+  }) async {
+    try {
+      final lead = await getLead(leadId);
+      if (lead == null) {
+        throw Exception('Lead not found');
+      }
+
+      // Check if already converted
+      if (lead.convertedToAppointmentId != null) {
+        return lead.convertedToAppointmentId!;
+      }
+
+      final now = DateTime.now();
+
+      // Create new appointment from lead data
+      final appointment = models.SalesAppointment(
+        id: '',
+        leadId: leadId,
+        customerName: lead.fullName,
+        email: lead.email,
+        phone: lead.phone,
+        currentStage: 'appointments', // First stage in Sales stream
+        appointmentDate: lead.bookingDate,
+        createdAt: now,
+        updatedAt: now,
+        stageEnteredAt: now,
+        stageHistory: [
+          models.SalesAppointmentStageHistoryEntry(
+            stage: 'appointments',
+            enteredAt: now,
+            note: 'Converted from Marketing lead',
+          ),
+        ],
+        notes: [
+          models.SalesAppointmentNote(
+            text: 'Appointment created from lead ${lead.id}',
+            createdAt: now,
+            createdBy: userId,
+            createdByName: userName,
+          ),
+        ],
+        createdBy: userId,
+        createdByName: userName,
+      );
+
+      // Create the appointment
+      final appointmentId = await _appointmentService.createAppointment(appointment);
+
+      // Update lead with appointment reference
+      final updatedLead = lead.copyWith(
+        convertedToAppointmentId: appointmentId,
+        updatedAt: now,
+      );
+      await updateLead(updatedLead);
+
+      if (kDebugMode) {
+        print('Converted lead $leadId to appointment $appointmentId');
+      }
+
+      return appointmentId;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error converting lead to appointment: $e');
       }
       rethrow;
     }

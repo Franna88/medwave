@@ -208,6 +208,9 @@ class Appointment {
     };
   }
 
+  /// Alias for toJson() to maintain compatibility with Firebase services
+  Map<String, dynamic> toMap() => toJson();
+
   factory Appointment.fromJson(Map<String, dynamic> json) {
     return Appointment(
       id: json['id'],

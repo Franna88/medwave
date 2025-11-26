@@ -11,7 +11,7 @@ import '../../services/ai/ai_report_service_factory.dart';
 import '../../services/ai/icd10_service.dart';
 import '../../services/pdf_generation_service.dart';
 import '../../services/firebase/practitioner_service.dart';
-import '../../services/firebase/appointment_service.dart';
+import '../../services/firebase/practitioner_appointment_service.dart';
 import '../../theme/app_theme.dart';
 
 class AIReportChatScreen extends StatefulWidget {

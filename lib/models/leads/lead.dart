@@ -26,6 +26,7 @@ class Lead {
   final String? bookingId; // Link to booking
   final DateTime? bookingDate; // Quick reference
   final String? bookingStatus; // Quick reference
+  final String? convertedToAppointmentId; // Set when moved to Sales stream
 
   Lead({
     required this.id,
@@ -51,6 +52,7 @@ class Lead {
     this.bookingId,
     this.bookingDate,
     this.bookingStatus,
+    this.convertedToAppointmentId,
   });
 
   /// Get full name
@@ -115,6 +117,7 @@ class Lead {
       bookingId: map['bookingId']?.toString(),
       bookingDate: (map['bookingDate'] as Timestamp?)?.toDate(),
       bookingStatus: map['bookingStatus']?.toString(),
+      convertedToAppointmentId: map['convertedToAppointmentId']?.toString(),
     );
   }
 
@@ -142,6 +145,7 @@ class Lead {
       'bookingId': bookingId,
       'bookingDate': bookingDate != null ? Timestamp.fromDate(bookingDate!) : null,
       'bookingStatus': bookingStatus,
+      'convertedToAppointmentId': convertedToAppointmentId,
     };
   }
 
@@ -169,6 +173,7 @@ class Lead {
     String? bookingId,
     DateTime? bookingDate,
     String? bookingStatus,
+    String? convertedToAppointmentId,
   }) {
     return Lead(
       id: id ?? this.id,
@@ -194,6 +199,7 @@ class Lead {
       bookingId: bookingId ?? this.bookingId,
       bookingDate: bookingDate ?? this.bookingDate,
       bookingStatus: bookingStatus ?? this.bookingStatus,
+      convertedToAppointmentId: convertedToAppointmentId ?? this.convertedToAppointmentId,
     );
   }
 }
