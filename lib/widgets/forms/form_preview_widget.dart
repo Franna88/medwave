@@ -20,11 +20,37 @@ class _FormPreviewWidgetState extends State<FormPreviewWidget> {
   final Map<String, dynamic> _responses = {};
   final List<FormQuestion> _questionPath = [];
   int _currentQuestionIndex = 0;
+  dynamic _currentAnswer; // Stores the pending answer before navigating
+  TextEditingController? _textController;
 
   @override
   void initState() {
     super.initState();
     _buildQuestionPath();
+  }
+
+  @override
+  void dispose() {
+    _textController?.dispose();
+    super.dispose();
+  }
+
+  bool get _hasAnswer {
+    if (_currentQuestionIndex >= _questionPath.length) return false;
+    final question = _questionPath[_currentQuestionIndex];
+    
+    // Check if there's a current answer being entered
+    if (_currentAnswer != null) {
+      if (_currentAnswer is String && (_currentAnswer as String).isNotEmpty) {
+        return true;
+      }
+      if (_currentAnswer is List && (_currentAnswer as List).isNotEmpty) {
+        return true;
+      }
+    }
+    
+    // Check if this question was already answered
+    return _responses.containsKey(question.questionId);
   }
 
   void _buildQuestionPath() {
@@ -46,13 +72,29 @@ class _FormPreviewWidgetState extends State<FormPreviewWidget> {
   void _handleAnswer(dynamic answer) {
     if (_currentQuestionIndex >= _questionPath.length) return;
 
+    setState(() {
+      _currentAnswer = answer;
+    });
+  }
+
+  void _goToNextQuestion() {
+    if (_currentQuestionIndex >= _questionPath.length) return;
+    if (_currentAnswer == null) return;
+
     final currentQuestion = _questionPath[_currentQuestionIndex];
     setState(() {
-      _responses[currentQuestion.questionId] = answer;
+      _responses[currentQuestion.questionId] = _currentAnswer;
     });
 
     // Determine next question
-    _navigateToNextQuestion(currentQuestion, answer);
+    _navigateToNextQuestion(currentQuestion, _currentAnswer);
+    
+    // Clear current answer and text controller for next question
+    _textController?.dispose();
+    _textController = null;
+    setState(() {
+      _currentAnswer = null;
+    });
   }
 
   void _navigateToNextQuestion(FormQuestion currentQuestion, dynamic answer) {
@@ -80,9 +122,11 @@ class _FormPreviewWidgetState extends State<FormPreviewWidget> {
       return;
     }
 
-    // Check if this question has branching
-    if (currentQuestion.branchingEnabled && currentQuestion.isChoiceType) {
-      // Find the selected option
+    // This is the last question in the column, check for follow-up columns
+    FormColumn? nextColumn;
+    
+    // If this is a choice type question, check for answer-specific follow-ups first
+    if (currentQuestion.isChoiceType) {
       String? selectedOptionId;
       if (answer is String) {
         selectedOptionId = answer;
@@ -91,28 +135,36 @@ class _FormPreviewWidgetState extends State<FormPreviewWidget> {
       }
 
       if (selectedOptionId != null) {
-        // Find the option
-        final option = currentQuestion.options.firstWhere(
-          (opt) => opt.optionId == selectedOptionId,
-          orElse: () => currentQuestion.options.first,
-        );
-
-        // Find the column this option leads to
-        if (option.leadsToColumnId != null) {
-          final nextColumn = widget.form.columns.firstWhere(
-            (col) => col.columnId == option.leadsToColumnId,
-            orElse: () => FormColumn(columnId: '', columnIndex: -1),
+        // First check if there's a column specifically for this answer
+        try {
+          final answerSpecificColumn = widget.form.columns.firstWhere(
+            (col) => col.parentAnswerId == selectedOptionId,
           );
-
-          if (nextColumn.columnIndex != -1 && nextColumn.questions.isNotEmpty) {
-            setState(() {
-              _currentQuestionIndex++;
-              _questionPath.add(nextColumn.questions.first);
-            });
-            return;
-          }
+          nextColumn = answerSpecificColumn;
+        } catch (_) {
+          // No answer-specific column found
         }
       }
+    }
+    
+    // If no answer-specific column, check for a general follow-up column for this question
+    if (nextColumn == null) {
+      try {
+        nextColumn = widget.form.columns.firstWhere(
+          (col) => col.parentQuestionId == currentQuestion.questionId && col.parentAnswerId == null,
+        );
+      } catch (_) {
+        // No follow-up column found
+      }
+    }
+
+    // If we found a follow-up column, navigate to it
+    if (nextColumn != null && nextColumn.questions.isNotEmpty) {
+      setState(() {
+        _currentQuestionIndex++;
+        _questionPath.add(nextColumn!.questions.first);
+      });
+      return;
     }
 
     // No more questions - form is complete
@@ -123,19 +175,30 @@ class _FormPreviewWidgetState extends State<FormPreviewWidget> {
 
   void _goBack() {
     if (_currentQuestionIndex > 0) {
+      _textController?.dispose();
+      _textController = null;
       setState(() {
         _currentQuestionIndex--;
+        _currentAnswer = null;
         if (_questionPath.length > _currentQuestionIndex + 1) {
           _questionPath.removeRange(_currentQuestionIndex + 1, _questionPath.length);
+        }
+        // Load the previous answer if it exists
+        if (_currentQuestionIndex < _questionPath.length) {
+          final previousQuestion = _questionPath[_currentQuestionIndex];
+          _currentAnswer = _responses[previousQuestion.questionId];
         }
       });
     }
   }
 
   void _restart() {
+    _textController?.dispose();
+    _textController = null;
     setState(() {
       _responses.clear();
       _currentQuestionIndex = 0;
+      _currentAnswer = null;
       _buildQuestionPath();
     });
   }
@@ -215,16 +278,16 @@ class _FormPreviewWidgetState extends State<FormPreviewWidget> {
               color: Colors.white70,
             ),
           ),
-          if (_questionPath.isNotEmpty) ...[
+          if (_questionPath.isNotEmpty && _currentQuestionIndex < _questionPath.length) ...[
             const SizedBox(height: 12),
             LinearProgressIndicator(
-              value: _currentQuestionIndex / _questionPath.length,
+              value: (_currentQuestionIndex + 1) / (_questionPath.length + 1),
               backgroundColor: Colors.white24,
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             ),
             const SizedBox(height: 4),
             Text(
-              'Question ${_currentQuestionIndex + 1} of ${_questionPath.length}',
+              'Question ${_currentQuestionIndex + 1}',
               style: const TextStyle(
                 fontSize: 12,
                 color: Colors.white70,
@@ -238,6 +301,21 @@ class _FormPreviewWidgetState extends State<FormPreviewWidget> {
 
   Widget _buildQuestionView() {
     final question = _questionPath[_currentQuestionIndex];
+    
+    // Initialize text controller for text input questions
+    if (question.questionType == QuestionType.text ||
+        question.questionType == QuestionType.email ||
+        question.questionType == QuestionType.phone) {
+      if (_textController == null) {
+        _textController = TextEditingController(
+          text: _currentAnswer is String ? _currentAnswer as String : '',
+        );
+      }
+    } else {
+      // Dispose text controller if not a text input question
+      _textController?.dispose();
+      _textController = null;
+    }
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -290,139 +368,191 @@ class _FormPreviewWidgetState extends State<FormPreviewWidget> {
       case QuestionType.text:
       case QuestionType.email:
       case QuestionType.phone:
-        return TextField(
-          decoration: InputDecoration(
-            hintText: question.placeholder ?? 'Enter your answer...',
-            border: const OutlineInputBorder(),
-          ),
-          keyboardType: question.questionType == QuestionType.email
-              ? TextInputType.emailAddress
-              : question.questionType == QuestionType.phone
-                  ? TextInputType.phone
-                  : TextInputType.text,
-          onSubmitted: (value) => _handleAnswer(value),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _textController,
+              decoration: InputDecoration(
+                hintText: question.placeholder ?? 'Enter your answer...',
+                border: const OutlineInputBorder(),
+              ),
+              keyboardType: question.questionType == QuestionType.email
+                  ? TextInputType.emailAddress
+                  : question.questionType == QuestionType.phone
+                      ? TextInputType.phone
+                      : TextInputType.text,
+              onChanged: (value) => _handleAnswer(value),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _hasAnswer ? _goToNextQuestion : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                disabledBackgroundColor: Colors.grey[300],
+              ),
+              child: const Text(
+                'Next',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
         );
 
       case QuestionType.singleChoice:
         return Column(
-          children: question.options.map((option) {
-            final isSelected = _responses[question.questionId] == option.optionId;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: InkWell(
-                onTap: () => _handleAnswer(option.optionId),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppTheme.primaryColor.withOpacity(0.1)
-                        : Colors.white,
-                    border: Border.all(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...question.options.map((option) {
+              final isSelected = _currentAnswer == option.optionId;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: InkWell(
+                  onTap: () => _handleAnswer(option.optionId),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
                       color: isSelected
-                          ? AppTheme.primaryColor
-                          : Colors.grey[300]!,
-                      width: isSelected ? 2 : 1,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isSelected
-                            ? Icons.radio_button_checked
-                            : Icons.radio_button_unchecked,
+                          ? AppTheme.primaryColor.withOpacity(0.1)
+                          : Colors.white,
+                      border: Border.all(
                         color: isSelected
                             ? AppTheme.primaryColor
-                            : Colors.grey[400],
+                            : Colors.grey[300]!,
+                        width: isSelected ? 2 : 1,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          option.optionText.isEmpty
-                              ? 'Option ${option.orderIndex + 1}'
-                              : option.optionText,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: option.optionText.isEmpty
-                                ? Colors.grey[400]
-                                : Colors.black87,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isSelected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          color: isSelected
+                              ? AppTheme.primaryColor
+                              : Colors.grey[400],
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            option.optionText.isEmpty
+                                ? 'Option ${option.orderIndex + 1}'
+                                : option.optionText,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: option.optionText.isEmpty
+                                  ? Colors.grey[400]
+                                  : Colors.black87,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
+              );
+            }).toList(),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _hasAnswer ? _goToNextQuestion : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                disabledBackgroundColor: Colors.grey[300],
               ),
-            );
-          }).toList(),
+              child: const Text(
+                'Next',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
         );
 
       case QuestionType.multipleChoice:
+        final currentSelections = _currentAnswer as List? ?? [];
         return Column(
-          children: question.options.map((option) {
-            final selectedOptions = _responses[question.questionId] as List? ?? [];
-            final isSelected = selectedOptions.contains(option.optionId);
-            
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: InkWell(
-                onTap: () {
-                  final currentSelections = List.from(selectedOptions);
-                  if (isSelected) {
-                    currentSelections.remove(option.optionId);
-                  } else {
-                    currentSelections.add(option.optionId);
-                  }
-                  setState(() {
-                    _responses[question.questionId] = currentSelections;
-                  });
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppTheme.primaryColor.withOpacity(0.1)
-                        : Colors.white,
-                    border: Border.all(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...question.options.map((option) {
+              final isSelected = currentSelections.contains(option.optionId);
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: InkWell(
+                  onTap: () {
+                    final updatedSelections = List.from(currentSelections);
+                    if (isSelected) {
+                      updatedSelections.remove(option.optionId);
+                    } else {
+                      updatedSelections.add(option.optionId);
+                    }
+                    _handleAnswer(updatedSelections);
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
                       color: isSelected
-                          ? AppTheme.primaryColor
-                          : Colors.grey[300]!,
-                      width: isSelected ? 2 : 1,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isSelected
-                            ? Icons.check_box
-                            : Icons.check_box_outline_blank,
+                          ? AppTheme.primaryColor.withOpacity(0.1)
+                          : Colors.white,
+                      border: Border.all(
                         color: isSelected
                             ? AppTheme.primaryColor
-                            : Colors.grey[400],
+                            : Colors.grey[300]!,
+                        width: isSelected ? 2 : 1,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          option.optionText.isEmpty
-                              ? 'Option ${option.orderIndex + 1}'
-                              : option.optionText,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: option.optionText.isEmpty
-                                ? Colors.grey[400]
-                                : Colors.black87,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isSelected
+                              ? Icons.check_box
+                              : Icons.check_box_outline_blank,
+                          color: isSelected
+                              ? AppTheme.primaryColor
+                              : Colors.grey[400],
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            option.optionText.isEmpty
+                                ? 'Option ${option.orderIndex + 1}'
+                                : option.optionText,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: option.optionText.isEmpty
+                                  ? Colors.grey[400]
+                                  : Colors.black87,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
+              );
+            }).toList(),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _hasAnswer ? _goToNextQuestion : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                disabledBackgroundColor: Colors.grey[300],
               ),
-            );
-          }).toList(),
+              child: const Text(
+                'Next',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
         );
     }
   }
