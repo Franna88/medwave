@@ -57,18 +57,6 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
   }
 
   void _deleteQuestion(String questionId) {
-    // Prevent deletion of required fields
-    const requiredFieldIds = {'firstName', 'lastName', 'email', 'phone'};
-    if (requiredFieldIds.contains(questionId)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cannot delete required field: $questionId'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
     final updatedQuestions = widget.column.questions
         .where((q) => q.questionId != questionId)
         .toList();
@@ -107,7 +95,8 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
                 ? _buildEmptyState()
                 : _buildQuestionsList(),
           ),
-          if (widget.column.questions.isEmpty || widget.column.isFirstColumn)
+          // Only show Add Question button if column is empty (1 question per column rule)
+          if (widget.column.questions.isEmpty)
             _buildAddQuestionButton(),
         ],
       ),

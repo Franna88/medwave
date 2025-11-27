@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
 import '../../../theme/app_theme.dart';
 import '../../../models/form/lead_form.dart';
@@ -61,18 +61,9 @@ class _FormBuilderScreenState extends State<FormBuilderScreen> {
           _isLoading = false;
         });
 
-        // If form has no columns, create the first one with required fields
+        // If form has no columns, create the first one (empty - user adds questions one at a time)
         if (_form!.columns.isEmpty) {
           _addFirstColumn();
-          // Auto-save to persist the required fields
-          _saveFormSilently();
-        } else {
-          // Ensure required fields exist in the first column
-          final hadMissingFields = _ensureRequiredFields();
-          // Auto-save if we added missing fields
-          if (hadMissingFields) {
-            _saveFormSilently();
-          }
         }
       } else {
         setState(() => _isLoading = false);
@@ -96,48 +87,21 @@ class _FormBuilderScreenState extends State<FormBuilderScreen> {
   void _addFirstColumn() {
     if (_form == null) return;
 
-    // Create required fields for the first column
-    final requiredQuestions = [
-      FormQuestion(
-        questionId: 'firstName',
-        questionText: 'First Name',
-        questionType: QuestionType.text,
-        required: true,
-        placeholder: 'Enter your first name',
-        orderIndex: 0,
-      ),
-      FormQuestion(
-        questionId: 'lastName',
-        questionText: 'Last Name',
-        questionType: QuestionType.text,
-        required: true,
-        placeholder: 'Enter your last name',
-        orderIndex: 1,
-      ),
-      FormQuestion(
-        questionId: 'email',
-        questionText: 'Email',
-        questionType: QuestionType.email,
-        required: true,
-        placeholder: 'Enter your email address',
-        orderIndex: 2,
-      ),
-      FormQuestion(
-        questionId: 'phone',
-        questionText: 'Phone Number',
-        questionType: QuestionType.phone,
-        required: true,
-        placeholder: 'Enter your phone number',
-        orderIndex: 3,
-      ),
-    ];
+    // Create first column with 1 empty question template - user fills it in
+    final emptyQuestion = FormQuestion(
+      questionId: _uuid.v4(),
+      questionText: '',
+      questionType: QuestionType.text,
+      required: false,
+      orderIndex: 0,
+    );
 
     final newColumn = FormColumn(
       columnId: _uuid.v4(),
       columnIndex: 0,
       parentQuestionId: null,
       parentAnswerId: null,
-      questions: requiredQuestions,
+      questions: [emptyQuestion], // Start with 1 empty question
     );
 
     setState(() {
@@ -145,124 +109,10 @@ class _FormBuilderScreenState extends State<FormBuilderScreen> {
     });
   }
 
-  bool _ensureRequiredFields() {
-    if (_form == null || _form!.columns.isEmpty) return false;
+  // Removed _ensureRequiredFields() - no longer enforcing required fields
+  // Users can now add questions one at a time as needed
 
-    final firstColumn = _form!.columns.firstWhere(
-      (col) => col.isFirstColumn,
-      orElse: () => _form!.columns.first,
-    );
-
-    final requiredFieldIds = {'firstName', 'lastName', 'email', 'phone'};
-    final existingQuestionIds = firstColumn.questions
-        .map((q) => q.questionId)
-        .toSet();
-
-    final missingFields = <FormQuestion>[];
-    int maxOrderIndex = firstColumn.questions.isEmpty
-        ? -1
-        : firstColumn.questions
-              .map((q) => q.orderIndex)
-              .reduce((a, b) => a > b ? a : b);
-
-    // Add missing required fields
-    if (!existingQuestionIds.contains('firstName')) {
-      missingFields.add(
-        FormQuestion(
-          questionId: 'firstName',
-          questionText: 'First Name',
-          questionType: QuestionType.text,
-          required: true,
-          placeholder: 'Enter your first name',
-          orderIndex: ++maxOrderIndex,
-        ),
-      );
-    }
-    if (!existingQuestionIds.contains('lastName')) {
-      missingFields.add(
-        FormQuestion(
-          questionId: 'lastName',
-          questionText: 'Last Name',
-          questionType: QuestionType.text,
-          required: true,
-          placeholder: 'Enter your last name',
-          orderIndex: ++maxOrderIndex,
-        ),
-      );
-    }
-    if (!existingQuestionIds.contains('email')) {
-      missingFields.add(
-        FormQuestion(
-          questionId: 'email',
-          questionText: 'Email',
-          questionType: QuestionType.email,
-          required: true,
-          placeholder: 'Enter your email address',
-          orderIndex: ++maxOrderIndex,
-        ),
-      );
-    }
-    if (!existingQuestionIds.contains('phone')) {
-      missingFields.add(
-        FormQuestion(
-          questionId: 'phone',
-          questionText: 'Phone Number',
-          questionType: QuestionType.phone,
-          required: true,
-          placeholder: 'Enter your phone number',
-          orderIndex: ++maxOrderIndex,
-        ),
-      );
-    }
-
-    // Ensure existing required fields are marked as required
-    final updatedQuestions = firstColumn.questions.map((q) {
-      if (requiredFieldIds.contains(q.questionId) && !q.required) {
-        return q.copyWith(required: true);
-      }
-      return q;
-    }).toList();
-
-    if (missingFields.isNotEmpty ||
-        updatedQuestions.length != firstColumn.questions.length) {
-      setState(() {
-        _form = _form!.copyWith(
-          columns: _form!.columns.map((col) {
-            if (col.columnId == firstColumn.columnId) {
-              return col.copyWith(
-                questions: [...updatedQuestions, ...missingFields]
-                  ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex)),
-              );
-            }
-            return col;
-          }).toList(),
-        );
-      });
-      return true; // Indicates fields were added/updated
-    }
-    return false; // No changes made
-  }
-
-  Future<void> _saveFormSilently() async {
-    if (_form == null) return;
-
-    try {
-      final updatedForm = _form!.copyWith(
-        formName: _formNameController.text,
-        description: _descriptionController.text,
-        updatedAt: DateTime.now(),
-      );
-      await _formService.updateForm(updatedForm);
-      setState(() {
-        _form = updatedForm;
-      });
-    } catch (e) {
-      // Silently fail - user can save manually if needed
-      if (kDebugMode) {
-        print('Error auto-saving form: $e');
-      }
-    }
-  }
+  // Removed _saveFormSilently() - no longer needed since we don't auto-add fields
 
   void _addColumn(String parentId) {
     if (_form == null) return;
