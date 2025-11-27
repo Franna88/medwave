@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../../models/leads/lead.dart';
 import '../../models/leads/lead_note.dart';
+import '../../models/leads/lead_channel.dart';
+import '../../models/form/form_submission.dart';
 import '../../models/streams/appointment.dart' as models;
 import 'sales_appointment_service.dart';
 
@@ -440,6 +442,68 @@ class LeadService {
     } catch (e) {
       if (kDebugMode) {
         print('Error converting lead to appointment: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Create a lead from a form submission
+  Future<String> createLeadFromFormSubmission({
+    required FormSubmission submission,
+    required Map<String, dynamic> formAnswers,
+    required LeadChannel channel,
+    required String firstStageId,
+  }) async {
+    try {
+      final firstName = formAnswers['firstName']?.toString() ?? '';
+      final lastName = formAnswers['lastName']?.toString() ?? '';
+      final email = formAnswers['email']?.toString() ?? '';
+      final phone = formAnswers['phone']?.toString() ?? '';
+      final source = submission.attribution?.utmSource ?? 'organic';
+      final attribution = submission.attribution;
+
+      final now = DateTime.now();
+
+      // Create new lead
+      final newLead = Lead(
+        id: '',
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        phone: phone,
+        source: source,
+        channelId: channel.id,
+        currentStage: firstStageId,
+        createdAt: now,
+        updatedAt: now,
+        stageEnteredAt: now,
+        stageHistory: [
+          StageHistoryEntry(
+            stage: firstStageId,
+            enteredAt: now,
+          ),
+        ],
+        createdBy: 'form_submission',
+        createdByName: 'Form Submission',
+        submissionId: submission.submissionId,
+        // UTM tracking fields
+        utmSource: attribution?.utmSource,
+        utmMedium: attribution?.utmMedium,
+        utmCampaign: attribution?.utmCampaign,
+        utmCampaignId: attribution?.utmCampaignId,
+        utmAdset: attribution?.utmAdset,
+        utmAdsetId: attribution?.utmAdsetId,
+        utmAd: attribution?.utmAd,
+        utmAdId: attribution?.utmAdId,
+        fbclid: attribution?.fbclid,
+      );
+
+      final leadId = await createLead(newLead);
+
+      return leadId;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error creating lead from form submission: $e');
       }
       rethrow;
     }

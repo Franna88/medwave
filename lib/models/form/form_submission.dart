@@ -5,11 +5,30 @@ class FormAttribution {
   final String? campaignId;
   final String? adSetId;
   final String? adId;
+  // UTM tracking fields
+  final String? utmSource;
+  final String? utmMedium;
+  final String? utmCampaign;
+  final String? utmCampaignId;
+  final String? utmAdset;
+  final String? utmAdsetId;
+  final String? utmAd;
+  final String? utmAdId;
+  final String? fbclid;
 
   FormAttribution({
     this.campaignId,
     this.adSetId,
     this.adId,
+    this.utmSource,
+    this.utmMedium,
+    this.utmCampaign,
+    this.utmCampaignId,
+    this.utmAdset,
+    this.utmAdsetId,
+    this.utmAd,
+    this.utmAdId,
+    this.fbclid,
   });
 
   Map<String, dynamic> toMap() {
@@ -17,6 +36,15 @@ class FormAttribution {
       'campaignId': campaignId,
       'adSetId': adSetId,
       'adId': adId,
+      'utmSource': utmSource,
+      'utmMedium': utmMedium,
+      'utmCampaign': utmCampaign,
+      'utmCampaignId': utmCampaignId,
+      'utmAdset': utmAdset,
+      'utmAdsetId': utmAdsetId,
+      'utmAd': utmAd,
+      'utmAdId': utmAdId,
+      'fbclid': fbclid,
     };
   }
 
@@ -25,6 +53,15 @@ class FormAttribution {
       campaignId: map['campaignId'] as String?,
       adSetId: map['adSetId'] as String?,
       adId: map['adId'] as String?,
+      utmSource: map['utmSource'] as String?,
+      utmMedium: map['utmMedium'] as String?,
+      utmCampaign: map['utmCampaign'] as String?,
+      utmCampaignId: map['utmCampaignId'] as String?,
+      utmAdset: map['utmAdset'] as String?,
+      utmAdsetId: map['utmAdsetId'] as String?,
+      utmAd: map['utmAd'] as String?,
+      utmAdId: map['utmAdId'] as String?,
+      fbclid: map['fbclid'] as String?,
     );
   }
 }

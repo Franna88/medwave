@@ -93,6 +93,48 @@ service cloud.firestore {
       allow delete: if request.auth != null && isAdmin();
     }
     
+    // Forms - Public read access for active forms, authenticated write for admins
+    match /forms/{formId} {
+      // Allow public read access to active forms (for public form page)
+      allow read: if resource.data.status == 'active';
+      // Allow authenticated admins to read all forms (including drafts/inactive)
+      allow read: if request.auth != null && isAdmin();
+      // Only authenticated admins can create/update/delete forms
+      allow write: if request.auth != null && isAdmin();
+    }
+    
+    // Form Submissions - Public create (for form submissions), admin read/write
+    match /formSubmissions/{submissionId} {
+      // Allow public create (anyone can submit a form)
+      allow create: if true;
+      // Only authenticated admins can read submissions
+      allow read: if request.auth != null && isAdmin();
+      // Only authenticated admins can update/delete submissions
+      allow update, delete: if request.auth != null && isAdmin();
+    }
+    
+    // Leads - Public create (for form submissions), admin read/write
+    match /leads/{leadId} {
+      // Allow public create (form submissions automatically create leads)
+      allow create: if true;
+      // Only authenticated admins can read leads
+      allow read: if request.auth != null && isAdmin();
+      // Only authenticated admins can update/delete leads
+      allow update, delete: if request.auth != null && isAdmin();
+    }
+    
+    // Lead Channels - Public read/write for default channel, admin full access
+    match /leadChannels/{channelId} {
+      // Allow public read access to default channel (for form submissions)
+      allow read: if channelId == 'new_leads';
+      // Allow public write (create/update) for default channel only (initializeDefaultChannel uses .set())
+      allow write: if channelId == 'new_leads';
+      // Allow authenticated admins to read all channels
+      allow read: if request.auth != null && isAdmin();
+      // Allow authenticated admins to write all channels
+      allow write: if request.auth != null && isAdmin();
+    }
+    
     // SUPER PERMISSIVE RULES - Allow all authenticated users to do everything
     match /{document=**} {
       allow read, write: if request.auth != null;

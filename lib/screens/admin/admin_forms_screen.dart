@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../theme/app_theme.dart';
 import '../../models/form/lead_form.dart';
@@ -6,6 +7,7 @@ import '../../services/firebase/form_service.dart';
 import '../../services/firebase/form_submission_service.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AdminFormsScreen extends StatefulWidget {
   const AdminFormsScreen({super.key});
@@ -18,7 +20,7 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
   final FormService _formService = FormService();
   final FormSubmissionService _submissionService = FormSubmissionService();
   final TextEditingController _searchController = TextEditingController();
-  
+
   List<LeadForm> _forms = [];
   List<LeadForm> _filteredForms = [];
   bool _isLoading = true;
@@ -42,14 +44,14 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
     setState(() => _isLoading = true);
     try {
       final forms = await _formService.getAllForms();
-      
+
       // Load submission counts for each form
       final counts = <String, int>{};
       for (final form in forms) {
         final count = await _submissionService.getSubmissionCount(form.formId);
         counts[form.formId] = count;
       }
-      
+
       setState(() {
         _forms = forms;
         _filteredForms = forms;
@@ -59,9 +61,9 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading forms: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading forms: $e')));
       }
     }
   }
@@ -70,9 +72,11 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
     final searchTerm = _searchController.text.toLowerCase();
     setState(() {
       _filteredForms = _forms.where((form) {
-        final matchesSearch = form.formName.toLowerCase().contains(searchTerm) ||
+        final matchesSearch =
+            form.formName.toLowerCase().contains(searchTerm) ||
             (form.description?.toLowerCase().contains(searchTerm) ?? false);
-        final matchesStatus = _filterStatus == null || form.status == _filterStatus;
+        final matchesStatus =
+            _filterStatus == null || form.status == _filterStatus;
         return matchesSearch && matchesStatus;
       }).toList();
     });
@@ -85,10 +89,58 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
     });
   }
 
+  String _getFormUrl(String formId) {
+    if (kIsWeb) {
+      final baseUrl = Uri.base.origin;
+      return '$baseUrl/fb-form/$formId';
+    }
+    // For mobile, use a configurable base URL or default
+    // You might want to store this in a config file
+    return 'https://yourdomain.com/fb-form/$formId';
+  }
+
+  Future<void> _copyFormUrl(LeadForm form) async {
+    final url = _getFormUrl(form.formId);
+
+    await Clipboard.setData(ClipboardData(text: url));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Form URL copied to clipboard!'),
+                    Text(
+                      url,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   Future<void> _createNewForm() async {
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.user?.uid ?? '';
-    
+
     final newForm = LeadForm(
       formId: '',
       formName: 'New Form ${DateTime.now().millisecondsSinceEpoch}',
@@ -107,9 +159,9 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating form: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error creating form: $e')));
       }
     }
   }
@@ -126,9 +178,9 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error duplicating form: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error duplicating form: $e')));
       }
     }
   }
@@ -164,9 +216,9 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting form: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting form: $e')));
         }
       }
     }
@@ -176,13 +228,15 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
     final newStatus = form.status == FormStatus.active
         ? FormStatus.inactive
         : FormStatus.active;
-    
+
     try {
       await _formService.updateFormStatus(form.formId, newStatus);
       await _loadForms();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Form ${newStatus.displayName.toLowerCase()}')),
+          SnackBar(
+            content: Text('Form ${newStatus.displayName.toLowerCase()}'),
+          ),
         );
       }
     } catch (e) {
@@ -206,8 +260,8 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredForms.isEmpty
-                    ? _buildEmptyState()
-                    : _buildFormsList(),
+                ? _buildEmptyState()
+                : _buildFormsList(),
           ),
         ],
       ),
@@ -244,10 +298,7 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Create and manage Facebook lead forms',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -283,7 +334,10 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: Colors.grey[300]!),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
           ),
@@ -314,10 +368,7 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
         ),
       ),
       itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: null,
-          child: Text('All Status'),
-        ),
+        const PopupMenuItem(value: null, child: Text('All Status')),
         PopupMenuItem(
           value: FormStatus.active,
           child: Text(FormStatus.active.displayName),
@@ -340,11 +391,7 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.description_outlined,
-            size: 64,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.description_outlined, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             _searchController.text.isEmpty && _filterStatus == null
@@ -361,10 +408,7 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
             _searchController.text.isEmpty && _filterStatus == null
                 ? 'Create your first form to get started'
                 : 'Try adjusting your search or filters',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
           if (_searchController.text.isEmpty && _filterStatus == null) ...[
             const SizedBox(height: 24),
@@ -375,7 +419,10 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
               ),
             ),
           ],
@@ -397,13 +444,11 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
 
   Widget _buildFormCard(LeadForm form) {
     final submissionCount = _submissionCounts[form.formId] ?? 0;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () => context.push('/admin/forms/builder/${form.formId}'),
         borderRadius: BorderRadius.circular(12),
@@ -425,7 +470,8 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        if (form.description != null && form.description!.isNotEmpty) ...[
+                        if (form.description != null &&
+                            form.description!.isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(
                             form.description!,
@@ -456,6 +502,17 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
                           ],
                         ),
                       ),
+                      if (form.status == FormStatus.active)
+                        const PopupMenuItem(
+                          value: 'copyUrl',
+                          child: Row(
+                            children: [
+                              Icon(Icons.link, size: 20),
+                              SizedBox(width: 12),
+                              Text('Copy Form URL'),
+                            ],
+                          ),
+                        ),
                       const PopupMenuItem(
                         value: 'duplicate',
                         child: Row(
@@ -501,6 +558,9 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
                         case 'edit':
                           context.push('/admin/forms/builder/${form.formId}');
                           break;
+                        case 'copyUrl':
+                          _copyFormUrl(form);
+                          break;
                         case 'duplicate':
                           _duplicateForm(form);
                           break;
@@ -528,10 +588,7 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
                     '${form.columns.fold<int>(0, (sum, col) => sum + col.questions.length)} questions',
                   ),
                   const SizedBox(width: 12),
-                  _buildInfoChip(
-                    Icons.inbox,
-                    '$submissionCount submissions',
-                  ),
+                  _buildInfoChip(Icons.inbox, '$submissionCount submissions'),
                 ],
               ),
               const SizedBox(height: 12),
@@ -541,13 +598,46 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
                   const SizedBox(width: 4),
                   Text(
                     'Updated ${_formatDate(form.updatedAt)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                   ),
                 ],
               ),
+              if (form.status == FormStatus.active) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.link, size: 16, color: Colors.blue[700]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _getFormUrl(form.formId),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[900],
+                            fontFamily: 'monospace',
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.copy, size: 16),
+                        onPressed: () => _copyFormUrl(form),
+                        tooltip: 'Copy URL',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        color: Colors.blue[700],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -599,13 +689,7 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
         children: [
           Icon(icon, size: 14, color: Colors.grey[700]),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[700],
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[700])),
         ],
       ),
     );
@@ -629,4 +713,3 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
     }
   }
 }
-

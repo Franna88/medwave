@@ -57,6 +57,18 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
   }
 
   void _deleteQuestion(String questionId) {
+    // Prevent deletion of required fields
+    const requiredFieldIds = {'firstName', 'lastName', 'email', 'phone'};
+    if (requiredFieldIds.contains(questionId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Cannot delete required field: $questionId'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final updatedQuestions = widget.column.questions
         .where((q) => q.questionId != questionId)
         .toList();
@@ -68,8 +80,6 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
 
     widget.onUpdate(widget.column.copyWith(questions: updatedQuestions));
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -97,8 +107,7 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
                 ? _buildEmptyState()
                 : _buildQuestionsList(),
           ),
-          // Only show add question button if column is empty
-          if (widget.column.questions.isEmpty)
+          if (widget.column.questions.isEmpty || widget.column.isFirstColumn)
             _buildAddQuestionButton(),
         ],
       ),
@@ -107,19 +116,19 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
 
   Widget _buildHeader() {
     String headerTitle = 'Starting Questions';
-    
+
     if (!widget.column.isFirstColumn) {
       // Find parent option or question
       bool found = false;
-      
+
       // Check if it's a follow-up to an option (parentAnswerId takes priority)
       if (widget.column.parentAnswerId != null) {
         for (final col in widget.allColumns) {
           for (final question in col.questions) {
             for (final option in question.options) {
               if (option.optionId == widget.column.parentAnswerId) {
-                headerTitle = option.optionText.isEmpty 
-                    ? 'Follow-up Questions' 
+                headerTitle = option.optionText.isEmpty
+                    ? 'Follow-up Questions'
                     : option.optionText;
                 found = true;
                 break;
@@ -130,14 +139,14 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
           if (found) break;
         }
       }
-      
+
       // If not found and no parentAnswerId, check if it's a follow-up to a question
       if (!found && widget.column.parentQuestionId != null) {
         for (final col in widget.allColumns) {
           for (final question in col.questions) {
             if (question.questionId == widget.column.parentQuestionId) {
-              headerTitle = question.questionText.isEmpty 
-                  ? 'Follow-up Questions' 
+              headerTitle = question.questionText.isEmpty
+                  ? 'Follow-up Questions'
                   : question.questionText;
               found = true;
               break;
@@ -147,7 +156,7 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
         }
       }
     }
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -177,10 +186,7 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
                   const SizedBox(height: 4),
                   Text(
                     'Follow-up questions',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                   ),
                 ],
               ],
@@ -205,11 +211,7 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.help_outline,
-              size: 48,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.help_outline, size: 48, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'No question yet',
@@ -222,10 +224,7 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
             const SizedBox(height: 8),
             Text(
               'Add a question to this column',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -235,30 +234,48 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
   }
 
   Widget _buildQuestionsList() {
-    // Since we only allow one question per column, just display it
-    final question = widget.column.questions.first;
-    final isSelected = widget.selectedQuestionId == question.questionId;
-    
-    // Check if this question has a follow-up column
-    final hasFollowUpColumn = widget.allColumns.any(
-      (col) => col.parentQuestionId == question.questionId,
-    );
-    
-    return Padding(
+    // Sort questions by orderIndex to ensure correct display order
+    final sortedQuestions = List<FormQuestion>.from(widget.column.questions)
+      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      child: FormQuestionWidget(
-        question: question,
-        onUpdate: _updateQuestion,
-        onDelete: _deleteQuestion,
-        onAddColumn: widget.onAddColumn,
-        onSelect: () => widget.onSelectQuestion(question.questionId),
-        onSelectQuestion: widget.onSelectQuestion, // Pass through for option selection
-        isSelected: isSelected,
-        selectedItemId: widget.selectedQuestionId, // Pass the selected item ID
-        hasFollowUpColumn: hasFollowUpColumn,
-        columnId: widget.column.columnId,
-        allColumns: widget.allColumns,
-      ),
+      itemCount: sortedQuestions.length,
+      itemBuilder: (context, index) {
+        final question = sortedQuestions[index];
+        final isSelected = widget.selectedQuestionId == question.questionId;
+
+        // Check if this question has a follow-up column
+        final hasFollowUpColumn = widget.allColumns.any(
+          (col) =>
+              col.parentQuestionId == question.questionId ||
+              col.parentAnswerId != null &&
+                  question.options.any(
+                    (opt) => opt.optionId == col.parentAnswerId,
+                  ),
+        );
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: index < sortedQuestions.length - 1 ? 16 : 0,
+          ),
+          child: FormQuestionWidget(
+            question: question,
+            onUpdate: _updateQuestion,
+            onDelete: _deleteQuestion,
+            onAddColumn: widget.onAddColumn,
+            onSelect: () => widget.onSelectQuestion(question.questionId),
+            onSelectQuestion:
+                widget.onSelectQuestion, // Pass through for option selection
+            isSelected: isSelected,
+            selectedItemId:
+                widget.selectedQuestionId, // Pass the selected item ID
+            hasFollowUpColumn: hasFollowUpColumn,
+            columnId: widget.column.columnId,
+            allColumns: widget.allColumns,
+          ),
+        );
+      },
     );
   }
 
@@ -266,9 +283,7 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Colors.grey[300]!),
-        ),
+        border: Border(top: BorderSide(color: Colors.grey[300]!)),
       ),
       child: SizedBox(
         width: double.infinity,
@@ -284,5 +299,3 @@ class _FormColumnWidgetState extends State<FormColumnWidget> {
     );
   }
 }
-
-
