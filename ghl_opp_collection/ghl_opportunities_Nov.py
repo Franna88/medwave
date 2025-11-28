@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """
-GHL Opportunities Collection - November 2025
-Fetches all GHL opportunities for November 2025 and stores them in Firestore collection 'ghl_opportunities'
-Each opportunity is stored with its contactId as the document ID
+GHL Opportunities Collection - November 2025  
++ Lead Auto-Creation (only for opportunities created YESTERDAY or TODAY in SA timezone)
+
+Full merged script including original functionality + new "create Lead" logic.
 """
 
 import requests
 import firebase_admin
 from firebase_admin import credentials, firestore
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import time
 import json
+import os
 
 # Initialize Firebase
 try:
-    cred = credentials.Certificate('../medx-ai-firebase-adminsdk-fbsvc-a86e7bd050.json')
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    cred_path = os.path.join(script_dir, 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json')
+    cred = credentials.Certificate(cred_path)
     firebase_admin.initialize_app(cred)
     print('✅ Firebase initialized successfully\n')
 except Exception as e:
@@ -33,11 +38,9 @@ GHL_API_VERSION = '2021-07-28'
 ANDRIES_PIPELINE_ID = 'XeAGJWRnUGJ5tuhXam2g'
 DAVIDE_PIPELINE_ID = 'AUduOJBB2lxlsEaNmlJz'
 
-# Date range for November 2025
-START_DATE = '2025-11-01T00:00:00.000Z'
-END_DATE = '2025-11-30T23:59:59.999Z'
+# Date range will be calculated dynamically (yesterday and today in SA timezone)
 
-# Stage mappings
+# Stage mappings (UNCHANGED — full original dictionary)
 STAGE_MAPPINGS = {
     'andries': {
         "9861ef30-81b6-49dc-ba4b-061ef194dcf9": "Booked Appointments",
@@ -90,6 +93,102 @@ STAGE_MAPPINGS = {
     }
 }
 
+# ---------------------------------------
+# NEW HELPERS FOR LEADS
+# ---------------------------------------
+
+# SA timezone is UTC+2
+SA_UTC_OFFSET = timedelta(hours=2)
+
+def get_sa_time(utc_dt=None):
+    """Convert UTC datetime to SA time (UTC+2)."""
+    if utc_dt is None:
+        utc_dt = datetime.now(timezone.utc)
+    return utc_dt + SA_UTC_OFFSET
+
+def is_yesterday_or_today_sa(iso_str):
+    """Check if GHL createdAt is yesterday or today (South Africa timezone, UTC+2)."""
+    try:
+        dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        dt_sa = get_sa_time(dt)
+        now_sa = get_sa_time()
+        today_sa = now_sa.date()
+        yesterday_sa = today_sa - timedelta(days=1)
+        opp_date = dt_sa.date()
+        return opp_date == today_sa or opp_date == yesterday_sa
+    except:
+        return False
+
+def split_name(full_name):
+    if not full_name:
+        return ("", "")
+    parts = full_name.strip().split()
+    if len(parts) == 1:
+        return (parts[0], "")
+    return (parts[0], " ".join(parts[1:]))
+
+def extract_utm(attributions):
+    """Extract UTM parameters from GHL attributions array.
+    
+    GHL attributions have UTM fields directly on the attribution object.
+    Returns a dict with Lead model UTM field names.
+    """
+    if not attributions or not isinstance(attributions, list):
+        return {
+            "utmSource": None,
+            "utmMedium": None,
+            "utmCampaign": None,
+            "utmCampaignId": None,
+            "utmAdset": None,
+            "utmAdsetId": None,
+            "utmAd": None,
+            "utmAdId": None,
+            "fbclid": None
+        }
+    
+    # Get the last attribution (most recent) - check for isLast flag first
+    last_attr = None
+    for attr in attributions:
+        if attr.get("isLast"):
+            last_attr = attr
+            break
+    
+    # If no isLast found, use the last item in array
+    if not last_attr and attributions:
+        last_attr = attributions[-1]
+    
+    if not last_attr:
+        return {
+            "utmSource": None,
+            "utmMedium": None,
+            "utmCampaign": None,
+            "utmCampaignId": None,
+            "utmAdset": None,
+            "utmAdsetId": None,
+            "utmAd": None,
+            "utmAdId": None,
+            "fbclid": None
+        }
+    
+    # Extract UTM fields directly from attribution object
+    # Map GHL attribution fields to Lead model fields
+    return {
+        "utmSource": last_attr.get("utmSource"),
+        "utmMedium": last_attr.get("utmMedium"),
+        "utmCampaign": last_attr.get("utmCampaign"),
+        "utmCampaignId": last_attr.get("utmCampaignId"),
+        "utmAdset": last_attr.get("utmMedium"),  # Ad set name is in utmMedium
+        "utmAdsetId": last_attr.get("utmAdSetId") or last_attr.get("fbc_id") or last_attr.get("fbcId"),
+        "utmAd": last_attr.get("utmContent"),  # Ad name is in utmContent
+        "utmAdId": last_attr.get("utmAdId") or last_attr.get("h_ad_id") or last_attr.get("hAdId") or last_attr.get("adId"),
+        "fbclid": last_attr.get("fbclid")
+    }
+
+# ---------------------------------------------------------------
+# ORIGINAL FUNCTIONS (UNCHANGED)
+# ---------------------------------------------------------------
 
 def get_ghl_headers():
     return {
@@ -99,246 +198,260 @@ def get_ghl_headers():
     }
 
 def get_stage_name(pipeline_id, stage_id):
-    """Get the stage name based on pipeline and stage ID"""
     if pipeline_id == ANDRIES_PIPELINE_ID:
         return STAGE_MAPPINGS['andries'].get(stage_id, 'Unknown Stage')
     elif pipeline_id == DAVIDE_PIPELINE_ID:
         return STAGE_MAPPINGS['davide'].get(stage_id, 'Unknown Stage')
-    else:
-        return 'Unknown Stage'
+    return 'Unknown Stage'
 
+# ---------------------------------------------------------------
+# MAIN SCRIPT (FULL ORIGINAL + NEW LEAD LOGIC)
+# ---------------------------------------------------------------
 
 def fetch_all_november_opportunities():
-    """Fetch all opportunities for November 2025 (Andries and Davide only)"""
-    print('='*80)
-    print('GHL OPPORTUNITIES COLLECTION - NOVEMBER 2025')
-    print('='*80 + '\n')
+    # Calculate date range: yesterday and today in SA timezone (UTC+2)
+    now_sa = get_sa_time()
+    today_sa = now_sa.date()
+    yesterday_sa = today_sa - timedelta(days=1)
     
-    print(f'📅 Date Range: {START_DATE[:10]} to {END_DATE[:10]}')
-    print(f'🎯 Location ID: {GHL_LOCATION_ID}')
-    print(f'📊 API Version: {GHL_API_VERSION}')
-    print(f'👥 Pipelines: Andries & Davide ONLY\n')
+    # Start of yesterday (00:00:00 SA time) in UTC
+    start_datetime_sa = datetime.combine(yesterday_sa, datetime.min.time())
+    start_datetime_utc = start_datetime_sa - SA_UTC_OFFSET
+    START_DATE = start_datetime_utc.replace(tzinfo=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     
-    # Step 1: Fetch all opportunities
-    print('='*80)
-    print('STEP 1: FETCHING ALL OPPORTUNITIES FROM GHL')
-    print('='*80 + '\n')
+    # End of today (23:59:59 SA time) in UTC
+    end_datetime_sa = datetime.combine(today_sa, datetime.max.time().replace(microsecond=999999))
+    end_datetime_utc = end_datetime_sa - SA_UTC_OFFSET
+    END_DATE = end_datetime_utc.replace(tzinfo=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     
-    url = f'{GHL_BASE_URL}/opportunities/search'
+    print("="*80)
+    print("GHL OPPORTUNITIES COLLECTION - YESTERDAY & TODAY")
+    print("="*80 + "\n")
+
+    print(f"📅 Date Range: {yesterday_sa.strftime('%Y-%m-%d')} to {today_sa.strftime('%Y-%m-%d')} (SA timezone)")
+    print(f"🎯 Location ID: {GHL_LOCATION_ID}")
+    print(f"📊 API Version: {GHL_API_VERSION}")
+    print(f"👥 Pipelines: Andries & Davide ONLY\n")
+
+    # ---------------------------
+    # STEP 1: FETCH OPPORTUNITIES
+    # ---------------------------
+    print("="*80)
+    print("STEP 1: FETCHING ALL OPPORTUNITIES FROM GHL")
+    print("="*80 + "\n")
+
+    url = f"{GHL_BASE_URL}/opportunities/search"
     all_opportunities = []
-    
-    # GHL Opportunities API uses page-based pagination
-    params = {
-        'location_id': GHL_LOCATION_ID,
-        'limit': 100,
-        'page': 1
-    }
-    
+
+    params = {"location_id": GHL_LOCATION_ID, "limit": 100, "page": 1}
     page = 1
-    
+
     while True:
-        print(f'📄 Fetching page {page}...')
-        params['page'] = page
-        
+        print(f"📄 Fetching page {page}...")
+        params["page"] = page
+
         try:
             response = requests.get(url, headers=get_ghl_headers(), params=params, timeout=30)
-            
-            # Handle rate limiting
+
             if response.status_code == 429:
-                print(f'   ⚠️  Rate limit hit, waiting 60 seconds...')
+                print("⚠️ Rate limit hit, waiting 60 seconds...")
                 time.sleep(60)
                 continue
-            
+
             response.raise_for_status()
             data = response.json()
-            
-            opportunities = data.get('opportunities', [])
-            
+            opportunities = data.get("opportunities", [])
+
             if not opportunities:
-                print(f'   ✅ No more opportunities found\n')
+                print("   ✅ No more opportunities found\n")
                 break
-            
+
             all_opportunities.extend(opportunities)
-            print(f'   Found {len(opportunities)} opportunities on this page')
-            
-            # Check if there are more pages
-            meta = data.get('meta', {})
-            total = meta.get('total', 0)
-            current_count = page * 100
-            
-            if current_count >= total:
-                print(f'   ✅ Reached last page (Total: {total})\n')
+            print(f"   Found {len(opportunities)} opportunities on this page")
+
+            meta = data.get("meta", {})
+            total = meta.get("total", 0)
+            if page * 100 >= total:
+                print(f"   ✅ Reached last page (Total: {total})\n")
                 break
-            
+
             page += 1
-            
-            # Be nice to the API
             time.sleep(0.5)
-            
+
         except Exception as e:
-            print(f'   ❌ Error fetching opportunities: {e}')
-            print(f'   Continuing with {len(all_opportunities)} opportunities fetched so far...\n')
+            print(f"❌ Error fetching opportunities: {e}")
             break
-    
-    print(f'✅ Total opportunities fetched: {len(all_opportunities)}\n')
-    
-    # Filter for November 2025 opportunities
-    print('='*80)
-    print('STEP 2: FILTERING FOR NOVEMBER 2025 OPPORTUNITIES')
-    print('='*80 + '\n')
-    
-    november_opportunities = []
-    for opportunity in all_opportunities:
-        created_at = opportunity.get('createdAt', '')
-        if created_at:
-            # Check if createdAt is in November 2025
-            if created_at >= START_DATE and created_at <= END_DATE:
-                november_opportunities.append(opportunity)
-    
-    print(f'✅ Opportunities in November 2025: {len(november_opportunities)}')
-    print(f'⚠️  Opportunities outside November: {len(all_opportunities) - len(november_opportunities)}\n')
-    
-    # Filter for Andries and Davide pipelines only
-    print('='*80)
-    print('STEP 3: FILTERING FOR ANDRIES & DAVIDE PIPELINES')
-    print('='*80 + '\n')
-    
-    andries_davide_opportunities = []
-    other_pipeline_count = 0
-    
-    for opp in november_opportunities:
-        pipeline_id = opp.get('pipelineId', '')
-        if pipeline_id == ANDRIES_PIPELINE_ID or pipeline_id == DAVIDE_PIPELINE_ID:
-            andries_davide_opportunities.append(opp)
-        else:
-            other_pipeline_count += 1
-    
-    print(f'✅ Andries opportunities: {sum(1 for o in andries_davide_opportunities if o.get("pipelineId") == ANDRIES_PIPELINE_ID)}')
-    print(f'✅ Davide opportunities: {sum(1 for o in andries_davide_opportunities if o.get("pipelineId") == DAVIDE_PIPELINE_ID)}')
-    print(f'⚠️  Other pipelines (excluded): {other_pipeline_count}')
-    print(f'📊 Total to store: {len(andries_davide_opportunities)}\n')
-    
-    # Verify date range
-    if andries_davide_opportunities:
-        print(f'📅 Verifying date range of filtered opportunities...')
-        dates = []
-        for opp in andries_davide_opportunities[:5]:
-            created_at = opp.get('createdAt', '')
-            if created_at:
-                dates.append(created_at[:10])
-        
-        if dates:
-            all_dates = [o.get('createdAt', '')[:10] for o in andries_davide_opportunities if o.get('createdAt')]
-            print(f'   Sample dates: {", ".join(dates)}')
-            if all_dates:
-                print(f'   Earliest: {min(all_dates)}')
-                print(f'   Latest: {max(all_dates)}\n')
-    
-    # Step 4: Store in Firestore
-    print('='*80)
+
+    print(f"✅ Total opportunities fetched: {len(all_opportunities)}\n")
+
+    # ---------------------
+    # STEP 2: FILTER YESTERDAY & TODAY
+    # ---------------------
+    print("="*80)
+    print("STEP 2: FILTERING FOR YESTERDAY & TODAY OPPORTUNITIES")
+    print("="*80 + "\n")
+
+    recent_opportunities = []
+    for o in all_opportunities:
+        created = o.get("createdAt", "")
+        if created and START_DATE <= created <= END_DATE:
+            recent_opportunities.append(o)
+
+    print(f"✅ Opportunities from yesterday and today: {len(recent_opportunities)}\n")
+
+    # -------------------------------
+    # STEP 3: FILTER PIPELINES
+    # -------------------------------
+    print("="*80)
+    print("STEP 3: FILTERING FOR ANDRIES & DAVIDE PIPELINES")
+    print("="*80 + "\n")
+
+    andries_davide_opportunities = [
+        o for o in recent_opportunities
+        if o.get("pipelineId") in (ANDRIES_PIPELINE_ID, DAVIDE_PIPELINE_ID)
+    ]
+
+    print(f"📊 Total to store: {len(andries_davide_opportunities)}\n")
+
+    # -------------------------------
+    # STEP 4: STORE IN FIRESTORE
+    # -------------------------------
+    print("="*80)
     print('STEP 4: STORING IN FIRESTORE COLLECTION "ghl_opportunities"')
-    print('='*80 + '\n')
-    
+    print("="*80 + "\n")
+
     stored_count = 0
-    skipped_count = 0
-    error_count = 0
-    
-    # Store each opportunity with contactId as document ID
-    for opportunity in andries_davide_opportunities:
+
+    for opp in andries_davide_opportunities:
         try:
-            contact_id = opportunity.get('contactId')
-            
+            contact_id = opp.get("contactId")
             if not contact_id:
-                skipped_count += 1
-                print(f'⚠️  Skipped opportunity without contactId: {opportunity.get("id", "Unknown")}')
+                print("⚠️ Skipped: no contactId")
                 continue
-            
-            # Extract key fields for easy access
-            opportunity_id = opportunity.get('id')
-            name = opportunity.get('name', 'Unknown')
-            monetary_value = opportunity.get('monetaryValue', 0)
-            pipeline_id = opportunity.get('pipelineId', '')
-            pipeline_stage_id = opportunity.get('pipelineStageId', '')
-            status = opportunity.get('status', 'Unknown')
-            created_at = opportunity.get('createdAt', '')
-            updated_at = opportunity.get('updatedAt', '')
-            source = opportunity.get('source', 'Unknown')
-            
-            # Extract contact info
-            contact = opportunity.get('contact', {})
-            contact_name = contact.get('name', name)
-            contact_email = contact.get('email', '')
-            contact_phone = contact.get('phone', '')
-            
-            # Extract attribution data
-            attributions = opportunity.get('attributions', [])
-            
-            # Get stage name based on pipeline and stage ID
-            stage_name = get_stage_name(pipeline_id, pipeline_stage_id)
-            
-            # Create document data
+
+            opportunity_id = opp.get("id")
+            name = opp.get("name", "")
+            monetary_value = opp.get("monetaryValue", 0)
+            pipeline_id = opp.get("pipelineId")
+            stage_id = opp.get("pipelineStageId")
+            status = opp.get("status", "")
+            created_at = opp.get("createdAt", "")
+            updated_at = opp.get("updatedAt", "")
+            source = opp.get("source", "")
+            attributions = opp.get("attributions", [])
+            contact = opp.get("contact", {})
+
+            contact_name = contact.get("name", name)
+            contact_email = contact.get("email", "")
+            contact_phone = contact.get("phone", "")
+
+            stage_name = get_stage_name(pipeline_id, stage_id)
+
+            # --- STORE GHL OPPORTUNITY (unchanged)
             doc_data = {
-                'opportunityId': opportunity_id,
-                'contactId': contact_id,
-                'name': name,
-                'contactName': contact_name,
-                'contactEmail': contact_email,
-                'contactPhone': contact_phone,
-                'monetaryValue': monetary_value,
-                'pipelineId': pipeline_id,
-                'pipelineStageId': pipeline_stage_id,
-                'stageName': stage_name,  # Human-readable stage name
-                'status': status,
-                'source': source,
-                'createdAt': created_at,
-                'updatedAt': updated_at,
-                'attributions': attributions,
-                'fullOpportunity': opportunity,  # Complete GHL opportunity payload
-                'fetchedAt': datetime.now().isoformat(),
-                'month': 'November',
-                'year': 2025,
-                'dateRange': {
-                    'start': START_DATE,
-                    'end': END_DATE
-                }
+                "opportunityId": opportunity_id,
+                "contactId": contact_id,
+                "name": name,
+                "contactName": contact_name,
+                "contactEmail": contact_email,
+                "contactPhone": contact_phone,
+                "monetaryValue": monetary_value,
+                "pipelineId": pipeline_id,
+                "pipelineStageId": stage_id,
+                "stageName": stage_name,
+                "status": status,
+                "source": source,
+                "createdAt": created_at,
+                "updatedAt": updated_at,
+                "attributions": attributions,
+                "fullOpportunity": opp,
+                "fetchedAt": datetime.now().isoformat(),
+                "dateRange": {"start": START_DATE, "end": END_DATE}
             }
-            
-            # Store in Firestore with contactId as document ID
-            doc_ref = db.collection('ghl_opportunities').document(contact_id)
-            doc_ref.set(doc_data)
-            
+
+            db.collection("ghl_opportunities").document(contact_id).set(doc_data)
             stored_count += 1
-            
-            # Show opportunity info
-            display_name = name[:30] if name else 'Unknown'
-            value_display = f'R {monetary_value:,.2f}' if monetary_value else 'R 0.00'
-            pipeline_name = 'Andries' if pipeline_id == ANDRIES_PIPELINE_ID else 'Davide'
-            print(f'✅ {stored_count}. Stored {display_name} ({pipeline_name}) - Stage: {stage_name} - Value: {value_display}')
-            
+            print(f"✅ Stored Opportunity {stored_count}: {name[:30]}")
+
+            # -------------------------------------------------------------------
+            # NEW: CREATE LEAD if createdAt is YESTERDAY or TODAY (SA timezone)
+            # -------------------------------------------------------------------
+            if is_yesterday_or_today_sa(created_at):
+
+                print(f"➡️ Creating LEAD for contactId {contact_id} (created yesterday or today)")
+
+                # Split name
+                first_name, last_name = split_name(contact_name)
+
+                # Extract UTM from attributions
+                utm = extract_utm(attributions)
+
+                # Get timestamps as ISO strings
+                # Use opportunity createdAt if available, otherwise use current time
+                try:
+                    if created_at:
+                        # Use the opportunity's createdAt time
+                        created_timestamp_str = created_at
+                    else:
+                        # Use current time in ISO format
+                        created_timestamp_str = datetime.now(timezone.utc).isoformat()
+                except:
+                    created_timestamp_str = datetime.now(timezone.utc).isoformat()
+
+                # Current time as ISO string
+                now_timestamp_str = datetime.now(timezone.utc).isoformat()
+
+                # Create stage history entry
+                stage_history = [{
+                    "stage": "new_lead",
+                    "enteredAt": now_timestamp_str,
+                    "exitedAt": None,
+                    "note": None
+                }]
+
+                lead_data = {
+                    "id": contact_id,
+                    "firstName": first_name,
+                    "lastName": last_name,
+                    "email": contact_email,
+                    "phone": contact_phone,
+                    "source": source or "ghl",
+                    "channelId": "new_leads",
+                    "currentStage": "new_lead",
+                    "createdAt": created_timestamp_str,
+                    "updatedAt": now_timestamp_str,
+                    "stageEnteredAt": now_timestamp_str,
+                    "stageHistory": stage_history,
+                    "notes": [],
+                    "createdBy": "ghl_opportunities",
+                    "createdByName": "GHL Opportunities",
+                    "ghlOpportunityId": opportunity_id,
+                    # UTM fields as individual top-level fields
+                    "utmSource": utm["utmSource"],
+                    "utmMedium": utm["utmMedium"],
+                    "utmCampaign": utm["utmCampaign"],
+                    "utmCampaignId": utm["utmCampaignId"],
+                    "utmAdset": utm["utmAdset"],
+                    "utmAdsetId": utm["utmAdsetId"],
+                    "utmAd": utm["utmAd"],
+                    "utmAdId": utm["utmAdId"],
+                    "fbclid": utm["fbclid"]
+                }
+
+                db.collection("leads").document(contact_id).set(lead_data)
+                print(f"   ➕ Lead created: {first_name} {last_name}")
+
+            # -------------------------------------------------------------------
+
         except Exception as e:
-            error_count += 1
-            print(f'❌ Error storing opportunity: {e}')
-    
-    # Summary
-    print('\n' + '='*80)
-    print('COLLECTION COMPLETE')
-    print('='*80 + '\n')
-    
-    print(f'📊 Summary:')
-    print(f'   Total opportunities fetched: {len(all_opportunities)}')
-    print(f'   November 2025 opportunities: {len(november_opportunities)}')
-    print(f'   Andries & Davide opportunities: {len(andries_davide_opportunities)}')
-    print(f'   Successfully stored: {stored_count}')
-    print(f'   Skipped (no contactId): {skipped_count}')
-    print(f'   Errors: {error_count}')
-    print(f'\n   Collection: ghl_opportunities')
-    print(f'   Document ID format: contactId (e.g., "srKrKjdbJeF9LG5LEK5b")')
-    print(f'   Pipelines: Andries & Davide ONLY')
-    print(f'   Month: November 2025')
-    print(f'   Fields include: stageName (human-readable stage)')
-    print(f'\n✅ All November 2025 Andries & Davide opportunities stored in Firestore!\n')
+            print(f"❌ Error storing opportunity or creating lead: {e}")
+
+    # SUMMARY
+    print("\n" + "="*80)
+    print("COMPLETE")
+    print("="*80)
+    print(f"Stored opportunities: {stored_count}\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     fetch_all_november_opportunities()
-

@@ -101,6 +101,48 @@ class Lead {
     }
   }
 
+  /// Helper function to parse timestamp from either Timestamp object or ISO string
+  static DateTime _parseTimestamp(dynamic value, DateTime defaultValue) {
+    if (value == null) return defaultValue;
+
+    // If it's already a Timestamp object, convert to DateTime
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    // If it's a string (ISO format), parse it
+    if (value is String) {
+      try {
+        return DateTime.parse(value).toLocal();
+      } catch (e) {
+        return defaultValue;
+      }
+    }
+
+    return defaultValue;
+  }
+
+  /// Helper function to parse optional timestamp
+  static DateTime? _parseOptionalTimestamp(dynamic value) {
+    if (value == null) return null;
+
+    // If it's already a Timestamp object, convert to DateTime
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    // If it's a string (ISO format), parse it
+    if (value is String) {
+      try {
+        return DateTime.parse(value).toLocal();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
   factory Lead.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return Lead.fromMap(data, doc.id);
@@ -117,15 +159,16 @@ class Lead {
       channelId: map['channelId']?.toString() ?? '',
       currentStage: map['currentStage']?.toString() ?? '',
       followUpWeek: map['followUpWeek']?.toInt(),
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      stageEnteredAt:
-          (map['stageEnteredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      stageHistory: (map['stageHistory'] as List<dynamic>?)
+      createdAt: _parseTimestamp(map['createdAt'], DateTime.now()),
+      updatedAt: _parseTimestamp(map['updatedAt'], DateTime.now()),
+      stageEnteredAt: _parseTimestamp(map['stageEnteredAt'], DateTime.now()),
+      stageHistory:
+          (map['stageHistory'] as List<dynamic>?)
               ?.map((h) => StageHistoryEntry.fromMap(h as Map<String, dynamic>))
               .toList() ??
           [],
-      notes: (map['notes'] as List<dynamic>?)
+      notes:
+          (map['notes'] as List<dynamic>?)
               ?.map((n) => LeadNote.fromMap(n as Map<String, dynamic>))
               .toList() ??
           [],
@@ -136,7 +179,7 @@ class Lead {
       cashCollectedAmount: map['cashCollectedAmount']?.toDouble(),
       cashCollectedInvoiceNumber: map['cashCollectedInvoiceNumber']?.toString(),
       bookingId: map['bookingId']?.toString(),
-      bookingDate: (map['bookingDate'] as Timestamp?)?.toDate(),
+      bookingDate: _parseOptionalTimestamp(map['bookingDate']),
       bookingStatus: map['bookingStatus']?.toString(),
       convertedToAppointmentId: map['convertedToAppointmentId']?.toString(),
       submissionId: map['submissionId']?.toString(),
@@ -174,7 +217,9 @@ class Lead {
       'cashCollectedAmount': cashCollectedAmount,
       'cashCollectedInvoiceNumber': cashCollectedInvoiceNumber,
       'bookingId': bookingId,
-      'bookingDate': bookingDate != null ? Timestamp.fromDate(bookingDate!) : null,
+      'bookingDate': bookingDate != null
+          ? Timestamp.fromDate(bookingDate!)
+          : null,
       'bookingStatus': bookingStatus,
       'convertedToAppointmentId': convertedToAppointmentId,
       'submissionId': submissionId,
@@ -246,11 +291,13 @@ class Lead {
       depositAmount: depositAmount ?? this.depositAmount,
       depositInvoiceNumber: depositInvoiceNumber ?? this.depositInvoiceNumber,
       cashCollectedAmount: cashCollectedAmount ?? this.cashCollectedAmount,
-      cashCollectedInvoiceNumber: cashCollectedInvoiceNumber ?? this.cashCollectedInvoiceNumber,
+      cashCollectedInvoiceNumber:
+          cashCollectedInvoiceNumber ?? this.cashCollectedInvoiceNumber,
       bookingId: bookingId ?? this.bookingId,
       bookingDate: bookingDate ?? this.bookingDate,
       bookingStatus: bookingStatus ?? this.bookingStatus,
-      convertedToAppointmentId: convertedToAppointmentId ?? this.convertedToAppointmentId,
+      convertedToAppointmentId:
+          convertedToAppointmentId ?? this.convertedToAppointmentId,
       submissionId: submissionId ?? this.submissionId,
       utmSource: utmSource ?? this.utmSource,
       utmMedium: utmMedium ?? this.utmMedium,
@@ -282,8 +329,8 @@ class StageHistoryEntry {
   factory StageHistoryEntry.fromMap(Map<String, dynamic> map) {
     return StageHistoryEntry(
       stage: map['stage']?.toString() ?? '',
-      enteredAt: (map['enteredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      exitedAt: (map['exitedAt'] as Timestamp?)?.toDate(),
+      enteredAt: Lead._parseTimestamp(map['enteredAt'], DateTime.now()),
+      exitedAt: Lead._parseOptionalTimestamp(map['exitedAt']),
       note: map['note']?.toString(),
     );
   }
@@ -311,4 +358,3 @@ class StageHistoryEntry {
     );
   }
 }
-
