@@ -11,6 +11,7 @@ import '../../widgets/leads/lead_card.dart';
 import '../../widgets/leads/followup_drilldown.dart';
 import '../../widgets/leads/add_lead_dialog.dart';
 import '../../widgets/leads/stage_transition_dialog.dart';
+import '../../widgets/leads/contacted_questionnaire_dialog.dart';
 import '../../widgets/leads/lead_detail_dialog.dart';
 import '../../widgets/leads/followup_week_transition_dialog.dart';
 import '../../widgets/leads/booking_stage_transition_dialog.dart';
@@ -268,14 +269,23 @@ class _AdminLeadsScreenState extends State<AdminLeadsScreen> {
       return;
     }
 
-    // Show regular transition dialog for other stages
+    // Show questionnaire dialog for Contacted stage, regular dialog for others
     final result = await showDialog<StageTransitionResult>(
       context: context,
-      builder: (context) => StageTransitionDialog(
-        fromStage: oldStage.name,
-        toStage: newStage.name,
-        toStageId: newStageId,
-      ),
+      builder: (context) {
+        if (newStageId == 'contacted') {
+          return ContactedQuestionnaireDialog(
+            fromStage: oldStage.name,
+            toStage: newStage.name,
+          );
+        } else {
+          return StageTransitionDialog(
+            fromStage: oldStage.name,
+            toStage: newStage.name,
+            toStageId: newStageId,
+          );
+        }
+      },
     );
 
     if (result == null) return; // User cancelled

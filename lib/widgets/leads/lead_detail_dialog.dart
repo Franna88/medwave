@@ -91,82 +91,70 @@ class LeadDetailDialog extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Contact Information
-                    _buildSection(
-                      'Contact Information',
-                      Icons.contact_mail,
-                      [
-                        _buildInfoRow(Icons.email, 'Email', lead.email),
-                        _buildInfoRow(Icons.phone, 'Phone', lead.phone),
-                        if (lead.source.isNotEmpty)
-                          _buildInfoRow(Icons.source, 'Source', lead.source),
-                      ],
-                    ),
+                    _buildSection('Contact Information', Icons.contact_mail, [
+                      _buildInfoRow(Icons.email, 'Email', lead.email),
+                      _buildInfoRow(Icons.phone, 'Phone', lead.phone),
+                      if (lead.source.isNotEmpty)
+                        _buildInfoRow(Icons.source, 'Source', lead.source),
+                    ]),
                     const SizedBox(height: 24),
 
                     // UTM Tracking Information (if available)
-                    if (lead.utmCampaign != null || lead.utmAdset != null || lead.utmAd != null)
-                      _buildSection(
-                        'Campaign Tracking',
-                        Icons.track_changes,
-                        [
-                          if (lead.utmCampaign != null)
-                            _buildInfoRow(
-                              Icons.campaign,
-                              'Campaign',
-                              lead.utmCampaign!,
-                            ),
-                          if (lead.utmAdset != null)
-                            _buildInfoRow(
-                              Icons.group_work,
-                              'Ad Set',
-                              lead.utmAdset!,
-                            ),
-                          if (lead.utmAd != null)
-                            _buildInfoRow(
-                              Icons.image,
-                              'Ad Name',
-                              lead.utmAd!,
-                            ),
-                          if (lead.utmSource != null)
-                            _buildInfoRow(
-                              Icons.source,
-                              'UTM Source',
-                              lead.utmSource!,
-                            ),
-                          if (lead.utmMedium != null)
-                            _buildInfoRow(
-                              Icons.trending_up,
-                              'UTM Medium',
-                              lead.utmMedium!,
-                            ),
-                        ],
-                      ),
-                    if (lead.utmCampaign != null || lead.utmAdset != null || lead.utmAd != null)
+                    if (lead.utmCampaign != null ||
+                        lead.utmAdset != null ||
+                        lead.utmAd != null)
+                      _buildSection('Campaign Tracking', Icons.track_changes, [
+                        if (lead.utmCampaign != null)
+                          _buildInfoRow(
+                            Icons.campaign,
+                            'Campaign',
+                            lead.utmCampaign!,
+                          ),
+                        if (lead.utmAdset != null)
+                          _buildInfoRow(
+                            Icons.group_work,
+                            'Ad Set',
+                            lead.utmAdset!,
+                          ),
+                        if (lead.utmAd != null)
+                          _buildInfoRow(Icons.image, 'Ad Name', lead.utmAd!),
+                        if (lead.utmSource != null)
+                          _buildInfoRow(
+                            Icons.source,
+                            'UTM Source',
+                            lead.utmSource!,
+                          ),
+                        if (lead.utmMedium != null)
+                          _buildInfoRow(
+                            Icons.trending_up,
+                            'UTM Medium',
+                            lead.utmMedium!,
+                          ),
+                      ]),
+                    if (lead.utmCampaign != null ||
+                        lead.utmAdset != null ||
+                        lead.utmAd != null)
                       const SizedBox(height: 24),
 
                     // Current Status
-                    _buildSection(
-                      'Current Status',
-                      Icons.info_outline,
-                      [
+                    _buildSection('Current Status', Icons.info_outline, [
+                      _buildInfoRow(
+                        Icons.access_time,
+                        'Time in Stage',
+                        _formatDuration(lead.timeInStage),
+                      ),
+                      if (lead.followUpWeek != null)
                         _buildInfoRow(
-                          Icons.access_time,
-                          'Time in Stage',
-                          _formatDuration(lead.timeInStage),
+                          Icons.calendar_today,
+                          'Follow-up Week',
+                          'Week ${lead.followUpWeek}',
                         ),
-                        if (lead.followUpWeek != null)
-                          _buildInfoRow(
-                            Icons.calendar_today,
-                            'Follow-up Week',
-                            'Week ${lead.followUpWeek}',
-                          ),
-                        _buildInfoRow(
-                          Icons.person,
-                          'Created By',
-                          lead.createdByName ?? 'Unknown',
-                        ),
-                      ],
-                    ),
+                      _buildInfoRow(
+                        Icons.person,
+                        'Created By',
+                        lead.createdByName ?? 'Unknown',
+                      ),
+                    ]),
                     const SizedBox(height: 24),
 
                     // Booking Information
@@ -179,7 +167,9 @@ class LeadDetailDialog extends StatelessWidget {
                             _buildInfoRow(
                               Icons.event,
                               'Booking Date',
-                              DateFormat('MMM dd, yyyy').format(lead.bookingDate!),
+                              DateFormat(
+                                'MMM dd, yyyy',
+                              ).format(lead.bookingDate!),
                             ),
                           if (lead.bookingStatus != null)
                             _buildInfoRow(
@@ -194,69 +184,59 @@ class LeadDetailDialog extends StatelessWidget {
                           ),
                         ],
                       ),
-                    if (lead.bookingId != null)
-                      const SizedBox(height: 24),
+                    if (lead.bookingId != null) const SizedBox(height: 24),
 
                     // Payment Information
-                    if (lead.depositAmount != null || lead.cashCollectedAmount != null)
-                      _buildSection(
-                        'Payment Information',
-                        Icons.payments,
-                        [
-                          if (lead.depositAmount != null) ...[
+                    if (lead.depositAmount != null ||
+                        lead.cashCollectedAmount != null)
+                      _buildSection('Payment Information', Icons.payments, [
+                        if (lead.depositAmount != null) ...[
+                          _buildInfoRow(
+                            Icons.account_balance_wallet,
+                            'Deposit Amount',
+                            'R ${lead.depositAmount!.toStringAsFixed(2)}',
+                          ),
+                          if (lead.depositInvoiceNumber != null)
                             _buildInfoRow(
-                              Icons.account_balance_wallet,
-                              'Deposit Amount',
-                              'R ${lead.depositAmount!.toStringAsFixed(2)}',
+                              Icons.receipt,
+                              'Deposit Invoice',
+                              lead.depositInvoiceNumber!,
                             ),
-                            if (lead.depositInvoiceNumber != null)
-                              _buildInfoRow(
-                                Icons.receipt,
-                                'Deposit Invoice',
-                                lead.depositInvoiceNumber!,
-                              ),
-                          ],
-                          if (lead.cashCollectedAmount != null) ...[
-                            _buildInfoRow(
-                              Icons.money,
-                              'Cash Collected',
-                              'R ${lead.cashCollectedAmount!.toStringAsFixed(2)}',
-                            ),
-                            if (lead.cashCollectedInvoiceNumber != null)
-                              _buildInfoRow(
-                                Icons.receipt_long,
-                                'Cash Invoice',
-                                lead.cashCollectedInvoiceNumber!,
-                              ),
-                          ],
                         ],
-                      ),
-                    if (lead.depositAmount != null || lead.cashCollectedAmount != null)
+                        if (lead.cashCollectedAmount != null) ...[
+                          _buildInfoRow(
+                            Icons.money,
+                            'Cash Collected',
+                            'R ${lead.cashCollectedAmount!.toStringAsFixed(2)}',
+                          ),
+                          if (lead.cashCollectedInvoiceNumber != null)
+                            _buildInfoRow(
+                              Icons.receipt_long,
+                              'Cash Invoice',
+                              lead.cashCollectedInvoiceNumber!,
+                            ),
+                        ],
+                      ]),
+                    if (lead.depositAmount != null ||
+                        lead.cashCollectedAmount != null)
                       const SizedBox(height: 24),
 
-                    // Stage History (newest first)
-                    _buildSection(
-                      'Stage History',
-                      Icons.timeline,
-                      [
-                        ...lead.stageHistory.reversed.map((entry) {
-                          return _buildHistoryEntry(entry);
-                        }).toList(),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
                     // Notes (newest first)
-                    if (lead.notes.isNotEmpty)
-                      _buildSection(
-                        'Notes',
-                        Icons.note,
-                        [
-                          ...lead.notes.reversed.map((note) {
-                            return _buildNoteEntry(note);
-                          }).toList(),
-                        ],
-                      ),
+                    if (lead.notes.isNotEmpty) ...[
+                      _buildSection('Notes', Icons.note, [
+                        ...lead.notes.reversed.map((note) {
+                          return _buildNoteEntry(note);
+                        }).toList(),
+                      ]),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Stage History (newest first)
+                    _buildSection('Stage History', Icons.timeline, [
+                      ...lead.stageHistory.reversed.map((entry) {
+                        return _buildHistoryEntry(entry);
+                      }).toList(),
+                    ]),
                   ],
                 ),
               ),
@@ -294,7 +274,9 @@ class LeadDetailDialog extends StatelessWidget {
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -316,10 +298,7 @@ class LeadDetailDialog extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -345,12 +324,7 @@ class LeadDetailDialog extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 14),
-            ),
-          ),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 14))),
         ],
       ),
     );
@@ -403,13 +377,6 @@ class LeadDetailDialog extends StatelessWidget {
               'Exited: ${dateFormat.format(entry.exitedAt!)}',
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
-          if (entry.note != null && entry.note!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              entry.note!,
-              style: const TextStyle(fontSize: 13),
-            ),
-          ],
         ],
       ),
     );
@@ -417,17 +384,22 @@ class LeadDetailDialog extends StatelessWidget {
 
   Widget _buildNoteEntry(note) {
     final dateFormat = DateFormat('MMM dd, yyyy HH:mm');
-    final isWeekTransition = note.stageTransition != null && 
-                             note.stageTransition!.contains('Week');
-    
+    final isWeekTransition =
+        note.stageTransition != null && note.stageTransition!.contains('Week');
+    final isQuestionnaire = note.isQuestionnaire;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isWeekTransition ? Colors.orange[50] : Colors.blue[50],
+        color: isQuestionnaire
+            ? Colors.purple[50]
+            : (isWeekTransition ? Colors.orange[50] : Colors.blue[50]),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isWeekTransition ? Colors.orange[100]! : Colors.blue[100]!,
+          color: isQuestionnaire
+              ? Colors.purple[100]!
+              : (isWeekTransition ? Colors.orange[100]! : Colors.blue[100]!),
         ),
       ),
       child: Column(
@@ -436,7 +408,9 @@ class LeadDetailDialog extends StatelessWidget {
           Row(
             children: [
               Icon(
-                isWeekTransition ? Icons.calendar_month : Icons.person,
+                isQuestionnaire
+                    ? Icons.contact_phone
+                    : (isWeekTransition ? Icons.calendar_month : Icons.person),
                 size: 14,
                 color: Colors.grey[600],
               ),
@@ -460,9 +434,11 @@ class LeadDetailDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isWeekTransition 
-                    ? Colors.orange[100]
-                    : AppTheme.primaryColor.withOpacity(0.1),
+                color: isQuestionnaire
+                    ? Colors.purple[100]
+                    : (isWeekTransition
+                          ? Colors.orange[100]
+                          : AppTheme.primaryColor.withOpacity(0.1)),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
@@ -471,14 +447,22 @@ class LeadDetailDialog extends StatelessWidget {
                   Icon(
                     isWeekTransition ? Icons.event_repeat : Icons.swap_horiz,
                     size: 12,
-                    color: isWeekTransition ? Colors.orange[700] : AppTheme.primaryColor,
+                    color: isQuestionnaire
+                        ? Colors.purple[700]
+                        : (isWeekTransition
+                              ? Colors.orange[700]
+                              : AppTheme.primaryColor),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     note.stageTransition!,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isWeekTransition ? Colors.orange[700] : AppTheme.primaryColor,
+                      color: isQuestionnaire
+                          ? Colors.purple[700]
+                          : (isWeekTransition
+                                ? Colors.orange[700]
+                                : AppTheme.primaryColor),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -487,10 +471,43 @@ class LeadDetailDialog extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 8),
-          Text(
-            note.text,
-            style: const TextStyle(fontSize: 13),
-          ),
+
+          // Display questionnaire data or regular text
+          if (isQuestionnaire) ...[
+            // Display as Q&A format
+            const Text(
+              'Sales Questionnaire:',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...note.questionnaireData!.entries.map((entry) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                    children: [
+                      TextSpan(
+                        text: '${entry.key}: ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      TextSpan(text: entry.value.toString()),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ] else ...[
+            // Display regular text note
+            Text(note.textAsString, style: const TextStyle(fontSize: 13)),
+          ],
         ],
       ),
     );
@@ -511,4 +528,3 @@ class LeadDetailDialog extends StatelessWidget {
     }
   }
 }
-
