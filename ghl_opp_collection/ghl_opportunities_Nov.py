@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 GHL Opportunities Collection - November 2025  
-+ Lead Auto-Creation (only for opportunities created YESTERDAY or TODAY in SA timezone)
++ Lead Auto-Creation (for opportunities created from 2025-11-28T07:18:26.555Z onwards)
 
 Full merged script including original functionality + new "create Lead" logic.
 """
@@ -106,18 +106,17 @@ def get_sa_time(utc_dt=None):
         utc_dt = datetime.now(timezone.utc)
     return utc_dt + SA_UTC_OFFSET
 
-def is_yesterday_or_today_sa(iso_str):
-    """Check if GHL createdAt is yesterday or today (South Africa timezone, UTC+2)."""
+def is_after_cutoff_time(iso_str):
+    """Check if GHL createdAt is after 2025-11-28T07:18:26.555Z."""
     try:
         dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
-        dt_sa = get_sa_time(dt)
-        now_sa = get_sa_time()
-        today_sa = now_sa.date()
-        yesterday_sa = today_sa - timedelta(days=1)
-        opp_date = dt_sa.date()
-        return opp_date == today_sa or opp_date == yesterday_sa
+        
+        # Cutoff time: 2025-11-28T07:18:26.555Z (last entry in leads collection)
+        cutoff_time = datetime(2025, 11, 28, 7, 18, 26, 555000, tzinfo=timezone.utc)
+        
+        return dt > cutoff_time
     except:
         return False
 
@@ -209,26 +208,19 @@ def get_stage_name(pipeline_id, stage_id):
 # ---------------------------------------------------------------
 
 def fetch_all_november_opportunities():
-    # Calculate date range: yesterday and today in SA timezone (UTC+2)
-    now_sa = get_sa_time()
-    today_sa = now_sa.date()
-    yesterday_sa = today_sa - timedelta(days=1)
+    # Calculate date range: From last entry (2025-11-28T07:18:26.555Z) to now
+    # Start time: 2025-11-28T07:18:26.555Z (last entry in leads collection)
+    START_DATE = "2025-11-28T07:18:26.555Z"
     
-    # Start of yesterday (00:00:00 SA time) in UTC
-    start_datetime_sa = datetime.combine(yesterday_sa, datetime.min.time())
-    start_datetime_utc = start_datetime_sa - SA_UTC_OFFSET
-    START_DATE = start_datetime_utc.replace(tzinfo=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-    
-    # End of today (23:59:59 SA time) in UTC
-    end_datetime_sa = datetime.combine(today_sa, datetime.max.time().replace(microsecond=999999))
-    end_datetime_utc = end_datetime_sa - SA_UTC_OFFSET
-    END_DATE = end_datetime_utc.replace(tzinfo=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+    # End time: Current time
+    now_utc = datetime.now(timezone.utc)
+    END_DATE = now_utc.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     
     print("="*80)
-    print("GHL OPPORTUNITIES COLLECTION - YESTERDAY & TODAY")
+    print("GHL OPPORTUNITIES COLLECTION - FROM LAST ENTRY TO NOW")
     print("="*80 + "\n")
 
-    print(f"📅 Date Range: {yesterday_sa.strftime('%Y-%m-%d')} to {today_sa.strftime('%Y-%m-%d')} (SA timezone)")
+    print(f"📅 Date Range: {START_DATE} to {END_DATE}")
     print(f"🎯 Location ID: {GHL_LOCATION_ID}")
     print(f"📊 API Version: {GHL_API_VERSION}")
     print(f"👥 Pipelines: Andries & Davide ONLY\n")
@@ -285,19 +277,19 @@ def fetch_all_november_opportunities():
     print(f"✅ Total opportunities fetched: {len(all_opportunities)}\n")
 
     # ---------------------
-    # STEP 2: FILTER YESTERDAY & TODAY
+    # STEP 2: FILTER FROM LAST ENTRY TO NOW
     # ---------------------
     print("="*80)
-    print("STEP 2: FILTERING FOR YESTERDAY & TODAY OPPORTUNITIES")
+    print("STEP 2: FILTERING FOR OPPORTUNITIES AFTER LAST ENTRY")
     print("="*80 + "\n")
 
     recent_opportunities = []
     for o in all_opportunities:
         created = o.get("createdAt", "")
-        if created and START_DATE <= created <= END_DATE:
+        if created and START_DATE < created <= END_DATE:
             recent_opportunities.append(o)
 
-    print(f"✅ Opportunities from yesterday and today: {len(recent_opportunities)}\n")
+    print(f"✅ Opportunities after last entry: {len(recent_opportunities)}\n")
 
     # -------------------------------
     # STEP 3: FILTER PIPELINES
@@ -374,11 +366,11 @@ def fetch_all_november_opportunities():
             print(f"✅ Stored Opportunity {stored_count}: {name[:30]}")
 
             # -------------------------------------------------------------------
-            # NEW: CREATE LEAD if createdAt is YESTERDAY or TODAY (SA timezone)
+            # NEW: CREATE LEAD if createdAt is after cutoff time (2025-11-28T07:18:26.555Z)
             # -------------------------------------------------------------------
-            if is_yesterday_or_today_sa(created_at):
+            if is_after_cutoff_time(created_at):
 
-                print(f"➡️ Creating LEAD for contactId {contact_id} (created yesterday or today)")
+                print(f"➡️ Creating LEAD for contactId {contact_id} (created after cutoff time)")
 
                 # Split name
                 first_name, last_name = split_name(contact_name)
