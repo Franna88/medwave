@@ -168,6 +168,8 @@ class LeadService {
     String? bookingId,
     DateTime? bookingDate,
     String? bookingStatus,
+    String? assignedTo, // userId of assigned marketing admin
+    String? assignedToName, // name of assigned marketing admin
   }) async {
     try {
       final lead = await getLead(leadId);
@@ -220,6 +222,8 @@ class LeadService {
         bookingId: bookingId ?? lead.bookingId,
         bookingDate: bookingDate ?? lead.bookingDate,
         bookingStatus: bookingStatus ?? lead.bookingStatus,
+        assignedTo: assignedTo ?? lead.assignedTo, // Set assignment if provided, otherwise keep existing
+        assignedToName: assignedToName ?? lead.assignedToName, // Set assignment name if provided, otherwise keep existing
       );
 
       await updateLead(updatedLead);

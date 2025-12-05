@@ -5,6 +5,7 @@ import '../../../models/streams/stream_stage.dart';
 import '../../../services/firebase/lead_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../utils/role_manager.dart';
 import '../../../widgets/leads/lead_card.dart';
 import '../../../widgets/leads/add_lead_dialog.dart';
 import '../../../widgets/leads/stage_transition_dialog.dart';
@@ -84,16 +85,29 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
   }
 
   void _filterLeads() {
-    if (_searchQuery.isEmpty) {
-      _filteredLeads = _allLeads;
-    } else {
-      _filteredLeads = _allLeads.where((lead) {
+    final authProvider = context.read<AuthProvider>();
+    final userRole = authProvider.userRole;
+    final currentUserId = authProvider.user?.uid ?? '';
+
+    // Start with all leads
+    var filtered = _allLeads;
+    // Marketing Admin see only their assigned leads + unassigned leads
+    if (userRole == UserRole.marketingAdmin) {
+      filtered = filtered.where((lead) {
+        return lead.assignedTo == null || lead.assignedTo == currentUserId;
+      }).toList();
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((lead) {
         return lead.firstName.toLowerCase().contains(_searchQuery) ||
             lead.lastName.toLowerCase().contains(_searchQuery) ||
             lead.email.toLowerCase().contains(_searchQuery) ||
             lead.phone.contains(_searchQuery);
       }).toList();
     }
+
+    _filteredLeads = filtered;
   }
 
   List<Lead> _getLeadsForStage(String stageId) {
@@ -208,6 +222,11 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
 
     if (result != null) {
       try {
+        // Get user role to determine if assignment should happen
+        final userRole = authProvider.userRole;
+        // Only assign if user is a Marketing Admin (not Super Admin or Country Admin)
+        final shouldAssign = userRole == UserRole.marketingAdmin;
+
         await _leadService.moveLeadToStage(
           leadId: lead.id,
           newStage: newStageId,
@@ -215,6 +234,8 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
           userId: userId,
           userName: userName,
           isFollowUpStage: newStage.id == 'follow_up',
+          assignedTo: shouldAssign ? userId : null,
+          assignedToName: shouldAssign ? userName : null,
         );
 
         if (mounted) {

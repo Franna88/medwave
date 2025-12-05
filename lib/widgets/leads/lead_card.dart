@@ -20,9 +20,7 @@ class LeadCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
@@ -62,7 +60,10 @@ class LeadCard extends StatelessWidget {
                   ),
                   // Time in stage badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: _getTimeColor().withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
@@ -79,20 +80,21 @@ class LeadCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              
+
               // Contact info
               if (lead.email.isNotEmpty) ...[
                 Row(
                   children: [
-                    Icon(Icons.email_outlined, size: 12, color: Colors.grey[600]),
+                    Icon(
+                      Icons.email_outlined,
+                      size: 12,
+                      color: Colors.grey[600],
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         lead.email,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -101,32 +103,73 @@ class LeadCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
               ],
-              
+
               if (lead.phone.isNotEmpty) ...[
                 Row(
                   children: [
-                    Icon(Icons.phone_outlined, size: 12, color: Colors.grey[600]),
+                    Icon(
+                      Icons.phone_outlined,
+                      size: 12,
+                      color: Colors.grey[600],
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       lead.phone,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                   ],
                 ),
               ],
-              
+
+              // Assigned to badge
+              if (lead.assignedToName != null &&
+                  lead.assignedToName!.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.person_outline,
+                        size: 10,
+                        color: Colors.blue[700],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Assigned: ${lead.assignedToName}',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               // Badges row
-              if ((isFollowUpStage && lead.followUpWeek != null) || lead.bookingId != null) ...[
+              if ((isFollowUpStage && lead.followUpWeek != null) ||
+                  lead.bookingId != null) ...[
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     // Follow-up week badge
                     if (isFollowUpStage && lead.followUpWeek != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4),
@@ -159,7 +202,10 @@ class LeadCard extends StatelessWidget {
                       if (isFollowUpStage && lead.followUpWeek != null)
                         const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.successColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4),
@@ -224,4 +270,3 @@ class LeadCard extends StatelessWidget {
     }
   }
 }
-
