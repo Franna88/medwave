@@ -12,21 +12,23 @@ import '../services/emailjs_service.dart';
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final VerificationDocumentService _verificationService = VerificationDocumentService();
-  
+  final VerificationDocumentService _verificationService =
+      VerificationDocumentService();
+
   User? _user;
   UserProfile? _userProfile;
   bool _isLoading = false;
   String? _errorMessage;
   StreamSubscription<DocumentSnapshot>? _userProfileSubscription;
-  
+
   // Feature flag for development - allows switching between mock and Firebase
   static const bool _useFirebase = true; // Firebase is now configured!
-  
+
   // Feature flag for auto-approval during development/testing
   // Set to true for testing, false for production approval workflow
-  static const bool _autoApprovePractitioners = false; // Disabled for production - require admin approval
-  
+  static const bool _autoApprovePractitioners =
+      false; // Disabled for production - require admin approval
+
   // Mock data for development
   bool _mockAuthenticated = false;
   String? _mockEmail;
@@ -39,42 +41,44 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get userEmail => _useFirebase ? _user?.email : _mockEmail;
-  String? get userName => _userProfile?.fullName ?? (_useFirebase ? _user?.displayName : _mockUserName);
-  
+  String? get userName =>
+      _userProfile?.fullName ??
+      (_useFirebase ? _user?.displayName : _mockUserName);
+
   // Helper getters for development
   bool get isAutoApprovalEnabled => _autoApprovePractitioners;
   bool get isUsingFirebase => _useFirebase;
-  
+
   // Check if user can access the app (approved practitioner or super admin)
   bool get canAccessApp {
     if (!_useFirebase) return _mockAuthenticated;
-    return _userProfile?.accountStatus == 'approved' || 
-           _userProfile?.role == 'super_admin';
+    return _userProfile?.accountStatus == 'approved' ||
+        _userProfile?.role == 'super_admin';
   }
-  
+
   // Get user role for role-based access control
   UserRole get userRole {
     if (!_useFirebase) return UserRole.practitioner;
     return UserRole.fromString(_userProfile?.role ?? 'practitioner');
   }
-  
+
   // Check if user has admin privileges
   bool get isAdmin {
     return RoleManager.canAccessAdminPanel(userRole);
   }
-  
+
   // Get appropriate dashboard route based on user role
   String get dashboardRoute {
     return RoleManager.getDashboardRoute(userRole);
   }
-  
+
   AuthProvider() {
     if (_useFirebase) {
       _isLoading = true; // Set loading while initializing
       _initializeAuthStateListener();
     }
   }
-  
+
   void _initializeAuthStateListener() {
     _auth.authStateChanges().listen((User? user) async {
       debugPrint('Auth state changed: user=${user?.email}, uid=${user?.uid}');
@@ -88,23 +92,26 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     });
   }
-  
+
   void _setupUserProfileListener(String userId) async {
     // Cancel any existing subscription
     _userProfileSubscription?.cancel();
-    
+
     // First check if this is an admin user
     try {
-      final adminQuery = await _firestore.collection('adminUsers')
+      final adminQuery = await _firestore
+          .collection('adminUsers')
           .where('userId', isEqualTo: userId)
           .limit(1)
           .get();
-      
+
       if (adminQuery.docs.isNotEmpty) {
         // This is an admin user - create a UserProfile from admin data
         final adminDoc = adminQuery.docs.first;
         final adminData = adminDoc.data();
-        
+
+        final adminRoleValue = adminData['role'] ?? 'super_admin';
+
         _userProfile = UserProfile(
           id: userId,
           email: adminData['email'] ?? '',
@@ -122,7 +129,7 @@ class AuthProvider extends ChangeNotifier {
           address: '',
           postalCode: '',
           accountStatus: 'approved', // Admin users are always approved
-          role: adminData['role'] ?? 'super_admin',
+          role: adminRoleValue,
           licenseVerified: true,
           professionalReferences: [],
           totalPatients: 0,
@@ -134,40 +141,50 @@ class AuthProvider extends ChangeNotifier {
             language: 'en',
             timezone: 'UTC',
           ),
-          createdAt: (adminData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          createdAt:
+              (adminData['createdAt'] as Timestamp?)?.toDate() ??
+              DateTime.now(),
           lastLogin: DateTime.now(),
         );
-        
-        debugPrint('Admin user profile loaded: ${_userProfile?.role}, canAccessApp: $canAccessApp');
+
+        debugPrint(
+          'Admin user profile loaded: ${_userProfile?.role}, canAccessApp: $canAccessApp',
+        );
         notifyListeners();
         return;
       }
     } catch (e) {
       debugPrint('Error checking admin users: $e');
     }
-    
+
     // Not an admin user, listen to regular user profile
-    _userProfileSubscription = _firestore.collection('users').doc(userId).snapshots().listen(
-      (doc) {
-        if (doc.exists) {
-          _userProfile = UserProfile.fromFirestore(doc);
-          debugPrint('User profile updated: ${_userProfile?.accountStatus}, canAccessApp: $canAccessApp');
-          notifyListeners();
-        } else {
-          debugPrint('User profile document does not exist');
-        }
-      },
-      onError: (e) {
-        debugPrint('Error listening to user profile: $e');
-      },
-    );
+    _userProfileSubscription = _firestore
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .listen(
+          (doc) {
+            if (doc.exists) {
+              _userProfile = UserProfile.fromFirestore(doc);
+              debugPrint(
+                'User profile updated: ${_userProfile?.accountStatus}, canAccessApp: $canAccessApp',
+              );
+              notifyListeners();
+            } else {
+              debugPrint('User profile document does not exist');
+            }
+          },
+          onError: (e) {
+            debugPrint('Error listening to user profile: $e');
+          },
+        );
   }
-  
+
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
   }
-  
+
   void _setError(String? error) {
     _errorMessage = error;
     notifyListeners();
@@ -177,19 +194,21 @@ class AuthProvider extends ChangeNotifier {
     if (!_useFirebase) {
       return _mockLogin(email, password);
     }
-    
+
     try {
       _setLoading(true);
       _setError(null);
-      
+
       // Add 30-second timeout to prevent indefinite loading
       await Future.any([
         Future.delayed(const Duration(seconds: 30)).then((_) {
-          throw TimeoutException('Login request timed out. Please check your internet connection and try again.');
+          throw TimeoutException(
+            'Login request timed out. Please check your internet connection and try again.',
+          );
         }),
         _performLogin(email, password),
       ]);
-      
+
       return true;
     } on TimeoutException catch (e) {
       _setError(e.message ?? 'Request timed out. Please try again.');
@@ -204,58 +223,65 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
     }
   }
-  
+
   Future<void> _performLogin(String email, String password) async {
     final credential = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
-    
+
     // Update last login time with separate timeout - don't fail login if this fails
     if (credential.user != null) {
       try {
-        await _firestore.collection('users').doc(credential.user!.uid).update({
-          'lastLogin': FieldValue.serverTimestamp(),
-          'lastActivityDate': FieldValue.serverTimestamp(),
-        }).timeout(
-          const Duration(seconds: 10),
-          onTimeout: () {
-            debugPrint('⚠️ Firestore lastLogin update timed out - continuing anyway');
-            return;
-          },
-        );
+        await _firestore
+            .collection('users')
+            .doc(credential.user!.uid)
+            .update({
+              'lastLogin': FieldValue.serverTimestamp(),
+              'lastActivityDate': FieldValue.serverTimestamp(),
+            })
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                debugPrint(
+                  '⚠️ Firestore lastLogin update timed out - continuing anyway',
+                );
+                return;
+              },
+            );
       } catch (e) {
         debugPrint('⚠️ Failed to update lastLogin timestamp: $e');
         // Continue anyway - login succeeded, timestamp update is not critical
       }
     }
   }
-  
+
   Future<bool> signup(Map<String, dynamic> signupData) async {
     if (!_useFirebase) {
       return _mockSignup(signupData);
     }
-    
+
     try {
       _setLoading(true);
       _setError(null);
-      
+
       // Create user account
       final credential = await _auth.createUserWithEmailAndPassword(
         email: signupData['email'],
         password: signupData['password'],
       );
-      
+
       if (credential.user != null) {
         // Send email verification
         await credential.user!.sendEmailVerification();
         debugPrint('Email verification sent to: ${credential.user!.email}');
-        
+
         // Upload verification documents
         List<String> idDocumentUrls = [];
         List<String> practiceImageUrls = [];
-        
-        if (signupData['idDocuments'] != null && (signupData['idDocuments'] as List).isNotEmpty) {
+
+        if (signupData['idDocuments'] != null &&
+            (signupData['idDocuments'] as List).isNotEmpty) {
           debugPrint('📤 Uploading ID documents...');
           idDocumentUrls = await _verificationService.uploadIdDocuments(
             credential.user!.uid,
@@ -263,8 +289,9 @@ class AuthProvider extends ChangeNotifier {
           );
           debugPrint('✅ Uploaded ${idDocumentUrls.length} ID documents');
         }
-        
-        if (signupData['practiceImages'] != null && (signupData['practiceImages'] as List).isNotEmpty) {
+
+        if (signupData['practiceImages'] != null &&
+            (signupData['practiceImages'] as List).isNotEmpty) {
           debugPrint('📤 Uploading practice images...');
           practiceImageUrls = await _verificationService.uploadPracticeImages(
             credential.user!.uid,
@@ -272,21 +299,22 @@ class AuthProvider extends ChangeNotifier {
           );
           debugPrint('✅ Uploaded ${practiceImageUrls.length} practice images');
         }
-        
+
         // Add document URLs to signup data
         signupData['idDocumentUrls'] = idDocumentUrls;
         signupData['practiceImageUrls'] = practiceImageUrls;
-        
+
         // Create user profile in Firestore
         await _createUserProfile(credential.user!.uid, signupData);
-        
+
         // Create practitioner application
         await _createPractitionerApplication(credential.user!.uid, signupData);
-        
+
         // Send email notification to admin about new practitioner registration
         // Do this asynchronously without blocking - failures shouldn't stop signup
         EmailJSService.sendPractitionerRegistrationNotification(
-          practitionerName: '${signupData['firstName']} ${signupData['lastName']}',
+          practitionerName:
+              '${signupData['firstName']} ${signupData['lastName']}',
           practitionerEmail: signupData['email'],
           specialization: signupData['specialization'] ?? 'N/A',
           licenseNumber: signupData['licenseNumber'] ?? 'N/A',
@@ -297,20 +325,20 @@ class AuthProvider extends ChangeNotifier {
           // Don't throw - email failure shouldn't block signup
           return false;
         });
-        
+
         // If auto-approval is enabled, set user and load profile immediately
         if (_autoApprovePractitioners) {
           _user = credential.user;
           // Add a small delay to ensure Firestore write is complete
           await Future.delayed(const Duration(milliseconds: 500));
           await _loadUserProfile();
-          
+
           debugPrint('Auto-approved practitioner: ${credential.user!.email}');
           debugPrint('User profile loaded: ${_userProfile?.accountStatus}');
           debugPrint('Can access app: $canAccessApp');
         }
       }
-      
+
       return true;
     } on FirebaseAuthException catch (e) {
       _setError(_getAuthErrorMessage(e));
@@ -323,18 +351,18 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
     }
   }
-  
+
   Future<void> logout() async {
     if (!_useFirebase) {
       _mockLogout();
       return;
     }
-    
+
     try {
       // Cancel user profile subscription
       await _userProfileSubscription?.cancel();
       _userProfileSubscription = null;
-      
+
       await _auth.signOut();
       _userProfile = null;
       _setError(null);
@@ -342,35 +370,37 @@ class AuthProvider extends ChangeNotifier {
       _setError('Failed to sign out. Please try again.');
     }
   }
-  
+
   /// Manually refresh user profile (useful for "Refresh Status" button)
   Future<void> refreshUserProfile() async {
     if (_user == null) return;
-    
+
     try {
       debugPrint('Manually refreshing user profile...');
       final doc = await _firestore.collection('users').doc(_user!.uid).get();
       if (doc.exists) {
         _userProfile = UserProfile.fromFirestore(doc);
-        debugPrint('User profile refreshed: ${_userProfile?.accountStatus}, canAccessApp: $canAccessApp');
+        debugPrint(
+          'User profile refreshed: ${_userProfile?.accountStatus}, canAccessApp: $canAccessApp',
+        );
         notifyListeners();
       }
     } catch (e) {
       debugPrint('Error refreshing user profile: $e');
     }
   }
-  
+
   Future<bool> resetPassword(String email) async {
     if (!_useFirebase) {
       // Mock password reset
       await Future.delayed(const Duration(seconds: 1));
       return true;
     }
-    
+
     try {
       _setLoading(true);
       _setError(null);
-      
+
       await _auth.sendPasswordResetEmail(email: email);
       return true;
     } on FirebaseAuthException catch (e) {
@@ -383,16 +413,18 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
     }
   }
-  
+
   Future<void> _loadUserProfile() async {
     if (_user == null) return;
-    
+
     try {
       debugPrint('Loading user profile for: ${_user!.uid}');
       final doc = await _firestore.collection('users').doc(_user!.uid).get();
       if (doc.exists) {
         _userProfile = UserProfile.fromFirestore(doc);
-        debugPrint('User profile loaded: ${_userProfile?.accountStatus}, canAccessApp: $canAccessApp');
+        debugPrint(
+          'User profile loaded: ${_userProfile?.accountStatus}, canAccessApp: $canAccessApp',
+        );
       } else {
         debugPrint('User profile document does not exist');
       }
@@ -400,11 +432,14 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('Error loading user profile: $e');
     }
   }
-  
-  Future<void> _createUserProfile(String userId, Map<String, dynamic> signupData) async {
+
+  Future<void> _createUserProfile(
+    String userId,
+    Map<String, dynamic> signupData,
+  ) async {
     debugPrint('Creating user profile for: $userId');
     debugPrint('Signup data: ${signupData.keys.toList()}');
-    
+
     final userProfile = {
       'firstName': signupData['firstName'],
       'lastName': signupData['lastName'],
@@ -422,18 +457,22 @@ class AuthProvider extends ChangeNotifier {
       'postalCode': signupData['postalCode'] ?? '',
       'accountStatus': _autoApprovePractitioners ? 'approved' : 'pending',
       'applicationDate': FieldValue.serverTimestamp(),
-      'approvalDate': _autoApprovePractitioners ? FieldValue.serverTimestamp() : null,
+      'approvalDate': _autoApprovePractitioners
+          ? FieldValue.serverTimestamp()
+          : null,
       'role': 'practitioner',
       'licenseVerified': _autoApprovePractitioners ? true : false,
       'professionalReferences': [],
       // Verification documents
       'idDocumentUrls': signupData['idDocumentUrls'] ?? [],
       'practiceImageUrls': signupData['practiceImageUrls'] ?? [],
-      'idDocumentUploadedAt': (signupData['idDocumentUrls'] as List?)?.isNotEmpty == true 
-          ? FieldValue.serverTimestamp() 
+      'idDocumentUploadedAt':
+          (signupData['idDocumentUrls'] as List?)?.isNotEmpty == true
+          ? FieldValue.serverTimestamp()
           : null,
-      'practiceImageUploadedAt': (signupData['practiceImageUrls'] as List?)?.isNotEmpty == true 
-          ? FieldValue.serverTimestamp() 
+      'practiceImageUploadedAt':
+          (signupData['practiceImageUrls'] as List?)?.isNotEmpty == true
+          ? FieldValue.serverTimestamp()
           : null,
       'settings': {
         'notificationsEnabled': true,
@@ -447,7 +486,7 @@ class AuthProvider extends ChangeNotifier {
       'createdAt': FieldValue.serverTimestamp(),
       'lastUpdated': FieldValue.serverTimestamp(),
     };
-    
+
     try {
       await _firestore.collection('users').doc(userId).set(userProfile);
       debugPrint('User profile created successfully');
@@ -456,8 +495,11 @@ class AuthProvider extends ChangeNotifier {
       throw Exception('Failed to create user profile: $e');
     }
   }
-  
-  Future<void> _createPractitionerApplication(String userId, Map<String, dynamic> signupData) async {
+
+  Future<void> _createPractitionerApplication(
+    String userId,
+    Map<String, dynamic> signupData,
+  ) async {
     final application = {
       'userId': userId,
       'email': signupData['email'],
@@ -473,14 +515,16 @@ class AuthProvider extends ChangeNotifier {
       'city': signupData['city'] ?? '',
       'status': _autoApprovePractitioners ? 'approved' : 'pending',
       'submittedAt': FieldValue.serverTimestamp(),
-      'approvedAt': _autoApprovePractitioners ? FieldValue.serverTimestamp() : null,
+      'approvedAt': _autoApprovePractitioners
+          ? FieldValue.serverTimestamp()
+          : null,
       'approvedBy': _autoApprovePractitioners ? 'auto-system' : null,
       'documents': {},
       'documentsVerified': _autoApprovePractitioners ? true : false,
       'licenseVerified': _autoApprovePractitioners ? true : false,
       'referencesVerified': false,
     };
-    
+
     try {
       await _firestore.collection('practitionerApplications').add(application);
       debugPrint('Practitioner application created successfully');
@@ -489,7 +533,7 @@ class AuthProvider extends ChangeNotifier {
       throw Exception('Failed to create practitioner application: $e');
     }
   }
-  
+
   String _getAuthErrorMessage(FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':
@@ -510,7 +554,7 @@ class AuthProvider extends ChangeNotifier {
         return e.message ?? 'An authentication error occurred.';
     }
   }
-  
+
   // Mock methods for development
   Future<bool> _mockLogin(String email, String password) async {
     await Future.delayed(const Duration(seconds: 1));
@@ -518,13 +562,13 @@ class AuthProvider extends ChangeNotifier {
       _mockAuthenticated = true;
       _mockEmail = email;
       _mockUserName = email.split('@')[0];
-      
+
       // Create mock user profile based on email for testing different roles
       String role = 'practitioner';
       String accountStatus = _autoApprovePractitioners ? 'approved' : 'pending';
-      
+
       // Special test accounts for different roles
-      if (email.toLowerCase() == 'admin@medwave.com' || 
+      if (email.toLowerCase() == 'admin@medwave.com' ||
           email.toLowerCase() == 'superadmin@medwave.com') {
         role = 'super_admin';
         accountStatus = 'approved';
@@ -532,14 +576,17 @@ class AuthProvider extends ChangeNotifier {
         role = 'country_admin';
         accountStatus = 'approved';
       }
-      
+
       // Create mock user profile for testing
       _userProfile = UserProfile(
         id: 'mock-${DateTime.now().millisecondsSinceEpoch}',
         email: email,
         firstName: 'Test',
-        lastName: role == 'super_admin' ? 'Super Admin' : 
-                 role == 'country_admin' ? 'Country Admin' : 'Practitioner',
+        lastName: role == 'super_admin'
+            ? 'Super Admin'
+            : role == 'country_admin'
+            ? 'Country Admin'
+            : 'Practitioner',
         phoneNumber: '+1-555-0123',
         licenseNumber: 'TEST123',
         specialization: 'Wound Care',
@@ -567,7 +614,7 @@ class AuthProvider extends ChangeNotifier {
         createdAt: DateTime.now(),
         lastLogin: DateTime.now(),
       );
-      
+
       notifyListeners();
       return true;
     }
@@ -579,7 +626,7 @@ class AuthProvider extends ChangeNotifier {
     _mockAuthenticated = true;
     _mockEmail = signupData['email'];
     _mockUserName = '${signupData['firstName']} ${signupData['lastName']}';
-    
+
     // Create mock user profile for testing
     _userProfile = UserProfile(
       id: 'mock-${DateTime.now().millisecondsSinceEpoch}',
@@ -612,19 +659,21 @@ class AuthProvider extends ChangeNotifier {
       totalPatients: 0,
       totalSessions: 0,
     );
-    
-    debugPrint('Mock ${_autoApprovePractitioners ? 'auto-approved' : 'pending'} practitioner: ${signupData['email']}');
+
+    debugPrint(
+      'Mock ${_autoApprovePractitioners ? 'auto-approved' : 'pending'} practitioner: ${signupData['email']}',
+    );
     notifyListeners();
     return true;
   }
-  
+
   void _mockLogout() {
     _mockAuthenticated = false;
     _mockEmail = null;
     _mockUserName = null;
     notifyListeners();
   }
-  
+
   @override
   void dispose() {
     _userProfileSubscription?.cancel();

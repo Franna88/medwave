@@ -2,7 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum AdminRole {
   superAdmin('super_admin'),
-  countryAdmin('country_admin');
+  countryAdmin('country_admin'),
+  marketing('marketing'),
+  sales('sales'),
+  operations('operations'),
+  support('support');
 
   const AdminRole(this.value);
   final String value;
@@ -20,6 +24,14 @@ enum AdminRole {
         return 'Super Admin';
       case AdminRole.countryAdmin:
         return 'Country Admin';
+      case AdminRole.marketing:
+        return 'Marketing';
+      case AdminRole.sales:
+        return 'Sales';
+      case AdminRole.operations:
+        return 'Operations';
+      case AdminRole.support:
+        return 'Support';
     }
   }
 }

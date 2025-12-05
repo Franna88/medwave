@@ -48,6 +48,7 @@ import 'screens/admin/admin_provider_management_screen.dart';
 import 'screens/admin/admin_provider_approvals_screen.dart';
 import 'screens/admin/admin_sales_performance_screen.dart';
 import 'screens/admin/admin_analytics_screen.dart';
+import 'utils/role_manager.dart';
 import 'screens/admin/admin_patient_management_screen.dart';
 import 'screens/admin/adverts/admin_adverts_overview_screen.dart';
 import 'screens/admin/adverts/admin_adverts_campaigns_screen.dart';
@@ -230,6 +231,35 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           currentPath == '/pending-approval') {
         // Redirect to role-appropriate dashboard
         return authProvider.dashboardRoute;
+      }
+
+      // Check stream route access
+      if (currentPath.startsWith('/admin/streams/')) {
+        final userRole = authProvider.userRole;
+        String? streamName;
+
+        if (currentPath == '/admin/streams/marketing' ||
+            currentPath.startsWith('/admin/streams/marketing/')) {
+          streamName = 'marketing';
+        } else if (currentPath == '/admin/streams/sales' ||
+            currentPath.startsWith('/admin/streams/sales/')) {
+          streamName = 'sales';
+        } else if (currentPath == '/admin/streams/operations' ||
+            currentPath.startsWith('/admin/streams/operations/')) {
+          streamName = 'operations';
+        } else if (currentPath == '/admin/streams/support' ||
+            currentPath.startsWith('/admin/streams/support/')) {
+          streamName = 'support';
+        }
+
+        if (streamName != null &&
+            !RoleManager.canAccessStream(userRole, streamName)) {
+          final accessibleStreams = RoleManager.getAccessibleStreams(userRole);
+          if (accessibleStreams.isNotEmpty) {
+            return '/admin/streams/${accessibleStreams.first}';
+          }
+          return authProvider.dashboardRoute;
+        }
       }
     }
 
