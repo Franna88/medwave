@@ -11,7 +11,8 @@ class AdminUserManagementScreen extends StatefulWidget {
   const AdminUserManagementScreen({super.key});
 
   @override
-  State<AdminUserManagementScreen> createState() => _AdminUserManagementScreenState();
+  State<AdminUserManagementScreen> createState() =>
+      _AdminUserManagementScreenState();
 }
 
 class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
@@ -25,7 +26,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
     // Load admin users when the screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
-      
+
       // Only Super Admins can access this screen
       if (authProvider.userRole == UserRole.superAdmin) {
         context.read<AdminProvider>().loadAdminUsers();
@@ -36,7 +37,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    
+
     // Access control: Only Super Admins can manage admin users
     if (authProvider.userRole != UserRole.superAdmin) {
       return Scaffold(
@@ -45,24 +46,20 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.lock_outline,
-                size: 64,
-                color: Colors.grey[400],
-              ),
+              Icon(Icons.lock_outline, size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
               Text(
                 'Access Denied',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineSmall?.copyWith(color: Colors.grey[600]),
               ),
               const SizedBox(height: 8),
               Text(
                 'Only Super Administrators can manage admin users.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[500],
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
               ),
             ],
           ),
@@ -78,7 +75,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final filteredAdminUsers = _getFilteredAdminUsers(adminProvider.adminUsers);
+          final filteredAdminUsers = _getFilteredAdminUsers(
+            adminProvider.adminUsers,
+          );
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -109,15 +108,37 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
       filtered = filtered.where((user) {
         final searchLower = _searchQuery.toLowerCase();
         return user.fullName.toLowerCase().contains(searchLower) ||
-               user.email.toLowerCase().contains(searchLower) ||
-               user.country.toLowerCase().contains(searchLower);
+            user.email.toLowerCase().contains(searchLower) ||
+            user.country.toLowerCase().contains(searchLower);
       }).toList();
     }
 
     // Filter by role
     if (_roleFilter != 'All') {
-      final roleToFilter = _roleFilter == 'Super Admin' ? AdminRole.superAdmin : AdminRole.countryAdmin;
-      filtered = filtered.where((user) => user.role == roleToFilter).toList();
+      AdminRole? roleToFilter;
+      switch (_roleFilter) {
+        case 'Super Admin':
+          roleToFilter = AdminRole.superAdmin;
+          break;
+        case 'Country Admin':
+          roleToFilter = AdminRole.countryAdmin;
+          break;
+        case 'Marketing':
+          roleToFilter = AdminRole.marketing;
+          break;
+        case 'Sales':
+          roleToFilter = AdminRole.sales;
+          break;
+        case 'Operations':
+          roleToFilter = AdminRole.operations;
+          break;
+        case 'Support':
+          roleToFilter = AdminRole.support;
+          break;
+      }
+      if (roleToFilter != null) {
+        filtered = filtered.where((user) => user.role == roleToFilter).toList();
+      }
     }
 
     // Filter by status
@@ -135,7 +156,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
           break;
       }
       if (statusToFilter != null) {
-        filtered = filtered.where((user) => user.status == statusToFilter).toList();
+        filtered = filtered
+            .where((user) => user.status == statusToFilter)
+            .toList();
       }
     }
 
@@ -159,9 +182,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
               const SizedBox(height: 8),
               Text(
                 'Manage super admins and country administrators',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
               ),
             ],
           ),
@@ -182,52 +205,119 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
 
   Widget _buildUserStatistics(List<AdminUser> adminUsers) {
     final totalUsers = adminUsers.length;
-    final superAdmins = adminUsers.where((u) => u.role == AdminRole.superAdmin).length;
-    final countryAdmins = adminUsers.where((u) => u.role == AdminRole.countryAdmin).length;
-    final activeUsers = adminUsers.where((u) => u.status == AdminUserStatus.active).length;
+    final superAdmins = adminUsers
+        .where((u) => u.role == AdminRole.superAdmin)
+        .length;
+    final countryAdmins = adminUsers
+        .where((u) => u.role == AdminRole.countryAdmin)
+        .length;
+    final marketingAdmins = adminUsers
+        .where((u) => u.role == AdminRole.marketing)
+        .length;
+    final salesAdmins = adminUsers
+        .where((u) => u.role == AdminRole.sales)
+        .length;
+    final operationsAdmins = adminUsers
+        .where((u) => u.role == AdminRole.operations)
+        .length;
+    final supportAdmins = adminUsers
+        .where((u) => u.role == AdminRole.support)
+        .length;
+    final activeUsers = adminUsers
+        .where((u) => u.status == AdminUserStatus.active)
+        .length;
 
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _buildStatCard(
-            'Total Admin Users',
-            totalUsers.toString(),
-            Icons.admin_panel_settings,
-            AppTheme.primaryColor,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'Total Admin Users',
+                totalUsers.toString(),
+                Icons.admin_panel_settings,
+                AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                'Super Admins',
+                superAdmins.toString(),
+                Icons.supervisor_account,
+                Colors.purple,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                'Country Admins',
+                countryAdmins.toString(),
+                Icons.location_on,
+                Colors.blue,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                'Active Users',
+                activeUsers.toString(),
+                Icons.check_circle,
+                Colors.green,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            'Super Admins',
-            superAdmins.toString(),
-            Icons.supervisor_account,
-            Colors.red,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            'Country Admins',
-            countryAdmins.toString(),
-            Icons.location_on,
-            Colors.blue,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            'Active Users',
-            activeUsers.toString(),
-            Icons.check_circle,
-            Colors.green,
-          ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'Marketing',
+                marketingAdmins.toString(),
+                Icons.campaign,
+                Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                'Sales',
+                salesAdmins.toString(),
+                Icons.attach_money,
+                Colors.green,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                'Operations',
+                operationsAdmins.toString(),
+                Icons.local_shipping,
+                Colors.teal,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                'Support',
+                supportAdmins.toString(),
+                Icons.support_agent,
+                Colors.indigo,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -260,10 +350,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
           const SizedBox(height: 16),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Text(
@@ -323,9 +410,18 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              items: ['All', 'Super Admin', 'Country Admin'].map((role) {
-                return DropdownMenuItem(value: role, child: Text(role));
-              }).toList(),
+              items:
+                  [
+                    'All',
+                    'Super Admin',
+                    'Country Admin',
+                    'Marketing',
+                    'Sales',
+                    'Operations',
+                    'Support',
+                  ].map((role) {
+                    return DropdownMenuItem(value: role, child: Text(role));
+                  }).toList(),
               onChanged: (value) => setState(() => _roleFilter = value!),
             ),
           ),
@@ -370,9 +466,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
             padding: const EdgeInsets.all(20),
             child: Text(
               'Admin Users (${adminUsers.length})',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           SizedBox(
@@ -382,34 +478,13 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
               horizontalMargin: 20,
               minWidth: 1000,
               columns: const [
-                DataColumn2(
-                  label: Text('User'),
-                  size: ColumnSize.L,
-                ),
-                DataColumn2(
-                  label: Text('Role'),
-                  size: ColumnSize.M,
-                ),
-                DataColumn2(
-                  label: Text('Country'),
-                  size: ColumnSize.S,
-                ),
-                DataColumn2(
-                  label: Text('Status'),
-                  size: ColumnSize.S,
-                ),
-                DataColumn2(
-                  label: Text('Last Login'),
-                  size: ColumnSize.M,
-                ),
-                DataColumn2(
-                  label: Text('Created'),
-                  size: ColumnSize.M,
-                ),
-                DataColumn2(
-                  label: Text('Actions'),
-                  size: ColumnSize.M,
-                ),
+                DataColumn2(label: Text('User'), size: ColumnSize.L),
+                DataColumn2(label: Text('Role'), size: ColumnSize.M),
+                DataColumn2(label: Text('Country'), size: ColumnSize.S),
+                DataColumn2(label: Text('Status'), size: ColumnSize.S),
+                DataColumn2(label: Text('Last Login'), size: ColumnSize.M),
+                DataColumn2(label: Text('Created'), size: ColumnSize.M),
+                DataColumn2(label: Text('Actions'), size: ColumnSize.M),
               ],
               rows: adminUsers.map((user) {
                 return DataRow2(
@@ -418,9 +493,14 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                       Row(
                         children: [
                           CircleAvatar(
-                            backgroundColor: _getRoleColor(user.role).withOpacity(0.1),
+                            backgroundColor: _getRoleColor(
+                              user.role,
+                            ).withOpacity(0.1),
                             child: Text(
-                              user.fullName.split(' ').map((n) => n[0]).join(''),
+                              user.fullName
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join(''),
                               style: TextStyle(
                                 color: _getRoleColor(user.role),
                                 fontWeight: FontWeight.bold,
@@ -434,7 +514,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                             children: [
                               Text(
                                 user.fullName,
-                                style: const TextStyle(fontWeight: FontWeight.w500),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                               Text(
                                 user.email,
@@ -461,20 +543,16 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                     DataCell(Text(user.status.displayName)),
                     DataCell(
                       Text(
-                        user.lastLogin != null ? _formatDateTime(user.lastLogin!) : 'Never',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        user.lastLogin != null
+                            ? _formatDateTime(user.lastLogin!)
+                            : 'Never',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ),
                     DataCell(
                       Text(
                         _formatDateTime(user.createdAt),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ),
                     DataCell(
@@ -488,11 +566,17 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                           ),
                           IconButton(
                             icon: Icon(
-                              user.status == AdminUserStatus.active ? Icons.block : Icons.check_circle,
-                              color: user.status == AdminUserStatus.active ? Colors.red : Colors.green,
+                              user.status == AdminUserStatus.active
+                                  ? Icons.block
+                                  : Icons.check_circle,
+                              color: user.status == AdminUserStatus.active
+                                  ? Colors.red
+                                  : Colors.green,
                             ),
                             onPressed: () => _toggleUserStatus(user),
-                            tooltip: user.status == AdminUserStatus.active ? 'Suspend User' : 'Activate User',
+                            tooltip: user.status == AdminUserStatus.active
+                                ? 'Suspend User'
+                                : 'Activate User',
                           ),
                           PopupMenuButton<String>(
                             onSelected: (value) => _deleteAdminUser(user),
@@ -530,7 +614,20 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
   }
 
   Color _getRoleColor(AdminRole role) {
-    return role == AdminRole.superAdmin ? Colors.purple : Colors.blue;
+    switch (role) {
+      case AdminRole.superAdmin:
+        return Colors.purple;
+      case AdminRole.countryAdmin:
+        return Colors.blue;
+      case AdminRole.marketing:
+        return Colors.orange;
+      case AdminRole.sales:
+        return Colors.green;
+      case AdminRole.operations:
+        return Colors.teal;
+      case AdminRole.support:
+        return Colors.indigo;
+    }
   }
 
   List<Map<String, dynamic>> _getMockAdminUsers() {
@@ -574,14 +671,18 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
     ];
   }
 
-  List<Map<String, dynamic>> _getFilteredUsers(List<Map<String, dynamic>> users) {
+  List<Map<String, dynamic>> _getFilteredUsers(
+    List<Map<String, dynamic>> users,
+  ) {
     var filtered = users;
 
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((user) {
-        return user['name'].toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               user['email'].toLowerCase().contains(_searchQuery.toLowerCase());
+        return user['name'].toLowerCase().contains(
+              _searchQuery.toLowerCase(),
+            ) ||
+            user['email'].toLowerCase().contains(_searchQuery.toLowerCase());
       }).toList();
     }
 
@@ -592,7 +693,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
 
     // Filter by status
     if (_statusFilter != 'All') {
-      filtered = filtered.where((user) => user['status'] == _statusFilter).toList();
+      filtered = filtered
+          .where((user) => user['status'] == _statusFilter)
+          .toList();
     }
 
     return filtered;
@@ -665,7 +768,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Admin user created successfully')),
+                const SnackBar(
+                  content: Text('Admin user created successfully'),
+                ),
               );
             },
             child: const Text('Create User'),
@@ -676,9 +781,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
   }
 
   void _editUser(Map<String, dynamic> user) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Editing user: ${user['name']}')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Editing user: ${user['name']}')));
   }
 
   void _handleUserAction(String action, Map<String, dynamic> user) {
@@ -709,7 +814,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete User'),
-        content: Text('Are you sure you want to delete ${user['name']}? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete ${user['name']}? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -719,7 +826,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('User ${user['name']} has been deleted')),
+                SnackBar(
+                  content: Text('User ${user['name']} has been deleted'),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -731,7 +840,10 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
   }
 
   /// Show create admin user dialog
-  void _showCreateAdminUserDialog(BuildContext context, AuthProvider authProvider) {
+  void _showCreateAdminUserDialog(
+    BuildContext context,
+    AuthProvider authProvider,
+  ) {
     final formKey = GlobalKey<FormState>();
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
@@ -760,7 +872,8 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                       labelText: 'First Name',
                       border: OutlineInputBorder(),
                     ),
-                    validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                    validator: (value) =>
+                        value?.isEmpty == true ? 'Required' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -769,7 +882,8 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                       labelText: 'Last Name',
                       border: OutlineInputBorder(),
                     ),
-                    validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                    validator: (value) =>
+                        value?.isEmpty == true ? 'Required' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -792,7 +906,8 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                       border: OutlineInputBorder(),
                     ),
                     obscureText: true,
-                    validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                    validator: (value) =>
+                        value?.isEmpty == true ? 'Required' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -804,7 +919,8 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                     obscureText: true,
                     validator: (value) {
                       if (value?.isEmpty == true) return 'Required';
-                      if (value != passwordController.text) return 'Passwords do not match';
+                      if (value != passwordController.text)
+                        return 'Passwords do not match';
                       return null;
                     },
                   ),
@@ -874,35 +990,45 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
               onPressed: () async {
                 if (formKey.currentState?.validate() == true) {
                   Navigator.pop(context);
-                  
-                  final success = await context.read<AdminProvider>().createAdminUser(
-                    email: emailController.text.trim(),
-                    password: passwordController.text,
-                    firstName: firstNameController.text.trim(),
-                    lastName: lastNameController.text.trim(),
-                    role: selectedRole,
-                    country: selectedCountry,
-                    countryName: selectedCountry == 'USA' ? 'United States' : 'South Africa',
-                    createdBy: authProvider.user?.uid ?? 'unknown',
-                    notes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
-                  );
+
+                  final success = await context
+                      .read<AdminProvider>()
+                      .createAdminUser(
+                        email: emailController.text.trim(),
+                        password: passwordController.text,
+                        firstName: firstNameController.text.trim(),
+                        lastName: lastNameController.text.trim(),
+                        role: selectedRole,
+                        country: selectedCountry,
+                        countryName: selectedCountry == 'USA'
+                            ? 'United States'
+                            : 'South Africa',
+                        createdBy: authProvider.user?.uid ?? 'unknown',
+                        notes: notesController.text.trim().isEmpty
+                            ? null
+                            : notesController.text.trim(),
+                      );
 
                   if (!context.mounted) return;
 
                   if (success) {
                     // Reload the admin users list to show the new user
                     await context.read<AdminProvider>().loadAdminUsers();
-                    
+
                     if (!context.mounted) return;
-                    
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Admin user ${firstNameController.text} ${lastNameController.text} created successfully'),
+                        content: Text(
+                          'Admin user ${firstNameController.text} ${lastNameController.text} created successfully',
+                        ),
                         backgroundColor: Colors.green,
                       ),
                     );
                   } else {
-                    final errorMessage = context.read<AdminProvider>().error ?? 'Failed to create admin user';
+                    final errorMessage =
+                        context.read<AdminProvider>().error ??
+                        'Failed to create admin user';
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(errorMessage),
@@ -924,7 +1050,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
   /// Build role chip for admin user
   Widget _buildRoleChip(AdminRole role) {
     Color color = role == AdminRole.superAdmin ? Colors.purple : Colors.blue;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -956,7 +1082,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
         color = Colors.red;
         break;
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -978,7 +1104,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
   String _formatDateTime(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime).inDays;
-    
+
     if (difference == 0) {
       return 'Today';
     } else if (difference == 1) {
@@ -992,23 +1118,219 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
 
   /// Edit admin user
   void _editAdminUser(AdminUser user) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Edit functionality for ${user.fullName} coming soon')),
+    final formKey = GlobalKey<FormState>();
+    final firstNameController = TextEditingController(text: user.firstName);
+    final lastNameController = TextEditingController(text: user.lastName);
+    final emailController = TextEditingController(text: user.email);
+    final notesController = TextEditingController(text: user.notes ?? '');
+    AdminRole selectedRole = user.role;
+    String selectedCountry = user.country;
+    AdminUserStatus selectedStatus = user.status;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Edit Admin User'),
+          content: SizedBox(
+            width: 400,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: firstNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'First Name',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value?.isEmpty == true ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: lastNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Last Name',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) =>
+                          value?.isEmpty == true ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Email Address',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value?.isEmpty == true) return 'Required';
+                        if (!value!.contains('@')) return 'Invalid email';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<AdminRole>(
+                      value: selectedRole,
+                      decoration: const InputDecoration(
+                        labelText: 'Role',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: AdminRole.values.map((role) {
+                        return DropdownMenuItem(
+                          value: role,
+                          child: Text(role.displayName),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => selectedRole = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: selectedCountry,
+                      decoration: const InputDecoration(
+                        labelText: 'Country',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: ['USA', 'RSA'].map((country) {
+                        return DropdownMenuItem(
+                          value: country,
+                          child: Row(
+                            children: [
+                              Text(_getCountryFlag(country)),
+                              const SizedBox(width: 8),
+                              Text(country),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => selectedCountry = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<AdminUserStatus>(
+                      value: selectedStatus,
+                      decoration: const InputDecoration(
+                        labelText: 'Status',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: AdminUserStatus.values.map((status) {
+                        return DropdownMenuItem(
+                          value: status,
+                          child: Text(status.displayName),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => selectedStatus = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: notesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes (Optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (formKey.currentState?.validate() == true) {
+                  Navigator.pop(context);
+
+                  final updates = <String, dynamic>{
+                    'firstName': firstNameController.text.trim(),
+                    'lastName': lastNameController.text.trim(),
+                    'email': emailController.text.trim(),
+                    'role': selectedRole.value,
+                    'country': selectedCountry,
+                    'countryName': selectedCountry == 'USA'
+                        ? 'United States'
+                        : 'South Africa',
+                    'status': selectedStatus.value,
+                    'notes': notesController.text.trim().isEmpty
+                        ? null
+                        : notesController.text.trim(),
+                  };
+
+                  final success = await context
+                      .read<AdminProvider>()
+                      .updateAdminUser(user.id, updates);
+
+                  if (!context.mounted) return;
+
+                  if (success) {
+                    // Reload the admin users list to show the updated user
+                    await context.read<AdminProvider>().loadAdminUsers();
+
+                    if (!context.mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${user.fullName} updated successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    final errorMessage =
+                        context.read<AdminProvider>().error ??
+                        'Failed to update admin user';
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(errorMessage),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 5),
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   /// Toggle user status
   void _toggleUserStatus(AdminUser user) async {
-    final newStatus = user.status == AdminUserStatus.active 
-      ? AdminUserStatus.suspended 
-      : AdminUserStatus.active;
-    
-    final success = await context.read<AdminProvider>().updateAdminUserStatus(user.id, newStatus);
-    
+    final newStatus = user.status == AdminUserStatus.active
+        ? AdminUserStatus.suspended
+        : AdminUserStatus.active;
+
+    final success = await context.read<AdminProvider>().updateAdminUserStatus(
+      user.id,
+      newStatus,
+    );
+
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${user.fullName} status updated to ${newStatus.displayName}'),
+          content: Text(
+            '${user.fullName} status updated to ${newStatus.displayName}',
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -1028,7 +1350,9 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Admin User'),
-        content: Text('Are you sure you want to delete ${user.fullName}? This action cannot be undone.'),
+        content: Text(
+          'Are you sure you want to delete ${user.fullName}? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1037,9 +1361,11 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
-              final success = await context.read<AdminProvider>().deleteAdminUser(user.id, user.userId);
-              
+
+              final success = await context
+                  .read<AdminProvider>()
+                  .deleteAdminUser(user.id, user.userId);
+
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

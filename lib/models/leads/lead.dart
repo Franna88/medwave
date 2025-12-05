@@ -19,6 +19,8 @@ class Lead {
   final List<LeadNote> notes;
   final String createdBy;
   final String? createdByName;
+  final String? assignedTo; // userId of assigned marketing admin
+  final String? assignedToName; // name of assigned marketing admin
   final double? depositAmount;
   final String? depositInvoiceNumber;
   final double? cashCollectedAmount;
@@ -56,6 +58,8 @@ class Lead {
     this.notes = const [],
     required this.createdBy,
     this.createdByName,
+    this.assignedTo,
+    this.assignedToName,
     this.depositAmount,
     this.depositInvoiceNumber,
     this.cashCollectedAmount,
@@ -174,6 +178,8 @@ class Lead {
           [],
       createdBy: map['createdBy']?.toString() ?? '',
       createdByName: map['createdByName']?.toString(),
+      assignedTo: map['assignedTo']?.toString(),
+      assignedToName: map['assignedToName']?.toString(),
       depositAmount: map['depositAmount']?.toDouble(),
       depositInvoiceNumber: map['depositInvoiceNumber']?.toString(),
       cashCollectedAmount: map['cashCollectedAmount']?.toDouble(),
@@ -212,6 +218,8 @@ class Lead {
       'notes': notes.map((n) => n.toMap()).toList(),
       'createdBy': createdBy,
       'createdByName': createdByName,
+      'assignedTo': assignedTo,
+      'assignedToName': assignedToName,
       'depositAmount': depositAmount,
       'depositInvoiceNumber': depositInvoiceNumber,
       'cashCollectedAmount': cashCollectedAmount,
@@ -252,6 +260,8 @@ class Lead {
     List<LeadNote>? notes,
     String? createdBy,
     String? createdByName,
+    String? assignedTo,
+    String? assignedToName,
     double? depositAmount,
     String? depositInvoiceNumber,
     double? cashCollectedAmount,
@@ -288,6 +298,8 @@ class Lead {
       notes: notes ?? this.notes,
       createdBy: createdBy ?? this.createdBy,
       createdByName: createdByName ?? this.createdByName,
+      assignedTo: assignedTo ?? this.assignedTo,
+      assignedToName: assignedToName ?? this.assignedToName,
       depositAmount: depositAmount ?? this.depositAmount,
       depositInvoiceNumber: depositInvoiceNumber ?? this.depositInvoiceNumber,
       cashCollectedAmount: cashCollectedAmount ?? this.cashCollectedAmount,

@@ -143,6 +143,37 @@ class LeadService {
     }
   }
 
+  /// Update lead assignment (assignedTo and assignedToName fields only)
+  Future<void> updateLeadAssignment({
+    required String leadId,
+    String? assignedTo,
+    String? assignedToName,
+  }) async {
+    try {
+      final lead = await getLead(leadId);
+      if (lead == null) {
+        throw Exception('Lead not found');
+      }
+
+      final updatedLead = lead.copyWith(
+        assignedTo: assignedTo,
+        assignedToName: assignedToName,
+        updatedAt: DateTime.now(),
+      );
+
+      await updateLead(updatedLead);
+
+      if (kDebugMode) {
+        print('Updated lead assignment: $leadId -> ${assignedToName ?? "Unassigned"}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating lead assignment: $e');
+      }
+      rethrow;
+    }
+  }
+
   /// Delete a lead
   Future<void> deleteLead(String leadId) async {
     try {
@@ -168,6 +199,8 @@ class LeadService {
     String? bookingId,
     DateTime? bookingDate,
     String? bookingStatus,
+    String? assignedTo, // userId of assigned marketing admin
+    String? assignedToName, // name of assigned marketing admin
   }) async {
     try {
       final lead = await getLead(leadId);
@@ -220,6 +253,8 @@ class LeadService {
         bookingId: bookingId ?? lead.bookingId,
         bookingDate: bookingDate ?? lead.bookingDate,
         bookingStatus: bookingStatus ?? lead.bookingStatus,
+        assignedTo: assignedTo ?? lead.assignedTo, // Set assignment if provided, otherwise keep existing
+        assignedToName: assignedToName ?? lead.assignedToName, // Set assignment name if provided, otherwise keep existing
       );
 
       await updateLead(updatedLead);
