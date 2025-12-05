@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/leads/lead.dart';
 import '../../models/leads/lead_channel.dart';
+import '../../models/admin/admin_user.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/admin_provider.dart';
+import '../../services/firebase/lead_service.dart';
+import '../../utils/role_manager.dart';
 
 /// Dialog for viewing full lead details and history
-class LeadDetailDialog extends StatelessWidget {
+class LeadDetailDialog extends StatefulWidget {
   final Lead lead;
   final LeadChannel channel;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onAssignmentChanged;
 
   const LeadDetailDialog({
     super.key,
@@ -17,7 +24,112 @@ class LeadDetailDialog extends StatelessWidget {
     required this.channel,
     required this.onEdit,
     required this.onDelete,
+    this.onAssignmentChanged,
   });
+
+  @override
+  State<LeadDetailDialog> createState() => _LeadDetailDialogState();
+}
+
+class _LeadDetailDialogState extends State<LeadDetailDialog> {
+  late Lead _currentLead;
+  final LeadService _leadService = LeadService();
+  String? _selectedAssignedTo;
+  bool _isSavingAssignment = false;
+  List<AdminUser> _marketingAdmins = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentLead = widget.lead;
+    _selectedAssignedTo = widget.lead.assignedTo;
+    _loadMarketingAdmins();
+  }
+
+  void _loadMarketingAdmins() {
+    final adminProvider = context.read<AdminProvider>();
+    // Filter to only active marketing admin users
+    final filtered = adminProvider.adminUsers
+        .where(
+          (user) =>
+              user.role == AdminRole.marketing &&
+              user.status == AdminUserStatus.active,
+        )
+        .toList();
+
+    if (mounted) {
+      setState(() {
+        _marketingAdmins = filtered;
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload marketing admins when AdminProvider updates
+    final adminProvider = context.watch<AdminProvider>();
+    if (adminProvider.adminUsers.isNotEmpty) {
+      _loadMarketingAdmins();
+    }
+  }
+
+  Future<void> _updateAssignment(
+    String? assignedTo,
+    String? assignedToName,
+  ) async {
+    if (_isSavingAssignment) return;
+
+    setState(() => _isSavingAssignment = true);
+
+    try {
+      await _leadService.updateLeadAssignment(
+        leadId: _currentLead.id,
+        assignedTo: assignedTo,
+        assignedToName: assignedToName,
+      );
+
+      // Update local lead state
+      setState(() {
+        _currentLead = _currentLead.copyWith(
+          assignedTo: assignedTo,
+          assignedToName: assignedToName,
+        );
+        _selectedAssignedTo = assignedTo;
+      });
+
+      // Notify parent to refresh leads
+      if (widget.onAssignmentChanged != null) {
+        widget.onAssignmentChanged!();
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              assignedToName != null
+                  ? 'Lead assigned to $assignedToName'
+                  : 'Lead assignment removed',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating assignment: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingAssignment = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +156,7 @@ class LeadDetailDialog extends StatelessWidget {
                     radius: 28,
                     backgroundColor: AppTheme.primaryColor,
                     child: Text(
-                      lead.initials,
+                      _currentLead.initials,
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -58,7 +170,7 @@ class LeadDetailDialog extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          lead.fullName,
+                          _currentLead.fullName,
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -66,7 +178,7 @@ class LeadDetailDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Current Stage: ${_getStageName(lead.currentStage)}',
+                          'Current Stage: ${_getStageName(_currentLead.currentStage)}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[700],
@@ -92,48 +204,56 @@ class LeadDetailDialog extends StatelessWidget {
                   children: [
                     // Contact Information
                     _buildSection('Contact Information', Icons.contact_mail, [
-                      _buildInfoRow(Icons.email, 'Email', lead.email),
-                      _buildInfoRow(Icons.phone, 'Phone', lead.phone),
-                      if (lead.source.isNotEmpty)
-                        _buildInfoRow(Icons.source, 'Source', lead.source),
+                      _buildInfoRow(Icons.email, 'Email', _currentLead.email),
+                      _buildInfoRow(Icons.phone, 'Phone', _currentLead.phone),
+                      if (_currentLead.source.isNotEmpty)
+                        _buildInfoRow(
+                          Icons.source,
+                          'Source',
+                          _currentLead.source,
+                        ),
                     ]),
                     const SizedBox(height: 24),
 
                     // UTM Tracking Information (if available)
-                    if (lead.utmCampaign != null ||
-                        lead.utmAdset != null ||
-                        lead.utmAd != null)
+                    if (_currentLead.utmCampaign != null ||
+                        _currentLead.utmAdset != null ||
+                        _currentLead.utmAd != null)
                       _buildSection('Campaign Tracking', Icons.track_changes, [
-                        if (lead.utmCampaign != null)
+                        if (_currentLead.utmCampaign != null)
                           _buildInfoRow(
                             Icons.campaign,
                             'Campaign',
-                            lead.utmCampaign!,
+                            _currentLead.utmCampaign!,
                           ),
-                        if (lead.utmAdset != null)
+                        if (_currentLead.utmAdset != null)
                           _buildInfoRow(
                             Icons.group_work,
                             'Ad Set',
-                            lead.utmAdset!,
+                            _currentLead.utmAdset!,
                           ),
-                        if (lead.utmAd != null)
-                          _buildInfoRow(Icons.image, 'Ad Name', lead.utmAd!),
-                        if (lead.utmSource != null)
+                        if (_currentLead.utmAd != null)
+                          _buildInfoRow(
+                            Icons.image,
+                            'Ad Name',
+                            _currentLead.utmAd!,
+                          ),
+                        if (_currentLead.utmSource != null)
                           _buildInfoRow(
                             Icons.source,
                             'UTM Source',
-                            lead.utmSource!,
+                            _currentLead.utmSource!,
                           ),
-                        if (lead.utmMedium != null)
+                        if (_currentLead.utmMedium != null)
                           _buildInfoRow(
                             Icons.trending_up,
                             'UTM Medium',
-                            lead.utmMedium!,
+                            _currentLead.utmMedium!,
                           ),
                       ]),
-                    if (lead.utmCampaign != null ||
-                        lead.utmAdset != null ||
-                        lead.utmAd != null)
+                    if (_currentLead.utmCampaign != null ||
+                        _currentLead.utmAdset != null ||
+                        _currentLead.utmAd != null)
                       const SizedBox(height: 24),
 
                     // Current Status
@@ -141,90 +261,95 @@ class LeadDetailDialog extends StatelessWidget {
                       _buildInfoRow(
                         Icons.access_time,
                         'Time in Stage',
-                        _formatDuration(lead.timeInStage),
+                        _formatDuration(_currentLead.timeInStage),
                       ),
-                      if (lead.followUpWeek != null)
+                      if (_currentLead.followUpWeek != null)
                         _buildInfoRow(
                           Icons.calendar_today,
                           'Follow-up Week',
-                          'Week ${lead.followUpWeek}',
+                          'Week ${_currentLead.followUpWeek}',
                         ),
                       _buildInfoRow(
                         Icons.person,
                         'Created By',
-                        lead.createdByName ?? 'Unknown',
+                        _currentLead.createdByName ?? 'Unknown',
                       ),
                     ]),
                     const SizedBox(height: 24),
 
+                    // Assignment Section
+                    _buildAssignmentSection(),
+                    const SizedBox(height: 24),
+
                     // Booking Information
-                    if (lead.bookingId != null)
+                    if (_currentLead.bookingId != null)
                       _buildSection(
                         'Booking Information',
                         Icons.calendar_today,
                         [
-                          if (lead.bookingDate != null)
+                          if (_currentLead.bookingDate != null)
                             _buildInfoRow(
                               Icons.event,
                               'Booking Date',
                               DateFormat(
                                 'MMM dd, yyyy',
-                              ).format(lead.bookingDate!),
+                              ).format(_currentLead.bookingDate!),
                             ),
-                          if (lead.bookingStatus != null)
+                          if (_currentLead.bookingStatus != null)
                             _buildInfoRow(
                               Icons.info,
                               'Status',
-                              lead.bookingStatus!.toUpperCase(),
+                              _currentLead.bookingStatus!.toUpperCase(),
                             ),
                           _buildInfoRow(
                             Icons.link,
                             'Booking ID',
-                            lead.bookingId!,
+                            _currentLead.bookingId!,
                           ),
                         ],
                       ),
-                    if (lead.bookingId != null) const SizedBox(height: 24),
+                    if (_currentLead.bookingId != null)
+                      const SizedBox(height: 24),
 
                     // Payment Information
-                    if (lead.depositAmount != null ||
-                        lead.cashCollectedAmount != null)
+                    if (_currentLead.depositAmount != null ||
+                        _currentLead.cashCollectedAmount != null)
                       _buildSection('Payment Information', Icons.payments, [
-                        if (lead.depositAmount != null) ...[
+                        if (_currentLead.depositAmount != null) ...[
                           _buildInfoRow(
                             Icons.account_balance_wallet,
                             'Deposit Amount',
-                            'R ${lead.depositAmount!.toStringAsFixed(2)}',
+                            'R ${_currentLead.depositAmount!.toStringAsFixed(2)}',
                           ),
-                          if (lead.depositInvoiceNumber != null)
+                          if (_currentLead.depositInvoiceNumber != null)
                             _buildInfoRow(
                               Icons.receipt,
                               'Deposit Invoice',
-                              lead.depositInvoiceNumber!,
+                              _currentLead.depositInvoiceNumber!,
                             ),
                         ],
-                        if (lead.cashCollectedAmount != null) ...[
+                        if (_currentLead.cashCollectedAmount != null) ...[
                           _buildInfoRow(
                             Icons.money,
                             'Cash Collected',
-                            'R ${lead.cashCollectedAmount!.toStringAsFixed(2)}',
+                            'R ${_currentLead.cashCollectedAmount!.toStringAsFixed(2)}',
                           ),
-                          if (lead.cashCollectedInvoiceNumber != null)
+                          if (_currentLead.cashCollectedInvoiceNumber != null)
                             _buildInfoRow(
                               Icons.receipt_long,
                               'Cash Invoice',
-                              lead.cashCollectedInvoiceNumber!,
+                              _currentLead.cashCollectedInvoiceNumber!,
                             ),
                         ],
                       ]),
-                    if (lead.depositAmount != null ||
-                        lead.cashCollectedAmount != null)
+                    if (_currentLead.depositAmount != null ||
+                        _currentLead.cashCollectedAmount != null)
                       const SizedBox(height: 24),
 
                     // Notes (newest first)
-                    if (lead.notes.isNotEmpty) ...[
+                    if (_currentLead.notes.isNotEmpty) ...[
                       _buildSection('Notes', Icons.note, [
-                        ...lead.notes.reversed.map((note) {
+                        ..._currentLead.notes.reversed.map((note) {
                           return _buildNoteEntry(note);
                         }).toList(),
                       ]),
@@ -233,7 +358,7 @@ class LeadDetailDialog extends StatelessWidget {
 
                     // Stage History (newest first)
                     _buildSection('Stage History', Icons.timeline, [
-                      ...lead.stageHistory.reversed.map((entry) {
+                      ..._currentLead.stageHistory.reversed.map((entry) {
                         return _buildHistoryEntry(entry);
                       }).toList(),
                     ]),
@@ -255,7 +380,7 @@ class LeadDetailDialog extends StatelessWidget {
                   TextButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      onDelete();
+                      widget.onDelete();
                     },
                     icon: const Icon(Icons.delete, color: Colors.red),
                     label: const Text(
@@ -266,7 +391,7 @@ class LeadDetailDialog extends StatelessWidget {
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      onEdit();
+                      widget.onEdit();
                     },
                     icon: const Icon(Icons.edit),
                     label: const Text('Edit Lead'),
@@ -513,8 +638,88 @@ class LeadDetailDialog extends StatelessWidget {
     );
   }
 
+  Widget _buildAssignmentSection() {
+    final authProvider = context.watch<AuthProvider>();
+    final userRole = authProvider.userRole;
+    final isSuperAdmin = userRole == UserRole.superAdmin;
+
+    return _buildSection('Assignment', Icons.person_outline, [
+      if (isSuperAdmin) ...[
+        // Editable dropdown for Super Admin
+        if (_isSavingAssignment)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Saving assignment...',
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: DropdownButtonFormField<String>(
+              value: _selectedAssignedTo,
+              decoration: InputDecoration(
+                labelText: 'Assign to Marketing Admin',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                prefixIcon: const Icon(Icons.person),
+              ),
+              items: [
+                // Unassigned option
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('Unassigned'),
+                ),
+                // Marketing admin users
+                ..._marketingAdmins.map((admin) {
+                  return DropdownMenuItem<String>(
+                    value: admin.userId,
+                    child: Text(admin.fullName),
+                  );
+                }).toList(),
+              ],
+              onChanged: (value) async {
+                if (value == null) {
+                  // Unassign
+                  await _updateAssignment(null, null);
+                } else {
+                  // Assign to selected marketing admin
+                  final selectedAdmin = _marketingAdmins.firstWhere(
+                    (admin) => admin.userId == value,
+                  );
+                  await _updateAssignment(
+                    selectedAdmin.userId,
+                    selectedAdmin.fullName,
+                  );
+                }
+              },
+            ),
+          ),
+      ] else ...[
+        // Read-only display for non-Super Admin users
+        _buildInfoRow(
+          Icons.person,
+          'Assigned To',
+          _currentLead.assignedToName ?? 'Unassigned',
+        ),
+      ],
+    ]);
+  }
+
   String _getStageName(String stageId) {
-    final stage = channel.getStageById(stageId);
+    final stage = widget.channel.getStageById(stageId);
     return stage?.name ?? stageId;
   }
 

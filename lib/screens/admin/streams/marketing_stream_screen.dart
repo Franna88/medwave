@@ -4,6 +4,7 @@ import '../../../models/leads/lead.dart';
 import '../../../models/streams/stream_stage.dart';
 import '../../../services/firebase/lead_service.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/admin_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/role_manager.dart';
 import '../../../widgets/leads/lead_card.dart';
@@ -39,6 +40,13 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
     super.initState();
     _initializeChannel();
     _searchController.addListener(_onSearchChanged);
+    // Load admin users for assignment feature (Super Admin only)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      if (authProvider.userRole == UserRole.superAdmin) {
+        context.read<AdminProvider>().loadAdminUsers();
+      }
+    });
   }
 
   @override
@@ -139,6 +147,11 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
         channel: _currentChannel!,
         onEdit: () => _showEditLeadDialog(lead),
         onDelete: () => _confirmDeleteLead(lead),
+        onAssignmentChanged: () {
+          setState(() {
+            _filterLeads();
+          });
+        },
       ),
     );
   }
