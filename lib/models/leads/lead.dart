@@ -317,7 +317,7 @@ class StageHistoryEntry {
   final String stage;
   final DateTime enteredAt;
   final DateTime? exitedAt;
-  final String? note;
+  final dynamic note; // Can be String or Map<String, dynamic> for questionnaire
 
   StageHistoryEntry({
     required this.stage,
@@ -327,11 +327,22 @@ class StageHistoryEntry {
   });
 
   factory StageHistoryEntry.fromMap(Map<String, dynamic> map) {
+    // Handle both String and Map formats for backward compatibility
+    dynamic noteValue = map['note'];
+    
+    // If note is a Map, preserve it as Map
+    if (noteValue is Map) {
+      noteValue = Map<String, dynamic>.from(noteValue);
+    } else if (noteValue != null) {
+      // Otherwise treat as String
+      noteValue = noteValue.toString();
+    }
+
     return StageHistoryEntry(
       stage: map['stage']?.toString() ?? '',
       enteredAt: Lead._parseTimestamp(map['enteredAt'], DateTime.now()),
       exitedAt: Lead._parseOptionalTimestamp(map['exitedAt']),
-      note: map['note']?.toString(),
+      note: noteValue,
     );
   }
 
@@ -340,7 +351,7 @@ class StageHistoryEntry {
       'stage': stage,
       'enteredAt': Timestamp.fromDate(enteredAt),
       'exitedAt': exitedAt != null ? Timestamp.fromDate(exitedAt!) : null,
-      'note': note,
+      'note': note, // Store as-is (String, Map, or null)
     };
   }
 
@@ -348,7 +359,7 @@ class StageHistoryEntry {
     String? stage,
     DateTime? enteredAt,
     DateTime? exitedAt,
-    String? note,
+    dynamic note,
   }) {
     return StageHistoryEntry(
       stage: stage ?? this.stage,

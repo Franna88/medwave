@@ -159,7 +159,7 @@ class LeadService {
   Future<void> moveLeadToStage({
     required String leadId,
     required String newStage,
-    required String note,
+    required dynamic note, // Can be String or Map<String, dynamic> for questionnaire
     required String userId,
     String? userName,
     bool isFollowUpStage = false,

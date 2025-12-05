@@ -3,15 +3,11 @@ import '../../theme/app_theme.dart';
 
 /// Result data from stage transition dialog
 class StageTransitionResult {
-  final String note;
+  final dynamic note; // Can be String or Map<String, dynamic> for questionnaire
   final double? amount;
   final String? invoiceNumber;
 
-  StageTransitionResult({
-    required this.note,
-    this.amount,
-    this.invoiceNumber,
-  });
+  StageTransitionResult({required this.note, this.amount, this.invoiceNumber});
 }
 
 /// Dialog for confirming stage transition and requiring a note
@@ -38,8 +34,8 @@ class _StageTransitionDialogState extends State<StageTransitionDialog> {
   final _formKey = GlobalKey<FormState>();
 
   bool get _requiresPaymentInfo {
-    return widget.toStageId == 'deposit_made' || 
-           widget.toStageId == 'cash_collected';
+    return widget.toStageId == 'deposit_made' ||
+        widget.toStageId == 'cash_collected';
   }
 
   String get _paymentLabel {
@@ -124,10 +120,7 @@ class _StageTransitionDialogState extends State<StageTransitionDialog> {
                         ],
                       ),
                     ),
-                    Icon(
-                      Icons.arrow_forward,
-                      color: AppTheme.primaryColor,
-                    ),
+                    Icon(Icons.arrow_forward, color: AppTheme.primaryColor),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
@@ -179,7 +172,9 @@ class _StageTransitionDialogState extends State<StageTransitionDialog> {
                           filled: true,
                           fillColor: Colors.grey[50],
                         ),
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Required';
@@ -276,7 +271,9 @@ class _StageTransitionDialogState extends State<StageTransitionDialog> {
                       backgroundColor: AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
                     child: const Text('Confirm Move'),
                   ),
@@ -289,4 +286,3 @@ class _StageTransitionDialogState extends State<StageTransitionDialog> {
     );
   }
 }
-

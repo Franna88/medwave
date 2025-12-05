@@ -8,6 +8,7 @@ import '../../../theme/app_theme.dart';
 import '../../../widgets/leads/lead_card.dart';
 import '../../../widgets/leads/add_lead_dialog.dart';
 import '../../../widgets/leads/stage_transition_dialog.dart';
+import '../../../widgets/leads/contacted_questionnaire_dialog.dart';
 import '../../../widgets/leads/lead_detail_dialog.dart';
 import '../../../models/leads/lead_channel.dart';
 import '../../../services/firebase/lead_channel_service.dart';
@@ -96,7 +97,9 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
   }
 
   List<Lead> _getLeadsForStage(String stageId) {
-    return _filteredLeads.where((lead) => lead.currentStage == stageId).toList();
+    return _filteredLeads
+        .where((lead) => lead.currentStage == stageId)
+        .toList();
   }
 
   Future<void> _showAddLeadDialog() async {
@@ -131,10 +134,8 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
 
     await showDialog(
       context: context,
-      builder: (context) => AddLeadDialog(
-        channel: _currentChannel!,
-        existingLead: lead,
-      ),
+      builder: (context) =>
+          AddLeadDialog(channel: _currentChannel!, existingLead: lead),
     );
   }
 
@@ -168,9 +169,9 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error deleting lead: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error deleting lead: $e')));
         }
       }
     }
@@ -186,13 +187,23 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
     final userId = authProvider.user?.uid ?? '';
     final userName = authProvider.userName;
 
+    // Show questionnaire dialog for Contacted stage, regular dialog for others
     final result = await showDialog<StageTransitionResult>(
       context: context,
-      builder: (context) => StageTransitionDialog(
-        fromStage: oldStage.name,
-        toStage: newStage.name,
-        toStageId: newStageId,
-      ),
+      builder: (context) {
+        if (newStageId == 'contacted') {
+          return ContactedQuestionnaireDialog(
+            fromStage: oldStage.name,
+            toStage: newStage.name,
+          );
+        } else {
+          return StageTransitionDialog(
+            fromStage: oldStage.name,
+            toStage: newStage.name,
+            toStageId: newStageId,
+          );
+        }
+      },
     );
 
     if (result != null) {
@@ -226,9 +237,9 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error moving lead: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error moving lead: $e')));
         }
       }
     }
@@ -253,7 +264,7 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
 
   Widget _buildHeader() {
     final totalLeads = _filteredLeads.length;
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -295,14 +306,20 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
                     hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
                     prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               // Lead count badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -310,7 +327,11 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.people_outline, color: Colors.white, size: 20),
+                    const Icon(
+                      Icons.people_outline,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       '$totalLeads leads',
@@ -331,7 +352,10 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: AppTheme.primaryColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -342,10 +366,7 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
           const SizedBox(height: 12),
           const Text(
             'All new leads enter in Marketing',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70),
           ),
         ],
       ),
@@ -378,7 +399,9 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Color(int.parse(stage.color.replaceFirst('#', '0xff'))),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
             ),
             child: Row(
               children: [
@@ -393,7 +416,10 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
@@ -412,18 +438,26 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
           // Leads list with DragTarget
           Expanded(
             child: DragTarget<Lead>(
-              onWillAcceptWithDetails: (details) => details.data.currentStage != stage.id,
-              onAcceptWithDetails: (details) => _moveLeadToStage(details.data, stage.id),
+              onWillAcceptWithDetails: (details) =>
+                  details.data.currentStage != stage.id,
+              onAcceptWithDetails: (details) =>
+                  _moveLeadToStage(details.data, stage.id),
               builder: (context, candidateData, rejectedData) {
                 return Container(
                   decoration: BoxDecoration(
                     color: candidateData.isNotEmpty
-                        ? Color(int.parse(stage.color.replaceFirst('#', '0xff'))).withOpacity(0.1)
+                        ? Color(
+                            int.parse(stage.color.replaceFirst('#', '0xff')),
+                          ).withOpacity(0.1)
                         : Colors.white,
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(12),
+                    ),
                     border: Border.all(
                       color: candidateData.isNotEmpty
-                          ? Color(int.parse(stage.color.replaceFirst('#', '0xff')))
+                          ? Color(
+                              int.parse(stage.color.replaceFirst('#', '0xff')),
+                            )
                           : Colors.grey.shade200,
                       width: candidateData.isNotEmpty ? 2 : 1,
                     ),
@@ -498,4 +532,3 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
     );
   }
 }
-
