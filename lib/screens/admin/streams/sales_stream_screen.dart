@@ -5,6 +5,7 @@ import '../../../models/streams/stream_stage.dart';
 import '../../../services/firebase/sales_appointment_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../utils/stream_utils.dart';
 
 class SalesStreamScreen extends StatefulWidget {
   const SalesStreamScreen({super.key});
@@ -67,12 +68,19 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
   }
 
   List<models.SalesAppointment> _getAppointmentsForStage(String stageId) {
-    return _filteredAppointments.where((apt) => apt.currentStage == stageId).toList();
+    return _filteredAppointments
+        .where((apt) => apt.currentStage == stageId)
+        .toList();
   }
 
-  Future<void> _moveAppointmentToStage(models.SalesAppointment appointment, String newStageId) async {
+  Future<void> _moveAppointmentToStage(
+    models.SalesAppointment appointment,
+    String newStageId,
+  ) async {
     final newStage = _stages.firstWhere((s) => s.id == newStageId);
-    final oldStage = _stages.firstWhere((s) => s.id == appointment.currentStage);
+    final oldStage = _stages.firstWhere(
+      (s) => s.id == appointment.currentStage,
+    );
 
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.user?.uid ?? '';
@@ -119,7 +127,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         await _appointmentService.moveAppointmentToStage(
           appointmentId: appointment.id,
           newStage: newStageId,
-          note: noteController.text.isEmpty ? 'Moved to ${newStage.name}' : noteController.text,
+          note: noteController.text.isEmpty
+              ? 'Moved to ${newStage.name}'
+              : noteController.text,
           userId: userId,
           userName: userName,
         );
@@ -127,7 +137,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${appointment.customerName} moved to ${newStage.name}'),
+              content: Text(
+                '${appointment.customerName} moved to ${newStage.name}',
+              ),
             ),
           );
 
@@ -171,7 +183,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
 
   Widget _buildHeader() {
     final totalAppointments = _filteredAppointments.length;
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -213,14 +225,20 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                     hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
                     prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               // Count badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -228,7 +246,11 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.attach_money, color: Colors.white, size: 20),
+                    const Icon(
+                      Icons.attach_money,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       '$totalAppointments appointments',
@@ -245,10 +267,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           const SizedBox(height: 12),
           const Text(
             'Appointments from Marketing booking stage',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70),
           ),
         ],
       ),
@@ -269,7 +288,10 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     );
   }
 
-  Widget _buildStageColumn(StreamStage stage, List<models.SalesAppointment> appointments) {
+  Widget _buildStageColumn(
+    StreamStage stage,
+    List<models.SalesAppointment> appointments,
+  ) {
     return Container(
       width: 320,
       margin: const EdgeInsets.only(right: 16),
@@ -281,7 +303,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Color(int.parse(stage.color.replaceFirst('#', '0xff'))),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
             ),
             child: Row(
               children: [
@@ -296,7 +320,10 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
@@ -315,18 +342,32 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           // Appointments list with DragTarget
           Expanded(
             child: DragTarget<models.SalesAppointment>(
-              onWillAcceptWithDetails: (details) => details.data.currentStage != stage.id,
-              onAcceptWithDetails: (details) => _moveAppointmentToStage(details.data, stage.id),
+              onWillAcceptWithDetails: (details) {
+                // Only allow forward movement to next immediate stage
+                return StreamUtils.canMoveToStage(
+                  details.data.currentStage,
+                  stage.id,
+                  _stages,
+                );
+              },
+              onAcceptWithDetails: (details) =>
+                  _moveAppointmentToStage(details.data, stage.id),
               builder: (context, candidateData, rejectedData) {
                 return Container(
                   decoration: BoxDecoration(
                     color: candidateData.isNotEmpty
-                        ? Color(int.parse(stage.color.replaceFirst('#', '0xff'))).withOpacity(0.1)
+                        ? Color(
+                            int.parse(stage.color.replaceFirst('#', '0xff')),
+                          ).withOpacity(0.1)
                         : Colors.white,
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(12),
+                    ),
                     border: Border.all(
                       color: candidateData.isNotEmpty
-                          ? Color(int.parse(stage.color.replaceFirst('#', '0xff')))
+                          ? Color(
+                              int.parse(stage.color.replaceFirst('#', '0xff')),
+                            )
                           : Colors.grey.shade200,
                       width: candidateData.isNotEmpty ? 2 : 1,
                     ),
@@ -356,27 +397,44 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                           itemCount: appointments.length,
                           itemBuilder: (context, index) {
                             final appointment = appointments[index];
+                            final isFinal = StreamUtils.isFinalStage(
+                              appointment.currentStage,
+                              _stages,
+                            );
+                            final card = _buildAppointmentCard(appointment);
+
+                            // Gray out final stage cards
+                            final styledCard = isFinal
+                                ? Opacity(opacity: 0.6, child: card)
+                                : card;
+
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12),
-                              child: Draggable<models.SalesAppointment>(
-                                data: appointment,
-                                feedback: Material(
-                                  elevation: 8,
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: SizedBox(
-                                    width: 280,
-                                    child: Opacity(
-                                      opacity: 0.8,
-                                      child: _buildAppointmentCard(appointment),
+                              child: isFinal
+                                  ? styledCard // Non-draggable for final stage
+                                  : Draggable<models.SalesAppointment>(
+                                      data: appointment,
+                                      feedback: Material(
+                                        elevation: 8,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: SizedBox(
+                                          width: 280,
+                                          child: Opacity(
+                                            opacity: 0.8,
+                                            child: _buildAppointmentCard(
+                                              appointment,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      childWhenDragging: Opacity(
+                                        opacity: 0.3,
+                                        child: _buildAppointmentCard(
+                                          appointment,
+                                        ),
+                                      ),
+                                      child: styledCard,
                                     ),
-                                  ),
-                                ),
-                                childWhenDragging: Opacity(
-                                  opacity: 0.3,
-                                  child: _buildAppointmentCard(appointment),
-                                ),
-                                child: _buildAppointmentCard(appointment),
-                              ),
                             );
                           },
                         ),
@@ -413,8 +471,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
               CircleAvatar(
                 backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
                 child: Text(
-                  appointment.customerName.isNotEmpty 
-                      ? appointment.customerName[0].toUpperCase() 
+                  appointment.customerName.isNotEmpty
+                      ? appointment.customerName[0].toUpperCase()
                       : 'A',
                   style: TextStyle(
                     color: AppTheme.primaryColor,
@@ -436,10 +494,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                     ),
                     Text(
                       appointment.email,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -471,13 +526,16 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
               const Spacer(),
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
-                onSelected: (stageId) => _moveAppointmentToStage(appointment, stageId),
+                onSelected: (stageId) =>
+                    _moveAppointmentToStage(appointment, stageId),
                 itemBuilder: (context) => _stages
                     .where((s) => s.id != appointment.currentStage)
-                    .map((stage) => PopupMenuItem(
-                          value: stage.id,
-                          child: Text('Move to ${stage.name}'),
-                        ))
+                    .map(
+                      (stage) => PopupMenuItem(
+                        value: stage.id,
+                        child: Text('Move to ${stage.name}'),
+                      ),
+                    )
                     .toList(),
               ),
             ],
@@ -487,4 +545,3 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     );
   }
 }
-

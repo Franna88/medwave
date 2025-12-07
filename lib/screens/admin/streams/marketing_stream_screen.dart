@@ -7,6 +7,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/role_manager.dart';
+import '../../../utils/stream_utils.dart';
 import '../../../widgets/leads/lead_card.dart';
 import '../../../widgets/leads/add_lead_dialog.dart';
 import '../../../widgets/leads/stage_transition_dialog.dart';
@@ -472,8 +473,14 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
           // Leads list with DragTarget
           Expanded(
             child: DragTarget<Lead>(
-              onWillAcceptWithDetails: (details) =>
-                  details.data.currentStage != stage.id,
+              onWillAcceptWithDetails: (details) {
+                // Only allow forward movement to next immediate stage
+                return StreamUtils.canMoveToStage(
+                  details.data.currentStage,
+                  stage.id,
+                  _stages,
+                );
+              },
               onAcceptWithDetails: (details) =>
                   _moveLeadToStage(details.data, stage.id),
               builder: (context, candidateData, rejectedData) {
@@ -521,39 +528,53 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
                           itemCount: leads.length,
                           itemBuilder: (context, index) {
                             final lead = leads[index];
+                            final isFinal = StreamUtils.isFinalStage(
+                              lead.currentStage,
+                              _stages,
+                            );
+                            final leadCard = LeadCard(
+                              lead: lead,
+                              onTap: () => _showLeadDetail(lead),
+                              isFollowUpStage: stage.id == 'follow_up',
+                            );
+
+                            // Gray out final stage cards
+                            final styledCard = isFinal
+                                ? Opacity(opacity: 0.6, child: leadCard)
+                                : leadCard;
+
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12),
-                              child: Draggable<Lead>(
-                                data: lead,
-                                feedback: Material(
-                                  elevation: 8,
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: SizedBox(
-                                    width: 280,
-                                    child: Opacity(
-                                      opacity: 0.8,
-                                      child: LeadCard(
-                                        lead: lead,
-                                        onTap: () {},
-                                        isFollowUpStage: false,
+                              child: isFinal
+                                  ? styledCard // Non-draggable for final stage
+                                  : Draggable<Lead>(
+                                      data: lead,
+                                      feedback: Material(
+                                        elevation: 8,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: SizedBox(
+                                          width: 280,
+                                          child: Opacity(
+                                            opacity: 0.8,
+                                            child: LeadCard(
+                                              lead: lead,
+                                              onTap: () {},
+                                              isFollowUpStage: false,
+                                            ),
+                                          ),
+                                        ),
                                       ),
+                                      childWhenDragging: Opacity(
+                                        opacity: 0.3,
+                                        child: LeadCard(
+                                          lead: lead,
+                                          onTap: () {},
+                                          isFollowUpStage:
+                                              stage.id == 'follow_up',
+                                        ),
+                                      ),
+                                      child: styledCard,
                                     ),
-                                  ),
-                                ),
-                                childWhenDragging: Opacity(
-                                  opacity: 0.3,
-                                  child: LeadCard(
-                                    lead: lead,
-                                    onTap: () {},
-                                    isFollowUpStage: stage.id == 'follow_up',
-                                  ),
-                                ),
-                                child: LeadCard(
-                                  lead: lead,
-                                  onTap: () => _showLeadDetail(lead),
-                                  isFollowUpStage: stage.id == 'follow_up',
-                                ),
-                              ),
                             );
                           },
                         ),
