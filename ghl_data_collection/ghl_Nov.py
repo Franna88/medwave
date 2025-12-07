@@ -11,10 +11,34 @@ from firebase_admin import credentials, firestore
 from datetime import datetime
 import time
 import json
+import os
 
 # Initialize Firebase
 try:
-    cred = credentials.Certificate('../medx-ai-firebase-adminsdk-fbsvc-a86e7bd050.json')
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Try to find Firebase credentials file in common locations
+    cred_paths = [
+        os.path.join(script_dir, '..', 'ghl_opp_collection', 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json'),
+        os.path.join(script_dir, '..', 'summary_collection', 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json'),
+        os.path.join(script_dir, '..', 'medx-ai-firebase-adminsdk-fbsvc-a86e7bd050.json'),
+        os.path.join(script_dir, '..', 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json')
+    ]
+    
+    cred_path = None
+    for path in cred_paths:
+        if os.path.exists(path):
+            cred_path = path
+            break
+    
+    if not cred_path:
+        raise FileNotFoundError(
+            f"Firebase credentials file not found. Tried:\n" + 
+            "\n".join(f"  - {p}" for p in cred_paths)
+        )
+    
+    cred = credentials.Certificate(cred_path)
     firebase_admin.initialize_app(cred)
     print('✅ Firebase initialized successfully\n')
 except Exception as e:
@@ -30,8 +54,11 @@ GHL_BASE_URL = 'https://services.leadconnectorhq.com'
 GHL_API_VERSION = '2021-07-28'
 
 # Date range for November 2025
-START_DATE = '2025-11-01T00:00:00.000Z'
-END_DATE = '2025-11-30T23:59:59.999Z'
+START_DATE = '2025-11-27T00:00:00.000Z'
+END_DATE = '2025-12-07T23:59:59.999Z'
+
+# Test mode flag - set to True to fetch only 1 submission for testing
+TEST_MODE = False
 
 
 def get_ghl_headers():
@@ -86,11 +113,63 @@ def extract_attribution_data(submission):
     }
 
 
+def calculate_form_score(submission):
+    """
+    Calculate form score based on customFields values.
+    Scoring rules:
+    - 10 Points: MD, General Practitioner, Chiropractor, Physical Therapist, Specialist, Yes, 51-100, 101-200, 200+
+    - 5 Points: Wellness Spa, Nurse Practitioner, Beauty Spa, Sports Recovery, 1-50
+    - 0 Points: Any other answer (not matching above)
+    
+    Returns the cumulative total score.
+    """
+    # Define scoring rules (already lowercase for case-insensitive matching)
+    score_10_points = [
+        'md', 'general practitioner', 'chiropractor', 'physical therapist', 
+        'specialist', 'yes', '51-100', '101-200', '200+'
+    ]
+    
+    score_5_points = [
+        'wellness spa', 'nurse practitioner', 'beauty spa', 
+        'sports recovery', '1-50'
+    ]
+    
+    # Extract customFields from submission
+    others = submission.get('others', {})
+    custom_fields = others.get('customFields', [])
+    
+    total_score = 0
+    
+    # Check each custom field value
+    for field in custom_fields:
+        field_value = field.get('field_value', '').strip()
+        
+        if not field_value:
+            continue
+        
+        # Convert to lowercase for case-insensitive matching
+        field_value_lower = field_value.lower()
+        
+        # Check against scoring rules
+        if field_value_lower in score_10_points:
+            total_score += 10
+        elif field_value_lower in score_5_points:
+            total_score += 5
+        else:
+            # Default to 0 points for any other answer (not matching above)
+            total_score += 0
+    
+    return total_score
+
+
 def fetch_all_november_submissions():
     """Fetch all form submissions for November 2025"""
     print('='*80)
     print('GHL FORM SUBMISSIONS COLLECTION - NOVEMBER 2025')
     print('='*80 + '\n')
+    
+    if TEST_MODE:
+        print('⚠️  TEST MODE ENABLED - Fetching only 1 submission\n')
     
     print(f'📅 Date Range: {START_DATE[:10]} to {END_DATE[:10]}')
     print(f'🎯 Location ID: {GHL_LOCATION_ID}')
@@ -107,9 +186,12 @@ def fetch_all_november_submissions():
     while True:
         print(f'📄 Fetching page {page}...')
         
+        # Use limit=1 in test mode, otherwise 100
+        limit = 1 if TEST_MODE else 100
+        
         params = {
             'locationId': GHL_LOCATION_ID,
-            'limit': 100,
+            'limit': limit,
             'startAt': START_DATE,
             'endAt': END_DATE,
             'page': page
@@ -135,6 +217,11 @@ def fetch_all_november_submissions():
             
             all_submissions.extend(submissions)
             print(f'   Found {len(submissions)} submissions on this page')
+            
+            # In test mode, break after fetching 1 submission
+            if TEST_MODE and len(all_submissions) >= 1:
+                print(f'   ✅ Test mode: Fetched 1 submission, stopping\n')
+                break
             
             # Check if we're on the last page
             meta = data.get('meta', {})
@@ -221,6 +308,14 @@ def fetch_all_november_submissions():
             source = others.get('source', 'Unknown')
             product_type = others.get('productType', 'Unknown')
             
+            # Calculate form score based on customFields
+            form_score = calculate_form_score(submission)
+            
+            # Add formScore to the submission object (fullSubmission)
+            # Create a copy to avoid modifying the original
+            submission_with_score = submission.copy()
+            submission_with_score['formScore'] = form_score
+            
             # Create document data
             doc_data = {
                 'contactId': contact_id,
@@ -234,7 +329,7 @@ def fetch_all_november_submissions():
                 'productType': product_type,
                 'adId': ad_id,  # Will be None if not from Facebook
                 'attribution': attribution,  # Will be None if no attribution
-                'fullSubmission': submission,  # Complete GHL payload
+                'fullSubmission': submission_with_score,  # Complete GHL payload with formScore
                 'fetchedAt': datetime.now().isoformat(),
                 'month': 'November',
                 'year': 2025,
@@ -252,9 +347,9 @@ def fetch_all_november_submissions():
             
             # Show ad info if available
             if ad_id:
-                print(f'✅ {stored_count}. Stored {name[:30]} (contactId: {contact_id[:20]}...) - Ad: {ad_id}')
+                print(f'✅ {stored_count}. Stored {name[:30]} (contactId: {contact_id[:20]}...) - Ad: {ad_id} - Score: {form_score}')
             else:
-                print(f'✅ {stored_count}. Stored {name[:30]} (contactId: {contact_id[:20]}...) - Source: {source}')
+                print(f'✅ {stored_count}. Stored {name[:30]} (contactId: {contact_id[:20]}...) - Source: {source} - Score: {form_score}')
             
         except Exception as e:
             error_count += 1

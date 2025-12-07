@@ -18,7 +18,29 @@ print("📦 Initializing Firebase...", flush=True)
 
 # Initialize Firebase
 if not firebase_admin._apps:
-    cred = credentials.Certificate('medx-ai-firebase-adminsdk-fbsvc-a86e7bd050.json')
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Try to find Firebase credentials file in common locations
+    cred_paths = [
+        os.path.join(script_dir, 'ghl_opp_collection', 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json'),
+        os.path.join(script_dir, 'summary_collection', 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json'),
+        os.path.join(script_dir, 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json')
+    ]
+    
+    cred_path = None
+    for path in cred_paths:
+        if os.path.exists(path):
+            cred_path = path
+            break
+    
+    if not cred_path:
+        raise FileNotFoundError(
+            f"Firebase credentials file not found. Tried:\n" + 
+            "\n".join(f"  - {p}" for p in cred_paths)
+        )
+    
+    cred = credentials.Certificate(cred_path)
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
@@ -37,7 +59,15 @@ DAVIDE_PIPELINE_ID = 'AUduOJBB2lxlsEaNmlJz'  # ⭐ CORRECTED: This is the REAL D
 def load_stage_mappings():
     """Load pipeline stage ID to name mappings"""
     try:
-        with open('/Users/mac/dev/medwave/ghl_info/pipeline_stage_mappings.json', 'r') as f:
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        mappings_path = os.path.join(script_dir, 'ghl_info', 'pipeline_stage_mappings.json')
+        
+        if not os.path.exists(mappings_path):
+            print(f'⚠️  Warning: Stage mappings file not found at {mappings_path}')
+            return {}
+        
+        with open(mappings_path, 'r') as f:
             return json.load(f)
     except Exception as e:
         print(f'⚠️  Warning: Could not load stage mappings: {e}')

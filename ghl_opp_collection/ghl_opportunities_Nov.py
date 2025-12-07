@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-GHL Opportunities Collection - November 2025  
-+ Lead Auto-Creation (for opportunities created from 2025-11-28T07:18:26.555Z onwards)
+GHL Opportunities Collection - November 27 to December 7, 2025
++ Lead Auto-Creation (for opportunities created from Nov 27, 2025 onwards)
 
 Full merged script including original functionality + new "create Lead" logic.
+Note: Duplicates are allowed and will be handled separately.
 """
 
 import requests
@@ -106,17 +107,17 @@ def get_sa_time(utc_dt=None):
         utc_dt = datetime.now(timezone.utc)
     return utc_dt + SA_UTC_OFFSET
 
-def is_after_cutoff_time(iso_str):
-    """Check if GHL createdAt is after 2025-11-28T07:18:26.555Z."""
+def is_from_nov_27_onwards(iso_str):
+    """Check if GHL createdAt is from Nov 27, 2025 onwards."""
     try:
         dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         
-        # Cutoff time: 2025-11-28T07:18:26.555Z (last entry in leads collection)
-        cutoff_time = datetime(2025, 11, 28, 7, 18, 26, 555000, tzinfo=timezone.utc)
+        # Nov 27, 2025 00:00:00 UTC
+        cutoff_time = datetime(2025, 11, 27, 0, 0, 0, tzinfo=timezone.utc)
         
-        return dt > cutoff_time
+        return dt >= cutoff_time
     except:
         return False
 
@@ -208,16 +209,16 @@ def get_stage_name(pipeline_id, stage_id):
 # ---------------------------------------------------------------
 
 def fetch_all_november_opportunities():
-    # Calculate date range: From last entry (2025-11-28T07:18:26.555Z) to now
-    # Start time: 2025-11-28T07:18:26.555Z (last entry in leads collection)
-    START_DATE = "2025-11-28T07:18:26.555Z"
+    # Date range: Nov 27, 2025 to Dec 7, 2025 (today)
+    # Start: Nov 27, 2025 00:00:00 UTC
+    START_DATE = "2025-11-27T00:00:00.000Z"
     
-    # End time: Current time
+    # End: Dec 7, 2025 23:59:59 UTC (today)
     now_utc = datetime.now(timezone.utc)
     END_DATE = now_utc.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     
     print("="*80)
-    print("GHL OPPORTUNITIES COLLECTION - FROM LAST ENTRY TO NOW")
+    print("GHL OPPORTUNITIES COLLECTION - NOV 27 TO DEC 7")
     print("="*80 + "\n")
 
     print(f"📅 Date Range: {START_DATE} to {END_DATE}")
@@ -277,19 +278,19 @@ def fetch_all_november_opportunities():
     print(f"✅ Total opportunities fetched: {len(all_opportunities)}\n")
 
     # ---------------------
-    # STEP 2: FILTER FROM LAST ENTRY TO NOW
+    # STEP 2: FILTER NOV 27 TO DEC 7
     # ---------------------
     print("="*80)
-    print("STEP 2: FILTERING FOR OPPORTUNITIES AFTER LAST ENTRY")
+    print("STEP 2: FILTERING FOR NOV 27 TO DEC 7 OPPORTUNITIES")
     print("="*80 + "\n")
 
     recent_opportunities = []
     for o in all_opportunities:
         created = o.get("createdAt", "")
-        if created and START_DATE < created <= END_DATE:
+        if created and START_DATE <= created <= END_DATE:
             recent_opportunities.append(o)
 
-    print(f"✅ Opportunities after last entry: {len(recent_opportunities)}\n")
+    print(f"✅ Opportunities from Nov 27 to Dec 7: {len(recent_opportunities)}\n")
 
     # -------------------------------
     # STEP 3: FILTER PIPELINES
@@ -366,11 +367,12 @@ def fetch_all_november_opportunities():
             print(f"✅ Stored Opportunity {stored_count}: {name[:30]}")
 
             # -------------------------------------------------------------------
-            # NEW: CREATE LEAD if createdAt is after cutoff time (2025-11-28T07:18:26.555Z)
+            # NEW: CREATE LEAD if createdAt is from Nov 27 onwards
+            # (Duplicates are allowed - will be handled separately)
             # -------------------------------------------------------------------
-            if is_after_cutoff_time(created_at):
+            if is_from_nov_27_onwards(created_at):
 
-                print(f"➡️ Creating LEAD for contactId {contact_id} (created after cutoff time)")
+                print(f"➡️ Creating LEAD for contactId {contact_id} (created from Nov 27 onwards)")
 
                 # Split name
                 first_name, last_name = split_name(contact_name)

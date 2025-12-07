@@ -69,8 +69,8 @@ class StreamUtils {
   // Classifies a form score into a tier.
   static FormScoreTier getFormScoreTier(double? score) {
     if (score == null) return FormScoreTier.none;
-    if (score >= 10) return FormScoreTier.high;
-    if (score >= 5) return FormScoreTier.mid;
+    if (score >= 20) return FormScoreTier.high;
+    if (score >= 5 && score <= 19) return FormScoreTier.mid;
     return FormScoreTier.low;
   }
 
