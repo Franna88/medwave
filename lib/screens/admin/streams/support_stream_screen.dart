@@ -6,6 +6,7 @@ import '../../../services/firebase/support_ticket_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/stream_utils.dart';
+import '../../../widgets/common/score_badge.dart';
 
 class SupportStreamScreen extends StatefulWidget {
   const SupportStreamScreen({super.key});
@@ -287,6 +288,15 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
   }
 
   Widget _buildStageColumn(StreamStage stage, List<SupportTicket> tickets) {
+    final sortedTickets = StreamUtils.sortByFormScore(
+      tickets,
+      (ticket) => ticket.formScore,
+    );
+    final tieredTickets = StreamUtils.withTierSeparators(
+      sortedTickets,
+      (ticket) => ticket.formScore,
+    );
+
     return Container(
       width: 320,
       margin: const EdgeInsets.only(right: 16),
@@ -389,9 +399,23 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.all(12),
-                          itemCount: tickets.length,
+                          itemCount: tieredTickets.length,
                           itemBuilder: (context, index) {
-                            final ticket = tickets[index];
+                            final entry = tieredTickets[index];
+
+                            if (entry.isDivider) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
+                                child: Container(
+                                  height: 2,
+                                  color: Colors.grey.shade400,
+                                ),
+                              );
+                            }
+
+                            final ticket = entry.item!;
                             final isFinal = StreamUtils.isFinalStage(
                               ticket.currentStage,
                               _stages,
@@ -531,6 +555,8 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               const Spacer(),
+              if (ticket.formScore != null) ScoreBadge(score: ticket.formScore),
+              if (ticket.formScore != null) const SizedBox(width: 8),
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
                 onSelected: (stageId) => _moveTicketToStage(ticket, stageId),

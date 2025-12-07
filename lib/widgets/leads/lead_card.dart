@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/leads/lead.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/stream_utils.dart';
 
 /// Compact card widget for displaying a lead in the Kanban board
 class LeadCard extends StatelessWidget {
@@ -237,6 +238,36 @@ class LeadCard extends StatelessWidget {
                   ],
                 ),
               ],
+
+              if (lead.formScore != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getScoreColor().withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: _getScoreColor().withOpacity(0.3),
+                        ),
+                      ),
+                      child: Text(
+                        'Score ${lead.formScore!.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: _getScoreColor(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -267,6 +298,20 @@ class LeadCard extends StatelessWidget {
       return Colors.orange;
     } else {
       return Colors.red;
+    }
+  }
+
+  Color _getScoreColor() {
+    final tier = StreamUtils.getFormScoreTier(lead.formScore);
+    switch (tier) {
+      case FormScoreTier.high:
+        return Colors.green;
+      case FormScoreTier.mid:
+        return Colors.orange;
+      case FormScoreTier.low:
+        return Colors.red;
+      case FormScoreTier.none:
+        return Colors.grey;
     }
   }
 }

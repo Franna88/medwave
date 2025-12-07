@@ -423,6 +423,15 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
   }
 
   Widget _buildStageColumn(StreamStage stage, List<Lead> leads) {
+    final sortedLeads = StreamUtils.sortByFormScore(
+      leads,
+      (lead) => lead.formScore,
+    );
+    final tieredLeads = StreamUtils.withTierSeparators<Lead>(
+      sortedLeads,
+      (lead) => lead.formScore,
+    );
+
     return Container(
       width: 320,
       margin: const EdgeInsets.only(right: 16),
@@ -525,9 +534,23 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.all(12),
-                          itemCount: leads.length,
+                          itemCount: tieredLeads.length,
                           itemBuilder: (context, index) {
-                            final lead = leads[index];
+                            final entry = tieredLeads[index];
+
+                            if (entry.isDivider) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
+                                child: Container(
+                                  height: 2,
+                                  color: Colors.grey.shade400,
+                                ),
+                              );
+                            }
+
+                            final lead = entry.item!;
                             final isFinal = StreamUtils.isFinalStage(
                               lead.currentStage,
                               _stages,

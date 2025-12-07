@@ -21,6 +21,7 @@ class Order {
   final String createdBy;
   final String? createdByName;
   final String? convertedToTicketId; // Set when moved to Support
+  final double? formScore;
 
   Order({
     required this.id,
@@ -42,6 +43,7 @@ class Order {
     required this.createdBy,
     this.createdByName,
     this.convertedToTicketId,
+    this.formScore,
   });
 
   /// Get time in current stage
@@ -73,7 +75,8 @@ class Order {
       phone: map['phone']?.toString() ?? '',
       currentStage: map['currentStage']?.toString() ?? '',
       orderDate: (map['orderDate'] as Timestamp?)?.toDate(),
-      items: (map['items'] as List<dynamic>?)
+      items:
+          (map['items'] as List<dynamic>?)
               ?.map((i) => OrderItem.fromMap(i as Map<String, dynamic>))
               .toList() ??
           [],
@@ -84,17 +87,25 @@ class Order {
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       stageEnteredAt:
           (map['stageEnteredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      stageHistory: (map['stageHistory'] as List<dynamic>?)
-              ?.map((h) => OrderStageHistoryEntry.fromMap(h as Map<String, dynamic>))
+      stageHistory:
+          (map['stageHistory'] as List<dynamic>?)
+              ?.map(
+                (h) =>
+                    OrderStageHistoryEntry.fromMap(h as Map<String, dynamic>),
+              )
               .toList() ??
           [],
-      notes: (map['notes'] as List<dynamic>?)
+      notes:
+          (map['notes'] as List<dynamic>?)
               ?.map((n) => OrderNote.fromMap(n as Map<String, dynamic>))
               .toList() ??
           [],
       createdBy: map['createdBy']?.toString() ?? '',
       createdByName: map['createdByName']?.toString(),
       convertedToTicketId: map['convertedToTicketId']?.toString(),
+      formScore: map['formScore'] != null
+          ? (map['formScore'] as num?)?.toDouble()
+          : null,
     );
   }
 
@@ -107,9 +118,13 @@ class Order {
       'currentStage': currentStage,
       'orderDate': orderDate != null ? Timestamp.fromDate(orderDate!) : null,
       'items': items.map((i) => i.toMap()).toList(),
-      'deliveryDate': deliveryDate != null ? Timestamp.fromDate(deliveryDate!) : null,
+      'deliveryDate': deliveryDate != null
+          ? Timestamp.fromDate(deliveryDate!)
+          : null,
       'invoiceNumber': invoiceNumber,
-      'installDate': installDate != null ? Timestamp.fromDate(installDate!) : null,
+      'installDate': installDate != null
+          ? Timestamp.fromDate(installDate!)
+          : null,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'stageEnteredAt': Timestamp.fromDate(stageEnteredAt),
@@ -118,6 +133,7 @@ class Order {
       'createdBy': createdBy,
       'createdByName': createdByName,
       'convertedToTicketId': convertedToTicketId,
+      'formScore': formScore,
     };
   }
 
@@ -141,6 +157,7 @@ class Order {
     String? createdBy,
     String? createdByName,
     String? convertedToTicketId,
+    double? formScore,
   }) {
     return Order(
       id: id ?? this.id,
@@ -162,6 +179,7 @@ class Order {
       createdBy: createdBy ?? this.createdBy,
       createdByName: createdByName ?? this.createdByName,
       convertedToTicketId: convertedToTicketId ?? this.convertedToTicketId,
+      formScore: formScore ?? this.formScore,
     );
   }
 }
@@ -172,11 +190,7 @@ class OrderItem {
   final int quantity;
   final double? price;
 
-  OrderItem({
-    required this.name,
-    required this.quantity,
-    this.price,
-  });
+  OrderItem({required this.name, required this.quantity, this.price});
 
   factory OrderItem.fromMap(Map<String, dynamic> map) {
     return OrderItem(
@@ -187,11 +201,7 @@ class OrderItem {
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'quantity': quantity,
-      'price': price,
-    };
+    return {'name': name, 'quantity': quantity, 'price': price};
   }
 }
 
@@ -260,4 +270,3 @@ class OrderNote {
     };
   }
 }
-

@@ -1,5 +1,7 @@
 import '../models/streams/stream_stage.dart';
 
+enum FormScoreTier { high, mid, low, none }
+
 // Utility functions for stream drag-and-drop validation and stage management
 class StreamUtils {
   // Only allows forward movement to the next immediate stage (position + 1)
@@ -62,5 +64,82 @@ class StreamUtils {
       orElse: () => throw Exception('Stage not found: $stageId'),
     );
     return stage.position;
+  }
+
+  // Classifies a form score into a tier.
+  static FormScoreTier getFormScoreTier(double? score) {
+    if (score == null) return FormScoreTier.none;
+    if (score >= 10) return FormScoreTier.high;
+    if (score >= 5) return FormScoreTier.mid;
+    return FormScoreTier.low;
+  }
+
+  // Sorts any list by form score tiers (high > mid > low > none) and
+  static List<T> sortByFormScore<T>(
+    List<T> items,
+    double? Function(T item) getScore,
+  ) {
+    final indexed = items
+        .asMap()
+        .entries
+        .map(
+          (entry) => (
+            item: entry.value,
+            index: entry.key,
+            score: getScore(entry.value),
+          ),
+        )
+        .toList();
+
+    int tierPriority(FormScoreTier tier) {
+      switch (tier) {
+        case FormScoreTier.high:
+          return 0;
+        case FormScoreTier.mid:
+          return 1;
+        case FormScoreTier.low:
+          return 2;
+        case FormScoreTier.none:
+          return 3;
+      }
+    }
+
+    indexed.sort((a, b) {
+      final tierA = getFormScoreTier(a.score);
+      final tierB = getFormScoreTier(b.score);
+
+      final tierCompare = tierPriority(tierA).compareTo(tierPriority(tierB));
+      if (tierCompare != 0) return tierCompare;
+
+      if (a.score != null && b.score != null) {
+        final scoreCompare = b.score!.compareTo(a.score!);
+        if (scoreCompare != 0) return scoreCompare;
+      }
+
+      return a.index.compareTo(b.index);
+    });
+
+    return indexed.map((e) => e.item).toList();
+  }
+
+  // Adds light-weight tier separators for already sorted items.
+  static List<({T? item, bool isDivider, FormScoreTier? tier})>
+  withTierSeparators<T>(
+    List<T> sortedItems,
+    double? Function(T item) getScore,
+  ) {
+    final result = <({T? item, bool isDivider, FormScoreTier? tier})>[];
+    FormScoreTier? lastTier;
+
+    for (final item in sortedItems) {
+      final tier = getFormScoreTier(getScore(item));
+      if (lastTier != null && tier != lastTier) {
+        result.add((item: null, isDivider: true, tier: tier));
+      }
+      result.add((item: item, isDivider: false, tier: tier));
+      lastTier = tier;
+    }
+
+    return result;
   }
 }

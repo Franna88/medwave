@@ -1,12 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Priority levels for support tickets
-enum TicketPriority {
-  low,
-  medium,
-  high,
-  urgent,
-}
+enum TicketPriority { low, medium, high, urgent }
 
 /// Model for a support ticket in the Support stream
 class SupportTicket {
@@ -27,6 +22,7 @@ class SupportTicket {
   final List<TicketNote> notes;
   final String createdBy;
   final String? createdByName;
+  final double? formScore;
 
   SupportTicket({
     required this.id,
@@ -46,6 +42,7 @@ class SupportTicket {
     this.notes = const [],
     required this.createdBy,
     this.createdByName,
+    this.formScore,
   });
 
   /// Get time in current stage
@@ -101,16 +98,24 @@ class SupportTicket {
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       stageEnteredAt:
           (map['stageEnteredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      stageHistory: (map['stageHistory'] as List<dynamic>?)
-              ?.map((h) => TicketStageHistoryEntry.fromMap(h as Map<String, dynamic>))
+      stageHistory:
+          (map['stageHistory'] as List<dynamic>?)
+              ?.map(
+                (h) =>
+                    TicketStageHistoryEntry.fromMap(h as Map<String, dynamic>),
+              )
               .toList() ??
           [],
-      notes: (map['notes'] as List<dynamic>?)
+      notes:
+          (map['notes'] as List<dynamic>?)
               ?.map((n) => TicketNote.fromMap(n as Map<String, dynamic>))
               .toList() ??
           [],
       createdBy: map['createdBy']?.toString() ?? '',
       createdByName: map['createdByName']?.toString(),
+      formScore: map['formScore'] != null
+          ? (map['formScore'] as num?)?.toDouble()
+          : null,
     );
   }
 
@@ -132,6 +137,7 @@ class SupportTicket {
       'notes': notes.map((n) => n.toMap()).toList(),
       'createdBy': createdBy,
       'createdByName': createdByName,
+      'formScore': formScore,
     };
   }
 
@@ -153,6 +159,7 @@ class SupportTicket {
     List<TicketNote>? notes,
     String? createdBy,
     String? createdByName,
+    double? formScore,
   }) {
     return SupportTicket(
       id: id ?? this.id,
@@ -172,6 +179,7 @@ class SupportTicket {
       notes: notes ?? this.notes,
       createdBy: createdBy ?? this.createdBy,
       createdByName: createdByName ?? this.createdByName,
+      formScore: formScore ?? this.formScore,
     );
   }
 }
@@ -241,4 +249,3 @@ class TicketNote {
     };
   }
 }
-

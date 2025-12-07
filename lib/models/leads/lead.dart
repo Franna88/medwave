@@ -40,6 +40,7 @@ class Lead {
   final String? utmAd;
   final String? utmAdId;
   final String? fbclid;
+  final double? formScore;
 
   Lead({
     required this.id,
@@ -78,6 +79,7 @@ class Lead {
     this.utmAd,
     this.utmAdId,
     this.fbclid,
+    this.formScore,
   });
 
   /// Get full name
@@ -198,6 +200,9 @@ class Lead {
       utmAd: map['utmAd']?.toString(),
       utmAdId: map['utmAdId']?.toString(),
       fbclid: map['fbclid']?.toString(),
+      formScore: map['formScore'] != null
+          ? (map['formScore'] as num?)?.toDouble()
+          : null,
     );
   }
 
@@ -240,6 +245,7 @@ class Lead {
       'utmAd': utmAd,
       'utmAdId': utmAdId,
       'fbclid': fbclid,
+      'formScore': formScore,
     };
   }
 
@@ -280,6 +286,7 @@ class Lead {
     String? utmAd,
     String? utmAdId,
     String? fbclid,
+    double? formScore,
   }) {
     return Lead(
       id: id ?? this.id,
@@ -320,6 +327,7 @@ class Lead {
       utmAd: utmAd ?? this.utmAd,
       utmAdId: utmAdId ?? this.utmAdId,
       fbclid: fbclid ?? this.fbclid,
+      formScore: formScore ?? this.formScore,
     );
   }
 }
@@ -341,7 +349,7 @@ class StageHistoryEntry {
   factory StageHistoryEntry.fromMap(Map<String, dynamic> map) {
     // Handle both String and Map formats for backward compatibility
     dynamic noteValue = map['note'];
-    
+
     // If note is a Map, preserve it as Map
     if (noteValue is Map) {
       noteValue = Map<String, dynamic>.from(noteValue);

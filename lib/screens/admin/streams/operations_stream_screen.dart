@@ -6,6 +6,7 @@ import '../../../services/firebase/order_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/stream_utils.dart';
+import '../../../widgets/common/score_badge.dart';
 
 class OperationsStreamScreen extends StatefulWidget {
   const OperationsStreamScreen({super.key});
@@ -282,6 +283,15 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
   }
 
   Widget _buildStageColumn(StreamStage stage, List<models.Order> orders) {
+    final sortedOrders = StreamUtils.sortByFormScore(
+      orders,
+      (order) => order.formScore,
+    );
+    final tieredOrders = StreamUtils.withTierSeparators(
+      sortedOrders,
+      (order) => order.formScore,
+    );
+
     return Container(
       width: 320,
       margin: const EdgeInsets.only(right: 16),
@@ -384,9 +394,23 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.all(12),
-                          itemCount: orders.length,
+                          itemCount: tieredOrders.length,
                           itemBuilder: (context, index) {
-                            final order = orders[index];
+                            final entry = tieredOrders[index];
+
+                            if (entry.isDivider) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
+                                child: Container(
+                                  height: 2,
+                                  color: Colors.grey.shade400,
+                                ),
+                              );
+                            }
+
+                            final order = entry.item!;
                             final isFinal = StreamUtils.isFinalStage(
                               order.currentStage,
                               _stages,
@@ -510,6 +534,8 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               const Spacer(),
+              if (order.formScore != null) ScoreBadge(score: order.formScore),
+              if (order.formScore != null) const SizedBox(width: 8),
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
                 onSelected: (stageId) => _moveOrderToStage(order, stageId),

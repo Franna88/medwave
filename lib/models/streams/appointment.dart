@@ -20,6 +20,7 @@ class SalesAppointment {
   final String createdBy;
   final String? createdByName;
   final String? convertedToOrderId; // Set when moved to Operations
+  final double? formScore;
 
   SalesAppointment({
     required this.id,
@@ -40,6 +41,7 @@ class SalesAppointment {
     required this.createdBy,
     this.createdByName,
     this.convertedToOrderId,
+    this.formScore,
   });
 
   /// Get time in current stage
@@ -78,17 +80,28 @@ class SalesAppointment {
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       stageEnteredAt:
           (map['stageEnteredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      stageHistory: (map['stageHistory'] as List<dynamic>?)
-              ?.map((h) => SalesAppointmentStageHistoryEntry.fromMap(h as Map<String, dynamic>))
+      stageHistory:
+          (map['stageHistory'] as List<dynamic>?)
+              ?.map(
+                (h) => SalesAppointmentStageHistoryEntry.fromMap(
+                  h as Map<String, dynamic>,
+                ),
+              )
               .toList() ??
           [],
-      notes: (map['notes'] as List<dynamic>?)
-              ?.map((n) => SalesAppointmentNote.fromMap(n as Map<String, dynamic>))
+      notes:
+          (map['notes'] as List<dynamic>?)
+              ?.map(
+                (n) => SalesAppointmentNote.fromMap(n as Map<String, dynamic>),
+              )
               .toList() ??
           [],
       createdBy: map['createdBy']?.toString() ?? '',
       createdByName: map['createdByName']?.toString(),
       convertedToOrderId: map['convertedToOrderId']?.toString(),
+      formScore: map['formScore'] != null
+          ? (map['formScore'] as num?)?.toDouble()
+          : null,
     );
   }
 
@@ -99,7 +112,9 @@ class SalesAppointment {
       'email': email,
       'phone': phone,
       'currentStage': currentStage,
-      'appointmentDate': appointmentDate != null ? Timestamp.fromDate(appointmentDate!) : null,
+      'appointmentDate': appointmentDate != null
+          ? Timestamp.fromDate(appointmentDate!)
+          : null,
       'appointmentTime': appointmentTime,
       'depositAmount': depositAmount,
       'depositPaid': depositPaid,
@@ -111,6 +126,7 @@ class SalesAppointment {
       'createdBy': createdBy,
       'createdByName': createdByName,
       'convertedToOrderId': convertedToOrderId,
+      'formScore': formScore,
     };
   }
 
@@ -133,6 +149,7 @@ class SalesAppointment {
     String? createdBy,
     String? createdByName,
     String? convertedToOrderId,
+    double? formScore,
   }) {
     return SalesAppointment(
       id: id ?? this.id,
@@ -153,6 +170,7 @@ class SalesAppointment {
       createdBy: createdBy ?? this.createdBy,
       createdByName: createdByName ?? this.createdByName,
       convertedToOrderId: convertedToOrderId ?? this.convertedToOrderId,
+      formScore: formScore ?? this.formScore,
     );
   }
 }
@@ -222,4 +240,3 @@ class SalesAppointmentNote {
     };
   }
 }
-

@@ -6,6 +6,7 @@ import '../../../services/firebase/sales_appointment_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/stream_utils.dart';
+import '../../../widgets/common/score_badge.dart';
 
 class SalesStreamScreen extends StatefulWidget {
   const SalesStreamScreen({super.key});
@@ -292,6 +293,15 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     StreamStage stage,
     List<models.SalesAppointment> appointments,
   ) {
+    final sortedAppointments = StreamUtils.sortByFormScore(
+      appointments,
+      (apt) => apt.formScore,
+    );
+    final tieredAppointments = StreamUtils.withTierSeparators(
+      sortedAppointments,
+      (apt) => apt.formScore,
+    );
+
     return Container(
       width: 320,
       margin: const EdgeInsets.only(right: 16),
@@ -394,9 +404,23 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.all(12),
-                          itemCount: appointments.length,
+                          itemCount: tieredAppointments.length,
                           itemBuilder: (context, index) {
-                            final appointment = appointments[index];
+                            final entry = tieredAppointments[index];
+
+                            if (entry.isDivider) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
+                                child: Container(
+                                  height: 2,
+                                  color: Colors.grey.shade400,
+                                ),
+                              );
+                            }
+
+                            final appointment = entry.item!;
                             final isFinal = StreamUtils.isFinalStage(
                               appointment.currentStage,
                               _stages,
@@ -524,6 +548,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
               const Spacer(),
+              if (appointment.formScore != null)
+                ScoreBadge(score: appointment.formScore),
+              if (appointment.formScore != null) const SizedBox(width: 8),
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
                 onSelected: (stageId) =>
