@@ -5,6 +5,7 @@ import '../../../models/streams/stream_stage.dart';
 import '../../../services/firebase/order_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../utils/stream_utils.dart';
 
 class OperationsStreamScreen extends StatefulWidget {
   const OperationsStreamScreen({super.key});
@@ -67,7 +68,9 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
   }
 
   List<models.Order> _getOrdersForStage(String stageId) {
-    return _filteredOrders.where((order) => order.currentStage == stageId).toList();
+    return _filteredOrders
+        .where((order) => order.currentStage == stageId)
+        .toList();
   }
 
   Future<void> _moveOrderToStage(models.Order order, String newStageId) async {
@@ -119,7 +122,9 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
         await _orderService.moveOrderToStage(
           orderId: order.id,
           newStage: newStageId,
-          note: noteController.text.isEmpty ? 'Moved to ${newStage.name}' : noteController.text,
+          note: noteController.text.isEmpty
+              ? 'Moved to ${newStage.name}'
+              : noteController.text,
           userId: userId,
           userName: userName,
         );
@@ -144,9 +149,9 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error moving order: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error moving order: $e')));
         }
       }
     }
@@ -171,7 +176,7 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
 
   Widget _buildHeader() {
     final totalOrders = _filteredOrders.length;
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -213,14 +218,20 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                     hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
                     prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               // Count badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -228,7 +239,11 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.local_shipping, color: Colors.white, size: 20),
+                    const Icon(
+                      Icons.local_shipping,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       '$totalOrders orders',
@@ -245,10 +260,7 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
           const SizedBox(height: 12),
           const Text(
             'Orders from Sales stream',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70),
           ),
         ],
       ),
@@ -281,7 +293,9 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Color(int.parse(stage.color.replaceFirst('#', '0xff'))),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
             ),
             child: Row(
               children: [
@@ -296,7 +310,10 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
@@ -315,18 +332,32 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
           // Orders list with DragTarget
           Expanded(
             child: DragTarget<models.Order>(
-              onWillAcceptWithDetails: (details) => details.data.currentStage != stage.id,
-              onAcceptWithDetails: (details) => _moveOrderToStage(details.data, stage.id),
+              onWillAcceptWithDetails: (details) {
+                // Only allow forward movement to next immediate stage
+                return StreamUtils.canMoveToStage(
+                  details.data.currentStage,
+                  stage.id,
+                  _stages,
+                );
+              },
+              onAcceptWithDetails: (details) =>
+                  _moveOrderToStage(details.data, stage.id),
               builder: (context, candidateData, rejectedData) {
                 return Container(
                   decoration: BoxDecoration(
                     color: candidateData.isNotEmpty
-                        ? Color(int.parse(stage.color.replaceFirst('#', '0xff'))).withOpacity(0.1)
+                        ? Color(
+                            int.parse(stage.color.replaceFirst('#', '0xff')),
+                          ).withOpacity(0.1)
                         : Colors.white,
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(12),
+                    ),
                     border: Border.all(
                       color: candidateData.isNotEmpty
-                          ? Color(int.parse(stage.color.replaceFirst('#', '0xff')))
+                          ? Color(
+                              int.parse(stage.color.replaceFirst('#', '0xff')),
+                            )
                           : Colors.grey.shade200,
                       width: candidateData.isNotEmpty ? 2 : 1,
                     ),
@@ -356,27 +387,40 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                           itemCount: orders.length,
                           itemBuilder: (context, index) {
                             final order = orders[index];
+                            final isFinal = StreamUtils.isFinalStage(
+                              order.currentStage,
+                              _stages,
+                            );
+                            final card = _buildOrderCard(order);
+
+                            // Gray out final stage cards
+                            final styledCard = isFinal
+                                ? Opacity(opacity: 0.6, child: card)
+                                : card;
+
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12),
-                              child: Draggable<models.Order>(
-                                data: order,
-                                feedback: Material(
-                                  elevation: 8,
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: SizedBox(
-                                    width: 280,
-                                    child: Opacity(
-                                      opacity: 0.8,
-                                      child: _buildOrderCard(order),
+                              child: isFinal
+                                  ? styledCard // Non-draggable for final stage
+                                  : Draggable<models.Order>(
+                                      data: order,
+                                      feedback: Material(
+                                        elevation: 8,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: SizedBox(
+                                          width: 280,
+                                          child: Opacity(
+                                            opacity: 0.8,
+                                            child: _buildOrderCard(order),
+                                          ),
+                                        ),
+                                      ),
+                                      childWhenDragging: Opacity(
+                                        opacity: 0.3,
+                                        child: _buildOrderCard(order),
+                                      ),
+                                      child: styledCard,
                                     ),
-                                  ),
-                                ),
-                                childWhenDragging: Opacity(
-                                  opacity: 0.3,
-                                  child: _buildOrderCard(order),
-                                ),
-                                child: _buildOrderCard(order),
-                              ),
                             );
                           },
                         ),
@@ -413,8 +457,8 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
               CircleAvatar(
                 backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
                 child: Text(
-                  order.customerName.isNotEmpty 
-                      ? order.customerName[0].toUpperCase() 
+                  order.customerName.isNotEmpty
+                      ? order.customerName[0].toUpperCase()
                       : 'O',
                   style: TextStyle(
                     color: AppTheme.primaryColor,
@@ -436,10 +480,7 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                     ),
                     Text(
                       order.email,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -474,10 +515,12 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                 onSelected: (stageId) => _moveOrderToStage(order, stageId),
                 itemBuilder: (context) => _stages
                     .where((s) => s.id != order.currentStage)
-                    .map((stage) => PopupMenuItem(
-                          value: stage.id,
-                          child: Text('Move to ${stage.name}'),
-                        ))
+                    .map(
+                      (stage) => PopupMenuItem(
+                        value: stage.id,
+                        child: Text('Move to ${stage.name}'),
+                      ),
+                    )
                     .toList(),
               ),
             ],
@@ -487,4 +530,3 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
     );
   }
 }
-

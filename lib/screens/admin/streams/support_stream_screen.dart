@@ -5,6 +5,7 @@ import '../../../models/streams/stream_stage.dart';
 import '../../../services/firebase/support_ticket_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../utils/stream_utils.dart';
 
 class SupportStreamScreen extends StatefulWidget {
   const SupportStreamScreen({super.key});
@@ -67,10 +68,15 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
   }
 
   List<SupportTicket> _getTicketsForStage(String stageId) {
-    return _filteredTickets.where((ticket) => ticket.currentStage == stageId).toList();
+    return _filteredTickets
+        .where((ticket) => ticket.currentStage == stageId)
+        .toList();
   }
 
-  Future<void> _moveTicketToStage(SupportTicket ticket, String newStageId) async {
+  Future<void> _moveTicketToStage(
+    SupportTicket ticket,
+    String newStageId,
+  ) async {
     final newStage = _stages.firstWhere((s) => s.id == newStageId);
     final oldStage = _stages.firstWhere((s) => s.id == ticket.currentStage);
 
@@ -119,7 +125,9 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
         await _ticketService.moveTicketToStage(
           ticketId: ticket.id,
           newStage: newStageId,
-          note: noteController.text.isEmpty ? 'Moved to ${newStage.name}' : noteController.text,
+          note: noteController.text.isEmpty
+              ? 'Moved to ${newStage.name}'
+              : noteController.text,
           userId: userId,
           userName: userName,
         );
@@ -133,9 +141,9 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error moving ticket: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error moving ticket: $e')));
         }
       }
     }
@@ -173,7 +181,7 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
 
   Widget _buildHeader() {
     final totalTickets = _filteredTickets.length;
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -215,14 +223,20 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
                     hintStyle: TextStyle(fontSize: 14, color: Colors.grey[400]),
                     prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
               // Count badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -230,7 +244,11 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.support_agent, color: Colors.white, size: 20),
+                    const Icon(
+                      Icons.support_agent,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       '$totalTickets tickets',
@@ -247,10 +265,7 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
           const SizedBox(height: 12),
           const Text(
             'Support tickets from Operations stream',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.white70),
           ),
         ],
       ),
@@ -283,7 +298,9 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Color(int.parse(stage.color.replaceFirst('#', '0xff'))),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
             ),
             child: Row(
               children: [
@@ -298,7 +315,10 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
@@ -317,18 +337,32 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
           // Tickets list with DragTarget
           Expanded(
             child: DragTarget<SupportTicket>(
-              onWillAcceptWithDetails: (details) => details.data.currentStage != stage.id,
-              onAcceptWithDetails: (details) => _moveTicketToStage(details.data, stage.id),
+              onWillAcceptWithDetails: (details) {
+                // Only allow forward movement to next immediate stage
+                return StreamUtils.canMoveToStage(
+                  details.data.currentStage,
+                  stage.id,
+                  _stages,
+                );
+              },
+              onAcceptWithDetails: (details) =>
+                  _moveTicketToStage(details.data, stage.id),
               builder: (context, candidateData, rejectedData) {
                 return Container(
                   decoration: BoxDecoration(
                     color: candidateData.isNotEmpty
-                        ? Color(int.parse(stage.color.replaceFirst('#', '0xff'))).withOpacity(0.1)
+                        ? Color(
+                            int.parse(stage.color.replaceFirst('#', '0xff')),
+                          ).withOpacity(0.1)
                         : Colors.white,
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(12),
+                    ),
                     border: Border.all(
                       color: candidateData.isNotEmpty
-                          ? Color(int.parse(stage.color.replaceFirst('#', '0xff')))
+                          ? Color(
+                              int.parse(stage.color.replaceFirst('#', '0xff')),
+                            )
                           : Colors.grey.shade200,
                       width: candidateData.isNotEmpty ? 2 : 1,
                     ),
@@ -358,27 +392,40 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
                           itemCount: tickets.length,
                           itemBuilder: (context, index) {
                             final ticket = tickets[index];
+                            final isFinal = StreamUtils.isFinalStage(
+                              ticket.currentStage,
+                              _stages,
+                            );
+                            final card = _buildTicketCard(ticket);
+
+                            // Gray out final stage cards
+                            final styledCard = isFinal
+                                ? Opacity(opacity: 0.6, child: card)
+                                : card;
+
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 12),
-                              child: Draggable<SupportTicket>(
-                                data: ticket,
-                                feedback: Material(
-                                  elevation: 8,
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: SizedBox(
-                                    width: 280,
-                                    child: Opacity(
-                                      opacity: 0.8,
-                                      child: _buildTicketCard(ticket),
+                              child: isFinal
+                                  ? styledCard // Non-draggable for final stage
+                                  : Draggable<SupportTicket>(
+                                      data: ticket,
+                                      feedback: Material(
+                                        elevation: 8,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: SizedBox(
+                                          width: 280,
+                                          child: Opacity(
+                                            opacity: 0.8,
+                                            child: _buildTicketCard(ticket),
+                                          ),
+                                        ),
+                                      ),
+                                      childWhenDragging: Opacity(
+                                        opacity: 0.3,
+                                        child: _buildTicketCard(ticket),
+                                      ),
+                                      child: styledCard,
                                     ),
-                                  ),
-                                ),
-                                childWhenDragging: Opacity(
-                                  opacity: 0.3,
-                                  child: _buildTicketCard(ticket),
-                                ),
-                                child: _buildTicketCard(ticket),
-                              ),
                             );
                           },
                         ),
@@ -415,8 +462,8 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
               CircleAvatar(
                 backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
                 child: Text(
-                  ticket.customerName.isNotEmpty 
-                      ? ticket.customerName[0].toUpperCase() 
+                  ticket.customerName.isNotEmpty
+                      ? ticket.customerName[0].toUpperCase()
                       : 'S',
                   style: TextStyle(
                     color: AppTheme.primaryColor,
@@ -438,10 +485,7 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
                     ),
                     Text(
                       ticket.email,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -467,7 +511,8 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
               ),
             ],
           ),
-          if (ticket.issueDescription != null && ticket.issueDescription!.isNotEmpty) ...[
+          if (ticket.issueDescription != null &&
+              ticket.issueDescription!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
               ticket.issueDescription!,
@@ -491,10 +536,12 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
                 onSelected: (stageId) => _moveTicketToStage(ticket, stageId),
                 itemBuilder: (context) => _stages
                     .where((s) => s.id != ticket.currentStage)
-                    .map((stage) => PopupMenuItem(
-                          value: stage.id,
-                          child: Text('Move to ${stage.name}'),
-                        ))
+                    .map(
+                      (stage) => PopupMenuItem(
+                        value: stage.id,
+                        child: Text('Move to ${stage.name}'),
+                      ),
+                    )
                     .toList(),
               ),
             ],
@@ -504,4 +551,3 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
     );
   }
 }
-

@@ -216,6 +216,7 @@ class StreamStage {
         position: 3,
         color: '#4CAF50', // green
         streamType: StreamType.support,
+        isFinalStage: true, // Final stage in Support stream
       ),
     ];
   }
