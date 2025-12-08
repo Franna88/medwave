@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+// Conditional import: uses web plugin on web, stub on mobile
+import 'url_strategy_stub.dart'
+    if (dart.library.html) 'url_strategy_web.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_performance/firebase_performance.dart';

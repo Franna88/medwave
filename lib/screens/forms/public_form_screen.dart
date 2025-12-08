@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
-import 'dart:html' as html;
+// Conditional import: dart:html only available on web, use stub for other platforms
+import 'html_stub.dart' if (dart.library.html) 'dart:html' as html;
 import '../../models/form/lead_form.dart';
 import '../../models/form/form_submission.dart';
 import '../../services/firebase/form_service.dart';

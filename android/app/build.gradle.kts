@@ -45,6 +45,24 @@ android {
         versionName = flutter.versionName
     }
 
+    // Google Play Photo and Video Permissions Policy Compliance
+    // Explicitly exclude broad media permissions added by image_picker plugin
+    // We use Android Photo Picker (Android 13+) and scoped storage (Android 12-)
+    // which don't require these permissions for one-time/infrequent access
+    packagingOptions {
+        resources {
+            excludes += setOf(
+                "META-INF/NOTICE",
+                "META-INF/LICENSE"
+            )
+        }
+    }
+    
+    // This ensures the permissions are properly removed during manifest merging
+    androidResources {
+        ignoreAssetsPattern = "!.svn:!.git:.*:!CVS:!thumbs.db:!picasa.ini:!*.scc:*~"
+    }
+
     signingConfigs {
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String
