@@ -19,7 +19,7 @@ Process:
 
 Output:
 - Writes to summary collection with same structure as existing
-- Processes October and November 2025 data
+- Processes December 2025 data
 """
 
 import firebase_admin
@@ -27,18 +27,15 @@ from firebase_admin import credentials, firestore
 from datetime import datetime, timedelta
 from collections import defaultdict
 import sys
+import os
 
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
-FIREBASE_CRED_PATH = '/Users/mac/dev/medwave/medx-ai-firebase-adminsdk-fbsvc-a86e7bd050.json'
-
-# Date ranges for October and November 2025
-OCTOBER_START = datetime(2025, 10, 1)
-OCTOBER_END = datetime(2025, 10, 31, 23, 59, 59)
-NOVEMBER_START = datetime(2025, 11, 1)
-NOVEMBER_END = datetime(2025, 11, 30, 23, 59, 59)
+# Date range for December 2025
+DECEMBER_START = datetime(2025, 12, 1)
+DECEMBER_END = datetime(2025, 12, 31, 23, 59, 59)
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -119,6 +116,25 @@ def is_date_in_range(date, start_date, end_date):
     
     return start_date <= date <= end_date
 
+def is_week_in_date_range(week_id, start_date, end_date):
+    """Check if a week (week_id format: YYYY-MM-DD_YYYY-MM-DD) falls within date range"""
+    try:
+        monday_str, sunday_str = week_id.split('_')
+        monday = datetime.strptime(monday_str, '%Y-%m-%d')
+        sunday = datetime.strptime(sunday_str, '%Y-%m-%d')
+        
+        # Week is in range if any part of it overlaps with the date range
+        # Check if week's Monday or Sunday falls within range, or if week completely contains the range
+        week_start = monday.date()
+        week_end = sunday.date()
+        range_start = start_date.date() if isinstance(start_date, datetime) else start_date
+        range_end = end_date.date() if isinstance(end_date, datetime) else end_date
+        
+        # Week overlaps if: week_start <= range_end AND week_end >= range_start
+        return week_start <= range_end and week_end >= range_start
+    except:
+        return False
+
 # ============================================================================
 # STEP 1: LOAD FB_ADS DATA AND GROUP BY WEEK
 # ============================================================================
@@ -158,13 +174,23 @@ def load_fb_ads_by_week(db, start_date, end_date):
         
         # Extract ad details from first insight or adDetails field
         first_insight = insights[0] if insights else {}
-        ad_details = ad_data.get('adDetails', {})
+        ad_details = ad_data.get('adDetails', {}) or {}
+        
+        # Extract adSetId with fallback logic (matching backfill_summary_adsetid.py)
+        adset_id = ad_details.get('adSetId') or ad_details.get('adsetId')
+        if not adset_id and first_insight:
+            adset_id = (
+                first_insight.get('adset_id')
+                or first_insight.get('adSetId')
+                or first_insight.get('adsetId')
+            )
+        adset_id = str(adset_id) if adset_id else ''
         
         # Store ad metadata
         ad_metadata[ad_id] = {
             'adId': ad_id,
             'adName': ad_data.get('adName', first_insight.get('ad_name', 'Unknown')),
-            'adSetId': first_insight.get('adset_id', ad_details.get('adSetId', '')),
+            'adSetId': adset_id,
             'adSetName': first_insight.get('adset_name', ad_details.get('adSetName', '')),
             'campaignId': first_insight.get('campaign_id', ad_details.get('campaignId', '')),
             'campaignName': first_insight.get('campaign_name', ad_details.get('campaignName', ''))
@@ -478,10 +504,11 @@ def build_summary_structure(weekly_fb_data, weekly_ghl_data, ad_metadata):
                 'cashCollected': 0, 'cashAmount': 0
             })
             
-            # Add ad-level data
+            # Add ad-level data (include adSetId for ad set-level queries)
             week_data['ads'][ad_id] = {
                 'adId': ad_id,
                 'adName': ad_info['adName'],
+                'adSetId': ad_info['adSetId'],  # Include adSetId for accurate ad set-level queries
                 'facebookInsights': fb_metrics.copy(),
                 'ghlData': ghl_metrics.copy()
             }
@@ -565,35 +592,44 @@ def build_summary_structure(weekly_fb_data, weekly_ghl_data, ad_metadata):
 # STEP 5: WRITE TO FIREBASE
 # ============================================================================
 
-def write_summary_to_firebase(db, summary_data, dry_run=False):
+def write_summary_to_firebase(db, summary_data, start_date, end_date, dry_run=False):
     """
-    Write summary data to Firebase summary collection
+    Write summary data to Firebase summary collection with merge logic
+    - Preserves existing weeks outside date range
+    - Recalculates weeks within date range
+    - Preserves campaign names
     """
     print(f"\n{'='*80}")
     print(f"STEP 5: WRITING TO FIREBASE")
     print(f"{'='*80}")
+    print(f"Date range: {start_date.date()} to {end_date.date()}")
     
     if dry_run:
         print("\n⚠️  DRY RUN MODE - No data will be written")
     
     total_campaigns = len(summary_data)
-    campaigns_written = 0
+    campaigns_created = 0
+    campaigns_updated = 0
+    total_weeks_preserved = 0
+    total_weeks_recalculated = 0
+    total_weeks_added = 0
     
     for campaign_id, campaign_summary in summary_data.items():
         try:
             campaign_name = campaign_summary['campaignName']
-            weeks_count = len(campaign_summary['weeks'])
+            new_weeks = campaign_summary['weeks']
+            new_weeks_count = len(new_weeks)
             
             print(f"\n  Campaign: {campaign_name[:60]}")
             print(f"  ID: {campaign_id}")
-            print(f"  Weeks: {weeks_count}")
+            print(f"  New weeks in this run: {new_weeks_count}")
             
             # Calculate totals for display
             total_spend = 0
             total_leads = 0
             total_cash = 0
             
-            for week_data in campaign_summary['weeks'].values():
+            for week_data in new_weeks.values():
                 total_spend += week_data['campaign']['facebookInsights']['spend']
                 total_leads += week_data['campaign']['ghlData']['leads']
                 total_cash += week_data['campaign']['ghlData']['cashAmount']
@@ -603,26 +639,114 @@ def write_summary_to_firebase(db, summary_data, dry_run=False):
             print(f"  Cash: R {total_cash:,.2f}")
             
             if not dry_run:
-                # Write to Firebase
                 doc_ref = db.collection('summary').document(campaign_id)
-                doc_ref.set(campaign_summary)
-                campaigns_written += 1
-                print(f"  ✅ Written to Firebase")
+                existing_doc = doc_ref.get()
+                
+                if existing_doc.exists:
+                    # Existing campaign - merge weeks
+                    existing_data = existing_doc.to_dict()
+                    existing_weeks = existing_data.get('weeks', {})
+                    
+                    # Preserve original campaign name
+                    campaign_summary['campaignName'] = existing_data.get('campaignName', campaign_name)
+                    
+                    # Identify which weeks to preserve vs recalculate
+                    weeks_to_preserve = {}
+                    weeks_recalculated = 0
+                    weeks_added = 0
+                    
+                    for week_id, week_data in existing_weeks.items():
+                        if is_week_in_date_range(week_id, start_date, end_date):
+                            # Week is in current run's date range - will be replaced
+                            weeks_recalculated += 1
+                        else:
+                            # Week is outside date range - preserve it
+                            weeks_to_preserve[week_id] = week_data
+                            total_weeks_preserved += 1
+                    
+                    # Count new weeks (not in existing)
+                    for week_id in new_weeks.keys():
+                        if week_id not in existing_weeks:
+                            weeks_added += 1
+                            total_weeks_added += 1
+                    
+                    # Merge weeks: preserve old ones outside range, add/replace new ones
+                    merged_weeks = {**weeks_to_preserve, **new_weeks}
+                    campaign_summary['weeks'] = merged_weeks
+                    
+                    # Write merged data
+                    doc_ref.set(campaign_summary)
+                    campaigns_updated += 1
+                    total_weeks_recalculated += weeks_recalculated
+                    
+                    print(f"  ✅ Updated in Firebase")
+                    print(f"     - Weeks preserved: {len(weeks_to_preserve)}")
+                    print(f"     - Weeks recalculated: {weeks_recalculated}")
+                    print(f"     - Weeks added: {weeks_added}")
+                    print(f"     - Total weeks: {len(merged_weeks)}")
+                else:
+                    # New campaign - create new document
+                    doc_ref.set(campaign_summary)
+                    campaigns_created += 1
+                    total_weeks_added += new_weeks_count
+                    print(f"  ✅ Created in Firebase")
+                    print(f"     - Weeks added: {new_weeks_count}")
             else:
-                print(f"  ✅ Would write to Firebase (dry run)")
+                # Dry run - check what would happen
+                doc_ref = db.collection('summary').document(campaign_id)
+                existing_doc = doc_ref.get()
+                
+                if existing_doc.exists:
+                    existing_data = existing_doc.to_dict()
+                    existing_weeks = existing_data.get('weeks', {})
+                    weeks_to_preserve = {}
+                    weeks_recalculated = 0
+                    weeks_added = 0
+                    
+                    for week_id, week_data in existing_weeks.items():
+                        if is_week_in_date_range(week_id, start_date, end_date):
+                            weeks_recalculated += 1
+                        else:
+                            weeks_to_preserve[week_id] = week_data
+                            total_weeks_preserved += 1
+                    
+                    for week_id in new_weeks.keys():
+                        if week_id not in existing_weeks:
+                            weeks_added += 1
+                            total_weeks_added += 1
+                    
+                    campaigns_updated += 1
+                    total_weeks_recalculated += weeks_recalculated
+                    
+                    print(f"  ✅ Would update in Firebase (dry run)")
+                    print(f"     - Weeks preserved: {len(weeks_to_preserve)}")
+                    print(f"     - Weeks recalculated: {weeks_recalculated}")
+                    print(f"     - Weeks added: {weeks_added}")
+                else:
+                    campaigns_created += 1
+                    total_weeks_added += new_weeks_count
+                    print(f"  ✅ Would create in Firebase (dry run)")
+                    print(f"     - Weeks added: {new_weeks_count}")
             
         except Exception as e:
             print(f"  ❌ Error writing campaign {campaign_id}: {e}")
+            import traceback
+            traceback.print_exc()
             continue
     
     print(f"\n{'='*80}")
     print(f"SUMMARY")
     print(f"{'='*80}")
-    print(f"Total campaigns: {total_campaigns}")
+    print(f"Total campaigns processed: {total_campaigns}")
     if not dry_run:
-        print(f"Campaigns written: {campaigns_written}")
+        print(f"  - Campaigns created: {campaigns_created}")
+        print(f"  - Campaigns updated: {campaigns_updated}")
+        print(f"  - Weeks preserved: {total_weeks_preserved}")
+        print(f"  - Weeks recalculated: {total_weeks_recalculated}")
+        print(f"  - Weeks added: {total_weeks_added}")
     else:
-        print(f"Campaigns ready to write: {total_campaigns}")
+        print(f"  - Campaigns ready to create: {campaigns_created}")
+        print(f"  - Campaigns ready to update: {campaigns_updated}")
     print(f"{'='*80}")
 
 # ============================================================================
@@ -634,77 +758,63 @@ def main():
     print("="*80)
     print("REBUILD SUMMARY COLLECTION FROM FIREBASE DATA")
     print("="*80)
-    print("Processing October and November 2025")
+    print("Processing December 2025")
     print("="*80)
     
     # Check for dry run flag
     dry_run = '--dry-run' in sys.argv
     
-    # Check for month filter
-    process_october = '--october' in sys.argv or '--all' in sys.argv or len([arg for arg in sys.argv if arg.startswith('--')]) == 0
-    process_november = '--november' in sys.argv or '--all' in sys.argv or len([arg for arg in sys.argv if arg.startswith('--')]) == 0
-    
-    # If no month specified, process both
-    if not process_october and not process_november:
-        process_october = True
-        process_november = True
-    
     # Initialize Firebase
     if not firebase_admin._apps:
-        cred = credentials.Certificate(FIREBASE_CRED_PATH)
+        # Get the directory where this script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Try to find Firebase credentials file in common locations
+        cred_paths = [
+            os.path.join(script_dir, 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json'),
+            os.path.join(script_dir, '..', 'ghl_opp_collection', 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json'),
+            os.path.join(script_dir, '..', 'ghl_data_collection', 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json'),
+            os.path.join(script_dir, '..', 'summary_collection', 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json'),
+            os.path.join(script_dir, '..', 'medx-ai-firebase-adminsdk-fbsvc-a86e7bd050.json'),
+            os.path.join(script_dir, '..', 'medx-ai-firebase-adminsdk-fbsvc-d88a6aa1a7.json')
+        ]
+        
+        cred_path = None
+        for path in cred_paths:
+            if os.path.exists(path):
+                cred_path = path
+                break
+        
+        if not cred_path:
+            raise FileNotFoundError(
+                f"Firebase credentials file not found. Tried:\n" + 
+                "\n".join(f"  - {p}" for p in cred_paths)
+            )
+        
+        cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
+        print('✅ Firebase initialized successfully\n')
     db = firestore.client()
     
-    # Process each month
-    all_summary_data = {}
+    # Process December 2025
+    print(f"\n{'='*80}")
+    print("PROCESSING DECEMBER 2025")
+    print(f"{'='*80}")
     
-    if process_october:
-        print(f"\n{'='*80}")
-        print("PROCESSING OCTOBER 2025")
-        print(f"{'='*80}")
-        
-        # Step 1: Load FB ads data
-        weekly_fb_data_oct, ad_metadata_oct = load_fb_ads_by_week(db, OCTOBER_START, OCTOBER_END)
-        
-        # Step 2: Load GHL contact mappings
-        contact_to_ad = load_ghl_contact_mappings(db)
-        
-        # Step 3: Load GHL opportunities
-        weekly_ghl_data_oct = load_ghl_opportunities_by_week(db, contact_to_ad, OCTOBER_START, OCTOBER_END)
-        
-        # Step 4: Build summary structure
-        summary_data_oct = build_summary_structure(weekly_fb_data_oct, weekly_ghl_data_oct, ad_metadata_oct)
-        
-        all_summary_data.update(summary_data_oct)
+    # Step 1: Load FB ads data
+    weekly_fb_data_dec, ad_metadata_dec = load_fb_ads_by_week(db, DECEMBER_START, DECEMBER_END)
     
-    if process_november:
-        print(f"\n{'='*80}")
-        print("PROCESSING NOVEMBER 2025")
-        print(f"{'='*80}")
-        
-        # Step 1: Load FB ads data
-        weekly_fb_data_nov, ad_metadata_nov = load_fb_ads_by_week(db, NOVEMBER_START, NOVEMBER_END)
-        
-        # Step 2: Load GHL contact mappings (reuse if already loaded)
-        if not process_october:
-            contact_to_ad = load_ghl_contact_mappings(db)
-        
-        # Step 3: Load GHL opportunities
-        weekly_ghl_data_nov = load_ghl_opportunities_by_week(db, contact_to_ad, NOVEMBER_START, NOVEMBER_END)
-        
-        # Step 4: Build summary structure
-        summary_data_nov = build_summary_structure(weekly_fb_data_nov, weekly_ghl_data_nov, ad_metadata_nov)
-        
-        # Merge with October data (combine weeks for same campaigns)
-        for campaign_id, campaign_data in summary_data_nov.items():
-            if campaign_id in all_summary_data:
-                # Merge weeks
-                all_summary_data[campaign_id]['weeks'].update(campaign_data['weeks'])
-            else:
-                all_summary_data[campaign_id] = campaign_data
+    # Step 2: Load GHL contact mappings
+    contact_to_ad = load_ghl_contact_mappings(db)
+    
+    # Step 3: Load GHL opportunities
+    weekly_ghl_data_dec = load_ghl_opportunities_by_week(db, contact_to_ad, DECEMBER_START, DECEMBER_END)
+    
+    # Step 4: Build summary structure
+    summary_data_dec = build_summary_structure(weekly_fb_data_dec, weekly_ghl_data_dec, ad_metadata_dec)
     
     # Step 5: Write to Firebase
-    write_summary_to_firebase(db, all_summary_data, dry_run=dry_run)
+    write_summary_to_firebase(db, summary_data_dec, DECEMBER_START, DECEMBER_END, dry_run=dry_run)
     
     print(f"\n{'='*80}")
     print("COMPLETE!")
