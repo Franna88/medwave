@@ -48,6 +48,8 @@ class LeadBooking {
   final String leadSource; // e.g., "Facebook Ad - Campaign X"
   final List<String> leadHistory; // Journey: ["Ad Click", "Form Submit", "Week 3 Follow-up"]
   final AICallPrompts aiPrompts;
+  final String? assignedTo; // userId of assigned Sales Admin
+  final String? assignedToName; // name of assigned Sales Admin
 
   LeadBooking({
     required this.id,
@@ -67,6 +69,8 @@ class LeadBooking {
     required this.leadSource,
     required this.leadHistory,
     required this.aiPrompts,
+    this.assignedTo,
+    this.assignedToName,
   });
 
   /// Get booking DateTime combining date and time
@@ -144,6 +148,8 @@ class LeadBooking {
           [],
       aiPrompts: AICallPrompts.fromMap(
           map['aiPrompts'] as Map<String, dynamic>? ?? {}),
+      assignedTo: map['assignedTo']?.toString(),
+      assignedToName: map['assignedToName']?.toString(),
     );
   }
 
@@ -165,6 +171,8 @@ class LeadBooking {
       'leadSource': leadSource,
       'leadHistory': leadHistory,
       'aiPrompts': aiPrompts.toMap(),
+      'assignedTo': assignedTo,
+      'assignedToName': assignedToName,
     };
   }
 
@@ -186,6 +194,8 @@ class LeadBooking {
     String? leadSource,
     List<String>? leadHistory,
     AICallPrompts? aiPrompts,
+    String? assignedTo,
+    String? assignedToName,
   }) {
     return LeadBooking(
       id: id ?? this.id,
@@ -205,6 +215,8 @@ class LeadBooking {
       leadSource: leadSource ?? this.leadSource,
       leadHistory: leadHistory ?? this.leadHistory,
       aiPrompts: aiPrompts ?? this.aiPrompts,
+      assignedTo: assignedTo ?? this.assignedTo,
+      assignedToName: assignedToName ?? this.assignedToName,
     );
   }
 

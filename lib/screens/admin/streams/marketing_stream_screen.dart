@@ -13,8 +13,11 @@ import '../../../widgets/leads/add_lead_dialog.dart';
 import '../../../widgets/leads/stage_transition_dialog.dart';
 import '../../../widgets/leads/contacted_questionnaire_dialog.dart';
 import '../../../widgets/leads/lead_detail_dialog.dart';
+import '../../../widgets/leads/booking_stage_transition_dialog.dart';
 import '../../../models/leads/lead_channel.dart';
+import '../../../models/leads/lead_booking.dart';
 import '../../../services/firebase/lead_channel_service.dart';
+import '../../../services/firebase/lead_booking_service.dart';
 
 class MarketingStreamScreen extends StatefulWidget {
   const MarketingStreamScreen({super.key});
@@ -26,6 +29,7 @@ class MarketingStreamScreen extends StatefulWidget {
 class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
   final LeadService _leadService = LeadService();
   final LeadChannelService _channelService = LeadChannelService();
+  final LeadBookingService _bookingService = LeadBookingService();
   final TextEditingController _searchController = TextEditingController();
 
   LeadChannel? _currentChannel;
@@ -215,6 +219,79 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
     final userId = authProvider.user?.uid ?? '';
     final userName = authProvider.userName;
 
+    // Check if this is the Booking stage
+    if (newStageId == 'booking') {
+      // Show booking calendar dialog
+      final bookingResult = await showDialog<BookingTransitionResult>(
+        context: context,
+        builder: (context) => BookingStageTransitionDialog(
+          lead: lead,
+          newStageName: newStage.name,
+        ),
+      );
+
+      if (bookingResult == null) return; // User cancelled
+
+      try {
+        // Create the booking
+        final booking = LeadBooking(
+          id: '', // Will be set by Firestore
+          leadId: lead.id,
+          leadName: lead.fullName,
+          leadEmail: lead.email,
+          leadPhone: lead.phone,
+          bookingDate: bookingResult.bookingDate,
+          bookingTime: bookingResult.bookingTime,
+          duration: bookingResult.duration,
+          status: BookingStatus.scheduled,
+          createdBy: userId,
+          createdByName: userName,
+          createdAt: DateTime.now(),
+          leadSource: lead.source,
+          leadHistory: [
+            'Lead Created',
+            'Contacted',
+            if (lead.followUpWeek != null) 'Follow-up Week ${lead.followUpWeek}',
+            'Booking Scheduled',
+          ],
+          aiPrompts: AICallPrompts.getDefault(),
+          assignedTo: bookingResult.assignedTo,
+          assignedToName: bookingResult.assignedToName,
+        );
+
+        final bookingId = await _bookingService.createBooking(booking);
+
+        // Move lead to Booking stage with booking info
+        await _leadService.moveLeadToStage(
+          leadId: lead.id,
+          newStage: newStageId,
+          note: bookingResult.note,
+          userId: userId,
+          userName: userName,
+          isFollowUpStage: false,
+          bookingId: bookingId,
+          bookingDate: bookingResult.bookingDate,
+          bookingStatus: 'scheduled',
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Booking created for ${bookingResult.bookingDate.day}/${bookingResult.bookingDate.month} at ${bookingResult.bookingTime}'),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error creating booking: $e')),
+          );
+        }
+      }
+      return;
+    }
+
     // Show questionnaire dialog for Contacted stage, regular dialog for others
     final result = await showDialog<StageTransitionResult>(
       context: context,
@@ -258,17 +335,6 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
               content: Text('${lead.fullName} moved to ${newStage.name}'),
             ),
           );
-
-          // Show success message if converted to appointment
-          if (newStageId == 'booking') {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Lead converted to Sales appointment!'),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 3),
-              ),
-            );
-          }
         }
       } catch (e) {
         if (mounted) {

@@ -4,9 +4,12 @@ import '../../../models/streams/appointment.dart' as models;
 import '../../../models/streams/stream_stage.dart';
 import '../../../services/firebase/sales_appointment_service.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/admin_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../utils/role_manager.dart';
 import '../../../utils/stream_utils.dart';
 import '../../../widgets/common/score_badge.dart';
+import '../../../widgets/appointments/appointment_detail_dialog.dart';
 
 class SalesStreamScreen extends StatefulWidget {
   const SalesStreamScreen({super.key});
@@ -31,6 +34,13 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     super.initState();
     _loadAppointments();
     _searchController.addListener(_onSearchChanged);
+    // Load admin users for assignment feature (Super Admin only)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      if (authProvider.userRole == UserRole.superAdmin) {
+        context.read<AdminProvider>().loadAdminUsers();
+      }
+    });
   }
 
   @override
@@ -57,15 +67,29 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
   }
 
   void _filterAppointments() {
-    if (_searchQuery.isEmpty) {
-      _filteredAppointments = _allAppointments;
-    } else {
-      _filteredAppointments = _allAppointments.where((appointment) {
-        return appointment.customerName.toLowerCase().contains(_searchQuery) ||
-            appointment.email.toLowerCase().contains(_searchQuery) ||
-            appointment.phone.contains(_searchQuery);
+    List<models.SalesAppointment> currentFilteredAppointments =
+        _allAppointments;
+
+    // 1. Apply assignment filtering based on user role
+    final authProvider = context.read<AuthProvider>();
+    final currentUserRole = authProvider.userRole;
+    final currentUserId = authProvider.user?.uid;
+
+    if (currentUserRole == UserRole.salesAdmin) {
+      currentFilteredAppointments = currentFilteredAppointments.where((apt) {
+        return apt.assignedTo == currentUserId || apt.assignedTo == null;
       }).toList();
     }
+
+    if (_searchQuery.isNotEmpty) {
+      currentFilteredAppointments = currentFilteredAppointments.where((apt) {
+        return apt.customerName.toLowerCase().contains(_searchQuery) ||
+            apt.email.toLowerCase().contains(_searchQuery) ||
+            apt.phone.contains(_searchQuery);
+      }).toList();
+    }
+
+    _filteredAppointments = currentFilteredAppointments;
   }
 
   List<models.SalesAppointment> _getAppointmentsForStage(String stageId) {
@@ -125,6 +149,14 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
 
     if (confirmed == true) {
       try {
+        String? assignedToUserId;
+        String? assignedToUserName;
+
+        if (authProvider.userRole == UserRole.salesAdmin) {
+          assignedToUserId = userId;
+          assignedToUserName = userName;
+        }
+
         await _appointmentService.moveAppointmentToStage(
           appointmentId: appointment.id,
           newStage: newStageId,
@@ -133,6 +165,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
               : noteController.text,
           userId: userId,
           userName: userName,
+          assignedTo: assignedToUserId,
+          assignedToName: assignedToUserName,
         );
 
         if (mounted) {
@@ -471,103 +505,160 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     );
   }
 
-  Widget _buildAppointmentCard(models.SalesAppointment appointment) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+  Future<void> _showAppointmentDetail(
+    models.SalesAppointment appointment,
+  ) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AppointmentDetailDialog(
+        appointment: appointment,
+        stages: _stages,
+        onAssignmentChanged: () {
+          setState(() {
+            _filterAppointments();
+          });
+        },
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                child: Text(
-                  appointment.customerName.isNotEmpty
-                      ? appointment.customerName[0].toUpperCase()
-                      : 'A',
-                  style: TextStyle(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.bold,
+    );
+  }
+
+  Widget _buildAppointmentCard(models.SalesAppointment appointment) {
+    return InkWell(
+      onTap: () => _showAppointmentDetail(appointment),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                  child: Text(
+                    appointment.customerName.isNotEmpty
+                        ? appointment.customerName[0].toUpperCase()
+                        : 'A',
+                    style: TextStyle(
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      appointment.customerName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        appointment.customerName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
+                      Text(
+                        appointment.email,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // Assigned to badge
+            if (appointment.assignedToName != null &&
+                appointment.assignedToName!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.person_outline,
+                      size: 12,
+                      color: Colors.blue[700],
                     ),
+                    const SizedBox(width: 4),
                     Text(
-                      appointment.email,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      'Assigned: ${appointment.assignedToName}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue[700],
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
-          ),
-          if (appointment.appointmentDate != null) ...[
-            const SizedBox(height: 8),
+            if (appointment.appointmentDate != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${appointment.appointmentDate!.day}/${appointment.appointmentDate!.month}/${appointment.appointmentDate!.year}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
                 const SizedBox(width: 4),
                 Text(
-                  '${appointment.appointmentDate!.day}/${appointment.appointmentDate!.month}/${appointment.appointmentDate!.year}',
+                  appointment.timeInStageDisplay,
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                const Spacer(),
+                if (appointment.formScore != null)
+                  ScoreBadge(score: appointment.formScore),
+                if (appointment.formScore != null) const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: Colors.grey[600],
+                  ),
+                  onSelected: (stageId) =>
+                      _moveAppointmentToStage(appointment, stageId),
+                  itemBuilder: (context) => _stages
+                      .where((s) => s.id != appointment.currentStage)
+                      .map(
+                        (stage) => PopupMenuItem(
+                          value: stage.id,
+                          child: Text('Move to ${stage.name}'),
+                        ),
+                      )
+                      .toList(),
                 ),
               ],
             ),
           ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
-              const SizedBox(width: 4),
-              Text(
-                appointment.timeInStageDisplay,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              const Spacer(),
-              if (appointment.formScore != null)
-                ScoreBadge(score: appointment.formScore),
-              if (appointment.formScore != null) const SizedBox(width: 8),
-              PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
-                onSelected: (stageId) =>
-                    _moveAppointmentToStage(appointment, stageId),
-                itemBuilder: (context) => _stages
-                    .where((s) => s.id != appointment.currentStage)
-                    .map(
-                      (stage) => PopupMenuItem(
-                        value: stage.id,
-                        child: Text('Move to ${stage.name}'),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

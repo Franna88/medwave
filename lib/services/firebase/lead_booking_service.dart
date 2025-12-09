@@ -1,6 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../models/leads/lead_booking.dart';
+import '../../models/streams/appointment.dart' as models;
+
+/// Internal interval type for merging overlapping time ranges
+class _TimeInterval {
+  final DateTime start;
+  final DateTime end;
+
+  _TimeInterval({required this.start, required this.end});
+}
 
 /// Service for managing lead bookings in Firestore
 class LeadBookingService {
@@ -19,6 +28,7 @@ class LeadBookingService {
         time: booking.bookingTime,
         duration: booking.duration,
         excludeBookingId: null,
+        assignedTo: booking.assignedTo,
       );
 
       if (hasConflict) {
@@ -69,8 +79,9 @@ class LeadBookingService {
   /// Stream of all bookings (for real-time updates)
   Stream<List<LeadBooking>> bookingsStream() {
     return _bookingsCollection.snapshots().map((snapshot) {
-      final bookings =
-          snapshot.docs.map((doc) => LeadBooking.fromFirestore(doc)).toList();
+      final bookings = snapshot.docs
+          .map((doc) => LeadBooking.fromFirestore(doc))
+          .toList();
       // Sort by booking date and time
       bookings.sort((a, b) => a.bookingDateTime.compareTo(b.bookingDateTime));
       return bookings;
@@ -78,22 +89,37 @@ class LeadBookingService {
   }
 
   /// Get bookings for a specific date
-  Future<List<LeadBooking>> getBookingsByDate(DateTime date) async {
+  Future<List<LeadBooking>> getBookingsByDate(
+    DateTime date, {
+    String? assignedTo,
+  }) async {
     try {
       // Start and end of day
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
-      final querySnapshot = await _bookingsCollection
-          .where('bookingDate',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('bookingDate',
-              isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-          .get();
+      Query query = _bookingsCollection
+          .where(
+            'bookingDate',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+          )
+          .where(
+            'bookingDate',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
+          );
 
-      final bookings = querySnapshot.docs
+      final querySnapshot = await query.get();
+
+      var bookings = querySnapshot.docs
           .map((doc) => LeadBooking.fromFirestore(doc))
           .toList();
+
+      // Filter by assignedTo in memory if provided (avoids composite index requirement)
+      if (assignedTo != null) {
+        bookings = bookings
+            .where((booking) => booking.assignedTo == assignedTo)
+            .toList();
+      }
 
       // Sort by time
       bookings.sort((a, b) => a.bookingTime.compareTo(b.bookingTime));
@@ -107,16 +133,22 @@ class LeadBookingService {
 
   /// Get bookings for a date range
   Future<List<LeadBooking>> getBookingsByDateRange(
-      DateTime start, DateTime end) async {
+    DateTime start,
+    DateTime end,
+  ) async {
     try {
       final startOfDay = DateTime(start.year, start.month, start.day);
       final endOfDay = DateTime(end.year, end.month, end.day, 23, 59, 59);
 
       final querySnapshot = await _bookingsCollection
-          .where('bookingDate',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('bookingDate',
-              isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .where(
+            'bookingDate',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+          )
+          .where(
+            'bookingDate',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
+          )
           .get();
 
       final bookings = querySnapshot.docs
@@ -146,16 +178,57 @@ class LeadBookingService {
     return getBookingsByDateRange(today, endDate);
   }
 
-  /// Check if a time slot has a conflict with existing bookings
-  Future<bool> checkTimeSlotConflict({
+  /// Get appointments by date and assigned admin
+  Future<List<models.SalesAppointment>> getAppointmentsByDateAndAdmin(
+    DateTime date, {
+    String? assignedTo,
+  }) async {
+    try {
+      // Start and end of day
+      final startOfDay = DateTime(date.year, date.month, date.day);
+      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+      Query query = _firestore
+          .collection('appointments')
+          .where(
+            'appointmentDate',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+          )
+          .where(
+            'appointmentDate',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
+          );
+
+      final querySnapshot = await query.get();
+      var appointments = querySnapshot.docs
+          .map((doc) => models.SalesAppointment.fromFirestore(doc))
+          .where((appt) => appt.appointmentDate != null)
+          .toList();
+
+      // Filter by assignedTo if provided
+      if (assignedTo != null) {
+        appointments = appointments
+            .where((appt) => appt.assignedTo == assignedTo)
+            .toList();
+      }
+
+      return appointments;
+    } catch (e) {
+      print('Error getting appointments by date and admin: $e');
+      return [];
+    }
+  }
+
+  /// Get sales admin availability for a specific date and time
+  /// Returns a map of adminUserId -> AdminAvailability
+  Future<Map<String, AdminAvailability>> getSalesAdminAvailability({
     required DateTime date,
     required String time,
     required int duration,
-    String? excludeBookingId,
+    required List<String> adminUserIds, // List of sales admin user IDs to check
   }) async {
     try {
-      // Get all bookings for the date
-      final existingBookings = await getBookingsByDate(date);
+      final availabilityMap = <String, AdminAvailability>{};
 
       // Parse the selected time
       final timeParts = time.split(':');
@@ -170,14 +243,184 @@ class LeadBookingService {
       );
       final selectedEnd = selectedStart.add(Duration(minutes: duration));
 
-      // Check each existing booking for overlap
+      // Get all bookings and appointments for the date
+      final allBookings = await getBookingsByDate(date);
+      final allAppointments = await getAppointmentsByDateAndAdmin(date);
+
+      // Get all available time slots for the date (to count available slots per admin)
+      const startHour = 9;
+      const endHour = 17;
+      final allTimeSlots = <String>[];
+      for (var hour = startHour; hour < endHour; hour++) {
+        for (var minute = 0; minute < 60; minute += 30) {
+          final slotEnd = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            hour,
+            minute,
+          ).add(Duration(minutes: duration));
+          if (slotEnd.hour >= endHour &&
+              (slotEnd.hour > endHour || slotEnd.minute > 0)) {
+            continue;
+          }
+          final timeString =
+              '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+          allTimeSlots.add(timeString);
+        }
+      }
+
+      // Check availability for each admin
+      for (final adminId in adminUserIds) {
+        // Filter bookings and appointments for this admin
+        final adminBookings = allBookings
+            .where((b) => b.assignedTo == adminId)
+            .toList();
+        final adminAppointments = allAppointments
+            .where((a) => a.assignedTo == adminId)
+            .toList();
+
+        // Check for conflicts at selected time
+        final conflictingBookings = <LeadBooking>[];
+        final conflictingAppointments = <models.SalesAppointment>[];
+
+        for (final booking in adminBookings) {
+          if (booking.status == BookingStatus.cancelled) continue;
+
+          final bookingStart = booking.bookingDateTime;
+          final bookingEnd = booking.bookingEndTime;
+
+          if (_timesOverlap(
+            selectedStart,
+            selectedEnd,
+            bookingStart,
+            bookingEnd,
+          )) {
+            conflictingBookings.add(booking);
+          }
+        }
+
+        for (final appointment in adminAppointments) {
+          if (appointment.appointmentDate == null ||
+              appointment.appointmentTime == null) {
+            continue;
+          }
+          if (appointment.currentStage == 'completed' ||
+              appointment.currentStage == 'cancelled') {
+            continue;
+          }
+
+          final apptTimeParts = appointment.appointmentTime!.split(':');
+          final apptHour = int.parse(apptTimeParts[0]);
+          final apptMinute = int.parse(apptTimeParts[1]);
+          final apptStart = DateTime(
+            appointment.appointmentDate!.year,
+            appointment.appointmentDate!.month,
+            appointment.appointmentDate!.day,
+            apptHour,
+            apptMinute,
+          );
+          final apptEnd = apptStart.add(const Duration(minutes: 30));
+
+          if (_timesOverlap(selectedStart, selectedEnd, apptStart, apptEnd)) {
+            conflictingAppointments.add(appointment);
+          }
+        }
+
+        final isAvailable =
+            conflictingBookings.isEmpty && conflictingAppointments.isEmpty;
+
+        // Count available slots for this admin on this date
+        int availableSlotsCount = 0;
+        for (final slotTime in allTimeSlots) {
+          bool hasConflict = false;
+
+          // Check against bookings
+          for (final booking in adminBookings) {
+            if (booking.status == BookingStatus.cancelled) continue;
+            if (booking.bookingTime == slotTime) {
+              hasConflict = true;
+              break;
+            }
+          }
+
+          // Check against appointments
+          if (!hasConflict) {
+            for (final appointment in adminAppointments) {
+              if (appointment.appointmentDate == null ||
+                  appointment.appointmentTime == null) {
+                continue;
+              }
+              if (appointment.currentStage == 'completed' ||
+                  appointment.currentStage == 'cancelled') {
+                continue;
+              }
+              if (appointment.appointmentTime == slotTime) {
+                hasConflict = true;
+                break;
+              }
+            }
+          }
+
+          if (!hasConflict) {
+            availableSlotsCount++;
+          }
+        }
+
+        availabilityMap[adminId] = AdminAvailability(
+          isAvailable: isAvailable,
+          availableSlotsCount: availableSlotsCount,
+          conflictingBookings: conflictingBookings,
+          conflictingAppointments: conflictingAppointments,
+        );
+      }
+
+      return availabilityMap;
+    } catch (e) {
+      print('Error getting sales admin availability: $e');
+      return {};
+    }
+  }
+
+  /// Check if a time slot has a conflict with existing bookings and appointments
+  Future<bool> checkTimeSlotConflict({
+    required DateTime date,
+    required String time,
+    required int duration,
+    String? excludeBookingId,
+    String? assignedTo,
+  }) async {
+    try {
+      // Get all bookings for the date (filtered by assignedTo)
+      final existingBookings = await getBookingsByDate(
+        date,
+        assignedTo: assignedTo,
+      );
+
+      // Get all appointments for the date (filtered by assignedTo)
+      final existingAppointments = await getAppointmentsByDateAndAdmin(
+        date,
+        assignedTo: assignedTo,
+      );
+
+      // Parse the selected time
+      final timeParts = time.split(':');
+      final selectedHour = int.parse(timeParts[0]);
+      final selectedMinute = int.parse(timeParts[1]);
+      final selectedStart = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        selectedHour,
+        selectedMinute,
+      );
+      final selectedEnd = selectedStart.add(Duration(minutes: duration));
+
       for (final booking in existingBookings) {
-        // Skip if this is the booking being edited
         if (excludeBookingId != null && booking.id == excludeBookingId) {
           continue;
         }
 
-        // Skip cancelled bookings
         if (booking.status == BookingStatus.cancelled) {
           continue;
         }
@@ -185,8 +428,43 @@ class LeadBookingService {
         final bookingStart = booking.bookingDateTime;
         final bookingEnd = booking.bookingEndTime;
 
+        if (_timesOverlap(
+          selectedStart,
+          selectedEnd,
+          bookingStart,
+          bookingEnd,
+        )) {
+          return true;
+        }
+      }
+
+      // Check each existing appointment for overlap
+      for (final appointment in existingAppointments) {
+        if (appointment.appointmentDate == null ||
+            appointment.appointmentTime == null) {
+          continue;
+        }
+
+        if (appointment.currentStage == 'completed' ||
+            appointment.currentStage == 'cancelled') {
+          continue;
+        }
+
+        // Parse appointment time
+        final apptTimeParts = appointment.appointmentTime!.split(':');
+        final apptHour = int.parse(apptTimeParts[0]);
+        final apptMinute = int.parse(apptTimeParts[1]);
+        final apptStart = DateTime(
+          appointment.appointmentDate!.year,
+          appointment.appointmentDate!.month,
+          appointment.appointmentDate!.day,
+          apptHour,
+          apptMinute,
+        );
+        final apptEnd = apptStart.add(const Duration(minutes: 30));
+
         // Check for time overlap
-        if (_timesOverlap(selectedStart, selectedEnd, bookingStart, bookingEnd)) {
+        if (_timesOverlap(selectedStart, selectedEnd, apptStart, apptEnd)) {
           return true; // Conflict found
         }
       }
@@ -200,30 +478,206 @@ class LeadBookingService {
 
   /// Helper method to check if two time ranges overlap
   bool _timesOverlap(
-      DateTime start1, DateTime end1, DateTime start2, DateTime end2) {
+    DateTime start1,
+    DateTime end1,
+    DateTime start2,
+    DateTime end2,
+  ) {
     // Two ranges overlap if one starts before the other ends
     return start1.isBefore(end2) && start2.isBefore(end1);
   }
 
-  /// Get available time slots for a given date
+  /// Merge overlapping intervals into disjoint intervals
+  /// Takes a list of time ranges and returns merged non-overlapping intervals
+  List<_TimeInterval> _mergeIntervals(List<_TimeInterval> intervals) {
+    if (intervals.isEmpty) return [];
+
+    // Sort by start time
+    final sorted = List<_TimeInterval>.from(intervals)
+      ..sort((a, b) => a.start.compareTo(b.start));
+
+    final merged = <_TimeInterval>[];
+    var current = sorted[0];
+
+    for (var i = 1; i < sorted.length; i++) {
+      final next = sorted[i];
+
+      // If intervals overlap or are adjacent, merge them
+      if (next.start.isBefore(current.end) ||
+          next.start.isAtSameMomentAs(current.end)) {
+        // Merge: extend current interval to include next
+        if (next.end.isAfter(current.end)) {
+          current = _TimeInterval(start: current.start, end: next.end);
+        }
+        // Otherwise, current already contains next, keep current
+      } else {
+        // No overlap, add current to merged and start new interval
+        merged.add(current);
+        current = next;
+      }
+    }
+
+    // Add the last interval
+    merged.add(current);
+
+    return merged;
+  }
+
+  /// Check if a slot overlaps with any merged intervals using binary search
+  /// Returns true if slot overlaps with any interval
+  bool _slotOverlapsMergedIntervals(
+    DateTime slotStart,
+    DateTime slotEnd,
+    List<_TimeInterval> mergedIntervals,
+  ) {
+    if (mergedIntervals.isEmpty) return false;
+
+    final slotStartMs = slotStart.millisecondsSinceEpoch;
+    final slotEndMs = slotEnd.millisecondsSinceEpoch;
+
+    // Binary search: find first interval whose end > slotStart
+    int lo = 0;
+    int hi = mergedIntervals.length - 1;
+    int firstCandidate = mergedIntervals.length;
+
+    while (lo <= hi) {
+      final mid = (lo + hi) ~/ 2;
+      final midEndMs = mergedIntervals[mid].end.millisecondsSinceEpoch;
+
+      if (midEndMs <= slotStartMs) {
+        lo = mid + 1;
+      } else {
+        firstCandidate = mid;
+        hi = mid - 1;
+      }
+    }
+
+    // Check if the candidate interval overlaps with the slot
+    if (firstCandidate < mergedIntervals.length) {
+      final interval = mergedIntervals[firstCandidate];
+      final intervalStartMs = interval.start.millisecondsSinceEpoch;
+      final intervalEndMs = interval.end.millisecondsSinceEpoch;
+
+      // Overlap condition: interval.start < slotEnd && interval.end > slotStart
+      if (intervalStartMs < slotEndMs && intervalEndMs > slotStartMs) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   Future<List<TimeSlot>> getAvailableTimeSlots({
     required DateTime date,
     required int duration,
     String? excludeBookingId,
+    String? assignedTo,
   }) async {
     try {
       final slots = <TimeSlot>[];
-
-      // Working hours: 9 AM - 5 PM
       const startHour = 9;
       const endHour = 17;
 
-      // Generate time slots every 30 minutes
+      if (assignedTo == null) {
+        for (var hour = startHour; hour < endHour; hour++) {
+          for (var minute = 0; minute < 60; minute += 30) {
+            final slotStart = DateTime(
+              date.year,
+              date.month,
+              date.day,
+              hour,
+              minute,
+            );
+            final slotEnd = slotStart.add(Duration(minutes: duration));
+
+            if (slotEnd.hour >= endHour &&
+                (slotEnd.hour > endHour || slotEnd.minute > 0)) {
+              continue;
+            }
+
+            final timeString =
+                '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+
+            slots.add(
+              TimeSlot(
+                time: timeString,
+                hour: hour,
+                minute: minute,
+                isAvailable: true,
+              ),
+            );
+          }
+        }
+        return slots;
+      }
+
+      // assignedTo is provided - check conflicts for this specific admin
+      final existingBookings = await getBookingsByDate(
+        date,
+        assignedTo: assignedTo,
+      );
+
+      final existingAppointments = await getAppointmentsByDateAndAdmin(
+        date,
+        assignedTo: assignedTo,
+      );
+
+      final activeBookings = existingBookings
+          .where((b) => b.status != BookingStatus.cancelled)
+          .where((b) => excludeBookingId == null || b.id != excludeBookingId)
+          .toList();
+
+      final activeAppointments = existingAppointments
+          .where(
+            (a) =>
+                a.appointmentDate != null &&
+                a.appointmentTime != null &&
+                a.currentStage != 'completed' &&
+                a.currentStage != 'cancelled',
+          )
+          .toList();
+
+      final bookingIntervals = activeBookings
+          .map(
+            (b) =>
+                _TimeInterval(start: b.bookingDateTime, end: b.bookingEndTime),
+          )
+          .toList();
+
+      final appointmentIntervals = activeAppointments.map((a) {
+        final timeParts = a.appointmentTime!.split(':');
+        final hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+        final start = DateTime(
+          a.appointmentDate!.year,
+          a.appointmentDate!.month,
+          a.appointmentDate!.day,
+          hour,
+          minute,
+        );
+        return _TimeInterval(
+          start: start,
+          end: start.add(const Duration(minutes: 30)),
+        );
+      }).toList();
+
+      final allIntervals = <_TimeInterval>[
+        ...bookingIntervals,
+        ...appointmentIntervals,
+      ];
+      final mergedIntervals = _mergeIntervals(allIntervals);
+
       for (var hour = startHour; hour < endHour; hour++) {
         for (var minute = 0; minute < 60; minute += 30) {
-          // Skip if this slot would end after working hours
-          final slotEnd = DateTime(date.year, date.month, date.day, hour, minute)
-              .add(Duration(minutes: duration));
+          final slotStart = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            hour,
+            minute,
+          );
+          final slotEnd = slotStart.add(Duration(minutes: duration));
+
           if (slotEnd.hour >= endHour &&
               (slotEnd.hour > endHour || slotEnd.minute > 0)) {
             continue;
@@ -232,19 +686,20 @@ class LeadBookingService {
           final timeString =
               '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 
-          final hasConflict = await checkTimeSlotConflict(
-            date: date,
-            time: timeString,
-            duration: duration,
-            excludeBookingId: excludeBookingId,
+          final hasConflict = _slotOverlapsMergedIntervals(
+            slotStart,
+            slotEnd,
+            mergedIntervals,
           );
 
-          slots.add(TimeSlot(
-            time: timeString,
-            hour: hour,
-            minute: minute,
-            isAvailable: !hasConflict,
-          ));
+          slots.add(
+            TimeSlot(
+              time: timeString,
+              hour: hour,
+              minute: minute,
+              isAvailable: !hasConflict,
+            ),
+          );
         }
       }
 
@@ -257,14 +712,65 @@ class LeadBookingService {
 
   /// Get dates with bookings in a month (for calendar indicators)
   Future<Set<DateTime>> getDatesWithBookingsInMonth(
-      int year, int month) async {
+    int year,
+    int month, {
+    String? assignedTo,
+  }) async {
     try {
       final startOfMonth = DateTime(year, month, 1);
       final endOfMonth = DateTime(year, month + 1, 0, 23, 59, 59);
 
-      final bookings = await getBookingsByDateRange(startOfMonth, endOfMonth);
+      // Get bookings for the month (filtered by assignedTo)
+      Query bookingsQuery = _bookingsCollection
+          .where(
+            'bookingDate',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
+          )
+          .where(
+            'bookingDate',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth),
+          );
 
-      // Extract unique dates
+      if (assignedTo != null) {
+        bookingsQuery = bookingsQuery.where(
+          'assignedTo',
+          isEqualTo: assignedTo,
+        );
+      }
+
+      final bookingsSnapshot = await bookingsQuery.get();
+      final bookings = bookingsSnapshot.docs
+          .map((doc) => LeadBooking.fromFirestore(doc))
+          .toList();
+
+      // Get appointments for the month (filtered by assignedTo)
+      // Note: We need to handle the case where appointmentDate might be null
+      // So we'll query and filter in memory
+      Query appointmentsQuery = _firestore
+          .collection('appointments')
+          .where(
+            'appointmentDate',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
+          )
+          .where(
+            'appointmentDate',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth),
+          );
+
+      final appointmentsSnapshot = await appointmentsQuery.get();
+      var appointments = appointmentsSnapshot.docs
+          .map((doc) => models.SalesAppointment.fromFirestore(doc))
+          .where((appt) => appt.appointmentDate != null)
+          .toList();
+
+      // Filter by assignedTo if provided
+      if (assignedTo != null) {
+        appointments = appointments
+            .where((appt) => appt.assignedTo == assignedTo)
+            .toList();
+      }
+
+      // Extract unique dates from bookings
       final datesSet = <DateTime>{};
       for (final booking in bookings) {
         final date = DateTime(
@@ -273,6 +779,18 @@ class LeadBookingService {
           booking.bookingDate.day,
         );
         datesSet.add(date);
+      }
+
+      // Extract unique dates from appointments
+      for (final appointment in appointments) {
+        if (appointment.appointmentDate != null) {
+          final date = DateTime(
+            appointment.appointmentDate!.year,
+            appointment.appointmentDate!.month,
+            appointment.appointmentDate!.day,
+          );
+          datesSet.add(date);
+        }
       }
 
       return datesSet;
@@ -284,11 +802,11 @@ class LeadBookingService {
 
   /// Update booking status
   Future<void> updateBookingStatus(
-      String bookingId, BookingStatus status) async {
+    String bookingId,
+    BookingStatus status,
+  ) async {
     try {
-      await _bookingsCollection.doc(bookingId).update({
-        'status': status.name,
-      });
+      await _bookingsCollection.doc(bookingId).update({'status': status.name});
     } catch (e) {
       print('Error updating booking status: $e');
       rethrow;
@@ -379,3 +897,18 @@ class TimeSlot {
   TimeOfDay get timeOfDay => TimeOfDay(hour: hour, minute: minute);
 }
 
+/// Model for sales admin availability information
+class AdminAvailability {
+  final bool isAvailable; // No conflict at selected time
+  final int availableSlotsCount; // Total available slots on that date
+  final List<LeadBooking> conflictingBookings; // Conflicting bookings if any
+  final List<models.SalesAppointment>
+  conflictingAppointments; // Conflicting appointments if any
+
+  AdminAvailability({
+    required this.isAvailable,
+    required this.availableSlotsCount,
+    this.conflictingBookings = const [],
+    this.conflictingAppointments = const [],
+  });
+}
