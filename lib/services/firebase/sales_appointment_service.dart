@@ -22,7 +22,9 @@ class SalesAppointmentService {
       }
 
       final snapshot = await query.get();
-      return snapshot.docs.map((doc) => models.SalesAppointment.fromFirestore(doc)).toList();
+      return snapshot.docs
+          .map((doc) => models.SalesAppointment.fromFirestore(doc))
+          .toList();
     } catch (e) {
       if (kDebugMode) {
         print('Error getting all appointments: $e');
@@ -32,14 +34,18 @@ class SalesAppointmentService {
   }
 
   /// Get appointments by stage
-  Future<List<models.SalesAppointment>> getAppointmentsByStage(String stage) async {
+  Future<List<models.SalesAppointment>> getAppointmentsByStage(
+    String stage,
+  ) async {
     try {
       final snapshot = await _firestore
           .collection('appointments')
           .where('currentStage', isEqualTo: stage)
           .get();
 
-      final appointments = snapshot.docs.map((doc) => models.SalesAppointment.fromFirestore(doc)).toList();
+      final appointments = snapshot.docs
+          .map((doc) => models.SalesAppointment.fromFirestore(doc))
+          .toList();
       // Sort in memory to avoid index requirement
       appointments.sort((a, b) => a.stageEnteredAt.compareTo(b.stageEnteredAt));
       return appointments;
@@ -54,7 +60,10 @@ class SalesAppointmentService {
   /// Get a single appointment by ID
   Future<models.SalesAppointment?> getAppointment(String appointmentId) async {
     try {
-      final doc = await _firestore.collection('appointments').doc(appointmentId).get();
+      final doc = await _firestore
+          .collection('appointments')
+          .doc(appointmentId)
+          .get();
 
       if (!doc.exists) {
         return null;
@@ -71,21 +80,22 @@ class SalesAppointmentService {
 
   /// Stream of all appointments
   Stream<List<models.SalesAppointment>> appointmentsStream() {
-    return _firestore
-        .collection('appointments')
-        .snapshots()
-        .map((snapshot) {
-          final appointments = snapshot.docs.map((doc) => models.SalesAppointment.fromFirestore(doc)).toList();
-          // Sort in memory instead of using orderBy to avoid index requirement
-          appointments.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          return appointments;
-        });
+    return _firestore.collection('appointments').snapshots().map((snapshot) {
+      final appointments = snapshot.docs
+          .map((doc) => models.SalesAppointment.fromFirestore(doc))
+          .toList();
+      // Sort in memory instead of using orderBy to avoid index requirement
+      appointments.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return appointments;
+    });
   }
 
   /// Create a new appointment
   Future<String> createAppointment(models.SalesAppointment appointment) async {
     try {
-      final docRef = await _firestore.collection('appointments').add(appointment.toMap());
+      final docRef = await _firestore
+          .collection('appointments')
+          .add(appointment.toMap());
       return docRef.id;
     } catch (e) {
       if (kDebugMode) {
@@ -105,6 +115,38 @@ class SalesAppointmentService {
     } catch (e) {
       if (kDebugMode) {
         print('Error updating appointment: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> updateAppointmentAssignment({
+    required String appointmentId,
+    String? assignedTo,
+    String? assignedToName,
+  }) async {
+    try {
+      final appointment = await getAppointment(appointmentId);
+      if (appointment == null) {
+        throw Exception('Appointment not found');
+      }
+
+      final updatedAppointment = appointment.copyWith(
+        assignedTo: assignedTo,
+        assignedToName: assignedToName,
+        updatedAt: DateTime.now(),
+      );
+
+      await updateAppointment(updatedAppointment);
+
+      if (kDebugMode) {
+        print(
+          'Updated appointment assignment: $appointmentId -> ${assignedToName ?? "Unassigned"}',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating appointment assignment: $e');
       }
       rethrow;
     }
@@ -133,6 +175,8 @@ class SalesAppointmentService {
     bool? depositPaid,
     DateTime? appointmentDate,
     String? appointmentTime,
+    String? assignedTo,
+    String? assignedToName,
   }) async {
     try {
       final appointment = await getAppointment(appointmentId);
@@ -147,22 +191,24 @@ class SalesAppointmentService {
       if (updatedHistory.isNotEmpty) {
         final lastEntry = updatedHistory.last;
         if (lastEntry.exitedAt == null) {
-          updatedHistory[updatedHistory.length - 1] =
-              models.SalesAppointmentStageHistoryEntry(
-                stage: lastEntry.stage,
-                enteredAt: lastEntry.enteredAt,
-                exitedAt: now,
-                note: note,
-              );
+          updatedHistory[updatedHistory.length -
+              1] = models.SalesAppointmentStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: now,
+            note: note,
+          );
         }
       }
 
       // Add new stage history entry
-      updatedHistory.add(models.SalesAppointmentStageHistoryEntry(
-        stage: newStage,
-        enteredAt: now,
-        note: note,
-      ));
+      updatedHistory.add(
+        models.SalesAppointmentStageHistoryEntry(
+          stage: newStage,
+          enteredAt: now,
+          note: note,
+        ),
+      );
 
       // Create note for the transition
       final transitionNote = models.SalesAppointmentNote(
@@ -185,6 +231,8 @@ class SalesAppointmentService {
         depositPaid: depositPaid ?? appointment.depositPaid,
         appointmentDate: appointmentDate ?? appointment.appointmentDate,
         appointmentTime: appointmentTime ?? appointment.appointmentTime,
+        assignedTo: assignedTo ?? appointment.assignedTo,
+        assignedToName: assignedToName ?? appointment.assignedToName,
       );
 
       await updateAppointment(updatedAppointment);
@@ -216,7 +264,7 @@ class SalesAppointmentService {
       if (appointment == null) {
         throw Exception('Appointment not found');
       }
-      
+
       // Check if already converted
       if (appointment.convertedToOrderId != null) {
         return appointment.convertedToOrderId!;
@@ -341,7 +389,8 @@ class SalesAppointmentService {
       final counts = <String, int>{};
 
       for (final appointment in appointments) {
-        counts[appointment.currentStage] = (counts[appointment.currentStage] ?? 0) + 1;
+        counts[appointment.currentStage] =
+            (counts[appointment.currentStage] ?? 0) + 1;
       }
 
       return counts;

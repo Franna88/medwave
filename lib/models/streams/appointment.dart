@@ -21,6 +21,8 @@ class SalesAppointment {
   final String? createdByName;
   final String? convertedToOrderId; // Set when moved to Operations
   final double? formScore;
+  final String? assignedTo; // userId of assigned Sales Admin
+  final String? assignedToName; // name of assigned Sales Admin
 
   SalesAppointment({
     required this.id,
@@ -42,6 +44,8 @@ class SalesAppointment {
     this.createdByName,
     this.convertedToOrderId,
     this.formScore,
+    this.assignedTo,
+    this.assignedToName,
   });
 
   /// Get time in current stage
@@ -102,6 +106,8 @@ class SalesAppointment {
       formScore: map['formScore'] != null
           ? (map['formScore'] as num?)?.toDouble()
           : null,
+      assignedTo: map['assignedTo']?.toString(),
+      assignedToName: map['assignedToName']?.toString(),
     );
   }
 
@@ -127,6 +133,8 @@ class SalesAppointment {
       'createdByName': createdByName,
       'convertedToOrderId': convertedToOrderId,
       'formScore': formScore,
+      'assignedTo': assignedTo,
+      'assignedToName': assignedToName,
     };
   }
 
@@ -150,6 +158,8 @@ class SalesAppointment {
     String? createdByName,
     String? convertedToOrderId,
     double? formScore,
+    String? assignedTo,
+    String? assignedToName,
   }) {
     return SalesAppointment(
       id: id ?? this.id,
@@ -171,6 +181,8 @@ class SalesAppointment {
       createdByName: createdByName ?? this.createdByName,
       convertedToOrderId: convertedToOrderId ?? this.convertedToOrderId,
       formScore: formScore ?? this.formScore,
+      assignedTo: assignedTo ?? this.assignedTo,
+      assignedToName: assignedToName ?? this.assignedToName,
     );
   }
 }
