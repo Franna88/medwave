@@ -3,6 +3,14 @@ import 'package:flutter/material.dart';
 import '../../models/leads/lead_booking.dart';
 import '../../models/streams/appointment.dart' as models;
 
+/// Internal interval type for merging overlapping time ranges
+class _TimeInterval {
+  final DateTime start;
+  final DateTime end;
+
+  _TimeInterval({required this.start, required this.end});
+}
+
 /// Service for managing lead bookings in Firestore
 class LeadBookingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -408,14 +416,11 @@ class LeadBookingService {
       );
       final selectedEnd = selectedStart.add(Duration(minutes: duration));
 
-      // Check each existing booking for overlap
       for (final booking in existingBookings) {
-        // Skip if this is the booking being edited
         if (excludeBookingId != null && booking.id == excludeBookingId) {
           continue;
         }
 
-        // Skip cancelled bookings
         if (booking.status == BookingStatus.cancelled) {
           continue;
         }
@@ -423,26 +428,23 @@ class LeadBookingService {
         final bookingStart = booking.bookingDateTime;
         final bookingEnd = booking.bookingEndTime;
 
-        // Check for time overlap
         if (_timesOverlap(
           selectedStart,
           selectedEnd,
           bookingStart,
           bookingEnd,
         )) {
-          return true; // Conflict found
+          return true;
         }
       }
 
       // Check each existing appointment for overlap
       for (final appointment in existingAppointments) {
-        // Skip if appointment doesn't have date/time
         if (appointment.appointmentDate == null ||
             appointment.appointmentTime == null) {
           continue;
         }
 
-        // Skip completed appointments (assuming completed means past stage)
         if (appointment.currentStage == 'completed' ||
             appointment.currentStage == 'cancelled') {
           continue;
@@ -459,7 +461,6 @@ class LeadBookingService {
           apptHour,
           apptMinute,
         );
-        // Assume 30 minutes duration for appointments (or use a default)
         final apptEnd = apptStart.add(const Duration(minutes: 30));
 
         // Check for time overlap
@@ -486,9 +487,86 @@ class LeadBookingService {
     return start1.isBefore(end2) && start2.isBefore(end1);
   }
 
-  /// Get available time slots for a given date
-  /// OPTIMIZED: Loads all bookings/appointments once, then checks all slots in memory
-  /// This reduces from 32+ queries to just 2 queries, dramatically improving performance
+  /// Merge overlapping intervals into disjoint intervals
+  /// Takes a list of time ranges and returns merged non-overlapping intervals
+  List<_TimeInterval> _mergeIntervals(List<_TimeInterval> intervals) {
+    if (intervals.isEmpty) return [];
+
+    // Sort by start time
+    final sorted = List<_TimeInterval>.from(intervals)
+      ..sort((a, b) => a.start.compareTo(b.start));
+
+    final merged = <_TimeInterval>[];
+    var current = sorted[0];
+
+    for (var i = 1; i < sorted.length; i++) {
+      final next = sorted[i];
+
+      // If intervals overlap or are adjacent, merge them
+      if (next.start.isBefore(current.end) ||
+          next.start.isAtSameMomentAs(current.end)) {
+        // Merge: extend current interval to include next
+        if (next.end.isAfter(current.end)) {
+          current = _TimeInterval(start: current.start, end: next.end);
+        }
+        // Otherwise, current already contains next, keep current
+      } else {
+        // No overlap, add current to merged and start new interval
+        merged.add(current);
+        current = next;
+      }
+    }
+
+    // Add the last interval
+    merged.add(current);
+
+    return merged;
+  }
+
+  /// Check if a slot overlaps with any merged intervals using binary search
+  /// Returns true if slot overlaps with any interval
+  bool _slotOverlapsMergedIntervals(
+    DateTime slotStart,
+    DateTime slotEnd,
+    List<_TimeInterval> mergedIntervals,
+  ) {
+    if (mergedIntervals.isEmpty) return false;
+
+    final slotStartMs = slotStart.millisecondsSinceEpoch;
+    final slotEndMs = slotEnd.millisecondsSinceEpoch;
+
+    // Binary search: find first interval whose end > slotStart
+    int lo = 0;
+    int hi = mergedIntervals.length - 1;
+    int firstCandidate = mergedIntervals.length;
+
+    while (lo <= hi) {
+      final mid = (lo + hi) ~/ 2;
+      final midEndMs = mergedIntervals[mid].end.millisecondsSinceEpoch;
+
+      if (midEndMs <= slotStartMs) {
+        lo = mid + 1;
+      } else {
+        firstCandidate = mid;
+        hi = mid - 1;
+      }
+    }
+
+    // Check if the candidate interval overlaps with the slot
+    if (firstCandidate < mergedIntervals.length) {
+      final interval = mergedIntervals[firstCandidate];
+      final intervalStartMs = interval.start.millisecondsSinceEpoch;
+      final intervalEndMs = interval.end.millisecondsSinceEpoch;
+
+      // Overlap condition: interval.start < slotEnd && interval.end > slotStart
+      if (intervalStartMs < slotEndMs && intervalEndMs > slotStartMs) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   Future<List<TimeSlot>> getAvailableTimeSlots({
     required DateTime date,
     required int duration,
@@ -496,8 +574,44 @@ class LeadBookingService {
     String? assignedTo,
   }) async {
     try {
-      // Load all bookings and appointments for the date ONCE (not per slot)
-      // This is the key optimization - reduces from 32 queries to 2 queries
+      final slots = <TimeSlot>[];
+      const startHour = 9;
+      const endHour = 17;
+
+      if (assignedTo == null) {
+        for (var hour = startHour; hour < endHour; hour++) {
+          for (var minute = 0; minute < 60; minute += 30) {
+            final slotStart = DateTime(
+              date.year,
+              date.month,
+              date.day,
+              hour,
+              minute,
+            );
+            final slotEnd = slotStart.add(Duration(minutes: duration));
+
+            if (slotEnd.hour >= endHour &&
+                (slotEnd.hour > endHour || slotEnd.minute > 0)) {
+              continue;
+            }
+
+            final timeString =
+                '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+
+            slots.add(
+              TimeSlot(
+                time: timeString,
+                hour: hour,
+                minute: minute,
+                isAvailable: true,
+              ),
+            );
+          }
+        }
+        return slots;
+      }
+
+      // assignedTo is provided - check conflicts for this specific admin
       final existingBookings = await getBookingsByDate(
         date,
         assignedTo: assignedTo,
@@ -508,7 +622,6 @@ class LeadBookingService {
         assignedTo: assignedTo,
       );
 
-      // Filter out cancelled/completed items
       final activeBookings = existingBookings
           .where((b) => b.status != BookingStatus.cancelled)
           .where((b) => excludeBookingId == null || b.id != excludeBookingId)
@@ -524,12 +637,14 @@ class LeadBookingService {
           )
           .toList();
 
-      // Pre-calculate booking and appointment time ranges for faster in-memory lookup
-      final bookingRanges = activeBookings
-          .map((b) => {'start': b.bookingDateTime, 'end': b.bookingEndTime})
+      final bookingIntervals = activeBookings
+          .map(
+            (b) =>
+                _TimeInterval(start: b.bookingDateTime, end: b.bookingEndTime),
+          )
           .toList();
 
-      final appointmentRanges = activeAppointments.map((a) {
+      final appointmentIntervals = activeAppointments.map((a) {
         final timeParts = a.appointmentTime!.split(':');
         final hour = int.parse(timeParts[0]);
         final minute = int.parse(timeParts[1]);
@@ -540,19 +655,20 @@ class LeadBookingService {
           hour,
           minute,
         );
-        return {'start': start, 'end': start.add(const Duration(minutes: 30))};
+        return _TimeInterval(
+          start: start,
+          end: start.add(const Duration(minutes: 30)),
+        );
       }).toList();
 
-      final slots = <TimeSlot>[];
+      final allIntervals = <_TimeInterval>[
+        ...bookingIntervals,
+        ...appointmentIntervals,
+      ];
+      final mergedIntervals = _mergeIntervals(allIntervals);
 
-      // Working hours: 9 AM - 5 PM
-      const startHour = 9;
-      const endHour = 17;
-
-      // Generate time slots every 30 minutes and check conflicts in memory
       for (var hour = startHour; hour < endHour; hour++) {
         for (var minute = 0; minute < 60; minute += 30) {
-          // Skip if this slot would end after working hours
           final slotStart = DateTime(
             date.year,
             date.month,
@@ -570,36 +686,11 @@ class LeadBookingService {
           final timeString =
               '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 
-          // Check conflicts in memory (much faster than individual queries)
-          bool hasConflict = false;
-
-          // Check against bookings
-          for (final range in bookingRanges) {
-            if (_timesOverlap(
-              slotStart,
-              slotEnd,
-              range['start'] as DateTime,
-              range['end'] as DateTime,
-            )) {
-              hasConflict = true;
-              break;
-            }
-          }
-
-          // Check against appointments if no booking conflict
-          if (!hasConflict) {
-            for (final range in appointmentRanges) {
-              if (_timesOverlap(
-                slotStart,
-                slotEnd,
-                range['start'] as DateTime,
-                range['end'] as DateTime,
-              )) {
-                hasConflict = true;
-                break;
-              }
-            }
-          }
+          final hasConflict = _slotOverlapsMergedIntervals(
+            slotStart,
+            slotEnd,
+            mergedIntervals,
+          );
 
           slots.add(
             TimeSlot(
