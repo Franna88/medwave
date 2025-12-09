@@ -6,6 +6,7 @@ import '../../models/leads/lead_channel.dart';
 import '../../models/form/form_submission.dart';
 import '../../models/streams/appointment.dart' as models;
 import 'sales_appointment_service.dart';
+import 'lead_booking_service.dart';
 
 /// Service for managing leads in Firebase
 class LeadService {
@@ -414,6 +415,10 @@ class LeadService {
     required String leadId,
     required String userId,
     String? userName,
+    String? assignedTo,
+    String? assignedToName,
+    DateTime? appointmentDate,
+    String? appointmentTime,
   }) async {
     try {
       final lead = await getLead(leadId);
@@ -428,6 +433,29 @@ class LeadService {
 
       final now = DateTime.now();
 
+      // If bookingId exists, fetch booking to get bookingTime and assignment
+      String? bookingTime = appointmentTime;
+      String? finalAssignedTo = assignedTo;
+      String? finalAssignedToName = assignedToName;
+      DateTime? finalAppointmentDate = appointmentDate ?? lead.bookingDate;
+
+      if (lead.bookingId != null) {
+        try {
+          final bookingService = LeadBookingService();
+          final booking = await bookingService.getBooking(lead.bookingId!);
+          if (booking != null) {
+            bookingTime = bookingTime ?? booking.bookingTime;
+            finalAssignedTo = finalAssignedTo ?? booking.assignedTo;
+            finalAssignedToName = finalAssignedToName ?? booking.assignedToName;
+            finalAppointmentDate = finalAppointmentDate ?? booking.bookingDate;
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Warning: Could not fetch booking ${lead.bookingId}: $e');
+          }
+        }
+      }
+
       // Create new appointment from lead data
       final appointment = models.SalesAppointment(
         id: '',
@@ -436,7 +464,8 @@ class LeadService {
         email: lead.email,
         phone: lead.phone,
         currentStage: 'appointments', // First stage in Sales stream
-        appointmentDate: lead.bookingDate,
+        appointmentDate: finalAppointmentDate,
+        appointmentTime: bookingTime,
         createdAt: now,
         updatedAt: now,
         stageEnteredAt: now,
@@ -457,6 +486,9 @@ class LeadService {
         ],
         createdBy: userId,
         createdByName: userName,
+        assignedTo: finalAssignedTo,
+        assignedToName: finalAssignedToName,
+        formScore: lead.formScore,
       );
 
       // Create the appointment

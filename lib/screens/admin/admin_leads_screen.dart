@@ -234,6 +234,8 @@ class _AdminLeadsScreenState extends State<AdminLeadsScreen> {
             'Booking Scheduled',
           ],
           aiPrompts: AICallPrompts.getDefault(),
+          assignedTo: bookingResult.assignedTo,
+          assignedToName: bookingResult.assignedToName,
         );
 
         final bookingId = await _bookingService.createBooking(booking);
