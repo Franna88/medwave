@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../models/streams/appointment.dart' as models;
 import '../../../models/streams/stream_stage.dart';
+import '../../../models/inventory/inventory_stock.dart';
 import '../../../services/firebase/sales_appointment_service.dart';
 import '../../../services/firebase/lead_service.dart';
 import '../../../models/leads/lead.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/product_items_provider.dart';
+import '../../../providers/inventory_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/role_manager.dart';
 import '../../../utils/stream_utils.dart';
@@ -28,7 +30,6 @@ class SalesStreamScreen extends StatefulWidget {
 class _SalesStreamScreenState extends State<SalesStreamScreen> {
   final SalesAppointmentService _appointmentService = SalesAppointmentService();
   final LeadService _leadService = LeadService();
-  final LeadBookingService _bookingService = LeadBookingService();
   final TextEditingController _searchController = TextEditingController();
 
   List<models.SalesAppointment> _allAppointments = [];
@@ -51,6 +52,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       }
       // Load product items for Opt In stage selections
       context.read<ProductItemsProvider>().listenToProducts();
+      // Load inventory stock for View Stock feature
+      context.read<InventoryProvider>().listenToInventory();
     });
   }
 
@@ -208,6 +211,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         .where((p) => p.isActive)
         .toList(growable: false);
     final selectedProductIds = <String>{};
+    final noteController = TextEditingController(
+      text: 'Manually moved to ${newStage.name}',
+    );
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1281,6 +1287,330 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         optInProducts: optInSelections ?? [],
       );
 
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${appointment.customerName} moved to ${newStage.name}',
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error moving appointment: $e')),
+          );
+        }
+      // Create the appointment
+      final appointmentId = await _appointmentService.createAppointment(
+        appointment,
+      );
+
+      // Update lead with appointment reference and opt-in products
+      final updatedLead = lead.copyWith(
+        convertedToAppointmentId: appointmentId,
+        optInNote: noteText,
+        optInProducts: optInSelections ?? [],
+        updatedAt: now,
+      );
+      await _leadService.updateLead(updatedLead);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${lead.fullName} added to Opt In'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating appointment: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _createAppointmentFromLead(String leadId) async {
+    try {
+      final lead = await _leadService.getLead(leadId);
+      if (lead == null) {
+        throw Exception('Lead not found');
+      }
+
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.user?.uid ?? '';
+      final userName = authProvider.userName;
+      final productProvider = context.read<ProductItemsProvider>();
+      final products = productProvider.items
+          .where((p) => p.isActive)
+          .toList(growable: false);
+      final selectedProductIds = <String>{};
+      final noteController = TextEditingController(
+        text: 'Manually added to Opt In',
+      );
+
+      // Show product selection dialog first
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              title: Text('Add ${lead.fullName} to Opt In'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Email: ${lead.email}'),
+                  Text('Phone: ${lead.phone}'),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: noteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Note (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Select product(s)',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 260,
+                    width: 720,
+                    child: products.isEmpty
+                        ? const Text('No products available')
+                        : Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                child: Row(
+                                  children: const [
+                                    SizedBox(width: 24),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        'Product',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        'Description',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Country',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    SizedBox(
+                                      width: 120,
+                                      child: Text(
+                                        'Price',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Divider(height: 1),
+                              const SizedBox(height: 8),
+                              Expanded(
+                                child: ListView.separated(
+                                  primary: false,
+                                  shrinkWrap: false,
+                                  itemCount: products.length,
+                                  separatorBuilder: (_, __) =>
+                                      const Divider(height: 1),
+                                  itemBuilder: (context, index) {
+                                    final product = products[index];
+                                    final isSelected = selectedProductIds
+                                        .contains(product.id);
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Checkbox(
+                                            value: isSelected,
+                                            onChanged: (checked) {
+                                              setState(() {
+                                                if (checked == true) {
+                                                  selectedProductIds.add(
+                                                    product.id,
+                                                  );
+                                                } else {
+                                                  selectedProductIds.remove(
+                                                    product.id,
+                                                  );
+                                                }
+                                              });
+                                            },
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            flex: 3,
+                                            child: Text(
+                                              product.name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 3,
+                                            child: Text(
+                                              product.description,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[700],
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              product.country,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          SizedBox(
+                                            width: 120,
+                                            child: Text(
+                                              'R ${product.price.toStringAsFixed(2)}',
+                                              textAlign: TextAlign.right,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      if (confirmed != true) return;
+
+      final now = DateTime.now();
+
+      // Create list of opt-in products
+      List<models.OptInProduct>? optInSelections;
+      if (selectedProductIds.isNotEmpty) {
+        optInSelections = selectedProductIds.map((id) {
+          final product = products.firstWhere((p) => p.id == id);
+          return models.OptInProduct(
+            id: product.id,
+            name: product.name,
+            price: product.price,
+          );
+        }).toList();
+      }
+
+      final noteText = noteController.text.isEmpty
+          ? 'Manually added to Opt In'
+          : noteController.text;
+
+      // Create appointment directly at opt_in stage with manuallyAdded flag
+      final appointment = models.SalesAppointment(
+        id: '',
+        leadId: leadId,
+        customerName: lead.fullName,
+        email: lead.email,
+        phone: lead.phone,
+        currentStage: 'opt_in',
+        appointmentDate: lead.bookingDate,
+        appointmentTime: null,
+        createdAt: now,
+        updatedAt: now,
+        stageEnteredAt: now,
+        stageHistory: [
+          models.SalesAppointmentStageHistoryEntry(
+            stage: 'opt_in',
+            enteredAt: now,
+            note: noteText,
+          ),
+        ],
+        notes: [
+          models.SalesAppointmentNote(
+            text: 'Appointment manually added from lead ${lead.id}',
+            createdAt: now,
+            createdBy: userId,
+            createdByName: userName,
+          ),
+        ],
+        createdBy: userId,
+        createdByName: userName,
+        assignedTo: authProvider.userRole == UserRole.salesAdmin
+            ? userId
+            : null,
+        assignedToName: authProvider.userRole == UserRole.salesAdmin
+            ? userName
+            : null,
+        formScore: lead.formScore,
+        manuallyAdded: true,
+        optInNote: noteText,
+        optInProducts: optInSelections ?? [],
+      );
+
       // Create the appointment
       final appointmentId = await _appointmentService.createAppointment(
         appointment,
@@ -1381,6 +1711,49 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 ),
               ),
               const SizedBox(width: 16),
+              // View Stock button
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _showStockDialog(),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.successColor,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.inventory_2,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'View Stock',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
               // Count badge
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -1420,6 +1793,382 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         ],
       ),
     );
+  }
+
+  void _showStockDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Consumer<InventoryProvider>(
+        builder: (context, inventoryProvider, child) {
+          final stockItems = inventoryProvider.allStockItems;
+          final stats = inventoryProvider.stats;
+
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              width: 800,
+              height: 600,
+              padding: const EdgeInsets.all(0),
+              child: Column(
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.inventory_2,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Inventory Stock',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                'Current stock levels from warehouse',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close, color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Stats row
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    color: Colors.grey[50],
+                    child: Row(
+                      children: [
+                        _buildStockStatChip(
+                          'Total',
+                          stats['total']?.toString() ?? '0',
+                          AppTheme.primaryColor,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildStockStatChip(
+                          'In Stock',
+                          stats['inStock']?.toString() ?? '0',
+                          AppTheme.successColor,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildStockStatChip(
+                          'Low Stock',
+                          stats['lowStock']?.toString() ?? '0',
+                          AppTheme.warningColor,
+                        ),
+                        const SizedBox(width: 12),
+                        _buildStockStatChip(
+                          'Out of Stock',
+                          stats['outOfStock']?.toString() ?? '0',
+                          AppTheme.errorColor,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Stock list
+                  Expanded(
+                    child: inventoryProvider.isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : stockItems.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.inventory_2_outlined,
+                                      size: 64,
+                                      color: Colors.grey[300],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No stock records found',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Stock will appear here once warehouse updates inventory',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[400],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.separated(
+                                padding: const EdgeInsets.all(16),
+                                itemCount: stockItems.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 8),
+                                itemBuilder: (context, index) {
+                                  final stock = stockItems[index];
+                                  return _buildStockListItem(stock);
+                                },
+                              ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStockStatChip(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: color.withOpacity(0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStockListItem(InventoryStock stock) {
+    Color statusColor;
+    IconData statusIcon;
+    String statusText;
+
+    if (stock.isOutOfStock) {
+      statusColor = AppTheme.errorColor;
+      statusIcon = Icons.error_outline;
+      statusText = 'Out of Stock';
+    } else if (stock.isLowStock) {
+      statusColor = AppTheme.warningColor;
+      statusIcon = Icons.warning_amber_outlined;
+      statusText = 'Low Stock';
+    } else {
+      statusColor = AppTheme.successColor;
+      statusIcon = Icons.check_circle_outline;
+      statusText = 'In Stock';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: stock.isLowStock || stock.isOutOfStock
+              ? statusColor.withOpacity(0.5)
+              : Colors.grey[200]!,
+          width: stock.isLowStock || stock.isOutOfStock ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Product info
+          Expanded(
+            flex: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stock.productName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 14,
+                      color: Colors.grey[500],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      stock.shelfLocation.isNotEmpty
+                          ? '${stock.warehouseLocation} - ${stock.shelfLocation}'
+                          : stock.warehouseLocation,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Quantity
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                Text(
+                  '${stock.currentQty}',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                  ),
+                ),
+                Text(
+                  'in stock',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Min level
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                Text(
+                  '${stock.minStockLevel}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  'min level',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Status badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: statusColor.withOpacity(0.5)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(statusIcon, size: 16, color: statusColor),
+                const SizedBox(width: 6),
+                Text(
+                  statusText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Last updated
+          const SizedBox(width: 16),
+          SizedBox(
+            width: 100,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'Last Updated',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey[400],
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  stock.lastStockTakeDate != null
+                      ? _formatStockDate(stock.lastStockTakeDate!)
+                      : 'Never',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatStockDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays == 0) {
+      return 'Today';
+    } else if (diff.inDays == 1) {
+      return 'Yesterday';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} days ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
   }
 
   Widget _buildKanbanBoard() {

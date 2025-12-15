@@ -5,6 +5,7 @@
 
 enum UserRole {
   practitioner('practitioner'),
+  warehouse('warehouse'),
   countryAdmin('country_admin'),
   superAdmin('super_admin'),
   marketingAdmin('marketing'),
@@ -116,11 +117,27 @@ class RoleManager {
     }
   }
 
+  /// Check if user can access warehouse/inventory features
+  static bool canAccessWarehouse(UserRole role) {
+    return role == UserRole.warehouse ||
+        role == UserRole.superAdmin ||
+        role == UserRole.countryAdmin;
+  }
+
+  /// Check if user can perform stock takes and update inventory
+  static bool canUpdateInventory(UserRole role) {
+    return role == UserRole.warehouse ||
+        role == UserRole.superAdmin ||
+        role == UserRole.countryAdmin;
+  }
+
   /// Get appropriate dashboard route based on role
   static String getDashboardRoute(UserRole role) {
     switch (role) {
       case UserRole.practitioner:
         return '/dashboard';
+      case UserRole.warehouse:
+        return '/warehouse/inventory';
       case UserRole.countryAdmin:
       case UserRole.superAdmin:
       case UserRole.marketingAdmin:
@@ -136,6 +153,8 @@ class RoleManager {
     switch (role) {
       case UserRole.practitioner:
         return 'Healthcare Practitioner';
+      case UserRole.warehouse:
+        return 'Warehouse Staff';
       case UserRole.countryAdmin:
         return 'Country Administrator';
       case UserRole.superAdmin:
@@ -253,6 +272,11 @@ class RoleManager {
                 '/admin/product-management',
                 'inventory',
               ),
+              NavigationSubItem(
+                'Contract Content',
+                '/admin/contract-content',
+                'description',
+              ),
             ],
           ),
           NavigationItem('Report Builder', '/admin/report-builder', 'build'),
@@ -327,6 +351,14 @@ class RoleManager {
         NavigationItem('Calendar', '/calendar', 'calendar_today'),
         NavigationItem('Reports', '/reports', 'assessment'),
         NavigationItem('Notifications', '/notifications', 'notifications'),
+      ];
+    }
+
+    // Warehouse staff see inventory navigation items
+    if (role == UserRole.warehouse) {
+      return [
+        NavigationItem('Inventory', '/warehouse/inventory', 'inventory_2'),
+        NavigationItem('Orders', '/warehouse/orders', 'shopping_cart'),
       ];
     }
 

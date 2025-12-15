@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 // Conditional import: uses web plugin on web, stub on mobile
@@ -62,6 +64,7 @@ import 'screens/admin/admin_report_builder_screen.dart';
 import 'screens/admin/admin_forms_screen.dart';
 import 'screens/admin/forms/form_builder_screen.dart';
 import 'screens/admin/admin_leads_screen.dart';
+import 'screens/admin/admin_contract_content_screen.dart';
 import 'screens/admin/streams/marketing_stream_screen.dart';
 import 'screens/admin/streams/sales_stream_screen.dart';
 import 'screens/admin/streams/operations_stream_screen.dart';
@@ -71,6 +74,11 @@ import 'providers/user_profile_provider.dart';
 import 'providers/admin_provider.dart';
 import 'providers/gohighlevel_provider.dart';
 import 'providers/product_items_provider.dart';
+import 'providers/contract_content_provider.dart';
+import 'providers/inventory_provider.dart';
+import 'screens/warehouse/warehouse_main_screen.dart';
+import 'screens/warehouse/inventory_list_screen.dart';
+import 'screens/warehouse/orders_placeholder_screen.dart';
 import 'services/firebase/fcm_service.dart';
 import 'services/web_image_service.dart';
 import 'utils/responsive_utils.dart';
@@ -128,10 +136,14 @@ class MedWaveApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AdminProvider()),
         // Product items provider for admin product management
         ChangeNotifierProvider(create: (_) => ProductItemsProvider()),
+        // Inventory provider for warehouse stock management
+        ChangeNotifierProvider(create: (_) => InventoryProvider()),
         // GoHighLevel CRM provider for advertisement performance monitoring
         ChangeNotifierProvider(create: (_) => GoHighLevelProvider()),
         // Performance Cost provider for ad budget and profitability tracking
         ChangeNotifierProvider(create: (_) => PerformanceCostProvider()),
+        // Contract Content provider for managing contract templates
+        ChangeNotifierProvider(create: (_) => ContractContentProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
@@ -142,6 +154,15 @@ class MedWaveApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             routerConfig: _buildRouter(authProvider),
             debugShowCheckedModeBanner: false,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              FlutterQuillLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en', 'US'),
+            ],
           );
         },
       ),
@@ -270,6 +291,12 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       // Restrict product management to super admin and country admin
       if (currentPath.startsWith('/admin/product-management') &&
           !RoleManager.canManageProducts(authProvider.userRole)) {
+        return authProvider.dashboardRoute;
+      }
+
+      // Restrict warehouse routes to warehouse role and admins
+      if (currentPath.startsWith('/warehouse') &&
+          !RoleManager.canAccessWarehouse(authProvider.userRole)) {
         return authProvider.dashboardRoute;
       }
     }
@@ -407,6 +434,11 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           builder: (context, state) => const AdminProductManagementScreen(),
         ),
         GoRoute(
+          path: '/admin/contract-content',
+          name: 'admin-contract-content',
+          builder: (context, state) => const AdminContractContentScreen(),
+        ),
+        GoRoute(
           path: '/admin/adverts',
           name: 'admin-adverts',
           redirect: (context, state) {
@@ -515,6 +547,24 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         ),
       ],
     ),
+
+    // Warehouse routes (protected) - separate shell for warehouse staff
+    ShellRoute(
+      builder: (context, state, child) => WarehouseMainScreen(child: child),
+      routes: [
+        GoRoute(
+          path: '/warehouse/inventory',
+          name: 'warehouse-inventory',
+          builder: (context, state) => const InventoryListScreen(),
+        ),
+        GoRoute(
+          path: '/warehouse/orders',
+          name: 'warehouse-orders',
+          builder: (context, state) => const OrdersPlaceholderScreen(),
+        ),
+      ],
+    ),
+
     GoRoute(
       path: '/patients/add',
       name: 'add-patient',
