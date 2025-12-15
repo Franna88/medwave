@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../../models/streams/appointment.dart' as models;
 import '../../../models/streams/stream_stage.dart';
 import '../../../services/firebase/sales_appointment_service.dart';
+import '../../../services/firebase/lead_service.dart';
+import '../../../models/leads/lead.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/product_items_provider.dart';
@@ -21,6 +23,7 @@ class SalesStreamScreen extends StatefulWidget {
 
 class _SalesStreamScreenState extends State<SalesStreamScreen> {
   final SalesAppointmentService _appointmentService = SalesAppointmentService();
+  final LeadService _leadService = LeadService();
   final TextEditingController _searchController = TextEditingController();
 
   List<models.SalesAppointment> _allAppointments = [];
@@ -117,8 +120,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     final noteController = TextEditingController();
     final isOptIn = newStageId == 'opt_in';
     final productProvider = context.read<ProductItemsProvider>();
-    final products =
-        productProvider.items.where((p) => p.isActive).toList(growable: false);
+    final products = productProvider.items
+        .where((p) => p.isActive)
+        .toList(growable: false);
     final selectedProductIds = <String>{};
 
     final confirmed = await showDialog<bool>(
@@ -159,8 +163,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                             children: [
                               // Header row
                               Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
                                 child: Row(
                                   children: const [
                                     SizedBox(width: 24), // checkbox space
@@ -221,8 +226,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                       const Divider(height: 1),
                                   itemBuilder: (context, index) {
                                     final product = products[index];
-                                    final isSelected =
-                                        selectedProductIds.contains(product.id);
+                                    final isSelected = selectedProductIds
+                                        .contains(product.id);
                                     return Padding(
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 10,
@@ -236,11 +241,13 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                             onChanged: (checked) {
                                               setState(() {
                                                 if (checked == true) {
-                                                  selectedProductIds
-                                                      .add(product.id);
+                                                  selectedProductIds.add(
+                                                    product.id,
+                                                  );
                                                 } else {
-                                                  selectedProductIds
-                                                      .remove(product.id);
+                                                  selectedProductIds.remove(
+                                                    product.id,
+                                                  );
                                                 }
                                               });
                                             },
@@ -380,6 +387,843 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
             SnackBar(content: Text('Error moving appointment: $e')),
           );
         }
+      }
+    }
+  }
+
+  Future<void> _handleManualAddToOptIn() async {
+    final searchController = TextEditingController();
+    List<models.SalesAppointment> appointmentResults = [];
+    List<Lead> leadResults = [];
+    bool isSearching = false;
+    String? selectedAppointmentId;
+    String? selectedLeadId;
+
+    final result = await showDialog<Map<String, dynamic>?>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> performSearch(String query) async {
+            if (query.trim().isEmpty) {
+              setDialogState(() {
+                appointmentResults = [];
+                leadResults = [];
+                isSearching = false;
+              });
+              return;
+            }
+
+            setDialogState(() {
+              isSearching = true;
+              appointmentResults = [];
+              leadResults = [];
+            });
+
+            try {
+              // First, search appointments
+              final appointments = await _appointmentService.searchAppointments(
+                query,
+              );
+
+              // If no appointments found, search leads
+              List<Lead> leads = [];
+              if (appointments.isEmpty) {
+                leads = await _leadService.searchLeadsAcrossAllChannels(query);
+              }
+
+              setDialogState(() {
+                appointmentResults = appointments;
+                leadResults = leads;
+                isSearching = false;
+                selectedAppointmentId = null;
+                selectedLeadId = null;
+              });
+            } catch (e) {
+              setDialogState(() {
+                isSearching = false;
+              });
+              if (mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Error searching: $e')));
+              }
+            }
+          }
+
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            title: const Text('Add Lead to Opt In'),
+            content: SizedBox(
+              width: 600,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: searchController,
+                    decoration: const InputDecoration(
+                      labelText: 'Search by name, email, or phone',
+                      hintText: 'Enter search query...',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      performSearch(value);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (isSearching)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else if (appointmentResults.isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Appointments Found:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 200,
+                          child: ListView.builder(
+                            itemCount: appointmentResults.length,
+                            itemBuilder: (context, index) {
+                              final apt = appointmentResults[index];
+                              final isSelected =
+                                  selectedAppointmentId == apt.id;
+                              return ListTile(
+                                selected: isSelected,
+                                title: Text(apt.customerName),
+                                subtitle: Text('${apt.email} • ${apt.phone}'),
+                                trailing: Text(
+                                  'Current: ${_stages.firstWhere((s) => s.id == apt.currentStage).name}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                onTap: () {
+                                  setDialogState(() {
+                                    selectedAppointmentId = apt.id;
+                                    selectedLeadId = null;
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    )
+                  else if (leadResults.isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Leads Found:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          height: 200,
+                          child: ListView.builder(
+                            itemCount: leadResults.length,
+                            itemBuilder: (context, index) {
+                              final lead = leadResults[index];
+                              final isSelected = selectedLeadId == lead.id;
+                              return ListTile(
+                                selected: isSelected,
+                                title: Text(lead.fullName),
+                                subtitle: Text('${lead.email} • ${lead.phone}'),
+                                onTap: () {
+                                  setDialogState(() {
+                                    selectedLeadId = lead.id;
+                                    selectedAppointmentId = null;
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    )
+                  else if (searchController.text.trim().isNotEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(
+                        child: Text(
+                          'No results found',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(null),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed:
+                    (selectedAppointmentId != null || selectedLeadId != null)
+                    ? () {
+                        Navigator.of(context).pop({
+                          'appointmentId': selectedAppointmentId,
+                          'leadId': selectedLeadId,
+                        });
+                      }
+                    : null,
+                child: const Text('Select'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      searchController.dispose();
+    });
+
+    if (result == null) {
+      return;
+    }
+
+    final appointmentId = result['appointmentId'] as String?;
+    final leadId = result['leadId'] as String?;
+
+    try {
+      if (appointmentId != null) {
+        // Handle appointment found
+        final appointment = _allAppointments.firstWhere(
+          (apt) => apt.id == appointmentId,
+        );
+
+        // Check if already at opt_in or beyond
+        final optInStagePosition = _stages
+            .firstWhere((s) => s.id == 'opt_in')
+            .position;
+        final currentStagePosition = _stages
+            .firstWhere((s) => s.id == appointment.currentStage)
+            .position;
+
+        if (currentStagePosition >= optInStagePosition) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'This appointment is already at Opt In stage or beyond',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Move to opt_in with product selection
+        await _moveAppointmentToStageWithProducts(appointment, 'opt_in');
+      } else if (leadId != null) {
+        // Handle lead found - create appointment at opt_in
+        await _createAppointmentFromLead(leadId);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<void> _moveAppointmentToStageWithProducts(
+    models.SalesAppointment appointment,
+    String newStageId,
+  ) async {
+    final newStage = _stages.firstWhere((s) => s.id == newStageId);
+    final oldStage = _stages.firstWhere(
+      (s) => s.id == appointment.currentStage,
+    );
+
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.user?.uid ?? '';
+    final userName = authProvider.userName;
+    final isOptIn = newStageId == 'opt_in';
+    final productProvider = context.read<ProductItemsProvider>();
+    final products = productProvider.items
+        .where((p) => p.isActive)
+        .toList(growable: false);
+    final selectedProductIds = <String>{};
+    final noteController = TextEditingController(
+      text: 'Manually moved to ${newStage.name}',
+    );
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            title: Text('Move ${appointment.customerName}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('From: ${oldStage.name}'),
+                Text('To: ${newStage.name}'),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: noteController,
+                  decoration: const InputDecoration(
+                    labelText: 'Note (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                if (isOptIn) ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Select product(s)',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 260,
+                    width: 720,
+                    child: products.isEmpty
+                        ? const Text('No products available')
+                        : Column(
+                            children: [
+                              // Header row
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                child: Row(
+                                  children: const [
+                                    SizedBox(width: 24),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        'Product',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        'Description',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Country',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    SizedBox(
+                                      width: 120,
+                                      child: Text(
+                                        'Price',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Divider(height: 1),
+                              const SizedBox(height: 8),
+                              Expanded(
+                                child: ListView.separated(
+                                  primary: false,
+                                  shrinkWrap: false,
+                                  itemCount: products.length,
+                                  separatorBuilder: (_, __) =>
+                                      const Divider(height: 1),
+                                  itemBuilder: (context, index) {
+                                    final product = products[index];
+                                    final isSelected = selectedProductIds
+                                        .contains(product.id);
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Checkbox(
+                                            value: isSelected,
+                                            onChanged: (checked) {
+                                              setState(() {
+                                                if (checked == true) {
+                                                  selectedProductIds.add(
+                                                    product.id,
+                                                  );
+                                                } else {
+                                                  selectedProductIds.remove(
+                                                    product.id,
+                                                  );
+                                                }
+                                              });
+                                            },
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            flex: 3,
+                                            child: Text(
+                                              product.name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 3,
+                                            child: Text(
+                                              product.description,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[700],
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              product.country,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          SizedBox(
+                                            width: 120,
+                                            child: Text(
+                                              'R ${product.price.toStringAsFixed(2)}',
+                                              textAlign: TextAlign.right,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Move'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        String? assignedToUserId;
+        String? assignedToUserName;
+
+        if (authProvider.userRole == UserRole.salesAdmin) {
+          assignedToUserId = userId;
+          assignedToUserName = userName;
+        }
+
+        List<models.OptInProduct>? optInSelections;
+        if (isOptIn && selectedProductIds.isNotEmpty) {
+          optInSelections = selectedProductIds.map((id) {
+            final product = products.firstWhere((p) => p.id == id);
+            return models.OptInProduct(
+              id: product.id,
+              name: product.name,
+              price: product.price,
+            );
+          }).toList();
+        }
+
+        final noteText = noteController.text.isEmpty
+            ? 'Moved to ${newStage.name}'
+            : noteController.text;
+
+        await _appointmentService.moveAppointmentToStage(
+          appointmentId: appointment.id,
+          newStage: newStageId,
+          note: noteText,
+          userId: userId,
+          userName: userName,
+          assignedTo: assignedToUserId,
+          assignedToName: assignedToUserName,
+          optInNote: isOptIn ? noteText : null,
+          optInProducts: optInSelections,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${appointment.customerName} moved to ${newStage.name}',
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error moving appointment: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _createAppointmentFromLead(String leadId) async {
+    try {
+      final lead = await _leadService.getLead(leadId);
+      if (lead == null) {
+        throw Exception('Lead not found');
+      }
+
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.user?.uid ?? '';
+      final userName = authProvider.userName;
+      final productProvider = context.read<ProductItemsProvider>();
+      final products = productProvider.items
+          .where((p) => p.isActive)
+          .toList(growable: false);
+      final selectedProductIds = <String>{};
+      final noteController = TextEditingController(
+        text: 'Manually added to Opt In',
+      );
+
+      // Show product selection dialog first
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              title: Text('Add ${lead.fullName} to Opt In'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Email: ${lead.email}'),
+                  Text('Phone: ${lead.phone}'),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: noteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Note (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Select product(s)',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 260,
+                    width: 720,
+                    child: products.isEmpty
+                        ? const Text('No products available')
+                        : Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                child: Row(
+                                  children: const [
+                                    SizedBox(width: 24),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        'Product',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        'Description',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Country',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    SizedBox(
+                                      width: 120,
+                                      child: Text(
+                                        'Price',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Divider(height: 1),
+                              const SizedBox(height: 8),
+                              Expanded(
+                                child: ListView.separated(
+                                  primary: false,
+                                  shrinkWrap: false,
+                                  itemCount: products.length,
+                                  separatorBuilder: (_, __) =>
+                                      const Divider(height: 1),
+                                  itemBuilder: (context, index) {
+                                    final product = products[index];
+                                    final isSelected = selectedProductIds
+                                        .contains(product.id);
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Checkbox(
+                                            value: isSelected,
+                                            onChanged: (checked) {
+                                              setState(() {
+                                                if (checked == true) {
+                                                  selectedProductIds.add(
+                                                    product.id,
+                                                  );
+                                                } else {
+                                                  selectedProductIds.remove(
+                                                    product.id,
+                                                  );
+                                                }
+                                              });
+                                            },
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            flex: 3,
+                                            child: Text(
+                                              product.name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 3,
+                                            child: Text(
+                                              product.description,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[700],
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              product.country,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          SizedBox(
+                                            width: 120,
+                                            child: Text(
+                                              'R ${product.price.toStringAsFixed(2)}',
+                                              textAlign: TextAlign.right,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      if (confirmed != true) return;
+
+      final now = DateTime.now();
+
+      // Create list of opt-in products
+      List<models.OptInProduct>? optInSelections;
+      if (selectedProductIds.isNotEmpty) {
+        optInSelections = selectedProductIds.map((id) {
+          final product = products.firstWhere((p) => p.id == id);
+          return models.OptInProduct(
+            id: product.id,
+            name: product.name,
+            price: product.price,
+          );
+        }).toList();
+      }
+
+      final noteText = noteController.text.isEmpty
+          ? 'Manually added to Opt In'
+          : noteController.text;
+
+      // Create appointment directly at opt_in stage with manuallyAdded flag
+      final appointment = models.SalesAppointment(
+        id: '',
+        leadId: leadId,
+        customerName: lead.fullName,
+        email: lead.email,
+        phone: lead.phone,
+        currentStage: 'opt_in',
+        appointmentDate: lead.bookingDate,
+        appointmentTime: null,
+        createdAt: now,
+        updatedAt: now,
+        stageEnteredAt: now,
+        stageHistory: [
+          models.SalesAppointmentStageHistoryEntry(
+            stage: 'opt_in',
+            enteredAt: now,
+            note: noteText,
+          ),
+        ],
+        notes: [
+          models.SalesAppointmentNote(
+            text: 'Appointment manually added from lead ${lead.id}',
+            createdAt: now,
+            createdBy: userId,
+            createdByName: userName,
+          ),
+        ],
+        createdBy: userId,
+        createdByName: userName,
+        assignedTo: authProvider.userRole == UserRole.salesAdmin
+            ? userId
+            : null,
+        assignedToName: authProvider.userRole == UserRole.salesAdmin
+            ? userName
+            : null,
+        formScore: lead.formScore,
+        manuallyAdded: true,
+        optInNote: noteText,
+        optInProducts: optInSelections ?? [],
+      );
+
+      // Create the appointment
+      final appointmentId = await _appointmentService.createAppointment(
+        appointment,
+      );
+
+      // Update lead with appointment reference and opt-in products
+      final updatedLead = lead.copyWith(
+        convertedToAppointmentId: appointmentId,
+        optInNote: noteText,
+        optInProducts: optInSelections ?? [],
+        updatedAt: now,
+      );
+      await _leadService.updateLead(updatedLead);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${lead.fullName} added to Opt In'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error creating appointment: $e')),
+        );
       }
     }
   }
@@ -548,6 +1392,15 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                     ),
                   ),
                 ),
+                if (stage.id == 'opt_in')
+                  IconButton(
+                    icon: const Icon(Icons.add, color: Colors.white, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _handleManualAddToOptIn(),
+                    tooltip: 'Add lead to Opt In',
+                  ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
