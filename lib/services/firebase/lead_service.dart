@@ -49,7 +49,9 @@ class LeadService {
           .where('currentStage', isEqualTo: stage)
           .get();
 
-      final leads = snapshot.docs.map((doc) => Lead.fromFirestore(doc)).toList();
+      final leads = snapshot.docs
+          .map((doc) => Lead.fromFirestore(doc))
+          .toList();
       // Sort in memory to avoid index requirement
       leads.sort((a, b) => a.stageEnteredAt.compareTo(b.stageEnteredAt));
       return leads;
@@ -63,7 +65,10 @@ class LeadService {
 
   /// Get leads in follow-up stage by week
   Future<List<Lead>> getLeadsByFollowUpWeek(
-      String channelId, String followUpStageId, int week) async {
+    String channelId,
+    String followUpStageId,
+    int week,
+  ) async {
     try {
       final snapshot = await _firestore
           .collection('leads')
@@ -72,7 +77,9 @@ class LeadService {
           .where('followUpWeek', isEqualTo: week)
           .get();
 
-      final leads = snapshot.docs.map((doc) => Lead.fromFirestore(doc)).toList();
+      final leads = snapshot.docs
+          .map((doc) => Lead.fromFirestore(doc))
+          .toList();
       // Sort in memory to avoid index requirement
       leads.sort((a, b) => a.stageEnteredAt.compareTo(b.stageEnteredAt));
       return leads;
@@ -109,7 +116,9 @@ class LeadService {
         .where('channelId', isEqualTo: channelId)
         .snapshots()
         .map((snapshot) {
-          final leads = snapshot.docs.map((doc) => Lead.fromFirestore(doc)).toList();
+          final leads = snapshot.docs
+              .map((doc) => Lead.fromFirestore(doc))
+              .toList();
           // Sort in memory instead of using orderBy to avoid index requirement
           leads.sort((a, b) => b.createdAt.compareTo(a.createdAt));
           return leads;
@@ -132,10 +141,7 @@ class LeadService {
   /// Update an existing lead
   Future<void> updateLead(Lead lead) async {
     try {
-      await _firestore
-          .collection('leads')
-          .doc(lead.id)
-          .update(lead.toMap());
+      await _firestore.collection('leads').doc(lead.id).update(lead.toMap());
     } catch (e) {
       if (kDebugMode) {
         print('Error updating lead: $e');
@@ -165,7 +171,9 @@ class LeadService {
       await updateLead(updatedLead);
 
       if (kDebugMode) {
-        print('Updated lead assignment: $leadId -> ${assignedToName ?? "Unassigned"}');
+        print(
+          'Updated lead assignment: $leadId -> ${assignedToName ?? "Unassigned"}',
+        );
       }
     } catch (e) {
       if (kDebugMode) {
@@ -191,7 +199,8 @@ class LeadService {
   Future<void> moveLeadToStage({
     required String leadId,
     required String newStage,
-    required dynamic note, // Can be String or Map<String, dynamic> for questionnaire
+    required dynamic
+    note, // Can be String or Map<String, dynamic> for questionnaire
     required String userId,
     String? userName,
     bool isFollowUpStage = false,
@@ -216,17 +225,17 @@ class LeadService {
       if (updatedHistory.isNotEmpty) {
         final lastEntry = updatedHistory.last;
         if (lastEntry.exitedAt == null) {
-          updatedHistory[updatedHistory.length - 1] =
-              lastEntry.copyWith(exitedAt: now, note: note);
+          updatedHistory[updatedHistory.length - 1] = lastEntry.copyWith(
+            exitedAt: now,
+            note: note,
+          );
         }
       }
 
       // Add new stage history entry
-      updatedHistory.add(StageHistoryEntry(
-        stage: newStage,
-        enteredAt: now,
-        note: note,
-      ));
+      updatedHistory.add(
+        StageHistoryEntry(stage: newStage, enteredAt: now, note: note),
+      );
 
       // Create note for the transition
       final transitionNote = LeadNote(
@@ -248,14 +257,24 @@ class LeadService {
         notes: updatedNotes,
         followUpWeek: isFollowUpStage ? (lead.followUpWeek ?? 1) : null,
         depositAmount: newStage == 'deposit_made' ? amount : lead.depositAmount,
-        depositInvoiceNumber: newStage == 'deposit_made' ? invoiceNumber : lead.depositInvoiceNumber,
-        cashCollectedAmount: newStage == 'cash_collected' ? amount : lead.cashCollectedAmount,
-        cashCollectedInvoiceNumber: newStage == 'cash_collected' ? invoiceNumber : lead.cashCollectedInvoiceNumber,
+        depositInvoiceNumber: newStage == 'deposit_made'
+            ? invoiceNumber
+            : lead.depositInvoiceNumber,
+        cashCollectedAmount: newStage == 'cash_collected'
+            ? amount
+            : lead.cashCollectedAmount,
+        cashCollectedInvoiceNumber: newStage == 'cash_collected'
+            ? invoiceNumber
+            : lead.cashCollectedInvoiceNumber,
         bookingId: bookingId ?? lead.bookingId,
         bookingDate: bookingDate ?? lead.bookingDate,
         bookingStatus: bookingStatus ?? lead.bookingStatus,
-        assignedTo: assignedTo ?? lead.assignedTo, // Set assignment if provided, otherwise keep existing
-        assignedToName: assignedToName ?? lead.assignedToName, // Set assignment name if provided, otherwise keep existing
+        assignedTo:
+            assignedTo ??
+            lead.assignedTo, // Set assignment if provided, otherwise keep existing
+        assignedToName:
+            assignedToName ??
+            lead.assignedToName, // Set assignment name if provided, otherwise keep existing
       );
 
       await updateLead(updatedLead);
@@ -391,6 +410,26 @@ class LeadService {
     }
   }
 
+  /// Search leads across all channels by name, email, or phone
+  Future<List<Lead>> searchLeadsAcrossAllChannels(String query) async {
+    try {
+      final allLeads = await getAllLeads();
+
+      final lowerQuery = query.toLowerCase();
+      return allLeads.where((lead) {
+        return lead.firstName.toLowerCase().contains(lowerQuery) ||
+            lead.lastName.toLowerCase().contains(lowerQuery) ||
+            lead.email.toLowerCase().contains(lowerQuery) ||
+            lead.phone.contains(query);
+      }).toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error searching leads across all channels: $e');
+      }
+      rethrow;
+    }
+  }
+
   /// Get lead count by stage
   Future<Map<String, int>> getLeadCountsByStage(String channelId) async {
     try {
@@ -492,7 +531,9 @@ class LeadService {
       );
 
       // Create the appointment
-      final appointmentId = await _appointmentService.createAppointment(appointment);
+      final appointmentId = await _appointmentService.createAppointment(
+        appointment,
+      );
 
       // Update lead with appointment reference
       final updatedLead = lead.copyWith(
@@ -544,12 +585,7 @@ class LeadService {
         createdAt: now,
         updatedAt: now,
         stageEnteredAt: now,
-        stageHistory: [
-          StageHistoryEntry(
-            stage: firstStageId,
-            enteredAt: now,
-          ),
-        ],
+        stageHistory: [StageHistoryEntry(stage: firstStageId, enteredAt: now)],
         createdBy: 'form_submission',
         createdByName: 'Form Submission',
         submissionId: submission.submissionId,
@@ -576,4 +612,3 @@ class LeadService {
     }
   }
 }
-

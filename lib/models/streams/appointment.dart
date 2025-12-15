@@ -25,6 +25,8 @@ class SalesAppointment {
   final String? assignedToName; // name of assigned Sales Admin
   final String? optInNote;
   final List<OptInProduct> optInProducts;
+  final bool
+  manuallyAdded; // Indicates if appointment was manually added to stream
 
   SalesAppointment({
     required this.id,
@@ -50,6 +52,7 @@ class SalesAppointment {
     this.assignedToName,
     this.optInNote,
     this.optInProducts = const [],
+    this.manuallyAdded = false,
   });
 
   /// Get time in current stage
@@ -120,6 +123,7 @@ class SalesAppointment {
               )
               .toList() ??
           [],
+      manuallyAdded: map['manuallyAdded'] == true,
     );
   }
 
@@ -149,6 +153,7 @@ class SalesAppointment {
       'assignedToName': assignedToName,
       'optInNote': optInNote,
       'optInProducts': optInProducts.map((p) => p.toMap()).toList(),
+      'manuallyAdded': manuallyAdded,
     };
   }
 
@@ -176,6 +181,7 @@ class SalesAppointment {
     String? assignedToName,
     String? optInNote,
     List<OptInProduct>? optInProducts,
+    bool? manuallyAdded,
   }) {
     return SalesAppointment(
       id: id ?? this.id,
@@ -201,6 +207,7 @@ class SalesAppointment {
       assignedToName: assignedToName ?? this.assignedToName,
       optInNote: optInNote ?? this.optInNote,
       optInProducts: optInProducts ?? this.optInProducts,
+      manuallyAdded: manuallyAdded ?? this.manuallyAdded,
     );
   }
 }
