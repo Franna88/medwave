@@ -13,6 +13,10 @@ import '../../../utils/role_manager.dart';
 import '../../../utils/stream_utils.dart';
 import '../../../widgets/common/score_badge.dart';
 import '../../../widgets/appointments/appointment_detail_dialog.dart';
+import '../../../widgets/appointments/reschedule_appointment_dialog.dart';
+import '../../../services/firebase/lead_booking_service.dart';
+import '../../../models/leads/lead_booking.dart'
+    show LeadBooking, BookingStatus, AICallPrompts;
 
 class SalesStreamScreen extends StatefulWidget {
   const SalesStreamScreen({super.key});
@@ -24,6 +28,7 @@ class SalesStreamScreen extends StatefulWidget {
 class _SalesStreamScreenState extends State<SalesStreamScreen> {
   final SalesAppointmentService _appointmentService = SalesAppointmentService();
   final LeadService _leadService = LeadService();
+  final LeadBookingService _bookingService = LeadBookingService();
   final TextEditingController _searchController = TextEditingController();
 
   List<models.SalesAppointment> _allAppointments = [];
@@ -116,6 +121,85 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.user?.uid ?? '';
     final userName = authProvider.userName;
+
+    // Check if this is the Rescheduled stage
+    if (newStageId == 'rescheduled') {
+      // Show reschedule booking dialog
+      final rescheduleResult = await showDialog<RescheduleTransitionResult>(
+        context: context,
+        builder: (context) => RescheduleAppointmentDialog(
+          appointment: appointment,
+          newStageName: newStage.name,
+        ),
+      );
+
+      if (rescheduleResult == null) return; // User cancelled
+
+      try {
+        // Get the lead to create booking with proper context
+        final lead = await _leadService.getLead(appointment.leadId);
+        final leadSource = lead?.source ?? 'Unknown';
+
+        // Create new booking for reschedule
+        final booking = LeadBooking(
+          id: '', // Will be set by Firestore
+          leadId: appointment.leadId,
+          leadName: appointment.customerName,
+          leadEmail: appointment.email,
+          leadPhone: appointment.phone,
+          bookingDate: rescheduleResult.bookingDate,
+          bookingTime: rescheduleResult.bookingTime,
+          duration: rescheduleResult.duration,
+          status: BookingStatus.scheduled,
+          createdBy: userId,
+          createdByName: userName,
+          createdAt: DateTime.now(),
+          leadSource: leadSource,
+          leadHistory: [
+            'Appointment Rescheduled',
+            'Previous: ${appointment.appointmentDate != null ? "${appointment.appointmentDate!.day}/${appointment.appointmentDate!.month}/${appointment.appointmentDate!.year}" : "N/A"} at ${appointment.appointmentTime ?? "N/A"}',
+            'New: ${rescheduleResult.bookingDate.day}/${rescheduleResult.bookingDate.month}/${rescheduleResult.bookingDate.year} at ${rescheduleResult.bookingTime}',
+          ],
+          aiPrompts: AICallPrompts.getDefault(),
+          assignedTo: rescheduleResult.assignedTo, // Use assignedTo from result
+          assignedToName: rescheduleResult.assignedToName,
+        );
+
+        // Create new booking for reschedule (bookingId stored but not needed in appointment)
+        final _bookingId = await _bookingService.createBooking(booking);
+
+        // Move appointment to Rescheduled stage with new date/time
+        await _appointmentService.moveAppointmentToStage(
+          appointmentId: appointment.id,
+          newStage: newStageId,
+          note: rescheduleResult.note,
+          userId: userId,
+          userName: userName,
+          appointmentDate: rescheduleResult.bookingDate,
+          appointmentTime: rescheduleResult.bookingTime,
+          assignedTo: rescheduleResult.assignedTo, // Use assignedTo from result
+          assignedToName: rescheduleResult.assignedToName,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Appointment rescheduled for ${rescheduleResult.bookingDate.day}/${rescheduleResult.bookingDate.month} at ${rescheduleResult.bookingTime}',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error rescheduling appointment: $e')),
+          );
+        }
+      }
+      return;
+    }
 
     final noteController = TextEditingController();
     final isOptIn = newStageId == 'opt_in';
