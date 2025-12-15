@@ -78,48 +78,53 @@ class OrdersPlaceholderScreen extends StatelessWidget {
   }
 
   Widget _buildComingSoonContent() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
-                shape: BoxShape.circle,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(28),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.shopping_cart_outlined,
+                  size: 56,
+                  color: AppTheme.primaryColor,
+                ),
               ),
-              child: Icon(
-                Icons.shopping_cart_outlined,
-                size: 64,
-                color: AppTheme.primaryColor,
+              const SizedBox(height: 24),
+              const Text(
+                'Coming Soon',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textColor,
+                ),
               ),
-            ),
-            const SizedBox(height: 32),
-            const Text(
-              'Coming Soon',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textColor,
+              const SizedBox(height: 12),
+              Text(
+                'The Orders section is currently under development.\n\nSoon you\'ll be able to:',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: AppTheme.secondaryColor.withOpacity(0.8),
+                  height: 1.5,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'The Orders section is currently under development.\n\nSoon you\'ll be able to:',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: AppTheme.secondaryColor.withOpacity(0.8),
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            _buildFeatureList(),
-            const SizedBox(height: 32),
-            _buildPlaceholderList(),
-          ],
+              const SizedBox(height: 20),
+              _buildFeatureList(),
+              const SizedBox(height: 24),
+              _buildPlaceholderList(),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
