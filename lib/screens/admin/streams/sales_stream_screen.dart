@@ -30,6 +30,7 @@ class SalesStreamScreen extends StatefulWidget {
 class _SalesStreamScreenState extends State<SalesStreamScreen> {
   final SalesAppointmentService _appointmentService = SalesAppointmentService();
   final LeadService _leadService = LeadService();
+  final LeadBookingService _bookingService = LeadBookingService();
   final TextEditingController _searchController = TextEditingController();
 
   List<models.SalesAppointment> _allAppointments = [];
@@ -168,8 +169,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           assignedToName: rescheduleResult.assignedToName,
         );
 
-        // Create new booking for reschedule (bookingId stored but not needed in appointment)
-        final _bookingId = await _bookingService.createBooking(booking);
+        // Create new booking for reschedule
+        await _bookingService.createBooking(booking);
 
         // Move appointment to Rescheduled stage with new date/time
         await _appointmentService.moveAppointmentToStage(
@@ -204,7 +205,6 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       return;
     }
 
-    final noteController = TextEditingController();
     final isOptIn = newStageId == 'opt_in';
     final productProvider = context.read<ProductItemsProvider>();
     final products = productProvider.items
@@ -1287,330 +1287,6 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         optInProducts: optInSelections ?? [],
       );
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '${appointment.customerName} moved to ${newStage.name}',
-              ),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error moving appointment: $e')),
-          );
-        }
-      // Create the appointment
-      final appointmentId = await _appointmentService.createAppointment(
-        appointment,
-      );
-
-      // Update lead with appointment reference and opt-in products
-      final updatedLead = lead.copyWith(
-        convertedToAppointmentId: appointmentId,
-        optInNote: noteText,
-        optInProducts: optInSelections ?? [],
-        updatedAt: now,
-      );
-      await _leadService.updateLead(updatedLead);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${lead.fullName} added to Opt In'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating appointment: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _createAppointmentFromLead(String leadId) async {
-    try {
-      final lead = await _leadService.getLead(leadId);
-      if (lead == null) {
-        throw Exception('Lead not found');
-      }
-
-      final authProvider = context.read<AuthProvider>();
-      final userId = authProvider.user?.uid ?? '';
-      final userName = authProvider.userName;
-      final productProvider = context.read<ProductItemsProvider>();
-      final products = productProvider.items
-          .where((p) => p.isActive)
-          .toList(growable: false);
-      final selectedProductIds = <String>{};
-      final noteController = TextEditingController(
-        text: 'Manually added to Opt In',
-      );
-
-      // Show product selection dialog first
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              title: Text('Add ${lead.fullName} to Opt In'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Email: ${lead.email}'),
-                  Text('Phone: ${lead.phone}'),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: noteController,
-                    decoration: const InputDecoration(
-                      labelText: 'Note (optional)',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Select product(s)',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 260,
-                    width: 720,
-                    child: products.isEmpty
-                        ? const Text('No products available')
-                        : Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8.0,
-                                ),
-                                child: Row(
-                                  children: const [
-                                    SizedBox(width: 24),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Text(
-                                        'Product',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Text(
-                                        'Description',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Country',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    SizedBox(
-                                      width: 120,
-                                      child: Text(
-                                        'Price',
-                                        textAlign: TextAlign.right,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Divider(height: 1),
-                              const SizedBox(height: 8),
-                              Expanded(
-                                child: ListView.separated(
-                                  primary: false,
-                                  shrinkWrap: false,
-                                  itemCount: products.length,
-                                  separatorBuilder: (_, __) =>
-                                      const Divider(height: 1),
-                                  itemBuilder: (context, index) {
-                                    final product = products[index];
-                                    final isSelected = selectedProductIds
-                                        .contains(product.id);
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
-                                      ),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Checkbox(
-                                            value: isSelected,
-                                            onChanged: (checked) {
-                                              setState(() {
-                                                if (checked == true) {
-                                                  selectedProductIds.add(
-                                                    product.id,
-                                                  );
-                                                } else {
-                                                  selectedProductIds.remove(
-                                                    product.id,
-                                                  );
-                                                }
-                                              });
-                                            },
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            flex: 3,
-                                            child: Text(
-                                              product.name,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 3,
-                                            child: Text(
-                                              product.description,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[700],
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              product.country,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          SizedBox(
-                                            width: 120,
-                                            child: Text(
-                                              'R ${product.price.toStringAsFixed(2)}',
-                                              textAlign: TextAlign.right,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Add'),
-                ),
-              ],
-            );
-          },
-        ),
-      );
-
-      if (confirmed != true) return;
-
-      final now = DateTime.now();
-
-      // Create list of opt-in products
-      List<models.OptInProduct>? optInSelections;
-      if (selectedProductIds.isNotEmpty) {
-        optInSelections = selectedProductIds.map((id) {
-          final product = products.firstWhere((p) => p.id == id);
-          return models.OptInProduct(
-            id: product.id,
-            name: product.name,
-            price: product.price,
-          );
-        }).toList();
-      }
-
-      final noteText = noteController.text.isEmpty
-          ? 'Manually added to Opt In'
-          : noteController.text;
-
-      // Create appointment directly at opt_in stage with manuallyAdded flag
-      final appointment = models.SalesAppointment(
-        id: '',
-        leadId: leadId,
-        customerName: lead.fullName,
-        email: lead.email,
-        phone: lead.phone,
-        currentStage: 'opt_in',
-        appointmentDate: lead.bookingDate,
-        appointmentTime: null,
-        createdAt: now,
-        updatedAt: now,
-        stageEnteredAt: now,
-        stageHistory: [
-          models.SalesAppointmentStageHistoryEntry(
-            stage: 'opt_in',
-            enteredAt: now,
-            note: noteText,
-          ),
-        ],
-        notes: [
-          models.SalesAppointmentNote(
-            text: 'Appointment manually added from lead ${lead.id}',
-            createdAt: now,
-            createdBy: userId,
-            createdByName: userName,
-          ),
-        ],
-        createdBy: userId,
-        createdByName: userName,
-        assignedTo: authProvider.userRole == UserRole.salesAdmin
-            ? userId
-            : null,
-        assignedToName: authProvider.userRole == UserRole.salesAdmin
-            ? userName
-            : null,
-        formScore: lead.formScore,
-        manuallyAdded: true,
-        optInNote: noteText,
-        optInProducts: optInSelections ?? [],
-      );
-
       // Create the appointment
       final appointmentId = await _appointmentService.createAppointment(
         appointment,
@@ -1735,11 +1411,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                     ),
                     child: const Row(
                       children: [
-                        Icon(
-                          Icons.inventory_2,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+                        Icon(Icons.inventory_2, color: Colors.white, size: 20),
                         SizedBox(width: 8),
                         Text(
                           'View Stock',
@@ -1899,44 +1571,44 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                     child: inventoryProvider.isLoading
                         ? const Center(child: CircularProgressIndicator())
                         : stockItems.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.inventory_2_outlined,
-                                      size: 64,
-                                      color: Colors.grey[300],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No stock records found',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Stock will appear here once warehouse updates inventory',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey[400],
-                                      ),
-                                    ),
-                                  ],
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.inventory_2_outlined,
+                                  size: 64,
+                                  color: Colors.grey[300],
                                 ),
-                              )
-                            : ListView.separated(
-                                padding: const EdgeInsets.all(16),
-                                itemCount: stockItems.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(height: 8),
-                                itemBuilder: (context, index) {
-                                  final stock = stockItems[index];
-                                  return _buildStockListItem(stock);
-                                },
-                              ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No stock records found',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Stock will appear here once warehouse updates inventory',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: stockItems.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final stock = stockItems[index];
+                              return _buildStockListItem(stock);
+                            },
+                          ),
                   ),
                 ],
               ),
@@ -1969,10 +1641,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 13,
-              color: color.withOpacity(0.8),
-            ),
+            style: TextStyle(fontSize: 13, color: color.withOpacity(0.8)),
           ),
         ],
       ),
@@ -2045,10 +1714,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                       stock.shelfLocation.isNotEmpty
                           ? '${stock.warehouseLocation} - ${stock.shelfLocation}'
                           : stock.warehouseLocation,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
                 ),
@@ -2070,10 +1736,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 ),
                 Text(
                   'in stock',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[500],
-                  ),
+                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                 ),
               ],
             ),
@@ -2092,10 +1755,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 ),
                 Text(
                   'min level',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[500],
-                  ),
+                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                 ),
               ],
             ),
@@ -2133,20 +1793,14 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
               children: [
                 Text(
                   'Last Updated',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[400],
-                  ),
+                  style: TextStyle(fontSize: 10, color: Colors.grey[400]),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   stock.lastStockTakeDate != null
                       ? _formatStockDate(stock.lastStockTakeDate!)
                       : 'Never',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),

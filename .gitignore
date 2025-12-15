@@ -105,3 +105,4 @@ android/fastlane/Preview.html
 
 # Facebook Sync Checkpoint
 facebook_sync_checkpoint.json
+node_modules
