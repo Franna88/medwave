@@ -139,24 +139,60 @@ class InventoryService {
   }
 
   /// Initialize stock records for products that don't have them
+  /// Also cleans up duplicates and orphaned records
   Future<void> initializeStockForProducts() async {
     try {
-      // Get all products
+      // Get all active products
       final productsSnapshot = await _productCollection.get();
       final products = productsSnapshot.docs
           .map(ProductItem.fromFirestore)
           .toList();
+      
+      // Create a set of valid product IDs
+      final validProductIds = products.map((p) => p.id).toSet();
 
       // Get all existing stock records
       final stockSnapshot = await _stockCollection.get();
-      final existingProductIds = stockSnapshot.docs
-          .map((doc) => doc.data()['productId'] as String?)
-          .whereType<String>()
-          .toSet();
+      
+      // Track which product IDs already have stock records
+      final Map<String, String> productIdToStockId = {};
+      final List<String> duplicatesToDelete = [];
+      final List<String> orphansToDelete = [];
 
-      // Create stock records for products without one
+      for (final doc in stockSnapshot.docs) {
+        final productId = doc.data()['productId'] as String?;
+        
+        if (productId == null || !validProductIds.contains(productId)) {
+          // Orphaned stock record (product no longer exists)
+          orphansToDelete.add(doc.id);
+        } else if (productIdToStockId.containsKey(productId)) {
+          // Duplicate stock record
+          duplicatesToDelete.add(doc.id);
+        } else {
+          // First stock record for this product
+          productIdToStockId[productId] = doc.id;
+        }
+      }
+
+      // Delete orphaned records
+      for (final orphanId in orphansToDelete) {
+        await _stockCollection.doc(orphanId).delete();
+        if (kDebugMode) {
+          debugPrint('Deleted orphaned stock record: $orphanId');
+        }
+      }
+
+      // Delete duplicate records
+      for (final duplicateId in duplicatesToDelete) {
+        await _stockCollection.doc(duplicateId).delete();
+        if (kDebugMode) {
+          debugPrint('Deleted duplicate stock record: $duplicateId');
+        }
+      }
+
+      // Create stock records for products that don't have one
       for (final product in products) {
-        if (!existingProductIds.contains(product.id)) {
+        if (!productIdToStockId.containsKey(product.id)) {
           final stock = InventoryStock.initial(
             productId: product.id,
             productName: product.name,
@@ -166,6 +202,11 @@ class InventoryService {
             debugPrint('Created stock record for product: ${product.name}');
           }
         }
+      }
+
+      if (kDebugMode) {
+        debugPrint('Inventory sync complete: ${orphansToDelete.length} orphans removed, '
+            '${duplicatesToDelete.length} duplicates removed');
       }
     } catch (e) {
       if (kDebugMode) {
