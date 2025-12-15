@@ -1,18 +1,11 @@
 /// Configuration for sales questionnaire when transitioning to Contacted stage
 class SalesQuestionnaireConfig {
-  /// Default questions for the sales questionnaire
-  /// Developers can easily modify this list to add/remove/update questions
+  /// Default questions for the sales questionnaire - Appointment Setter Questions
   static const List<String> defaultQuestions = [
-    'Contact Method',
-    'Customer Name',
-    // 'Budget Range',
-    // 'Timeline/Urgency',
-    // 'Decision Maker?',
-    // 'Primary Pain Points',
-    // 'Current Solution/Provider',
-    // 'Key Requirements',
-    // 'Next Steps Agreed',
-    // 'Follow-up Date',
+    'What line of Business are you in?',
+    'Do you have a website? Can you share the link.',
+    'How many clients do you see a week currently?',
+    'Have you experienced a Medwave session before?',
   ];
 
   /// Get a copy of the default questions
