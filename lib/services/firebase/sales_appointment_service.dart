@@ -177,6 +177,8 @@ class SalesAppointmentService {
     String? appointmentTime,
     String? assignedTo,
     String? assignedToName,
+    String? optInNote,
+    List<models.OptInProduct>? optInProducts,
   }) async {
     try {
       final appointment = await getAppointment(appointmentId);
@@ -233,9 +235,23 @@ class SalesAppointmentService {
         appointmentTime: appointmentTime ?? appointment.appointmentTime,
         assignedTo: assignedTo ?? appointment.assignedTo,
         assignedToName: assignedToName ?? appointment.assignedToName,
+        optInNote: optInNote ?? appointment.optInNote,
+        optInProducts: optInProducts ?? appointment.optInProducts,
       );
 
       await updateAppointment(updatedAppointment);
+
+      // Persist Opt In selection to lead as well, if provided
+      if (optInNote != null || optInProducts != null) {
+        final productMaps = (optInProducts ?? appointment.optInProducts)
+            .map((p) => p.toMap())
+            .toList();
+        await _firestore.collection('leads').doc(appointment.leadId).update({
+          'optInNote': optInNote ?? appointment.optInNote,
+          'optInProducts': productMaps,
+          'updatedAt': Timestamp.fromDate(now),
+        });
+      }
 
       // Check if we need to convert to Order (final stage)
       if (newStage == 'send_to_operations') {

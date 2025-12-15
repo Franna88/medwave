@@ -25,8 +25,8 @@ admin.initializeApp({
 const bucket = admin.storage().bucket();
 
 // APK file path
-const apkPath = path.join(__dirname, 'MedWave-v1.2.12.apk');
-const destinationPath = 'downloads/apks/MedWave-v1.2.12.apk';
+const apkPath = path.join(__dirname, 'MedWave-v1.2.7.apk');
+const destinationPath = 'downloads/apks/MedWave-v1.2.7.apk';
 
 console.log('🚀 Starting APK upload to Firebase Storage...');
 console.log(`📁 Source: ${apkPath}`);
@@ -35,7 +35,7 @@ console.log(`📦 Destination: ${destinationPath}`);
 // Check if file exists
 if (!fs.existsSync(apkPath)) {
   console.error('❌ Error: APK file not found at', apkPath);
-  console.error('Please ensure MedWave-v1.2.12.apk exists in the project root.');
+  console.error('Please ensure MedWave-v1.2.7.apk exists in the project root.');
   process.exit(1);
 }
 
@@ -52,8 +52,8 @@ async function uploadAPK() {
       metadata: {
         contentType: 'application/vnd.android.package-archive',
         metadata: {
-          version: '1.2.12',
-          buildNumber: '14',
+          version: '1.2.7',
+          buildNumber: '12',
           uploadedAt: new Date().toISOString(),
           description: 'MedWave Provider Android App - Beta Version'
         }

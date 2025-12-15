@@ -26,12 +26,12 @@ enum UserRole {
 class RoleManager {
   /// Check if user can access admin panel features
   static bool canAccessAdminPanel(UserRole role) {
-    return role == UserRole.countryAdmin || 
-           role == UserRole.superAdmin ||
-           role == UserRole.marketingAdmin ||
-           role == UserRole.salesAdmin ||
-           role == UserRole.operationsAdmin ||
-           role == UserRole.supportAdmin;
+    return role == UserRole.countryAdmin ||
+        role == UserRole.superAdmin ||
+        role == UserRole.marketingAdmin ||
+        role == UserRole.salesAdmin ||
+        role == UserRole.operationsAdmin ||
+        role == UserRole.supportAdmin;
   }
 
   /// Check if user can manage healthcare providers
@@ -47,6 +47,11 @@ class RoleManager {
   /// Check if user can approve/reject provider applications
   static bool canApproveProviders(UserRole role) {
     return role == UserRole.countryAdmin || role == UserRole.superAdmin;
+  }
+
+  /// Check if user can manage products
+  static bool canManageProducts(UserRole role) {
+    return role == UserRole.superAdmin || role == UserRole.countryAdmin;
   }
 
   /// Check if user can manage admin users
@@ -75,7 +80,7 @@ class RoleManager {
     if (role == UserRole.superAdmin || role == UserRole.countryAdmin) {
       return true;
     }
-    
+
     // Stream-specific admins can only access their own stream
     switch (streamName.toLowerCase()) {
       case 'marketing':
@@ -96,7 +101,7 @@ class RoleManager {
     if (role == UserRole.superAdmin || role == UserRole.countryAdmin) {
       return ['marketing', 'sales', 'operations', 'support'];
     }
-    
+
     switch (role) {
       case UserRole.marketingAdmin:
         return ['marketing'];
@@ -154,12 +159,15 @@ class RoleManager {
     bool showLeads = true,
   }) {
     // Check if role is a stream admin
-    final isStreamAdmin = role == UserRole.marketingAdmin ||
-                         role == UserRole.salesAdmin ||
-                         role == UserRole.operationsAdmin ||
-                         role == UserRole.supportAdmin;
+    final isStreamAdmin =
+        role == UserRole.marketingAdmin ||
+        role == UserRole.salesAdmin ||
+        role == UserRole.operationsAdmin ||
+        role == UserRole.supportAdmin;
 
-    if (role == UserRole.superAdmin || role == UserRole.countryAdmin || isStreamAdmin) {
+    if (role == UserRole.superAdmin ||
+        role == UserRole.countryAdmin ||
+        isStreamAdmin) {
       // Admin users see ONLY admin navigation items
       final List<NavigationItem> adminItems = [
         NavigationItem(
@@ -170,7 +178,9 @@ class RoleManager {
       ];
 
       // Common pages for all admins (including stream admins)
-      if (role == UserRole.superAdmin || role == UserRole.countryAdmin || isStreamAdmin) {
+      if (role == UserRole.superAdmin ||
+          role == UserRole.countryAdmin ||
+          isStreamAdmin) {
         // Stream admins get common pages
         if (isStreamAdmin) {
           // Stream admins only get Dashboard, Forms, and Streams
@@ -182,8 +192,16 @@ class RoleManager {
         } else {
           // Super admin and country admin get full access
           adminItems.addAll([
-            NavigationItem('Provider Management', '/admin/providers', 'business'),
-            NavigationItem('Provider Approvals', '/admin/approvals', 'approval'),
+            NavigationItem(
+              'Provider Management',
+              '/admin/providers',
+              'business',
+            ),
+            NavigationItem(
+              'Provider Approvals',
+              '/admin/approvals',
+              'approval',
+            ),
             NavigationItem('Analytics', '/admin/analytics', 'analytics'),
             NavigationItem(
               'Patient Management',
@@ -224,9 +242,36 @@ class RoleManager {
             'Admin Management',
             '/admin/users',
             'admin_panel_settings',
+            subItems: [
+              NavigationSubItem(
+                'Admin Users',
+                '/admin/users',
+                'admin_panel_settings',
+              ),
+              NavigationSubItem(
+                'Product Management',
+                '/admin/product-management',
+                'inventory',
+              ),
+            ],
           ),
           NavigationItem('Report Builder', '/admin/report-builder', 'build'),
         ]);
+      } else if (role == UserRole.countryAdmin) {
+        adminItems.add(
+          NavigationItem(
+            'Admin Management',
+            '/admin/users',
+            'admin_panel_settings',
+            subItems: [
+              NavigationSubItem(
+                'Product Management',
+                '/admin/product-management',
+                'inventory',
+              ),
+            ],
+          ),
+        );
       }
 
       // Add Forms for super admin if not already added

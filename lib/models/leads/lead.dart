@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lead_note.dart';
+import '../streams/appointment.dart' show OptInProduct;
 
 /// Model for a lead in the pipeline
 class Lead {
@@ -41,6 +42,8 @@ class Lead {
   final String? utmAdId;
   final String? fbclid;
   final double? formScore;
+  final String? optInNote;
+  final List<OptInProduct> optInProducts;
 
   Lead({
     required this.id,
@@ -80,6 +83,8 @@ class Lead {
     this.utmAdId,
     this.fbclid,
     this.formScore,
+    this.optInNote,
+    this.optInProducts = const [],
   });
 
   /// Get full name
@@ -203,6 +208,14 @@ class Lead {
       formScore: map['formScore'] != null
           ? (map['formScore'] as num?)?.toDouble()
           : null,
+      optInNote: map['optInNote']?.toString(),
+      optInProducts:
+          (map['optInProducts'] as List<dynamic>?)
+              ?.map(
+                (item) => OptInProduct.fromMap(item as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
     );
   }
 
@@ -246,6 +259,8 @@ class Lead {
       'utmAdId': utmAdId,
       'fbclid': fbclid,
       'formScore': formScore,
+      'optInNote': optInNote,
+      'optInProducts': optInProducts.map((p) => p.toMap()).toList(),
     };
   }
 
@@ -287,6 +302,8 @@ class Lead {
     String? utmAdId,
     String? fbclid,
     double? formScore,
+    String? optInNote,
+    List<OptInProduct>? optInProducts,
   }) {
     return Lead(
       id: id ?? this.id,
@@ -328,6 +345,8 @@ class Lead {
       utmAdId: utmAdId ?? this.utmAdId,
       fbclid: fbclid ?? this.fbclid,
       formScore: formScore ?? this.formScore,
+      optInNote: optInNote ?? this.optInNote,
+      optInProducts: optInProducts ?? this.optInProducts,
     );
   }
 }
