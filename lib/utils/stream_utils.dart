@@ -26,6 +26,13 @@ class StreamUtils {
       orElse: () => throw Exception('Target stage not found: $targetStageId'),
     );
 
+    // Sales exception: allow jumping directly from Appointments -> Opt In
+    final isSalesDirectOptIn =
+        currentStage.streamType == StreamType.sales &&
+        currentStage.id == 'appointments' &&
+        targetStage.id == 'opt_in';
+    if (isSalesDirectOptIn) return true;
+
     // Only allow forward movement to the next immediate stage
     return targetStage.position == currentStage.position + 1;
   }
