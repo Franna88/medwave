@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # UI and Design
   cupertino_icons: ^1.0.8
@@ -51,7 +53,7 @@ dependencies:
   package_info_plus: ^8.0.2
   
   # Date and time utilities
-  intl: ^0.19.0
+  intl: ^0.20.2
   
   # Calendar and scheduling
   table_calendar: ^3.0.9
@@ -101,6 +103,9 @@ dependencies:
   
   # CSV export
   csv: ^6.0.0
+  
+  # Rich text editor for contract content
+  flutter_quill: ^11.5.0
 
 dev_dependencies:
   flutter_test:
