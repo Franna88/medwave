@@ -202,8 +202,16 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                   children: [
                     // Contact Information
                     _buildSection('Contact Information', Icons.contact_mail, [
-                      _buildInfoRow(Icons.email, 'Email', _currentAppointment.email),
-                      _buildInfoRow(Icons.phone, 'Phone', _currentAppointment.phone),
+                      _buildInfoRow(
+                        Icons.email,
+                        'Email',
+                        _currentAppointment.email,
+                      ),
+                      _buildInfoRow(
+                        Icons.phone,
+                        'Phone',
+                        _currentAppointment.phone,
+                      ),
                     ]),
                     const SizedBox(height: 24),
 
@@ -229,21 +237,26 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                     // Appointment Information
                     if (_currentAppointment.appointmentDate != null ||
                         _currentAppointment.appointmentTime != null)
-                      _buildSection('Appointment Details', Icons.calendar_today, [
-                        if (_currentAppointment.appointmentDate != null)
-                          _buildInfoRow(
-                            Icons.event,
-                            'Appointment Date',
-                            DateFormat('MMM dd, yyyy')
-                                .format(_currentAppointment.appointmentDate!),
-                          ),
-                        if (_currentAppointment.appointmentTime != null)
-                          _buildInfoRow(
-                            Icons.schedule,
-                            'Appointment Time',
-                            _currentAppointment.appointmentTime!,
-                          ),
-                      ]),
+                      _buildSection(
+                        'Appointment Details',
+                        Icons.calendar_today,
+                        [
+                          if (_currentAppointment.appointmentDate != null)
+                            _buildInfoRow(
+                              Icons.event,
+                              'Appointment Date',
+                              DateFormat(
+                                'MMM dd, yyyy',
+                              ).format(_currentAppointment.appointmentDate!),
+                            ),
+                          if (_currentAppointment.appointmentTime != null)
+                            _buildInfoRow(
+                              Icons.schedule,
+                              'Appointment Time',
+                              _currentAppointment.appointmentTime!,
+                            ),
+                        ],
+                      ),
                     if (_currentAppointment.appointmentDate != null ||
                         _currentAppointment.appointmentTime != null)
                       const SizedBox(height: 24),
@@ -267,6 +280,28 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                     if (_currentAppointment.depositAmount != null ||
                         _currentAppointment.depositPaid)
                       const SizedBox(height: 24),
+
+                    // Opt In Products (whenever present)
+                    if (_currentAppointment.optInProducts.isNotEmpty ||
+                        (_currentAppointment.optInNote?.isNotEmpty ??
+                            false)) ...[
+                      _buildSection('Opt In Products', Icons.shopping_cart, [
+                        if (_currentAppointment.optInProducts.isNotEmpty)
+                          _buildOptInProductsList(
+                            _currentAppointment.optInProducts,
+                          ),
+                        if (_currentAppointment.optInNote?.isNotEmpty ?? false)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: _buildInfoRow(
+                              Icons.sticky_note_2_outlined,
+                              'Opt In Note',
+                              _currentAppointment.optInNote!,
+                            ),
+                          ),
+                      ]),
+                      const SizedBox(height: 24),
+                    ],
 
                     // Notes (newest first)
                     if (_currentAppointment.notes.isNotEmpty) ...[
@@ -434,6 +469,92 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
     );
   }
 
+  Widget _buildOptInProductsList(List<OptInProduct> products) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                child: Row(
+                  children: const [
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        'Product',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    SizedBox(
+                      width: 120,
+                      child: Text(
+                        'Price',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              ...products.map((p) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          p.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 120,
+                        child: Text(
+                          'R ${p.price.toStringAsFixed(2)}',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildNoteEntry(SalesAppointmentNote note) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -466,10 +587,7 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            note.text,
-            style: const TextStyle(fontSize: 14),
-          ),
+          Text(note.text, style: const TextStyle(fontSize: 14)),
         ],
       ),
     );
@@ -542,4 +660,3 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
     }
   }
 }
-

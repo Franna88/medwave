@@ -36,11 +36,13 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
 
   @override
   void dispose() {
+    _searchController.removeListener(_filterForms);
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _loadForms() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final forms = await _formService.getAllForms();
@@ -48,10 +50,12 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
       // Load submission counts for each form
       final counts = <String, int>{};
       for (final form in forms) {
+        if (!mounted) return;
         final count = await _submissionService.getSubmissionCount(form.formId);
         counts[form.formId] = count;
       }
 
+      if (!mounted) return;
       setState(() {
         _forms = forms;
         _filteredForms = forms;
@@ -59,12 +63,11 @@ class _AdminFormsScreenState extends State<AdminFormsScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading forms: $e')));
-      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading forms: $e')));
     }
   }
 

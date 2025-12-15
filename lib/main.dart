@@ -3,8 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 // Conditional import: uses web plugin on web, stub on mobile
-import 'url_strategy_stub.dart'
-    if (dart.library.html) 'url_strategy_web.dart';
+import 'url_strategy_stub.dart' if (dart.library.html) 'url_strategy_web.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_performance/firebase_performance.dart';
@@ -52,6 +51,7 @@ import 'screens/admin/admin_sales_performance_screen.dart';
 import 'screens/admin/admin_analytics_screen.dart';
 import 'utils/role_manager.dart';
 import 'screens/admin/admin_patient_management_screen.dart';
+import 'screens/admin/admin_product_management_screen.dart';
 import 'screens/admin/adverts/admin_adverts_overview_screen.dart';
 import 'screens/admin/adverts/admin_adverts_campaigns_screen.dart';
 import 'screens/admin/adverts/admin_adverts_campaigns_old_screen.dart';
@@ -70,6 +70,7 @@ import 'providers/auth_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/admin_provider.dart';
 import 'providers/gohighlevel_provider.dart';
+import 'providers/product_items_provider.dart';
 import 'services/firebase/fcm_service.dart';
 import 'services/web_image_service.dart';
 import 'utils/responsive_utils.dart';
@@ -125,6 +126,8 @@ class MedWaveApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         // Admin provider for superadmin functionality
         ChangeNotifierProvider(create: (_) => AdminProvider()),
+        // Product items provider for admin product management
+        ChangeNotifierProvider(create: (_) => ProductItemsProvider()),
         // GoHighLevel CRM provider for advertisement performance monitoring
         ChangeNotifierProvider(create: (_) => GoHighLevelProvider()),
         // Performance Cost provider for ad budget and profitability tracking
@@ -263,6 +266,12 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           return authProvider.dashboardRoute;
         }
       }
+
+      // Restrict product management to super admin and country admin
+      if (currentPath.startsWith('/admin/product-management') &&
+          !RoleManager.canManageProducts(authProvider.userRole)) {
+        return authProvider.dashboardRoute;
+      }
     }
 
     return null; // No redirect needed - preserve current route
@@ -391,6 +400,11 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           path: '/admin/patients',
           name: 'admin-patients',
           builder: (context, state) => const AdminPatientManagementScreen(),
+        ),
+        GoRoute(
+          path: '/admin/product-management',
+          name: 'admin-product-management',
+          builder: (context, state) => const AdminProductManagementScreen(),
         ),
         GoRoute(
           path: '/admin/adverts',

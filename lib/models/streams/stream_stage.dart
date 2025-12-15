@@ -1,10 +1,5 @@
 /// Enum for different stream types
-enum StreamType {
-  marketing,
-  sales,
-  operations,
-  support,
-}
+enum StreamType { marketing, sales, operations, support }
 
 /// Model for a stage in any stream pipeline
 class StreamStage {
@@ -13,7 +8,8 @@ class StreamStage {
   final int position;
   final String color;
   final StreamType streamType;
-  final bool isFinalStage; // Indicates if this stage triggers conversion to next stream
+  final bool
+  isFinalStage; // Indicates if this stage triggers conversion to next stream
 
   StreamStage({
     required this.id,
@@ -120,23 +116,30 @@ class StreamStage {
         streamType: StreamType.sales,
       ),
       StreamStage(
+        id: 'opt_in',
+        name: 'Opt In',
+        position: 2,
+        color: '#7E57C2', // deep purple
+        streamType: StreamType.sales,
+      ),
+      StreamStage(
         id: 'deposit_requested',
         name: 'Deposit Requested',
-        position: 2,
+        position: 3,
         color: '#FFC107', // amber
         streamType: StreamType.sales,
       ),
       StreamStage(
         id: 'deposit_made',
         name: 'Deposit Made',
-        position: 3,
+        position: 4,
         color: '#4CAF50', // green
         streamType: StreamType.sales,
       ),
       StreamStage(
         id: 'send_to_operations',
         name: 'Send to Operations',
-        position: 4,
+        position: 5,
         color: '#2E7D32', // dark green
         streamType: StreamType.sales,
         isFinalStage: true, // Triggers conversion to Operations
@@ -221,4 +224,3 @@ class StreamStage {
     ];
   }
 }
-

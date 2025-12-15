@@ -23,6 +23,8 @@ class SalesAppointment {
   final double? formScore;
   final String? assignedTo; // userId of assigned Sales Admin
   final String? assignedToName; // name of assigned Sales Admin
+  final String? optInNote;
+  final List<OptInProduct> optInProducts;
 
   SalesAppointment({
     required this.id,
@@ -46,6 +48,8 @@ class SalesAppointment {
     this.formScore,
     this.assignedTo,
     this.assignedToName,
+    this.optInNote,
+    this.optInProducts = const [],
   });
 
   /// Get time in current stage
@@ -108,6 +112,14 @@ class SalesAppointment {
           : null,
       assignedTo: map['assignedTo']?.toString(),
       assignedToName: map['assignedToName']?.toString(),
+      optInNote: map['optInNote']?.toString(),
+      optInProducts:
+          (map['optInProducts'] as List<dynamic>?)
+              ?.map(
+                (item) => OptInProduct.fromMap(item as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
     );
   }
 
@@ -135,6 +147,8 @@ class SalesAppointment {
       'formScore': formScore,
       'assignedTo': assignedTo,
       'assignedToName': assignedToName,
+      'optInNote': optInNote,
+      'optInProducts': optInProducts.map((p) => p.toMap()).toList(),
     };
   }
 
@@ -160,6 +174,8 @@ class SalesAppointment {
     double? formScore,
     String? assignedTo,
     String? assignedToName,
+    String? optInNote,
+    List<OptInProduct>? optInProducts,
   }) {
     return SalesAppointment(
       id: id ?? this.id,
@@ -183,6 +199,8 @@ class SalesAppointment {
       formScore: formScore ?? this.formScore,
       assignedTo: assignedTo ?? this.assignedTo,
       assignedToName: assignedToName ?? this.assignedToName,
+      optInNote: optInNote ?? this.optInNote,
+      optInProducts: optInProducts ?? this.optInProducts,
     );
   }
 }
@@ -250,5 +268,29 @@ class SalesAppointmentNote {
       'createdBy': createdBy,
       'createdByName': createdByName,
     };
+  }
+}
+
+class OptInProduct {
+  final String id;
+  final String name;
+  final double price;
+
+  const OptInProduct({
+    required this.id,
+    required this.name,
+    required this.price,
+  });
+
+  factory OptInProduct.fromMap(Map<String, dynamic> map) {
+    return OptInProduct(
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      price: (map['price'] is num) ? (map['price'] as num).toDouble() : 0.0,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {'id': id, 'name': name, 'price': price};
   }
 }
