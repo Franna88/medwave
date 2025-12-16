@@ -14,14 +14,43 @@ class ContractPdfService {
 
   /// Generate complete contract PDF document
   Future<pw.Document> generateContractPdf(Contract contract) async {
+    // #region agent log
+    final startTime = DateTime.now().millisecondsSinceEpoch;
+    if (kDebugMode) {
+      print(
+        '🔍 [PDF-START] contractId=${contract.id}, products=${contract.products.length}, time=$startTime (Hyp: All)',
+      );
+      // Check for trademark symbols in contract data
+      final plainText =
+          contract.contractContentData['plainText'] as String? ?? '';
+      final tmCount = '™'.allMatches(plainText).length;
+      final tmInProducts = contract.products
+          .where((p) => p.name.contains('™'))
+          .length;
+      print(
+        '🔍 [PDF-TM-CHECK] plainText_tm_count=$tmCount, products_with_tm=$tmInProducts, plainText_length=${plainText.length} (Hyp: A, B)',
+      );
+    }
+    // #endregion
     final pdf = pw.Document();
 
     // Load logo
+    // #region agent log
+    final logoStartTime = DateTime.now().millisecondsSinceEpoch;
+    // #endregion
     final logoData = await rootBundle.load('images/medwave_logo_white.png');
     final logoBytes = logoData.buffer.asUint8List();
     final logo = pw.MemoryImage(logoBytes);
+    // #region agent log
+    final logoEndTime = DateTime.now().millisecondsSinceEpoch;
+    final logoDuration = logoEndTime - logoStartTime;
+    if (kDebugMode) print('🔍 [PDF-LOGO] load_time=${logoDuration}ms (Hyp: C)');
+    // #endregion
 
     // Page 1: Header + Customer Info + Quote
+    // #region agent log
+    final page1StartTime = DateTime.now().millisecondsSinceEpoch;
+    // #endregion
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -40,19 +69,27 @@ class ContractPdfService {
         ),
       ),
     );
+    // #region agent log
+    final page1EndTime = DateTime.now().millisecondsSinceEpoch;
+    if (kDebugMode)
+      print(
+        '🔍 [PDF-PAGE1] build_time=${page1EndTime - page1StartTime}ms (Hyp: A, D)',
+      );
+    // #endregion
 
     // Page 2+: Contract Content
-    final plainText = contract.contractContentData['plainText'] as String? ?? '';
+    final plainText =
+        contract.contractContentData['plainText'] as String? ?? '';
     if (plainText.isNotEmpty) {
+      // #region agent log
+      final contentStartTime = DateTime.now().millisecondsSinceEpoch;
+      // #endregion
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(40),
           build: (context) => [
-            pw.Text(
-              'Agreement Terms',
-              style: PdfStyles.h2,
-            ),
+            pw.Text('Agreement Terms', style: PdfStyles.h2),
             PdfStyles.thickDivider,
             pw.Text(
               plainText,
@@ -63,9 +100,19 @@ class ContractPdfService {
           footer: (context) => _buildFooter(),
         ),
       );
+      // #region agent log
+      final contentEndTime = DateTime.now().millisecondsSinceEpoch;
+      if (kDebugMode)
+        print(
+          '🔍 [PDF-CONTENT] build_time=${contentEndTime - contentStartTime}ms, text_length=${plainText.length} (Hyp: A, B, D)',
+        );
+      // #endregion
     }
 
     // Final Page: Signature Certificate
+    // #region agent log
+    final sigStartTime = DateTime.now().millisecondsSinceEpoch;
+    // #endregion
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -80,14 +127,39 @@ class ContractPdfService {
         ),
       ),
     );
+    // #region agent log
+    final sigEndTime = DateTime.now().millisecondsSinceEpoch;
+    if (kDebugMode)
+      print(
+        '🔍 [PDF-SIGNATURE] build_time=${sigEndTime - sigStartTime}ms (Hyp: A, D)',
+      );
+    final totalTime = sigEndTime - startTime;
+    if (kDebugMode)
+      print('🔍 [PDF-DOCUMENT-COMPLETE] total_time=${totalTime}ms (Hyp: All)');
+    // #endregion
 
     return pdf;
   }
 
   /// Generate PDF as bytes
   Future<Uint8List> generatePdfBytes(Contract contract) async {
+    // #region agent log
+    final bytesStartTime = DateTime.now().millisecondsSinceEpoch;
+    // #endregion
     final pdf = await generateContractPdf(contract);
-    return pdf.save();
+    // #region agent log
+    final saveStartTime = DateTime.now().millisecondsSinceEpoch;
+    if (kDebugMode) print('🔍 [PDF-SAVE-START] time=$saveStartTime (Hyp: D)');
+    // #endregion
+    final bytes = await pdf.save();
+    // #region agent log
+    final bytesEndTime = DateTime.now().millisecondsSinceEpoch;
+    if (kDebugMode)
+      print(
+        '🔍 [PDF-BYTES] save_time=${bytesEndTime - saveStartTime}ms, total_time=${bytesEndTime - bytesStartTime}ms, size_bytes=${bytes.length} (Hyp: D)',
+      );
+    // #endregion
+    return bytes;
   }
 
   /// Upload PDF to Firebase Storage
@@ -96,6 +168,13 @@ class ContractPdfService {
     Uint8List pdfBytes,
   ) async {
     try {
+      // #region agent log
+      final uploadStartTime = DateTime.now().millisecondsSinceEpoch;
+      if (kDebugMode)
+        print(
+          '🔍 [STORAGE-UPLOAD-START] size_bytes=${pdfBytes.length}, time=$uploadStartTime (Hyp: E)',
+        );
+      // #endregion
       final fileName = 'signed_contract_${contract.id}.pdf';
       final ref = _storage.ref().child('contracts/${contract.id}/$fileName');
 
@@ -111,7 +190,22 @@ class ContractPdfService {
         ),
       );
 
+      // #region agent log
+      final urlStartTime = DateTime.now().millisecondsSinceEpoch;
+      if (kDebugMode)
+        print(
+          '🔍 [STORAGE-UPLOAD-DONE] upload_time=${urlStartTime - uploadStartTime}ms (Hyp: E)',
+        );
+      // #endregion
       final downloadUrl = await ref.getDownloadURL();
+
+      // #region agent log
+      final uploadEndTime = DateTime.now().millisecondsSinceEpoch;
+      if (kDebugMode)
+        print(
+          '🔍 [STORAGE-COMPLETE] get_url_time=${uploadEndTime - urlStartTime}ms, total_upload_time=${uploadEndTime - uploadStartTime}ms (Hyp: E)',
+        );
+      // #endregion
 
       if (kDebugMode) {
         print('✅ PDF uploaded successfully: $downloadUrl');
@@ -293,9 +387,11 @@ class ContractPdfService {
                 pw.SizedBox(height: 8),
                 _buildInfoRow('Email:', contract.email),
                 pw.SizedBox(height: 8),
+                _buildInfoRow('Signature:', contract.digitalSignature ?? 'N/A'),
+                pw.SizedBox(height: 8),
                 _buildInfoRow(
-                  'Signature:',
-                  contract.digitalSignature ?? 'N/A',
+                  'Signature Token:',
+                  contract.digitalSignatureToken ?? 'N/A',
                 ),
                 pw.SizedBox(height: 8),
                 _buildInfoRow(
@@ -305,10 +401,7 @@ class ContractPdfService {
                       : 'N/A',
                 ),
                 pw.SizedBox(height: 8),
-                _buildInfoRow(
-                  'IP Address:',
-                  contract.ipAddress ?? 'N/A',
-                ),
+                _buildInfoRow('IP Address:', contract.ipAddress ?? 'N/A'),
               ],
             ),
           ),
@@ -338,9 +431,7 @@ class ContractPdfService {
           width: 120,
           child: pw.Text(label, style: PdfStyles.labelText),
         ),
-        pw.Expanded(
-          child: pw.Text(value, style: PdfStyles.bodyText),
-        ),
+        pw.Expanded(child: pw.Text(value, style: PdfStyles.bodyText)),
       ],
     );
   }
@@ -386,14 +477,8 @@ class ContractPdfService {
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text(
-                'MedWave™ RSA PTY LTD',
-                style: PdfStyles.smallText,
-              ),
-              pw.Text(
-                'www.medwavegroup.com',
-                style: PdfStyles.smallText,
-              ),
+              pw.Text('MedWave RSA PTY LTD', style: PdfStyles.smallText),
+              pw.Text('www.medwavegroup.com', style: PdfStyles.smallText),
             ],
           ),
         ],
@@ -401,4 +486,3 @@ class ContractPdfService {
     );
   }
 }
-

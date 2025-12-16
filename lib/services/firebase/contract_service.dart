@@ -280,6 +280,13 @@ class ContractService {
   /// Generate and upload PDF for a contract (can be called independently)
   Future<String> generateAndUploadPdf(String contractId) async {
     try {
+      // #region agent log
+      final overallStartTime = DateTime.now().millisecondsSinceEpoch;
+      if (kDebugMode)
+        print(
+          '🔍 [CONTRACT-SERVICE-START] contractId=$contractId, time=$overallStartTime (Hyp: E)',
+        );
+      // #endregion
       final doc = await _firestore
           .collection(_collectionPath)
           .doc(contractId)
@@ -288,6 +295,14 @@ class ContractService {
       if (!doc.exists) {
         throw Exception('Contract not found');
       }
+
+      // #region agent log
+      final fetchEndTime = DateTime.now().millisecondsSinceEpoch;
+      if (kDebugMode)
+        print(
+          '🔍 [FIRESTORE-FETCH] fetch_time=${fetchEndTime - overallStartTime}ms (Hyp: E)',
+        );
+      // #endregion
 
       final contract = Contract.fromFirestore(doc);
 
@@ -302,10 +317,25 @@ class ContractService {
       final pdfBytes = await _pdfService.generatePdfBytes(contract);
       final pdfUrl = await _pdfService.uploadPdfToStorage(contract, pdfBytes);
 
+      // #region agent log
+      final updateStartTime = DateTime.now().millisecondsSinceEpoch;
+      // #endregion
       // Update contract with PDF URL
       await _firestore.collection(_collectionPath).doc(contractId).update({
         'pdfUrl': pdfUrl,
       });
+
+      // #region agent log
+      final overallEndTime = DateTime.now().millisecondsSinceEpoch;
+      if (kDebugMode)
+        print(
+          '🔍 [FIRESTORE-UPDATE] update_time=${overallEndTime - updateStartTime}ms (Hyp: E)',
+        );
+      if (kDebugMode)
+        print(
+          '🔍 [CONTRACT-SERVICE-COMPLETE] total_time=${overallEndTime - overallStartTime}ms (Hyp: All)',
+        );
+      // #endregion
 
       if (kDebugMode) {
         print('✅ PDF generated and uploaded successfully: $pdfUrl');
