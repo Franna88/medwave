@@ -73,17 +73,30 @@ service cloud.firestore {
                      resource.data.depositConfirmationStatus == 'pending';
       
       allow create: if request.auth != null;
-      
+
       // Allow authenticated updates by owner or admin
       allow update: if request.auth != null && 
         (resource.data.practitionerId == request.auth.uid || isAdmin());
-      
+
       // Allow unauthenticated updates ONLY for automatic stage movement from contract signing
       // This allows the system to move appointments from opt_in to deposit_requested
       // when a contract is signed (unauthenticated contract signing flow)
       allow update: if resource.data.currentStage == 'opt_in' && 
                        request.resource.data.currentStage == 'deposit_requested';
-      
+
+      // Allow unauthenticated updates for deposit confirmation (Yes/No response)
+      // This allows updating deposit confirmation fields when customer clicks Yes/No in email
+      // Stage must remain deposit_requested and only specific fields can be modified
+      allow update: if resource.data.currentStage == 'deposit_requested' && 
+                       request.resource.data.currentStage == 'deposit_requested' &&
+                       // Ensure only deposit confirmation fields, stageHistory and updatedAt are being modified
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['depositConfirmationStatus', 'depositConfirmationRespondedAt', 'stageHistory', 'updatedAt']) &&
+                       // Validate depositConfirmationStatus is changing from 'pending' to 'confirmed' or 'declined'
+                       resource.data.depositConfirmationStatus == 'pending' &&
+                       (request.resource.data.depositConfirmationStatus == 'confirmed' || 
+                        request.resource.data.depositConfirmationStatus == 'declined');
+
       allow delete: if request.auth != null && 
         (resource.data.practitionerId == request.auth.uid || isAdmin());
     }
