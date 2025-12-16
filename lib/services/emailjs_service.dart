@@ -214,14 +214,17 @@ class EmailJSService {
       templateId: _depositMarketingTemplateId,
       toEmail: resolvedEmail,
       toName: 'Marketing Team',
-      templateParams: _buildDepositParams(
-        appointment: appointment,
-        yesUrl: resolvedYesUrl,
-        noUrl: resolvedNoUrl,
-        description: resolvedDescription,
-        yesLabel: yesLabel ?? 'Open sales board',
-        noLabel: noLabel ?? 'View appointment',
-      ),
+      templateParams:
+          _buildDepositParams(
+              appointment: appointment,
+              yesUrl: resolvedYesUrl,
+              noUrl: resolvedNoUrl,
+              description: resolvedDescription,
+              yesLabel: yesLabel ?? 'Open sales board',
+              noLabel: noLabel ?? 'View appointment',
+            )
+            ..['customer_email'] = resolvedEmail
+            ..['customer_name'] = 'Finance Team',
     );
   }
 

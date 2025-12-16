@@ -87,6 +87,7 @@ import 'services/firebase/fcm_service.dart';
 import 'services/web_image_service.dart';
 import 'utils/responsive_utils.dart';
 import 'services/firebase/app_settings_service.dart';
+import 'screens/public/finance_deposit_confirmation_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -220,7 +221,8 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         currentPath.startsWith('/mobile-warning') ||
         currentPath.startsWith('/fb-form') ||
         currentPath.startsWith('/verify-email') ||
-        currentPath.startsWith('/deposit-confirmation');
+        currentPath.startsWith('/deposit-confirmation') ||
+        currentPath.startsWith('/finance-confirmation');
     currentPath.startsWith('/contract') ||
         currentPath.startsWith('/verify-email');
 
@@ -347,6 +349,14 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       builder: (context, state) => DepositConfirmationScreen(
         appointmentId: state.uri.queryParameters['appointmentId'],
         decision: state.uri.queryParameters['decision'],
+        token: state.uri.queryParameters['token'],
+      ),
+    ),
+    GoRoute(
+      path: '/finance-confirmation',
+      name: 'finance-confirmation',
+      builder: (context, state) => FinanceDepositConfirmationScreen(
+        appointmentId: state.uri.queryParameters['appointmentId'],
         token: state.uri.queryParameters['token'],
       ),
     ),
