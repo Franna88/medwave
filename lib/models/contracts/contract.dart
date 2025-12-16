@@ -96,6 +96,9 @@ class Contract {
   final String? ipAddress;
   final String? userAgent;
 
+  // PDF
+  final String? pdfUrl; // Firebase Storage URL for generated PDF
+
   // Timestamps
   final DateTime createdAt;
   final DateTime? viewedAt;
@@ -128,6 +131,7 @@ class Contract {
     this.signedAt,
     this.ipAddress,
     this.userAgent,
+    this.pdfUrl,
     required this.createdAt,
     this.viewedAt,
     required this.createdBy,
@@ -199,6 +203,7 @@ class Contract {
       signedAt: (map['signedAt'] as Timestamp?)?.toDate(),
       ipAddress: map['ipAddress']?.toString(),
       userAgent: map['userAgent']?.toString(),
+      pdfUrl: map['pdfUrl']?.toString(),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       viewedAt: (map['viewedAt'] as Timestamp?)?.toDate(),
       createdBy: map['createdBy']?.toString() ?? '',
@@ -230,6 +235,7 @@ class Contract {
       'signedAt': signedAt != null ? Timestamp.fromDate(signedAt!) : null,
       'ipAddress': ipAddress,
       'userAgent': userAgent,
+      'pdfUrl': pdfUrl,
       'createdAt': Timestamp.fromDate(createdAt),
       'viewedAt': viewedAt != null ? Timestamp.fromDate(viewedAt!) : null,
       'createdBy': createdBy,
@@ -261,6 +267,7 @@ class Contract {
     DateTime? signedAt,
     String? ipAddress,
     String? userAgent,
+    String? pdfUrl,
     DateTime? createdAt,
     DateTime? viewedAt,
     String? createdBy,
@@ -292,6 +299,7 @@ class Contract {
       signedAt: signedAt ?? this.signedAt,
       ipAddress: ipAddress ?? this.ipAddress,
       userAgent: userAgent ?? this.userAgent,
+      pdfUrl: pdfUrl ?? this.pdfUrl,
       createdAt: createdAt ?? this.createdAt,
       viewedAt: viewedAt ?? this.viewedAt,
       createdBy: createdBy ?? this.createdBy,

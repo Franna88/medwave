@@ -7,6 +7,7 @@ import '../../models/contracts/contract.dart';
 import '../../models/streams/appointment.dart';
 import 'contract_content_service.dart';
 import 'sales_appointment_service.dart';
+import '../pdf/contract_pdf_service.dart';
 
 /// Service for managing contracts in Firebase
 class ContractService {
@@ -14,6 +15,7 @@ class ContractService {
   final ContractContentService _contractContentService =
       ContractContentService();
   final SalesAppointmentService _appointmentService = SalesAppointmentService();
+  final ContractPdfService _pdfService = ContractPdfService();
 
   static const String _collectionPath = 'contracts';
   static const String _secretKey =
@@ -255,10 +257,64 @@ class ContractService {
           );
         }
       }
+
+      // Generate and upload PDF (non-blocking if it fails)
+      try {
+        await generateAndUploadPdf(contractId);
+      } catch (pdfError) {
+        // Log but don't throw - contract is still signed successfully
+        if (kDebugMode) {
+          print('⚠️ Contract signed but PDF generation failed: $pdfError');
+          print('   Admin can regenerate PDF later from admin panel');
+        }
+      }
     } catch (e) {
       // Only rethrow if contract signing itself failed
       if (kDebugMode) {
         print('❌ ContractService: Error signing contract: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Generate and upload PDF for a contract (can be called independently)
+  Future<String> generateAndUploadPdf(String contractId) async {
+    try {
+      final doc = await _firestore
+          .collection(_collectionPath)
+          .doc(contractId)
+          .get();
+
+      if (!doc.exists) {
+        throw Exception('Contract not found');
+      }
+
+      final contract = Contract.fromFirestore(doc);
+
+      if (!contract.hasSigned) {
+        throw Exception('Contract must be signed before generating PDF');
+      }
+
+      if (kDebugMode) {
+        print('📄 Generating PDF for contract: $contractId');
+      }
+
+      final pdfBytes = await _pdfService.generatePdfBytes(contract);
+      final pdfUrl = await _pdfService.uploadPdfToStorage(contract, pdfBytes);
+
+      // Update contract with PDF URL
+      await _firestore.collection(_collectionPath).doc(contractId).update({
+        'pdfUrl': pdfUrl,
+      });
+
+      if (kDebugMode) {
+        print('✅ PDF generated and uploaded successfully: $pdfUrl');
+      }
+
+      return pdfUrl;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error generating PDF: $e');
       }
       rethrow;
     }

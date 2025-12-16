@@ -2,9 +2,25 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Ultra-permissive rules for debugging HTTP 412 errors
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             (get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'superadmin' ||
+              get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+
+    // Contract PDFs - app can write during signing, authenticated users can read
+    match /contracts/{contractId}/{fileName} {
+      // Allow app to write PDFs (including during unauthenticated contract signing)
+      // Validate file is PDF and follows naming convention
+      allow write: if fileName.matches('signed_contract_.*\\.pdf');
+      // Allow authenticated users to read PDFs
+      allow read: if request.auth != null;
+    }
+
+    // Default: Require authentication for all other paths
     match /{allPaths=**} {
-      allow read, write: if true; // Allow everything for debugging
+      allow read, write: if request.auth != null;
     }
   }
 }

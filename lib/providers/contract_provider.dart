@@ -171,17 +171,8 @@ class ContractProvider extends ChangeNotifier {
         userAgent: userAgent,
       );
 
-      // Update local state
-      if (_currentContract?.id == contractId) {
-        _currentContract = _currentContract!.copyWith(
-          status: ContractStatus.signed,
-          hasSigned: true,
-          digitalSignature: digitalSignature,
-          signedAt: DateTime.now(),
-          ipAddress: ipAddress,
-          userAgent: userAgent,
-        );
-      }
+      // Reload contract to get updated fields (digitalSignatureToken, pdfUrl, etc.)
+      await loadContractById(contractId);
 
       _isSaving = false;
       notifyListeners();
@@ -248,6 +239,34 @@ class ContractProvider extends ChangeNotifier {
 
       if (kDebugMode) {
         print('❌ ContractProvider: Error voiding contract: $e');
+      }
+
+      return false;
+    }
+  }
+
+  /// Generate PDF for a contract (manual trigger)
+  Future<bool> generateContractPdf(String contractId) async {
+    try {
+      _error = null;
+      notifyListeners();
+
+      await _service.generateAndUploadPdf(contractId);
+
+      // Reload contract to get updated pdfUrl
+      await loadContractById(contractId);
+
+      if (kDebugMode) {
+        print('✅ ContractProvider: PDF generated successfully');
+      }
+
+      return true;
+    } catch (e) {
+      _error = 'Failed to generate PDF: $e';
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ContractProvider: Error generating PDF: $e');
       }
 
       return false;

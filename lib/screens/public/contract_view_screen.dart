@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/contracts/contract.dart';
 import '../../providers/contract_provider.dart';
 import '../../theme/app_theme.dart';
@@ -281,6 +282,11 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                       contract.digitalSignature ?? '-',
                     ),
                     const SizedBox(height: 12),
+                    _buildInfoRow(
+                      'Signature ID',
+                      contract.digitalSignatureToken ?? '-',
+                    ),
+                    const SizedBox(height: 12),
                     _buildInfoRow('Customer', contract.customerName),
                     const SizedBox(height: 12),
                     _buildInfoRow('Email', contract.email),
@@ -289,6 +295,35 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
+
+              // PDF Download (if available)
+              if (contract.pdfUrl != null)
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    try {
+                      final uri = Uri.parse(contract.pdfUrl!);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      }
+                    } catch (e) {
+                      _showError('Unable to download PDF: $e');
+                    }
+                  },
+                  icon: const Icon(Icons.download),
+                  label: const Text('Download Signed Contract PDF'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 24,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 24),
 
               // Next steps

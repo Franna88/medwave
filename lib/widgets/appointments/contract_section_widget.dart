@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/streams/appointment.dart';
 import '../../models/contracts/contract.dart';
 import '../../providers/contract_provider.dart';
@@ -261,6 +262,33 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
     );
   }
 
+  void _downloadPdf() async {
+    if (_contract?.pdfUrl == null) return;
+
+    try {
+      final uri = Uri.parse(_contract!.pdfUrl!);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open PDF'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening PDF: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Only show for Opt In stage
@@ -486,11 +514,31 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
 
         const SizedBox(height: 12),
 
-        // View button
-        OutlinedButton.icon(
-          onPressed: _viewContract,
-          icon: const Icon(Icons.visibility, size: 18),
-          label: const Text('View Contract'),
+        // Action buttons
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _viewContract,
+                icon: const Icon(Icons.visibility, size: 18),
+                label: const Text('View Contract'),
+              ),
+            ),
+            if (_contract!.pdfUrl != null) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _downloadPdf,
+                  icon: const Icon(Icons.download, size: 18),
+                  label: const Text('Download PDF'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ],
     );

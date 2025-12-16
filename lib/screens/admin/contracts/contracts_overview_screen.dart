@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../models/contracts/contract.dart';
 import '../../../providers/contract_provider.dart';
 import '../../../providers/auth_provider.dart';
@@ -167,6 +168,100 @@ class _ContractsOverviewScreenState extends State<ContractsOverviewScreen> {
     }
   }
 
+  Future<void> _generateContractPdf(Contract contract) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Generate PDF'),
+        content: const Text('Generate PDF document for this signed contract?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Generate'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final provider = context.read<ContractProvider>();
+      final success = await provider.generateContractPdf(contract.id);
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF generated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadContracts(); // Refresh list
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _regenerateContractPdf(Contract contract) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Regenerate PDF'),
+        content: const Text(
+          'Regenerate PDF document? This will replace the existing PDF.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Regenerate'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final provider = context.read<ContractProvider>();
+      final success = await provider.generateContractPdf(contract.id);
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF regenerated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadContracts(); // Refresh list
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to regenerate PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _viewContractDetails(Contract contract) {
     final provider = context.read<ContractProvider>();
     final url = provider.getFullContractUrl(contract);
@@ -183,6 +278,18 @@ class _ContractsOverviewScreenState extends State<ContractsOverviewScreen> {
             ? () {
                 Navigator.of(context).pop();
                 _voidContract(contract);
+              }
+            : null,
+        onGeneratePdf: contract.hasSigned && contract.pdfUrl == null
+            ? () {
+                Navigator.of(context).pop();
+                _generateContractPdf(contract);
+              }
+            : null,
+        onRegeneratePdf: contract.hasSigned && contract.pdfUrl != null
+            ? () {
+                Navigator.of(context).pop();
+                _regenerateContractPdf(contract);
               }
             : null,
       ),
@@ -565,22 +672,13 @@ class _ContractsOverviewScreenState extends State<ContractsOverviewScreen> {
 
             // Status
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
+              child: Text(
+                contract.status.displayName,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                   color: Color(
                     int.parse(contract.statusColor.replaceFirst('#', '0xff')),
-                  ).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  contract.status.displayName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(
-                      int.parse(contract.statusColor.replaceFirst('#', '0xff')),
-                    ),
                   ),
                 ),
               ),
@@ -650,12 +748,16 @@ class _ContractDetailsDialog extends StatelessWidget {
   final String url;
   final VoidCallback onCopyLink;
   final VoidCallback? onVoid;
+  final VoidCallback? onGeneratePdf;
+  final VoidCallback? onRegeneratePdf;
 
   const _ContractDetailsDialog({
     required this.contract,
     required this.url,
     required this.onCopyLink,
     this.onVoid,
+    this.onGeneratePdf,
+    this.onRegeneratePdf,
   });
 
   @override
@@ -853,7 +955,7 @@ class _ContractDetailsDialog extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  if (onVoid != null)
+                  if (onVoid != null) ...[
                     OutlinedButton.icon(
                       onPressed: onVoid,
                       icon: const Icon(Icons.block),
@@ -862,7 +964,64 @@ class _ContractDetailsDialog extends StatelessWidget {
                         foregroundColor: Colors.red,
                       ),
                     ),
-                  const SizedBox(width: 12),
+                    const SizedBox(width: 12),
+                  ],
+                  // PDF Actions - Show for signed contracts
+                  if (contract.hasSigned) ...[
+                    if (onGeneratePdf != null)
+                      // Generate PDF button (when PDF doesn't exist)
+                      ElevatedButton.icon(
+                        onPressed: onGeneratePdf,
+                        icon: const Icon(Icons.picture_as_pdf),
+                        label: const Text('Generate PDF'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                      )
+                    else if (contract.pdfUrl != null)
+                      // Download PDF button (when PDF exists)
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          try {
+                            final uri = Uri.parse(contract.pdfUrl!);
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(
+                                uri,
+                                mode: LaunchMode.externalApplication,
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error opening PDF: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.download),
+                        label: const Text('Download PDF'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    const SizedBox(width: 12),
+                    // Regenerate button (always show for signed contracts with PDF)
+                    if (onRegeneratePdf != null)
+                      OutlinedButton.icon(
+                        onPressed: onRegeneratePdf,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Regenerate'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.blue,
+                        ),
+                      ),
+                    const SizedBox(width: 12),
+                  ],
                   ElevatedButton.icon(
                     onPressed: onCopyLink,
                     icon: const Icon(Icons.copy),
