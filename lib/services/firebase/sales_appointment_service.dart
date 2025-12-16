@@ -1,8 +1,5 @@
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import '../../models/streams/appointment.dart' as models;
 import '../../models/streams/order.dart' as models;
@@ -15,8 +12,6 @@ class SalesAppointmentService {
   final OrderService _orderService = OrderService();
   static const String _depositLinkBaseProd = 'https://app.medwave.com';
   static const String _depositLinkBaseLocal = 'http://localhost:52961';
-  static const String _depositApiBaseProd =
-      'https://us-central1-medx-ai.cloudfunctions.net/api';
 
   /// Get all sales appointments
   Future<List<models.SalesAppointment>> getAllAppointments({
@@ -340,51 +335,85 @@ class SalesAppointmentService {
       );
     }
 
-    final uri = Uri.parse('$_depositApiBaseProd/deposit/confirm');
-
     try {
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'appointmentId': appointmentId,
-          'decision': normalizedDecision,
-          'token': token,
-        }),
-      );
+      // 1. Fetch the appointment to validate token
+      final appointment = await getAppointment(appointmentId);
 
-      if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (appointment == null) {
         return const DepositConfirmationResult(
           success: false,
-          message: 'Link issue or request failed.',
+          message: 'Appointment not found.',
           status: DepositResponseStatus.invalid,
         );
       }
 
-      final Map<String, dynamic> data =
-          json.decode(response.body) as Map<String, dynamic>;
-      final success = data['success'] == true;
-      final statusString = (data['status'] ?? 'invalid').toString();
-      final message =
-          data['message']?.toString() ??
-          'Something went wrong. Please try again later.';
-
-      DepositResponseStatus status;
-      switch (statusString) {
-        case 'confirmed':
-          status = DepositResponseStatus.confirmed;
-          break;
-        case 'declined':
-          status = DepositResponseStatus.declined;
-          break;
-        default:
-          status = DepositResponseStatus.invalid;
+      // 2. Validate token matches
+      if (appointment.depositConfirmationToken != token) {
+        return const DepositConfirmationResult(
+          success: false,
+          message: 'Invalid or expired confirmation link.',
+          status: DepositResponseStatus.invalid,
+        );
       }
 
+      // 3. Check if already responded
+      if (appointment.depositConfirmationStatus != null &&
+          appointment.depositConfirmationStatus != 'pending') {
+        return const DepositConfirmationResult(
+          success: false,
+          message: 'You have already responded to this confirmation.',
+          status: DepositResponseStatus.invalid,
+        );
+      }
+
+      // 4. Prepare update data
+      final now = DateTime.now();
+      final isConfirmed = normalizedDecision == 'yes';
+      final newStatus = isConfirmed ? 'confirmed' : 'declined';
+
+      // Create stage history note
+      final stageNote = isConfirmed
+          ? 'Customer ${appointment.customerName} has made deposit, finance department will confirm'
+          : 'We will send a follow up email in 2 days';
+
+      // Add new stage history entry (append to existing history)
+      final updatedHistory = [...appointment.stageHistory];
+      if (updatedHistory.isNotEmpty) {
+        // Update the last entry's note if it's the current stage and has no exit time
+        final lastEntry = updatedHistory.last;
+        if (lastEntry.stage == 'deposit_requested' &&
+            lastEntry.exitedAt == null) {
+          updatedHistory[updatedHistory.length -
+              1] = models.SalesAppointmentStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: lastEntry.exitedAt,
+            note: stageNote,
+          );
+        }
+      }
+
+      // 5. Update appointment in Firestore
+      await _firestore.collection('appointments').doc(appointmentId).update({
+        'depositConfirmationStatus': newStatus,
+        'depositConfirmationRespondedAt': Timestamp.fromDate(now),
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      if (kDebugMode) {
+        print('Deposit confirmation updated: $appointmentId -> $newStatus');
+      }
+
+      // 6. Return success result
       return DepositConfirmationResult(
-        success: success,
-        message: message,
-        status: status,
+        success: true,
+        message: isConfirmed
+            ? 'Thank you for confirming your deposit.'
+            : 'Thank you for your response.',
+        status: isConfirmed
+            ? DepositResponseStatus.confirmed
+            : DepositResponseStatus.declined,
       );
     } catch (e) {
       if (kDebugMode) {

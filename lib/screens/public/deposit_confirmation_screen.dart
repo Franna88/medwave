@@ -26,6 +26,13 @@ class _DepositConfirmationScreenState extends State<DepositConfirmationScreen> {
   String _message = 'Please wait while we record your response.';
   bool _isError = false;
   bool _isLoaded = false;
+  bool _isProcessing = false; // Prevent duplicate calls
+
+  // Static set to track processing appointments across widget recreations
+  static final Set<String> _processingAppointments = {};
+
+  // Static map to store results across widget recreations
+  static final Map<String, DepositConfirmationResult> _processingResults = {};
 
   @override
   void initState() {
@@ -48,12 +55,47 @@ class _DepositConfirmationScreenState extends State<DepositConfirmationScreen> {
       return;
     }
 
+    // Check if result already exists from another widget instance
+    if (_processingResults.containsKey(appointmentId)) {
+      final cachedResult = _processingResults[appointmentId]!;
+      _updateUIWithResult(cachedResult);
+      return;
+    }
+
+    // Prevent duplicate calls - check both instance flags and static set
+    if (_isProcessing || _isLoaded) {
+      return;
+    }
+
+    // If another widget is processing, wait for it
+    if (_processingAppointments.contains(appointmentId)) {
+      _waitForResult(appointmentId);
+      return;
+    }
+
+    _isProcessing = true;
+    _processingAppointments.add(appointmentId);
+
     final result = await _service.handleDepositConfirmationResponse(
       appointmentId: appointmentId,
       decision: decision,
       token: token,
     );
 
+    // Store result for other widget instances
+    _processingResults[appointmentId] = result;
+
+    // Clean up processing set
+    _processingAppointments.remove(appointmentId);
+
+    if (!mounted) {
+      return;
+    }
+
+    _updateUIWithResult(result);
+  }
+
+  void _updateUIWithResult(DepositConfirmationResult result) {
     if (!mounted) return;
 
     setState(() {
@@ -75,6 +117,23 @@ class _DepositConfirmationScreenState extends State<DepositConfirmationScreen> {
           break;
       }
     });
+  }
+
+  Future<void> _waitForResult(String appointmentId) async {
+    // Poll for result with timeout
+    for (int i = 0; i < 100; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (_processingResults.containsKey(appointmentId)) {
+        final result = _processingResults[appointmentId]!;
+        _updateUIWithResult(result);
+        return;
+      }
+
+      if (!_processingAppointments.contains(appointmentId)) {
+        break;
+      }
+    }
   }
 
   @override
