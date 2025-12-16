@@ -599,45 +599,32 @@ class SalesAppointmentService {
   }
 
   /// Move appointment to Deposit Requested stage (after contract signing)
-  /// This is called unauthenticated, so it uses direct update without reading first
+  /// Convenience wrapper that calls moveAppointmentToStage with email notification
   Future<void> moveToDepositRequested(
     String appointmentId, {
     String? customerName,
     String? contractId,
   }) async {
-    try {
-      final now = DateTime.now();
-      final contextNote = customerName != null
-          ? 'Contract digitally signed by $customerName. Moving to deposit requested stage for payment processing.'
-          : 'Contract digitally signed. Moving to deposit requested stage for payment processing.';
+    final note = customerName != null && contractId != null
+        ? 'Contract digitally signed by $customerName (Contract ID: $contractId). Deposit request email sent.'
+        : customerName != null
+        ? 'Contract digitally signed by $customerName. Moving to deposit requested stage for payment processing.'
+        : 'Contract digitally signed. Moving to deposit requested stage for payment processing.';
 
-      // Direct update without reading first (Firestore rules will validate)
-      // Rules ensure this only works if appointment is in opt_in stage
-      await _firestore.collection('appointments').doc(appointmentId).update({
-        'currentStage': 'deposit_requested',
-        'updatedAt': Timestamp.fromDate(now),
-        'stageHistory': FieldValue.arrayUnion([
-          {
-            'stage': 'deposit_requested',
-            'movedAt': Timestamp.fromDate(now),
-            'movedBy': 'system',
-            'movedByName': 'System (Contract Signing)',
-            'note': contextNote,
-          },
-        ]),
-      });
+    await moveAppointmentToStage(
+      appointmentId: appointmentId,
+      newStage: 'deposit_requested',
+      note: note,
+      userId: 'system',
+      userName: 'System (Contract Signing)',
+      shouldSendDepositEmail: true,
+    );
 
-      if (kDebugMode) {
-        print('✅ Moved appointment $appointmentId to Deposit Requested stage');
-        if (contractId != null) {
-          print('   Contract ID: $contractId');
-        }
+    if (kDebugMode) {
+      print('✅ Moved appointment $appointmentId to Deposit Requested stage');
+      if (contractId != null) {
+        print('   Contract ID: $contractId');
       }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error moving appointment to Deposit Requested: $e');
-      }
-      rethrow;
     }
   }
 }

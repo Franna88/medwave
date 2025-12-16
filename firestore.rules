@@ -67,6 +67,10 @@ service cloud.firestore {
     match /appointments/{appointmentId} {
       allow read: if request.auth != null;
       
+      // Allow unauthenticated read for opt_in appointments (needed for contract signing flow)
+      // This allows the system to read appointment data when moving from opt_in to deposit_requested
+      allow read: if resource.data.currentStage == 'opt_in';
+      
       // Allow unauthenticated read for deposit confirmation flow
       // This allows customers to validate their token when clicking Yes/No links
       allow read: if resource.data.currentStage == 'deposit_requested' && 
@@ -171,6 +175,11 @@ service cloud.firestore {
       // Allow public UPDATE only for pending/viewed contracts (for signing)
       allow update: if resource.data.status in ['pending', 'viewed'] && 
                        !resource.data.hasSigned;
+
+      // Allow updating pdfUrl after contract is signed (for PDF generation)
+      // Only allow updating the pdfUrl field, nothing else
+      allow update: if resource.data.hasSigned == true &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pdfUrl']);
 
       // Only authenticated admins can create/delete contracts
       allow create, delete: if request.auth != null && isAdmin();

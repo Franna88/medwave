@@ -238,14 +238,20 @@ class ContractService {
             .get();
         if (doc.exists) {
           final contract = Contract.fromFirestore(doc);
-          // Move appointment to Deposit Requested stage with context
-          await _appointmentService.moveToDepositRequested(
-            contract.appointmentId,
-            customerName: contract.customerName,
-            contractId: contractId,
+          // Move appointment to Deposit Requested stage with email notification
+          await _appointmentService.moveAppointmentToStage(
+            appointmentId: contract.appointmentId,
+            newStage: 'deposit_requested',
+            note:
+                'Contract digitally signed by ${contract.customerName} (Contract ID: $contractId). Deposit request email sent.',
+            userId: 'system',
+            userName: 'System (Contract Signing)',
+            shouldSendDepositEmail: true, // Triggers deposit confirmation email
           );
           if (kDebugMode) {
-            print('✅ ContractService: Appointment moved to Deposit Requested');
+            print(
+              '✅ ContractService: Appointment moved to Deposit Requested with email',
+            );
           }
         }
       } catch (stageError) {

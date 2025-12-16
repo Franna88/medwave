@@ -9,13 +9,9 @@ service firebase.storage {
               get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
 
-    // Contract PDFs - app can write during signing, authenticated users can read
+    // Contract PDFs - allow read/write for contract signing flow
     match /contracts/{contractId}/{fileName} {
-      // Allow app to write PDFs (including during unauthenticated contract signing)
-      // Validate file is PDF and follows naming convention
-      allow write: if fileName.matches('signed_contract_.*\\.pdf');
-      // Allow authenticated users to read PDFs
-      allow read: if request.auth != null;
+      allow read, write: if true;
     }
 
     // Default: Require authentication for all other paths
