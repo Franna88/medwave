@@ -414,7 +414,7 @@ class SalesAppointmentService {
 
           final sent = await EmailJSService.sendMarketingDepositNotification(
             appointment: appointment,
-            marketingEmail: 'ojebola.michael00@gmail.com',
+            marketingEmail: 'info@barefootbytes.com',
             yesUrl: financeUrl,
             noUrl: financeUrl,
             yesLabel: 'Deposit received',
@@ -542,6 +542,63 @@ class SalesAppointmentService {
     }
   }
 
+  /// Follow-up #1: resend original deposit confirmation with friendly nudge
+  Future<bool> sendDepositFollowUp1(String appointmentId) async {
+    final appointment = await getAppointment(appointmentId);
+    if (appointment == null) {
+      throw Exception('Appointment not found');
+    }
+
+    final links = _buildDepositConfirmationLinks(appointment);
+    if (links == null) {
+      return false;
+    }
+
+    return EmailJSService.sendCustomerDepositFollowUp1(
+      appointment: appointment,
+      yesUrl: links.yesUrl,
+      noUrl: links.noUrl,
+    );
+  }
+
+  /// Follow-up #2: shipped & locked reminder asking to confirm deposit
+  Future<bool> sendDepositFollowUp2(String appointmentId) async {
+    final appointment = await getAppointment(appointmentId);
+    if (appointment == null) {
+      throw Exception('Appointment not found');
+    }
+
+    final links = _buildDepositConfirmationLinks(appointment);
+    if (links == null) {
+      return false;
+    }
+
+    return EmailJSService.sendCustomerDepositFollowUp2(
+      appointment: appointment,
+      yesUrl: links.yesUrl,
+      noUrl: links.noUrl,
+    );
+  }
+
+  /// Follow-up #3: price increase reminder asking to confirm deposit
+  Future<bool> sendDepositFollowUp3(String appointmentId) async {
+    final appointment = await getAppointment(appointmentId);
+    if (appointment == null) {
+      throw Exception('Appointment not found');
+    }
+
+    final links = _buildDepositConfirmationLinks(appointment);
+    if (links == null) {
+      return false;
+    }
+
+    return EmailJSService.sendCustomerDepositFollowUp3(
+      appointment: appointment,
+      yesUrl: links.yesUrl,
+      noUrl: links.noUrl,
+    );
+  }
+
   String _buildDepositConfirmationLink({
     required String appointmentId,
     required String decision,
@@ -562,6 +619,31 @@ class SalesAppointmentService {
     );
 
     return uri.toString();
+  }
+
+  _DepositConfirmationLinks? _buildDepositConfirmationLinks(
+    models.SalesAppointment appointment,
+  ) {
+    final token = appointment.depositConfirmationToken;
+    if (token == null || token.isEmpty) {
+      if (kDebugMode) {
+        print('Missing deposit confirmation token for ${appointment.id}');
+      }
+      return null;
+    }
+
+    return _DepositConfirmationLinks(
+      yesUrl: _buildDepositConfirmationLink(
+        appointmentId: appointment.id,
+        decision: 'yes',
+        token: token,
+      ),
+      noUrl: _buildDepositConfirmationLink(
+        appointmentId: appointment.id,
+        decision: 'no',
+        token: token,
+      ),
+    );
   }
 
   String _buildFinanceConfirmationLink({
@@ -759,6 +841,13 @@ class SalesAppointmentService {
       }
     }
   }
+}
+
+/// Lightweight holder for yes/no confirmation URLs
+class _DepositConfirmationLinks {
+  const _DepositConfirmationLinks({required this.yesUrl, required this.noUrl});
+  final String yesUrl;
+  final String noUrl;
 }
 
 enum DepositResponseStatus { confirmed, declined, invalid }

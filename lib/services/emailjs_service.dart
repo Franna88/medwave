@@ -22,7 +22,7 @@ class EmailJSService {
   static const String _practitionerApprovalTemplateId =
       'template_qnmopr1'; // Practitioner approval notification - Application Approved
   static const String _depositCustomerTemplateId = 'template_6vqr5ib';
-  static const String _depositMarketingTemplateId = 'template_6vqr5ib';
+  static const String _depositMarketingTemplateId = 'template_jykxsg3';
   static const String _contractLinkTemplateId = 'template_bdg4s33';
 
   // Admin email for notifications
@@ -244,6 +244,72 @@ class EmailJSService {
     );
   }
 
+  /// Friendly follow-up #1 (same template) asking for deposit confirmation
+  static Future<bool> sendCustomerDepositFollowUp1({
+    required sales_models.SalesAppointment appointment,
+    required String yesUrl,
+    required String noUrl,
+  }) {
+    return _sendDepositEmail(
+      templateId: _depositCustomerTemplateId,
+      toEmail: appointment.email,
+      toName: appointment.customerName,
+      templateParams: _buildDepositParams(
+        appointment: appointment,
+        yesUrl: yesUrl,
+        noUrl: noUrl,
+        description:
+            'Friendly reminder: were you able to make the deposit to reserve your order?',
+        yesLabel: 'Yes, deposit is paid',
+        noLabel: 'Not yet, please assist',
+      ),
+    );
+  }
+
+  /// Friendly follow-up #2: shipped & locked notification + deposit check
+  static Future<bool> sendCustomerDepositFollowUp2({
+    required sales_models.SalesAppointment appointment,
+    required String yesUrl,
+    required String noUrl,
+  }) {
+    return _sendDepositEmail(
+      templateId: _depositCustomerTemplateId,
+      toEmail: appointment.email,
+      toName: appointment.customerName,
+      templateParams: _buildDepositParams(
+        appointment: appointment,
+        yesUrl: yesUrl,
+        noUrl: noUrl,
+        description:
+            'Good news—your items are prepped and locked at our warehouse. Please confirm the deposit so we can ship.',
+        yesLabel: 'Deposit is paid',
+        noLabel: 'Not yet, I need help',
+      ),
+    );
+  }
+
+  /// Friendly follow-up #3: price increase warning + deposit check
+  static Future<bool> sendCustomerDepositFollowUp3({
+    required sales_models.SalesAppointment appointment,
+    required String yesUrl,
+    required String noUrl,
+  }) {
+    return _sendDepositEmail(
+      templateId: _depositCustomerTemplateId,
+      toEmail: appointment.email,
+      toName: appointment.customerName,
+      templateParams: _buildDepositParams(
+        appointment: appointment,
+        yesUrl: yesUrl,
+        noUrl: noUrl,
+        description:
+            'Heads up: prices will increase soon. Confirm your deposit now to lock in your current quote.',
+        yesLabel: 'Lock price with deposit',
+        noLabel: 'Not yet, please hold',
+      ),
+    );
+  }
+
   static Future<bool> sendMarketingDepositNotification({
     required sales_models.SalesAppointment appointment,
     String? marketingEmail,
@@ -253,7 +319,7 @@ class EmailJSService {
     String? yesUrl,
     String? noUrl,
   }) async {
-    final resolvedEmail = marketingEmail ?? 'ojebola.michael00@gmail.com';
+    final resolvedEmail = marketingEmail ?? 'info@barefootbytes.com';
     final resolvedYesUrl = yesUrl ?? _defaultSalesBoardLink();
     final resolvedNoUrl = noUrl ?? _defaultSalesBoardLink();
 
