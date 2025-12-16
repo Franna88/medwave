@@ -66,6 +66,12 @@ service cloud.firestore {
     // Appointments - Can include sync status and Google event ID
     match /appointments/{appointmentId} {
       allow read: if request.auth != null;
+      
+      // Allow unauthenticated read for deposit confirmation flow
+      // This allows customers to validate their token when clicking Yes/No links
+      allow read: if resource.data.currentStage == 'deposit_requested' && 
+                     resource.data.depositConfirmationStatus == 'pending';
+      
       allow create: if request.auth != null;
       
       // Allow authenticated updates by owner or admin

@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const { Resend } = require('resend');
 // Cumulative metrics functions for parallel tracking system
 const { storeStageTransition, getCumulativeStageMetrics, syncOpportunitiesFromAPI, matchAndUpdateGHLDataToFacebookAds } = require('./lib/opportunityHistoryService');
 // Facebook Ads sync function
@@ -38,6 +39,14 @@ const GHL_BASE_URL = 'https://services.leadconnectorhq.com';
 // Use Firebase Functions config for production, or environment variable for local development
 const GHL_API_KEY = functions.config().ghl?.api_key || process.env.GHL_API_KEY;
 
+// Resend configuration for simple marketing notifications
+const RESEND_API_KEY = functions.config().resend?.api_key || process.env.RESEND_API_KEY;
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+const MARKETING_EMAIL =
+  functions.config().marketing?.deposit_email ||
+  process.env.MARKETING_EMAIL ||
+  'tertiusva@gmail.com';
+
 // Validate API key is configured
 if (!GHL_API_KEY) {
   console.warn('⚠️ WARNING: GHL_API_KEY not configured!');
@@ -61,6 +70,155 @@ app.get('/health', (req, res) => {
     message: 'GoHighLevel Proxy Server is running',
     timestamp: new Date().toISOString()
   });
+});
+
+// Deposit confirmation endpoint (Yes/No) - validates token and updates appointment
+app.post('/deposit/confirm', async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
+  try {
+    const appointmentId =
+      req.body?.appointmentId || req.body?.id || req.query.appointmentId || req.query.id;
+    const decision =
+      (req.body?.decision || req.query.decision || '').toString().toLowerCase();
+    const token = req.body?.token || req.query.token;
+
+    if (!appointmentId || !decision || !token) {
+      return res.status(400).json({
+        success: false,
+        status: 'invalid',
+        message: 'Missing appointmentId, decision, or token.',
+      });
+    }
+
+    if (decision !== 'yes' && decision !== 'no') {
+      return res.status(400).json({
+        success: false,
+        status: 'invalid',
+        message: 'Unknown decision.',
+      });
+    }
+
+    const db = admin.firestore();
+    const appointmentRef = db.collection('appointments').doc(appointmentId);
+    const snap = await appointmentRef.get();
+
+    if (!snap.exists) {
+      return res.status(404).json({
+        success: false,
+        status: 'invalid',
+        message: 'Appointment not found.',
+      });
+    }
+
+    const data = snap.data() || {};
+
+    if (!data.depositConfirmationToken || data.depositConfirmationToken !== token) {
+      return res.status(400).json({
+        success: false,
+        status: 'invalid',
+        message: 'This link is invalid or has already been used.',
+      });
+    }
+
+    const nowTs = admin.firestore.Timestamp.now();
+    const updates = {
+      depositConfirmationStatus: decision === 'yes' ? 'confirmed' : 'declined',
+      depositConfirmationRespondedAt: nowTs,
+      depositConfirmationToken: data.depositConfirmationToken,
+    };
+
+    // Normalize arrays
+    const stageHistory = Array.isArray(data.stageHistory) ? [...data.stageHistory] : [];
+    const notes = Array.isArray(data.notes) ? [...data.notes] : [];
+
+    if (decision === 'yes') {
+      if (stageHistory.length > 0) {
+        const last = stageHistory[stageHistory.length - 1];
+        if (!last.exitedAt) {
+          stageHistory[stageHistory.length - 1] = { ...last, exitedAt: nowTs };
+        }
+      }
+
+      stageHistory.push({
+        stage: 'deposit_made',
+        enteredAt: nowTs,
+        exitedAt: null,
+        note: 'Client confirmed deposit via email link',
+      });
+
+      notes.push({
+        text: 'Client confirmed deposit via email link',
+        createdAt: nowTs,
+        createdBy: 'system-email',
+        createdByName: 'Client',
+      });
+
+      Object.assign(updates, {
+        currentStage: 'deposit_made',
+        stageEnteredAt: nowTs,
+        stageHistory: stageHistory,
+        notes: notes,
+      });
+    } else {
+      notes.push({
+        text: 'Client indicated deposit not made (via email link)',
+        createdAt: nowTs,
+        createdBy: 'system-email',
+        createdByName: 'Client',
+      });
+
+      Object.assign(updates, {
+        notes: notes,
+      });
+    }
+
+    await appointmentRef.update(updates);
+
+    // Optional: notify marketing on confirmed deposit
+    if (decision === 'yes' && resend) {
+      try {
+        await resend.emails.send({
+          from: 'MedWave <no-reply@medwave.app>',
+          to: MARKETING_EMAIL,
+          subject: `Deposit confirmed: ${data.customerName || data.name || appointmentId}`,
+          html: `
+            <p>Deposit confirmed by client.</p>
+            <p><strong>Appointment ID:</strong> ${appointmentId}</p>
+            <p><strong>Name:</strong> ${data.customerName || data.name || 'N/A'}</p>
+            <p><strong>Email:</strong> ${data.email || 'N/A'}</p>
+            <p><strong>Phone:</strong> ${data.phone || 'N/A'}</p>
+            <p><strong>Deposit amount:</strong> ${data.depositAmount || 'N/A'}</p>
+          `,
+        });
+      } catch (emailErr) {
+        console.warn('⚠️ Unable to send marketing email:', emailErr.message || emailErr);
+      }
+    }
+
+    return res.json({
+      success: true,
+      status: decision === 'yes' ? 'confirmed' : 'declined',
+      message:
+        decision === 'yes'
+          ? 'Thank you for confirming your deposit.'
+          : 'We will send another reminder in 2 days to verify your deposit.',
+    });
+  } catch (error) {
+    console.error('❌ Error handling deposit confirmation:', error);
+    return res.status(500).json({
+      success: false,
+      status: 'invalid',
+      message: 'Something went wrong. Please try again later.',
+    });
+  }
 });
 
 // APK Download endpoint - Generate signed URL for Android app download
@@ -1411,6 +1569,8 @@ exports.scheduledFacebookSync = functions
 */
 
 // Export the Express app as a Firebase Cloud Function (1st gen)
+// Ensure this is deployed so /deposit/confirm is reachable:
+// firebase deploy --only functions:api
 exports.api = functions
   .runWith({
     timeoutSeconds: 300,

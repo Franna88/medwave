@@ -46,6 +46,7 @@ import 'screens/notifications/notifications_screen.dart';
 import 'screens/notifications/notification_preferences_screen.dart';
 import 'screens/web/mobile_warning_screen.dart';
 import 'screens/forms/public_form_screen.dart';
+import 'screens/public/deposit_confirmation_screen.dart';
 import 'screens/public/contract_view_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_provider_management_screen.dart';
@@ -165,9 +166,7 @@ class MedWaveApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               FlutterQuillLocalizations.delegate,
             ],
-            supportedLocales: const [
-              Locale('en', 'US'),
-            ],
+            supportedLocales: const [Locale('en', 'US')],
           );
         },
       ),
@@ -219,6 +218,8 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         currentPath.startsWith('/download-app') ||
         currentPath.startsWith('/mobile-warning') ||
         currentPath.startsWith('/fb-form') ||
+        currentPath.startsWith('/verify-email') ||
+        currentPath.startsWith('/deposit-confirmation');
         currentPath.startsWith('/contract') ||
         currentPath.startsWith('/verify-email');
 
@@ -339,6 +340,14 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         return PublicFormScreen(formId: formId);
       },
     ),
+    GoRoute(
+      path: '/deposit-confirmation',
+      name: 'deposit-confirmation',
+      builder: (context, state) => DepositConfirmationScreen(
+        appointmentId: state.uri.queryParameters['appointmentId'],
+        decision: state.uri.queryParameters['decision'],
+        token: state.uri.queryParameters['token'],
+      ),
     // Public contract view (no authentication required)
     GoRoute(
       path: '/contract/:contractId',
