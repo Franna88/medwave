@@ -76,6 +76,10 @@ service cloud.firestore {
       allow read: if resource.data.currentStage == 'deposit_requested' && 
                      resource.data.depositConfirmationStatus == 'pending';
       
+      // Allow unauthenticated read for finance deposit confirmation
+      // Finance needs to read appointments in deposit_requested regardless of confirmation status
+      allow read: if resource.data.currentStage == 'deposit_requested';
+      
       allow create: if request.auth != null;
 
       // Allow authenticated updates by owner or admin
@@ -100,6 +104,15 @@ service cloud.firestore {
                        resource.data.depositConfirmationStatus == 'pending' &&
                        (request.resource.data.depositConfirmationStatus == 'confirmed' || 
                         request.resource.data.depositConfirmationStatus == 'declined');
+
+      // Allow finance to confirm deposit received (unauthenticated)
+      // This allows moving appointments from deposit_requested to deposit_made
+      allow update: if resource.data.currentStage == 'deposit_requested' && 
+                       request.resource.data.currentStage == 'deposit_made' &&
+                       request.resource.data.depositPaid == true &&
+                       // Only allow updating specific fields for deposit confirmation
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['currentStage', 'stageEnteredAt', 'depositPaid', 'stageHistory', 'updatedAt']);
 
       allow delete: if request.auth != null && 
         (resource.data.practitionerId == request.auth.uid || isAdmin());

@@ -20,45 +20,73 @@ class FinanceDepositConfirmationScreen extends StatefulWidget {
 class _FinanceDepositConfirmationScreenState
     extends State<FinanceDepositConfirmationScreen> {
   final _service = SalesAppointmentService();
+  late final Future<DepositConfirmationResult> _confirmationFuture;
 
-  String _title = 'Processing...';
-  String _message = 'Please wait while we record your confirmation.';
-  bool _isError = false;
-  bool _isLoaded = false;
+  // Static state to handle widget recreation
+  static final Set<String> _processingAppointments = {};
+  static final Map<String, DepositConfirmationResult> _processingResults = {};
 
   @override
   void initState() {
     super.initState();
-    _process();
+    // Initialize once - survives widget rebuilds
+    _confirmationFuture = _processConfirmation();
   }
 
-  Future<void> _process() async {
+  Future<DepositConfirmationResult> _processConfirmation() async {
     final appointmentId = widget.appointmentId;
     final token = widget.token;
 
     if (appointmentId == null || token == null) {
-      setState(() {
-        _title = 'Missing information';
-        _message = 'The confirmation link is missing some details.';
-        _isError = true;
-        _isLoaded = true;
-      });
-      return;
+      return const DepositConfirmationResult(
+        success: false,
+        message: 'The confirmation link is missing some details.',
+        status: DepositResponseStatus.invalid,
+      );
     }
 
-    final result = await _service.handleFinanceDepositConfirmation(
-      appointmentId: appointmentId,
-      token: token,
+    if (_processingResults.containsKey(appointmentId)) {
+      return _processingResults[appointmentId]!;
+    }
+
+    if (_processingAppointments.contains(appointmentId)) {
+      return await _waitForResult(appointmentId);
+    }
+
+    _processingAppointments.add(appointmentId);
+
+    try {
+      final result = await _service.handleFinanceDepositConfirmation(
+        appointmentId: appointmentId,
+        token: token,
+      );
+
+      _processingResults[appointmentId] = result;
+      return result;
+    } finally {
+      _processingAppointments.remove(appointmentId);
+    }
+  }
+
+  Future<DepositConfirmationResult> _waitForResult(String appointmentId) async {
+    for (int i = 0; i < 100; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (_processingResults.containsKey(appointmentId)) {
+        return _processingResults[appointmentId]!;
+      }
+
+      if (!_processingAppointments.contains(appointmentId)) {
+        break;
+      }
+    }
+
+    // Timeout - return error
+    return const DepositConfirmationResult(
+      success: false,
+      message: 'Request timeout. Please try again.',
+      status: DepositResponseStatus.invalid,
     );
-
-    if (!mounted) return;
-
-    setState(() {
-      _isLoaded = true;
-      _isError = !result.success;
-      _title = result.success ? 'Deposit marked received' : 'Link issue';
-      _message = result.message;
-    });
   }
 
   @override
@@ -75,34 +103,104 @@ class _FinanceDepositConfirmationScreenState
             ),
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _isError ? Icons.error_outline : Icons.check_circle_outline,
-                    size: 64,
-                    color: _isError ? Colors.redAccent : Colors.green,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _message,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 15, height: 1.4),
-                  ),
-                  if (!_isLoaded) ...[
-                    const SizedBox(height: 16),
-                    const CircularProgressIndicator(),
-                  ],
-                ],
+              child: FutureBuilder<DepositConfirmationResult>(
+                future: _confirmationFuture,
+                builder: (context, snapshot) {
+                  // Loading state
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(
+                          Icons.hourglass_empty,
+                          size: 64,
+                          color: Colors.blue,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Processing...',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Please wait while we record your confirmation.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 15, height: 1.4),
+                        ),
+                        SizedBox(height: 16),
+                        CircularProgressIndicator(),
+                      ],
+                    );
+                  }
+
+                  // Error state (unexpected errors)
+                  if (snapshot.hasError) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.redAccent,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Something went wrong',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          snapshot.error.toString(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 15, height: 1.4),
+                        ),
+                      ],
+                    );
+                  }
+
+                  // Success state - show result
+                  final result = snapshot.data!;
+                  final isError = !result.success;
+                  final title = result.success
+                      ? 'Deposit marked as received'
+                      : 'Link issue';
+
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isError
+                            ? Icons.error_outline
+                            : Icons.check_circle_outline,
+                        size: 64,
+                        color: isError ? Colors.redAccent : Colors.green,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        result.message,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 15, height: 1.4),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),

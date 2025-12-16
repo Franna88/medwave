@@ -192,7 +192,6 @@ class EmailJSService {
     );
   }
 
-  /// Send marketing notification when customer confirms deposit
   static Future<bool> sendMarketingDepositNotification({
     required sales_models.SalesAppointment appointment,
     String? marketingEmail,
@@ -202,7 +201,7 @@ class EmailJSService {
     String? yesUrl,
     String? noUrl,
   }) async {
-    final resolvedEmail = marketingEmail ?? 'tertiusva@gmail.com';
+    final resolvedEmail = marketingEmail ?? 'ojebola.michae00@gmail.com';
     final resolvedYesUrl = yesUrl ?? _defaultSalesBoardLink();
     final resolvedNoUrl = noUrl ?? _defaultSalesBoardLink();
 

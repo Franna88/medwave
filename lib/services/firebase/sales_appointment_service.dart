@@ -414,7 +414,7 @@ class SalesAppointmentService {
 
           final sent = await EmailJSService.sendMarketingDepositNotification(
             appointment: appointment,
-            marketingEmail: 'tertiusva@gmail.com',
+            marketingEmail: 'ojebola.michae00@gmail.com',
             yesUrl: financeUrl,
             noUrl: financeUrl,
             yesLabel: 'Deposit received',
