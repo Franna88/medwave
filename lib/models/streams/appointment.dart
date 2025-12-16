@@ -244,6 +244,13 @@ class SalesAppointment {
       manuallyAdded: manuallyAdded ?? this.manuallyAdded,
     );
   }
+
+  /// Requires: contract signed, deposit paid, and customer confirmed
+  bool get isReadyForOperations {
+    return currentStage == 'deposit_made' &&
+        depositPaid == true &&
+        depositConfirmationStatus == 'confirmed';
+  }
 }
 
 /// Model for sales appointment stage history entry

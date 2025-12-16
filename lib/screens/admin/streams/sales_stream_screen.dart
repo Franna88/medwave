@@ -16,6 +16,7 @@ import '../../../utils/stream_utils.dart';
 import '../../../widgets/common/score_badge.dart';
 import '../../../widgets/appointments/appointment_detail_dialog.dart';
 import '../../../widgets/appointments/reschedule_appointment_dialog.dart';
+import '../../../widgets/appointments/ready_for_ops_badge.dart';
 import '../../../services/firebase/lead_booking_service.dart';
 import '../../../models/leads/lead_booking.dart'
     show LeadBooking, BookingStatus, AICallPrompts;
@@ -2104,6 +2105,11 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 ),
               ],
             ),
+            // Ready for Ops badge (for Deposit Made stage)
+            if (appointment.currentStage == 'deposit_made') ...[
+              const SizedBox(height: 8),
+              ReadyForOpsBadge(appointment: appointment, isCompact: true),
+            ],
             // Assigned to badge
             if (appointment.assignedToName != null &&
                 appointment.assignedToName!.isNotEmpty) ...[

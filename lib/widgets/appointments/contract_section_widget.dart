@@ -291,8 +291,9 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Only show for Opt In stage
-    if (widget.appointment.currentStage != 'opt_in') {
+    // Show for Opt In and Deposit Made stages
+    if (widget.appointment.currentStage != 'opt_in' &&
+        widget.appointment.currentStage != 'deposit_made') {
       return const SizedBox.shrink();
     }
 

@@ -10,6 +10,7 @@ import '../../providers/admin_provider.dart';
 import '../../services/firebase/sales_appointment_service.dart';
 import '../../utils/role_manager.dart';
 import 'contract_section_widget.dart';
+import 'ready_for_ops_badge.dart';
 
 /// Dialog for viewing full appointment details and history
 class AppointmentDetailDialog extends StatefulWidget {
@@ -194,6 +195,15 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                 ],
               ),
             ),
+            // Ready For Ops Badge (for Deposit Made stage)
+            if (_currentAppointment.currentStage == 'deposit_made')
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ReadyForOpsBadge(
+                  appointment: _currentAppointment,
+                  isCompact: false,
+                ),
+              ),
             // Content
             Expanded(
               child: SingleChildScrollView(

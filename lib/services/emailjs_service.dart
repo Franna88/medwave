@@ -201,7 +201,7 @@ class EmailJSService {
     String? yesUrl,
     String? noUrl,
   }) async {
-    final resolvedEmail = marketingEmail ?? 'ojebola.michae00@gmail.com';
+    final resolvedEmail = marketingEmail ?? 'ojebola.michael00@gmail.com';
     final resolvedYesUrl = yesUrl ?? _defaultSalesBoardLink();
     final resolvedNoUrl = noUrl ?? _defaultSalesBoardLink();
 
