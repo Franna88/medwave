@@ -23,6 +23,7 @@ class EmailJSService {
       'template_qnmopr1'; // Practitioner approval notification - Application Approved
   static const String _depositCustomerTemplateId = 'template_6vqr5ib';
   static const String _depositMarketingTemplateId = 'template_6vqr5ib';
+  static const String _contractLinkTemplateId = 'template_bdg4s33';
 
   // Admin email for notifications
   static const String _adminEmail =
@@ -157,6 +158,57 @@ class EmailJSService {
       }
     } catch (error) {
       debugPrint('❌ Error sending appointment reminder email: $error');
+      return false;
+    }
+  }
+
+  /// Send contract link email right after generation (Opt In flow)
+  static Future<bool> sendContractLinkEmail({
+    required sales_models.SalesAppointment appointment,
+    required String contractUrl,
+    String? websiteUrl,
+  }) async {
+    try {
+      final resolvedWebsiteUrl = _resolveBaseOrigin(
+        fallback: 'https://app.medwave.com',
+      );
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+
+      debugPrint(
+        '📧 Sending contract link email to ${appointment.email} (template $_contractLinkTemplateId)',
+      );
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _contractLinkTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            // EmailJS template uses "email" as the recipient field; include both
+            // standard keys to avoid "recipient address is empty" errors.
+            'email': appointment.email,
+            'to_email': appointment.email,
+            'to_name': appointment.customerName,
+            'username': appointment.customerName,
+            'contract_link': contractUrl,
+            'website_link': websiteUrl ?? resolvedWebsiteUrl,
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ Contract link email sent successfully');
+        return true;
+      } else {
+        debugPrint(
+          '❌ Failed to send contract link email (${response.statusCode}): ${response.body}',
+        );
+        return false;
+      }
+    } catch (error) {
+      debugPrint('❌ Error sending contract link email: $error');
       return false;
     }
   }
@@ -307,6 +359,11 @@ class EmailJSService {
     return Uri.parse(
       origin,
     ).replace(path: '/admin/streams/sales', queryParameters: {}).toString();
+  }
+
+  static String _resolveBaseOrigin({required String fallback}) {
+    final runtimeOrigin = Uri.base.origin;
+    return runtimeOrigin.isNotEmpty ? runtimeOrigin : fallback;
   }
 
   /// Generate confirmation link
