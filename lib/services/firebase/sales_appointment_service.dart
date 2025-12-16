@@ -405,6 +405,36 @@ class SalesAppointmentService {
         print('Deposit confirmation updated: $appointmentId -> $newStatus');
       }
 
+      if (isConfirmed) {
+        try {
+          final financeUrl = _buildFinanceConfirmationLink(
+            appointmentId: appointment.id,
+            token: appointment.depositConfirmationToken ?? token,
+          );
+
+          final sent = await EmailJSService.sendMarketingDepositNotification(
+            appointment: appointment,
+            marketingEmail: 'tertiusva@gmail.com',
+            yesUrl: financeUrl,
+            noUrl: financeUrl,
+            yesLabel: 'Deposit received',
+            noLabel: '',
+            description:
+                'Please confirm you have received the customer deposit.',
+          );
+
+          if (kDebugMode) {
+            print(
+              'Finance notification for $appointmentId sent: $sent (confirmed)',
+            );
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Failed to send finance notification for $appointmentId: $e');
+          }
+        }
+      }
+
       // 6. Return success result
       return DepositConfirmationResult(
         success: true,
@@ -418,6 +448,91 @@ class SalesAppointmentService {
     } catch (e) {
       if (kDebugMode) {
         print('Error handling deposit confirmation response: $e');
+      }
+      return const DepositConfirmationResult(
+        success: false,
+        message: 'Something went wrong. Please try again later.',
+        status: DepositResponseStatus.invalid,
+      );
+    }
+  }
+
+  /// Handle finance confirmation (single button) to mark deposit as received
+  Future<DepositConfirmationResult> handleFinanceDepositConfirmation({
+    required String appointmentId,
+    required String token,
+  }) async {
+    try {
+      final appointment = await getAppointment(appointmentId);
+      if (appointment == null) {
+        return const DepositConfirmationResult(
+          success: false,
+          message: 'Appointment not found.',
+          status: DepositResponseStatus.invalid,
+        );
+      }
+
+      if (appointment.depositConfirmationToken != token) {
+        return const DepositConfirmationResult(
+          success: false,
+          message: 'Invalid or expired confirmation link.',
+          status: DepositResponseStatus.invalid,
+        );
+      }
+
+      if (appointment.currentStage == 'deposit_made') {
+        return const DepositConfirmationResult(
+          success: true,
+          message: 'Deposit already marked as received.',
+          status: DepositResponseStatus.confirmed,
+        );
+      }
+
+      final now = DateTime.now();
+
+      // Update stage history: close current stage and add deposit_made
+      final updatedHistory = [...appointment.stageHistory];
+      if (updatedHistory.isNotEmpty) {
+        final lastEntry = updatedHistory.last;
+        if (lastEntry.exitedAt == null) {
+          updatedHistory[updatedHistory.length -
+              1] = models.SalesAppointmentStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: now,
+            note: lastEntry.note,
+          );
+        }
+      }
+
+      updatedHistory.add(
+        models.SalesAppointmentStageHistoryEntry(
+          stage: 'deposit_made',
+          enteredAt: now,
+          note: 'Finance confirmed deposit received.',
+        ),
+      );
+
+      await _firestore.collection('appointments').doc(appointmentId).update({
+        'currentStage': 'deposit_made',
+        'stageEnteredAt': Timestamp.fromDate(now),
+        'depositPaid': true,
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      if (kDebugMode) {
+        print('Finance marked deposit received for $appointmentId');
+      }
+
+      return const DepositConfirmationResult(
+        success: true,
+        message: 'Deposit marked as received.',
+        status: DepositResponseStatus.confirmed,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error handling finance deposit confirmation: $e');
       }
       return const DepositConfirmationResult(
         success: false,
@@ -444,6 +559,23 @@ class SalesAppointmentService {
         'decision': decision,
         'token': token,
       },
+    );
+
+    return uri.toString();
+  }
+
+  String _buildFinanceConfirmationLink({
+    required String appointmentId,
+    required String token,
+  }) {
+    final runtimeOrigin = Uri.base.origin;
+    final baseOrigin = runtimeOrigin.isNotEmpty
+        ? runtimeOrigin
+        : (kReleaseMode ? _depositLinkBaseProd : _depositLinkBaseLocal);
+
+    final uri = Uri.parse(baseOrigin).replace(
+      path: '/finance-confirmation',
+      queryParameters: {'appointmentId': appointmentId, 'token': token},
     );
 
     return uri.toString();
