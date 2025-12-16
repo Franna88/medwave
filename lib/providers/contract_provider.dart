@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/contracts/contract.dart';
 import '../models/streams/appointment.dart';
 import '../services/firebase/contract_service.dart';
+import '../services/emailjs_service.dart';
 
 /// Provider for managing contract state
 class ContractProvider extends ChangeNotifier {
@@ -42,6 +43,25 @@ class ContractProvider extends ChangeNotifier {
       );
 
       _currentContract = contract;
+
+      // Send contract link email (best-effort; non-blocking to signing flow)
+      try {
+        final contractUrl = getFullContractUrl(contract);
+        final sent = await EmailJSService.sendContractLinkEmail(
+          appointment: appointment,
+          contractUrl: contractUrl,
+        );
+        if (kDebugMode && !sent) {
+          debugPrint('⚠️ ContractProvider: Contract link email failed to send');
+        }
+      } catch (emailError) {
+        if (kDebugMode) {
+          debugPrint(
+            '⚠️ ContractProvider: Error sending contract email: $emailError',
+          );
+        }
+      }
+
       _isSaving = false;
       notifyListeners();
 
