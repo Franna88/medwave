@@ -277,6 +277,7 @@ class RoleManager {
                 '/admin/contract-content',
                 'description',
               ),
+              NavigationSubItem('Contracts', '/admin/contracts', 'description'),
             ],
           ),
           NavigationItem('Report Builder', '/admin/report-builder', 'build'),
