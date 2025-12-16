@@ -185,7 +185,8 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
     );
 
     // Explicitly allow /fb-form and /contract routes - always accessible regardless of authentication status
-    if (currentPath.startsWith('/fb-form') || currentPath.startsWith('/contract')) {
+    if (currentPath.startsWith('/fb-form') ||
+        currentPath.startsWith('/contract')) {
       return null; // Always allow access to public forms and contracts
     }
 
@@ -220,7 +221,7 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         currentPath.startsWith('/fb-form') ||
         currentPath.startsWith('/verify-email') ||
         currentPath.startsWith('/deposit-confirmation');
-        currentPath.startsWith('/contract') ||
+    currentPath.startsWith('/contract') ||
         currentPath.startsWith('/verify-email');
 
     // Wait for auth to initialize - preserve current route during loading
@@ -348,6 +349,7 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         decision: state.uri.queryParameters['decision'],
         token: state.uri.queryParameters['token'],
       ),
+    ),
     // Public contract view (no authentication required)
     GoRoute(
       path: '/contract/:contractId',
@@ -355,10 +357,7 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       builder: (context, state) {
         final contractId = state.pathParameters['contractId']!;
         final token = state.uri.queryParameters['token'];
-        return ContractViewScreen(
-          contractId: contractId,
-          token: token,
-        );
+        return ContractViewScreen(contractId: contractId, token: token);
       },
     ),
     // Authentication routes
