@@ -46,6 +46,7 @@ import 'screens/notifications/notifications_screen.dart';
 import 'screens/notifications/notification_preferences_screen.dart';
 import 'screens/web/mobile_warning_screen.dart';
 import 'screens/forms/public_form_screen.dart';
+import 'screens/public/deposit_confirmation_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_provider_management_screen.dart';
 import 'screens/admin/admin_provider_approvals_screen.dart';
@@ -160,9 +161,7 @@ class MedWaveApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               FlutterQuillLocalizations.delegate,
             ],
-            supportedLocales: const [
-              Locale('en', 'US'),
-            ],
+            supportedLocales: const [Locale('en', 'US')],
           );
         },
       ),
@@ -214,7 +213,8 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         currentPath.startsWith('/download-app') ||
         currentPath.startsWith('/mobile-warning') ||
         currentPath.startsWith('/fb-form') ||
-        currentPath.startsWith('/verify-email');
+        currentPath.startsWith('/verify-email') ||
+        currentPath.startsWith('/deposit-confirmation');
 
     // Wait for auth to initialize - preserve current route during loading
     // This prevents redirecting authenticated users away from their current page on reload
@@ -332,6 +332,15 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         final formId = state.pathParameters['formId']!;
         return PublicFormScreen(formId: formId);
       },
+    ),
+    GoRoute(
+      path: '/deposit-confirmation',
+      name: 'deposit-confirmation',
+      builder: (context, state) => DepositConfirmationScreen(
+        appointmentId: state.uri.queryParameters['appointmentId'],
+        decision: state.uri.queryParameters['decision'],
+        token: state.uri.queryParameters['token'],
+      ),
     ),
     // Authentication routes
     GoRoute(

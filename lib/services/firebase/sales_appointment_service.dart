@@ -1,13 +1,22 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 import '../../models/streams/appointment.dart' as models;
 import '../../models/streams/order.dart' as models;
+import '../emailjs_service.dart';
 import 'order_service.dart';
 
 /// Service for managing sales appointments in Firebase
 class SalesAppointmentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final OrderService _orderService = OrderService();
+  static const String _depositLinkBaseProd = 'https://app.medwave.com';
+  static const String _depositLinkBaseLocal = 'http://localhost:52961';
+  static const String _depositApiBaseProd =
+      'https://us-central1-medx-ai.cloudfunctions.net/api';
 
   /// Get all sales appointments
   Future<List<models.SalesAppointment>> getAllAppointments({
@@ -179,6 +188,11 @@ class SalesAppointmentService {
     String? assignedToName,
     String? optInNote,
     List<models.OptInProduct>? optInProducts,
+    String? depositConfirmationToken,
+    String? depositConfirmationStatus,
+    DateTime? depositConfirmationSentAt,
+    DateTime? depositConfirmationRespondedAt,
+    bool shouldSendDepositEmail = true,
   }) async {
     try {
       final appointment = await getAppointment(appointmentId);
@@ -187,6 +201,39 @@ class SalesAppointmentService {
       }
 
       final now = DateTime.now();
+
+      // Determine if we need to send deposit confirmation email
+      final movedFromOptInToDeposit =
+          appointment.currentStage == 'opt_in' &&
+          newStage == 'deposit_requested';
+
+      String? confirmationToken = depositConfirmationToken;
+      String? confirmationStatus = depositConfirmationStatus;
+      DateTime? confirmationSentAt = depositConfirmationSentAt;
+      DateTime? confirmationRespondedAt = depositConfirmationRespondedAt;
+
+      if (shouldSendDepositEmail && movedFromOptInToDeposit) {
+        confirmationToken = const Uuid().v4();
+        confirmationStatus = 'pending';
+        confirmationSentAt = now;
+
+        final yesUrl = _buildDepositConfirmationLink(
+          appointmentId: appointment.id,
+          decision: 'yes',
+          token: confirmationToken,
+        );
+        final noUrl = _buildDepositConfirmationLink(
+          appointmentId: appointment.id,
+          decision: 'no',
+          token: confirmationToken,
+        );
+
+        await EmailJSService.sendCustomerDepositRequest(
+          appointment: appointment,
+          yesUrl: yesUrl,
+          noUrl: noUrl,
+        );
+      }
 
       // Create stage history entry for current stage exit
       final updatedHistory = [...appointment.stageHistory];
@@ -237,6 +284,15 @@ class SalesAppointmentService {
         assignedToName: assignedToName ?? appointment.assignedToName,
         optInNote: optInNote ?? appointment.optInNote,
         optInProducts: optInProducts ?? appointment.optInProducts,
+        depositConfirmationToken:
+            confirmationToken ?? appointment.depositConfirmationToken,
+        depositConfirmationStatus:
+            confirmationStatus ?? appointment.depositConfirmationStatus,
+        depositConfirmationSentAt:
+            confirmationSentAt ?? appointment.depositConfirmationSentAt,
+        depositConfirmationRespondedAt:
+            confirmationRespondedAt ??
+            appointment.depositConfirmationRespondedAt,
       );
 
       await updateAppointment(updatedAppointment);
@@ -267,6 +323,101 @@ class SalesAppointmentService {
       }
       rethrow;
     }
+  }
+
+  /// Handle deposit confirmation response from public link
+  Future<DepositConfirmationResult> handleDepositConfirmationResponse({
+    required String appointmentId,
+    required String decision,
+    required String token,
+  }) async {
+    final normalizedDecision = decision.toLowerCase();
+    if (normalizedDecision != 'yes' && normalizedDecision != 'no') {
+      return const DepositConfirmationResult(
+        success: false,
+        message: 'Unknown decision.',
+        status: DepositResponseStatus.invalid,
+      );
+    }
+
+    final uri = Uri.parse('$_depositApiBaseProd/deposit/confirm');
+
+    try {
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'appointmentId': appointmentId,
+          'decision': normalizedDecision,
+          'token': token,
+        }),
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return const DepositConfirmationResult(
+          success: false,
+          message: 'Link issue or request failed.',
+          status: DepositResponseStatus.invalid,
+        );
+      }
+
+      final Map<String, dynamic> data =
+          json.decode(response.body) as Map<String, dynamic>;
+      final success = data['success'] == true;
+      final statusString = (data['status'] ?? 'invalid').toString();
+      final message =
+          data['message']?.toString() ??
+          'Something went wrong. Please try again later.';
+
+      DepositResponseStatus status;
+      switch (statusString) {
+        case 'confirmed':
+          status = DepositResponseStatus.confirmed;
+          break;
+        case 'declined':
+          status = DepositResponseStatus.declined;
+          break;
+        default:
+          status = DepositResponseStatus.invalid;
+      }
+
+      return DepositConfirmationResult(
+        success: success,
+        message: message,
+        status: status,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error handling deposit confirmation response: $e');
+      }
+      return const DepositConfirmationResult(
+        success: false,
+        message: 'Something went wrong. Please try again later.',
+        status: DepositResponseStatus.invalid,
+      );
+    }
+  }
+
+  String _buildDepositConfirmationLink({
+    required String appointmentId,
+    required String decision,
+    required String token,
+  }) {
+    final runtimeOrigin = Uri.base.origin;
+    final baseOrigin = runtimeOrigin.isNotEmpty
+        ? runtimeOrigin
+        : (kReleaseMode ? _depositLinkBaseProd : _depositLinkBaseLocal);
+
+    final uri = Uri.parse(baseOrigin).replace(
+      path: '/deposit-confirmation',
+      queryParameters: {
+        'appointmentId': appointmentId,
+        'decision': decision,
+        'token': token,
+      },
+    );
+
+    return uri.toString();
   }
 
   /// Convert appointment to order (when reaching "Send to Operations" stage)
@@ -417,4 +568,18 @@ class SalesAppointmentService {
       rethrow;
     }
   }
+}
+
+enum DepositResponseStatus { confirmed, declined, invalid }
+
+class DepositConfirmationResult {
+  final bool success;
+  final String message;
+  final DepositResponseStatus status;
+
+  const DepositConfirmationResult({
+    required this.success,
+    required this.message,
+    required this.status,
+  });
 }
