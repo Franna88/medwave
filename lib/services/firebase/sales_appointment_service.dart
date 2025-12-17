@@ -401,17 +401,18 @@ class SalesAppointmentService {
         'updatedAt': Timestamp.fromDate(now),
       });
 
-      if (kDebugMode) {
-        print('Deposit confirmation updated: $appointmentId -> $newStatus');
-      }
+      print('✅ DEPOSIT CONFIRMATION: $appointmentId -> $newStatus');
+      print('📧 Customer: ${appointment.customerName} (${appointment.email})');
 
       if (isConfirmed) {
+        print('🔵 Customer said YES - Sending finance notification...');
         try {
           final financeUrl = _buildFinanceConfirmationLink(
             appointmentId: appointment.id,
             token: appointment.depositConfirmationToken ?? token,
           );
 
+          print('📤 Calling EmailJS.sendMarketingDepositNotification...');
           final sent = await EmailJSService.sendMarketingDepositNotification(
             appointment: appointment,
             marketingEmail: 'info@barefootbytes.com',
@@ -423,16 +424,17 @@ class SalesAppointmentService {
                 'Please confirm you have received the customer deposit.',
           );
 
-          if (kDebugMode) {
-            print(
-              'Finance notification for $appointmentId sent: $sent (confirmed)',
-            );
+          print('✉️ Finance email sent status: $sent');
+          if (sent) {
+            print('✅ SUCCESS: Finance team notified at info@barefootbytes.com');
+          } else {
+            print('❌ FAILED: Finance email was not sent (EmailJS returned false)');
           }
         } catch (e) {
-          if (kDebugMode) {
-            print('Failed to send finance notification for $appointmentId: $e');
-          }
+          print('❌ ERROR sending finance notification: $e');
         }
+      } else {
+        print('🔴 Customer said NO - Will follow up in 2 days');
       }
 
       // 6. Return success result
