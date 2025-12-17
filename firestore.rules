@@ -66,9 +66,54 @@ service cloud.firestore {
     // Appointments - Can include sync status and Google event ID
     match /appointments/{appointmentId} {
       allow read: if request.auth != null;
+      
+      // Allow unauthenticated read for opt_in appointments (needed for contract signing flow)
+      // This allows the system to read appointment data when moving from opt_in to deposit_requested
+      allow read: if resource.data.currentStage == 'opt_in';
+      
+      // Allow unauthenticated read for deposit confirmation flow
+      // This allows customers to validate their token when clicking Yes/No links
+      allow read: if resource.data.currentStage == 'deposit_requested' && 
+                     resource.data.depositConfirmationStatus == 'pending';
+      
+      // Allow unauthenticated read for finance deposit confirmation
+      // Finance needs to read appointments in deposit_requested regardless of confirmation status
+      allow read: if resource.data.currentStage == 'deposit_requested';
+      
       allow create: if request.auth != null;
+
+      // Allow authenticated updates by owner or admin
       allow update: if request.auth != null && 
         (resource.data.practitionerId == request.auth.uid || isAdmin());
+
+      // Allow unauthenticated updates ONLY for automatic stage movement from contract signing
+      // This allows the system to move appointments from opt_in to deposit_requested
+      // when a contract is signed (unauthenticated contract signing flow)
+      allow update: if resource.data.currentStage == 'opt_in' && 
+                       request.resource.data.currentStage == 'deposit_requested';
+
+      // Allow unauthenticated updates for deposit confirmation (Yes/No response)
+      // This allows updating deposit confirmation fields when customer clicks Yes/No in email
+      // Stage must remain deposit_requested and only specific fields can be modified
+      allow update: if resource.data.currentStage == 'deposit_requested' && 
+                       request.resource.data.currentStage == 'deposit_requested' &&
+                       // Ensure only deposit confirmation fields, stageHistory and updatedAt are being modified
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['depositConfirmationStatus', 'depositConfirmationRespondedAt', 'stageHistory', 'updatedAt']) &&
+                       // Validate depositConfirmationStatus is changing from 'pending' to 'confirmed' or 'declined'
+                       resource.data.depositConfirmationStatus == 'pending' &&
+                       (request.resource.data.depositConfirmationStatus == 'confirmed' || 
+                        request.resource.data.depositConfirmationStatus == 'declined');
+
+      // Allow finance to confirm deposit received (unauthenticated)
+      // This allows moving appointments from deposit_requested to deposit_made
+      allow update: if resource.data.currentStage == 'deposit_requested' && 
+                       request.resource.data.currentStage == 'deposit_made' &&
+                       request.resource.data.depositPaid == true &&
+                       // Only allow updating specific fields for deposit confirmation
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['currentStage', 'stageEnteredAt', 'depositPaid', 'stageHistory', 'updatedAt']);
+
       allow delete: if request.auth != null && 
         (resource.data.practitionerId == request.auth.uid || isAdmin());
     }
@@ -133,6 +178,24 @@ service cloud.firestore {
       allow read: if request.auth != null && isAdmin();
       // Allow authenticated admins to write all channels
       allow write: if request.auth != null && isAdmin();
+    }
+    
+    // Contracts - Public read access, restricted write access
+    match /contracts/{contractId} {
+      // Allow public read access
+      allow read: if true;
+
+      // Allow public UPDATE only for pending/viewed contracts (for signing)
+      allow update: if resource.data.status in ['pending', 'viewed'] && 
+                       !resource.data.hasSigned;
+
+      // Allow updating pdfUrl after contract is signed (for PDF generation)
+      // Only allow updating the pdfUrl field, nothing else
+      allow update: if resource.data.hasSigned == true &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pdfUrl']);
+
+      // Only authenticated admins can create/delete contracts
+      allow create, delete: if request.auth != null && isAdmin();
     }
     
     // SUPER PERMISSIVE RULES - Allow all authenticated users to do everything

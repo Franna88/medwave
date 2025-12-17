@@ -25,6 +25,10 @@ class SalesAppointment {
   final String? assignedToName; // name of assigned Sales Admin
   final String? optInNote;
   final List<OptInProduct> optInProducts;
+  final String? depositConfirmationToken;
+  final String? depositConfirmationStatus; // pending | confirmed | declined
+  final DateTime? depositConfirmationSentAt;
+  final DateTime? depositConfirmationRespondedAt;
   final bool
   manuallyAdded; // Indicates if appointment was manually added to stream
 
@@ -52,6 +56,10 @@ class SalesAppointment {
     this.assignedToName,
     this.optInNote,
     this.optInProducts = const [],
+    this.depositConfirmationToken,
+    this.depositConfirmationStatus,
+    this.depositConfirmationSentAt,
+    this.depositConfirmationRespondedAt,
     this.manuallyAdded = false,
   });
 
@@ -123,6 +131,12 @@ class SalesAppointment {
               )
               .toList() ??
           [],
+      depositConfirmationToken: map['depositConfirmationToken']?.toString(),
+      depositConfirmationStatus: map['depositConfirmationStatus']?.toString(),
+      depositConfirmationSentAt:
+          (map['depositConfirmationSentAt'] as Timestamp?)?.toDate(),
+      depositConfirmationRespondedAt:
+          (map['depositConfirmationRespondedAt'] as Timestamp?)?.toDate(),
       manuallyAdded: map['manuallyAdded'] == true,
     );
   }
@@ -153,6 +167,14 @@ class SalesAppointment {
       'assignedToName': assignedToName,
       'optInNote': optInNote,
       'optInProducts': optInProducts.map((p) => p.toMap()).toList(),
+      'depositConfirmationToken': depositConfirmationToken,
+      'depositConfirmationStatus': depositConfirmationStatus,
+      'depositConfirmationSentAt': depositConfirmationSentAt != null
+          ? Timestamp.fromDate(depositConfirmationSentAt!)
+          : null,
+      'depositConfirmationRespondedAt': depositConfirmationRespondedAt != null
+          ? Timestamp.fromDate(depositConfirmationRespondedAt!)
+          : null,
       'manuallyAdded': manuallyAdded,
     };
   }
@@ -181,6 +203,10 @@ class SalesAppointment {
     String? assignedToName,
     String? optInNote,
     List<OptInProduct>? optInProducts,
+    String? depositConfirmationToken,
+    String? depositConfirmationStatus,
+    DateTime? depositConfirmationSentAt,
+    DateTime? depositConfirmationRespondedAt,
     bool? manuallyAdded,
   }) {
     return SalesAppointment(
@@ -207,8 +233,23 @@ class SalesAppointment {
       assignedToName: assignedToName ?? this.assignedToName,
       optInNote: optInNote ?? this.optInNote,
       optInProducts: optInProducts ?? this.optInProducts,
+      depositConfirmationToken:
+          depositConfirmationToken ?? this.depositConfirmationToken,
+      depositConfirmationStatus:
+          depositConfirmationStatus ?? this.depositConfirmationStatus,
+      depositConfirmationSentAt:
+          depositConfirmationSentAt ?? this.depositConfirmationSentAt,
+      depositConfirmationRespondedAt:
+          depositConfirmationRespondedAt ?? this.depositConfirmationRespondedAt,
       manuallyAdded: manuallyAdded ?? this.manuallyAdded,
     );
+  }
+
+  /// Requires: contract signed, deposit paid, and customer confirmed
+  bool get isReadyForOperations {
+    return currentStage == 'deposit_made' &&
+        depositPaid == true &&
+        depositConfirmationStatus == 'confirmed';
   }
 }
 

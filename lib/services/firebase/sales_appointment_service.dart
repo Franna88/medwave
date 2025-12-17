@@ -1,13 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 import '../../models/streams/appointment.dart' as models;
 import '../../models/streams/order.dart' as models;
+import '../emailjs_service.dart';
 import 'order_service.dart';
 
 /// Service for managing sales appointments in Firebase
 class SalesAppointmentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final OrderService _orderService = OrderService();
+  static const String _depositLinkBaseProd = 'https://app.medwave.com';
+  static const String _depositLinkBaseLocal = 'http://localhost:52961';
 
   /// Get all sales appointments
   Future<List<models.SalesAppointment>> getAllAppointments({
@@ -179,6 +183,11 @@ class SalesAppointmentService {
     String? assignedToName,
     String? optInNote,
     List<models.OptInProduct>? optInProducts,
+    String? depositConfirmationToken,
+    String? depositConfirmationStatus,
+    DateTime? depositConfirmationSentAt,
+    DateTime? depositConfirmationRespondedAt,
+    bool shouldSendDepositEmail = true,
   }) async {
     try {
       final appointment = await getAppointment(appointmentId);
@@ -187,6 +196,39 @@ class SalesAppointmentService {
       }
 
       final now = DateTime.now();
+
+      // Determine if we need to send deposit confirmation email
+      final movedFromOptInToDeposit =
+          appointment.currentStage == 'opt_in' &&
+          newStage == 'deposit_requested';
+
+      String? confirmationToken = depositConfirmationToken;
+      String? confirmationStatus = depositConfirmationStatus;
+      DateTime? confirmationSentAt = depositConfirmationSentAt;
+      DateTime? confirmationRespondedAt = depositConfirmationRespondedAt;
+
+      if (shouldSendDepositEmail && movedFromOptInToDeposit) {
+        confirmationToken = const Uuid().v4();
+        confirmationStatus = 'pending';
+        confirmationSentAt = now;
+
+        final yesUrl = _buildDepositConfirmationLink(
+          appointmentId: appointment.id,
+          decision: 'yes',
+          token: confirmationToken,
+        );
+        final noUrl = _buildDepositConfirmationLink(
+          appointmentId: appointment.id,
+          decision: 'no',
+          token: confirmationToken,
+        );
+
+        await EmailJSService.sendCustomerDepositRequest(
+          appointment: appointment,
+          yesUrl: yesUrl,
+          noUrl: noUrl,
+        );
+      }
 
       // Create stage history entry for current stage exit
       final updatedHistory = [...appointment.stageHistory];
@@ -237,6 +279,15 @@ class SalesAppointmentService {
         assignedToName: assignedToName ?? appointment.assignedToName,
         optInNote: optInNote ?? appointment.optInNote,
         optInProducts: optInProducts ?? appointment.optInProducts,
+        depositConfirmationToken:
+            confirmationToken ?? appointment.depositConfirmationToken,
+        depositConfirmationStatus:
+            confirmationStatus ?? appointment.depositConfirmationStatus,
+        depositConfirmationSentAt:
+            confirmationSentAt ?? appointment.depositConfirmationSentAt,
+        depositConfirmationRespondedAt:
+            confirmationRespondedAt ??
+            appointment.depositConfirmationRespondedAt,
       );
 
       await updateAppointment(updatedAppointment);
@@ -267,6 +318,349 @@ class SalesAppointmentService {
       }
       rethrow;
     }
+  }
+
+  /// Handle deposit confirmation response from public link
+  Future<DepositConfirmationResult> handleDepositConfirmationResponse({
+    required String appointmentId,
+    required String decision,
+    required String token,
+  }) async {
+    final normalizedDecision = decision.toLowerCase();
+    if (normalizedDecision != 'yes' && normalizedDecision != 'no') {
+      return const DepositConfirmationResult(
+        success: false,
+        message: 'Unknown decision.',
+        status: DepositResponseStatus.invalid,
+      );
+    }
+
+    try {
+      // 1. Fetch the appointment to validate token
+      final appointment = await getAppointment(appointmentId);
+
+      if (appointment == null) {
+        return const DepositConfirmationResult(
+          success: false,
+          message: 'Appointment not found.',
+          status: DepositResponseStatus.invalid,
+        );
+      }
+
+      // 2. Validate token matches
+      if (appointment.depositConfirmationToken != token) {
+        return const DepositConfirmationResult(
+          success: false,
+          message: 'Invalid or expired confirmation link.',
+          status: DepositResponseStatus.invalid,
+        );
+      }
+
+      // 3. Check if already responded
+      if (appointment.depositConfirmationStatus != null &&
+          appointment.depositConfirmationStatus != 'pending') {
+        return const DepositConfirmationResult(
+          success: false,
+          message: 'You have already responded to this confirmation.',
+          status: DepositResponseStatus.invalid,
+        );
+      }
+
+      // 4. Prepare update data
+      final now = DateTime.now();
+      final isConfirmed = normalizedDecision == 'yes';
+      final newStatus = isConfirmed ? 'confirmed' : 'declined';
+
+      // Create stage history note
+      final stageNote = isConfirmed
+          ? 'Customer ${appointment.customerName} has made deposit, finance department will confirm'
+          : 'We will send a follow up email in 2 days';
+
+      // Add new stage history entry (append to existing history)
+      final updatedHistory = [...appointment.stageHistory];
+      if (updatedHistory.isNotEmpty) {
+        // Update the last entry's note if it's the current stage and has no exit time
+        final lastEntry = updatedHistory.last;
+        if (lastEntry.stage == 'deposit_requested' &&
+            lastEntry.exitedAt == null) {
+          updatedHistory[updatedHistory.length -
+              1] = models.SalesAppointmentStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: lastEntry.exitedAt,
+            note: stageNote,
+          );
+        }
+      }
+
+      // 5. Update appointment in Firestore
+      await _firestore.collection('appointments').doc(appointmentId).update({
+        'depositConfirmationStatus': newStatus,
+        'depositConfirmationRespondedAt': Timestamp.fromDate(now),
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      if (kDebugMode) {
+        print('Deposit confirmation updated: $appointmentId -> $newStatus');
+      }
+
+      if (isConfirmed) {
+        try {
+          final financeUrl = _buildFinanceConfirmationLink(
+            appointmentId: appointment.id,
+            token: appointment.depositConfirmationToken ?? token,
+          );
+
+          final sent = await EmailJSService.sendMarketingDepositNotification(
+            appointment: appointment,
+            marketingEmail: 'info@barefootbytes.com',
+            yesUrl: financeUrl,
+            noUrl: financeUrl,
+            yesLabel: 'Deposit received',
+            noLabel: '',
+            description:
+                'Please confirm you have received the customer deposit.',
+          );
+
+          if (kDebugMode) {
+            print(
+              'Finance notification for $appointmentId sent: $sent (confirmed)',
+            );
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Failed to send finance notification for $appointmentId: $e');
+          }
+        }
+      }
+
+      // 6. Return success result
+      return DepositConfirmationResult(
+        success: true,
+        message: isConfirmed
+            ? 'Thank you for confirming your deposit.'
+            : 'Thank you for your response.',
+        status: isConfirmed
+            ? DepositResponseStatus.confirmed
+            : DepositResponseStatus.declined,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error handling deposit confirmation response: $e');
+      }
+      return const DepositConfirmationResult(
+        success: false,
+        message: 'Something went wrong. Please try again later.',
+        status: DepositResponseStatus.invalid,
+      );
+    }
+  }
+
+  /// Handle finance confirmation (single button) to mark deposit as received
+  Future<DepositConfirmationResult> handleFinanceDepositConfirmation({
+    required String appointmentId,
+    required String token,
+  }) async {
+    try {
+      final appointment = await getAppointment(appointmentId);
+      if (appointment == null) {
+        return const DepositConfirmationResult(
+          success: false,
+          message: 'Appointment not found.',
+          status: DepositResponseStatus.invalid,
+        );
+      }
+
+      if (appointment.depositConfirmationToken != token) {
+        return const DepositConfirmationResult(
+          success: false,
+          message: 'Invalid or expired confirmation link.',
+          status: DepositResponseStatus.invalid,
+        );
+      }
+
+      if (appointment.currentStage == 'deposit_made') {
+        return const DepositConfirmationResult(
+          success: true,
+          message: 'Deposit already marked as received.',
+          status: DepositResponseStatus.confirmed,
+        );
+      }
+
+      final now = DateTime.now();
+
+      // Update stage history: close current stage and add deposit_made
+      final updatedHistory = [...appointment.stageHistory];
+      if (updatedHistory.isNotEmpty) {
+        final lastEntry = updatedHistory.last;
+        if (lastEntry.exitedAt == null) {
+          updatedHistory[updatedHistory.length -
+              1] = models.SalesAppointmentStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: now,
+            note: lastEntry.note,
+          );
+        }
+      }
+
+      updatedHistory.add(
+        models.SalesAppointmentStageHistoryEntry(
+          stage: 'deposit_made',
+          enteredAt: now,
+          note: 'Finance confirmed deposit received.',
+        ),
+      );
+
+      await _firestore.collection('appointments').doc(appointmentId).update({
+        'currentStage': 'deposit_made',
+        'stageEnteredAt': Timestamp.fromDate(now),
+        'depositPaid': true,
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      if (kDebugMode) {
+        print('Finance marked deposit received for $appointmentId');
+      }
+
+      return const DepositConfirmationResult(
+        success: true,
+        message: 'Deposit marked as received.',
+        status: DepositResponseStatus.confirmed,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error handling finance deposit confirmation: $e');
+      }
+      return const DepositConfirmationResult(
+        success: false,
+        message: 'Something went wrong. Please try again later.',
+        status: DepositResponseStatus.invalid,
+      );
+    }
+  }
+
+  /// Follow-up #1: resend original deposit confirmation with friendly nudge
+  Future<bool> sendDepositFollowUp1(String appointmentId) async {
+    final appointment = await getAppointment(appointmentId);
+    if (appointment == null) {
+      throw Exception('Appointment not found');
+    }
+
+    final links = _buildDepositConfirmationLinks(appointment);
+    if (links == null) {
+      return false;
+    }
+
+    return EmailJSService.sendCustomerDepositFollowUp1(
+      appointment: appointment,
+      yesUrl: links.yesUrl,
+      noUrl: links.noUrl,
+    );
+  }
+
+  /// Follow-up #2: shipped & locked reminder asking to confirm deposit
+  Future<bool> sendDepositFollowUp2(String appointmentId) async {
+    final appointment = await getAppointment(appointmentId);
+    if (appointment == null) {
+      throw Exception('Appointment not found');
+    }
+
+    final links = _buildDepositConfirmationLinks(appointment);
+    if (links == null) {
+      return false;
+    }
+
+    return EmailJSService.sendCustomerDepositFollowUp2(
+      appointment: appointment,
+      yesUrl: links.yesUrl,
+      noUrl: links.noUrl,
+    );
+  }
+
+  /// Follow-up #3: price increase reminder asking to confirm deposit
+  Future<bool> sendDepositFollowUp3(String appointmentId) async {
+    final appointment = await getAppointment(appointmentId);
+    if (appointment == null) {
+      throw Exception('Appointment not found');
+    }
+
+    final links = _buildDepositConfirmationLinks(appointment);
+    if (links == null) {
+      return false;
+    }
+
+    return EmailJSService.sendCustomerDepositFollowUp3(
+      appointment: appointment,
+      yesUrl: links.yesUrl,
+      noUrl: links.noUrl,
+    );
+  }
+
+  String _buildDepositConfirmationLink({
+    required String appointmentId,
+    required String decision,
+    required String token,
+  }) {
+    final runtimeOrigin = Uri.base.origin;
+    final baseOrigin = runtimeOrigin.isNotEmpty
+        ? runtimeOrigin
+        : (kReleaseMode ? _depositLinkBaseProd : _depositLinkBaseLocal);
+
+    final uri = Uri.parse(baseOrigin).replace(
+      path: '/deposit-confirmation',
+      queryParameters: {
+        'appointmentId': appointmentId,
+        'decision': decision,
+        'token': token,
+      },
+    );
+
+    return uri.toString();
+  }
+
+  _DepositConfirmationLinks? _buildDepositConfirmationLinks(
+    models.SalesAppointment appointment,
+  ) {
+    final token = appointment.depositConfirmationToken;
+    if (token == null || token.isEmpty) {
+      if (kDebugMode) {
+        print('Missing deposit confirmation token for ${appointment.id}');
+      }
+      return null;
+    }
+
+    return _DepositConfirmationLinks(
+      yesUrl: _buildDepositConfirmationLink(
+        appointmentId: appointment.id,
+        decision: 'yes',
+        token: token,
+      ),
+      noUrl: _buildDepositConfirmationLink(
+        appointmentId: appointment.id,
+        decision: 'no',
+        token: token,
+      ),
+    );
+  }
+
+  String _buildFinanceConfirmationLink({
+    required String appointmentId,
+    required String token,
+  }) {
+    final runtimeOrigin = Uri.base.origin;
+    final baseOrigin = runtimeOrigin.isNotEmpty
+        ? runtimeOrigin
+        : (kReleaseMode ? _depositLinkBaseProd : _depositLinkBaseLocal);
+
+    final uri = Uri.parse(baseOrigin).replace(
+      path: '/finance-confirmation',
+      queryParameters: {'appointmentId': appointmentId, 'token': token},
+    );
+
+    return uri.toString();
   }
 
   /// Convert appointment to order (when reaching "Send to Operations" stage)
@@ -417,4 +811,55 @@ class SalesAppointmentService {
       rethrow;
     }
   }
+
+  /// Move appointment to Deposit Requested stage (after contract signing)
+  /// Convenience wrapper that calls moveAppointmentToStage with email notification
+  Future<void> moveToDepositRequested(
+    String appointmentId, {
+    String? customerName,
+    String? contractId,
+  }) async {
+    final note = customerName != null && contractId != null
+        ? 'Contract digitally signed by $customerName (Contract ID: $contractId). Deposit request email sent.'
+        : customerName != null
+        ? 'Contract digitally signed by $customerName. Moving to deposit requested stage for payment processing.'
+        : 'Contract digitally signed. Moving to deposit requested stage for payment processing.';
+
+    await moveAppointmentToStage(
+      appointmentId: appointmentId,
+      newStage: 'deposit_requested',
+      note: note,
+      userId: 'system',
+      userName: 'System (Contract Signing)',
+      shouldSendDepositEmail: true,
+    );
+
+    if (kDebugMode) {
+      print('✅ Moved appointment $appointmentId to Deposit Requested stage');
+      if (contractId != null) {
+        print('   Contract ID: $contractId');
+      }
+    }
+  }
+}
+
+/// Lightweight holder for yes/no confirmation URLs
+class _DepositConfirmationLinks {
+  const _DepositConfirmationLinks({required this.yesUrl, required this.noUrl});
+  final String yesUrl;
+  final String noUrl;
+}
+
+enum DepositResponseStatus { confirmed, declined, invalid }
+
+class DepositConfirmationResult {
+  final bool success;
+  final String message;
+  final DepositResponseStatus status;
+
+  const DepositConfirmationResult({
+    required this.success,
+    required this.message,
+    required this.status,
+  });
 }

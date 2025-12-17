@@ -9,6 +9,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/firebase/sales_appointment_service.dart';
 import '../../utils/role_manager.dart';
+import 'contract_section_widget.dart';
+import 'ready_for_ops_badge.dart';
 
 /// Dialog for viewing full appointment details and history
 class AppointmentDetailDialog extends StatefulWidget {
@@ -193,6 +195,15 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                 ],
               ),
             ),
+            // Ready For Ops Badge (for Deposit Made stage)
+            if (_currentAppointment.currentStage == 'deposit_made')
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ReadyForOpsBadge(
+                  appointment: _currentAppointment,
+                  isCompact: false,
+                ),
+              ),
             // Content
             Expanded(
               child: SingleChildScrollView(
@@ -302,6 +313,18 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                       ]),
                       const SizedBox(height: 24),
                     ],
+
+                    // Contract Section (for Opt In stage)
+                    ContractSectionWidget(
+                      appointment: _currentAppointment,
+                      onContractGenerated: () {
+                        // Refresh appointment data if needed
+                      },
+                      onContractSigned: () {
+                        // Refresh appointment data if needed
+                      },
+                    ),
+                    const SizedBox(height: 24),
 
                     // Notes (newest first)
                     if (_currentAppointment.notes.isNotEmpty) ...[

@@ -46,6 +46,8 @@ import 'screens/notifications/notifications_screen.dart';
 import 'screens/notifications/notification_preferences_screen.dart';
 import 'screens/web/mobile_warning_screen.dart';
 import 'screens/forms/public_form_screen.dart';
+import 'screens/public/deposit_confirmation_screen.dart';
+import 'screens/public/contract_view_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_provider_management_screen.dart';
 import 'screens/admin/admin_provider_approvals_screen.dart';
@@ -65,6 +67,7 @@ import 'screens/admin/admin_forms_screen.dart';
 import 'screens/admin/forms/form_builder_screen.dart';
 import 'screens/admin/admin_leads_screen.dart';
 import 'screens/admin/admin_contract_content_screen.dart';
+import 'screens/admin/contracts/contracts_overview_screen.dart';
 import 'screens/admin/streams/marketing_stream_screen.dart';
 import 'screens/admin/streams/sales_stream_screen.dart';
 import 'screens/admin/streams/operations_stream_screen.dart';
@@ -75,6 +78,7 @@ import 'providers/admin_provider.dart';
 import 'providers/gohighlevel_provider.dart';
 import 'providers/product_items_provider.dart';
 import 'providers/contract_content_provider.dart';
+import 'providers/contract_provider.dart';
 import 'providers/inventory_provider.dart';
 import 'screens/warehouse/warehouse_main_screen.dart';
 import 'screens/warehouse/inventory_list_screen.dart';
@@ -83,6 +87,7 @@ import 'services/firebase/fcm_service.dart';
 import 'services/web_image_service.dart';
 import 'utils/responsive_utils.dart';
 import 'services/firebase/app_settings_service.dart';
+import 'screens/public/finance_deposit_confirmation_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -144,6 +149,8 @@ class MedWaveApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PerformanceCostProvider()),
         // Contract Content provider for managing contract templates
         ChangeNotifierProvider(create: (_) => ContractContentProvider()),
+        // Contract provider for managing customer contracts
+        ChangeNotifierProvider(create: (_) => ContractProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
@@ -160,9 +167,7 @@ class MedWaveApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               FlutterQuillLocalizations.delegate,
             ],
-            supportedLocales: const [
-              Locale('en', 'US'),
-            ],
+            supportedLocales: const [Locale('en', 'US')],
           );
         },
       ),
@@ -180,9 +185,10 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       'Router redirect: currentPath=$currentPath, isAuthenticated=${authProvider.isAuthenticated}, canAccessApp=${authProvider.canAccessApp}, isLoading=${authProvider.isLoading}',
     );
 
-    // Explicitly allow /fb-form routes - always accessible regardless of authentication status
-    if (currentPath.startsWith('/fb-form')) {
-      return null; // Always allow access to public forms
+    // Explicitly allow /fb-form and /contract routes - always accessible regardless of authentication status
+    if (currentPath.startsWith('/fb-form') ||
+        currentPath.startsWith('/contract')) {
+      return null; // Always allow access to public forms and contracts
     }
 
     // Check for mobile browser warning on web platform
@@ -214,6 +220,10 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         currentPath.startsWith('/download-app') ||
         currentPath.startsWith('/mobile-warning') ||
         currentPath.startsWith('/fb-form') ||
+        currentPath.startsWith('/verify-email') ||
+        currentPath.startsWith('/deposit-confirmation') ||
+        currentPath.startsWith('/finance-confirmation');
+    currentPath.startsWith('/contract') ||
         currentPath.startsWith('/verify-email');
 
     // Wait for auth to initialize - preserve current route during loading
@@ -333,6 +343,33 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         return PublicFormScreen(formId: formId);
       },
     ),
+    GoRoute(
+      path: '/deposit-confirmation',
+      name: 'deposit-confirmation',
+      builder: (context, state) => DepositConfirmationScreen(
+        appointmentId: state.uri.queryParameters['appointmentId'],
+        decision: state.uri.queryParameters['decision'],
+        token: state.uri.queryParameters['token'],
+      ),
+    ),
+    GoRoute(
+      path: '/finance-confirmation',
+      name: 'finance-confirmation',
+      builder: (context, state) => FinanceDepositConfirmationScreen(
+        appointmentId: state.uri.queryParameters['appointmentId'],
+        token: state.uri.queryParameters['token'],
+      ),
+    ),
+    // Public contract view (no authentication required)
+    GoRoute(
+      path: '/contract/:contractId',
+      name: 'contract-view',
+      builder: (context, state) {
+        final contractId = state.pathParameters['contractId']!;
+        final token = state.uri.queryParameters['token'];
+        return ContractViewScreen(contractId: contractId, token: token);
+      },
+    ),
     // Authentication routes
     GoRoute(
       path: '/login',
@@ -437,6 +474,11 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           path: '/admin/contract-content',
           name: 'admin-contract-content',
           builder: (context, state) => const AdminContractContentScreen(),
+        ),
+        GoRoute(
+          path: '/admin/contracts',
+          name: 'admin-contracts-overview',
+          builder: (context, state) => const ContractsOverviewScreen(),
         ),
         GoRoute(
           path: '/admin/adverts',
