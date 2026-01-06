@@ -180,6 +180,26 @@ service cloud.firestore {
       allow write: if request.auth != null && isAdmin();
     }
     
+    // Orders - Public read for installation booking, authenticated write
+    match /orders/{orderId} {
+      // Allow public read access for installation booking flow
+      // Customers need to read their order to select installation dates
+      allow read: if true;
+      
+      // Allow public update ONLY for installation date selection
+      // This allows customers to submit their preferred installation dates
+      // The update moves the order to priority_shipment stage and records the selected dates
+      allow update: if resource.data.installBookingStatus == 'pending' &&
+                       request.resource.data.installBookingStatus == 'dates_selected' &&
+                       request.resource.data.currentStage == 'priority_shipment' &&
+                       // Only allow updating specific fields for installation booking
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['installBookingStatus', 'customerSelectedDates', 'currentStage', 'stageEnteredAt', 'stageHistory', 'updatedAt']);
+      
+      // Authenticated users (admins/staff) can do everything
+      allow read, write: if request.auth != null;
+    }
+    
     // Contracts - Public read access, restricted write access
     match /contracts/{contractId} {
       // Allow public read access
