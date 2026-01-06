@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../models/practitioner_application.dart';
 import '../../models/admin/admin_user.dart';
 import '../../models/admin/installer.dart';
+import '../../models/admin/warehouse_user.dart';
 import '../emailjs_service.dart';
 
 /// Firebase service for admin operations
@@ -797,6 +798,208 @@ class AdminService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ ADMIN SERVICE ERROR: Failed to get installer by userId: $e');
+      }
+      return null;
+    }
+  }
+
+  // ============================================================================
+  // WAREHOUSE USER MANAGEMENT METHODS
+  // ============================================================================
+
+  /// Get all warehouse users (Super Admin only)
+  /// Queries users collection where role='warehouse'
+  static Stream<List<WarehouseUser>> getWarehouseUsersStream() {
+    return _usersCollection
+        .where('role', isEqualTo: 'warehouse')
+        .snapshots()
+        .map((snapshot) {
+      if (kDebugMode) {
+        print('✅ ADMIN SERVICE: Found ${snapshot.docs.length} warehouse users');
+      }
+      return snapshot.docs.map((doc) => WarehouseUser.fromFirestore(doc)).toList();
+    });
+  }
+
+  /// Get warehouse users by country
+  static Stream<List<WarehouseUser>> getWarehouseUsersByCountryStream(String country) {
+    return _usersCollection
+        .where('role', isEqualTo: 'warehouse')
+        .where('country', isEqualTo: country)
+        .snapshots()
+        .map((snapshot) {
+      if (kDebugMode) {
+        print('🌍 ADMIN SERVICE: Found ${snapshot.docs.length} warehouse users in $country');
+      }
+      return snapshot.docs.map((doc) => WarehouseUser.fromFirestore(doc)).toList();
+    });
+  }
+
+  /// Create a new warehouse user (Super Admin only)
+  /// Creates Firebase Auth user and stores profile in users collection with role='warehouse'
+  static Future<String> createWarehouseUser({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String phoneNumber,
+    required String address,
+    required String city,
+    required String province,
+    required String postalCode,
+    required String country,
+    String? countryName,
+    required String createdBy,
+    String? notes,
+  }) async {
+    try {
+      // Create Firebase Auth user first
+      final UserCredential userCredential =
+          await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final String userId = userCredential.user!.uid;
+
+      // Create warehouse user document in users collection
+      final warehouseUser = WarehouseUser(
+        id: userId, // Use auth UID as document ID
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        phoneNumber: phoneNumber,
+        address: address,
+        city: city,
+        province: province,
+        postalCode: postalCode,
+        country: country,
+        countryName: countryName,
+        status: WarehouseUserStatus.active,
+        createdAt: DateTime.now(),
+        createdBy: createdBy,
+        notes: notes,
+      );
+
+      // Store in users collection with the auth UID as document ID
+      await _usersCollection.doc(userId).set(warehouseUser.toFirestore());
+
+      if (kDebugMode) {
+        print(
+            '✅ ADMIN SERVICE: Created warehouse user: ${warehouseUser.fullName} (${warehouseUser.email})');
+      }
+
+      return userId;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to create warehouse user: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Update warehouse user status
+  static Future<void> updateWarehouseUserStatus(
+      String userId, WarehouseUserStatus status) async {
+    try {
+      // Convert status to accountStatus for users collection
+      String accountStatus;
+      switch (status) {
+        case WarehouseUserStatus.active:
+          accountStatus = 'approved';
+        case WarehouseUserStatus.suspended:
+          accountStatus = 'suspended';
+        case WarehouseUserStatus.inactive:
+          accountStatus = 'pending';
+      }
+
+      await _usersCollection.doc(userId).update({
+        'accountStatus': accountStatus,
+        'updatedAt': Timestamp.now(),
+      });
+
+      if (kDebugMode) {
+        print(
+            '✅ ADMIN SERVICE: Updated warehouse user status: $userId -> ${status.value}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to update warehouse user status: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Update warehouse user details
+  static Future<void> updateWarehouseUser(
+      String userId, Map<String, dynamic> updates) async {
+    try {
+      updates['updatedAt'] = Timestamp.now();
+      await _usersCollection.doc(userId).update(updates);
+
+      if (kDebugMode) {
+        print('✅ ADMIN SERVICE: Updated warehouse user: $userId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to update warehouse user: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Delete warehouse user (Super Admin only)
+  static Future<void> deleteWarehouseUser(String userId) async {
+    try {
+      // Delete from Firestore users collection
+      await _usersCollection.doc(userId).delete();
+
+      // Note: Firebase Auth user deletion requires admin privileges
+      // This would typically be done via Firebase Admin SDK on the backend
+
+      if (kDebugMode) {
+        print('✅ ADMIN SERVICE: Deleted warehouse user: $userId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to delete warehouse user: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Update warehouse user last login
+  static Future<void> updateWarehouseUserLastLogin(String userId) async {
+    try {
+      await _usersCollection.doc(userId).update({
+        'lastLogin': Timestamp.now(),
+      });
+
+      if (kDebugMode) {
+        print('✅ ADMIN SERVICE: Updated last login for warehouse user: $userId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to update warehouse user last login: $e');
+      }
+    }
+  }
+
+  /// Get warehouse user by user ID
+  static Future<WarehouseUser?> getWarehouseUserByUserId(String userId) async {
+    try {
+      final doc = await _usersCollection.doc(userId).get();
+
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['role'] == 'warehouse') {
+          return WarehouseUser.fromFirestore(doc);
+        }
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to get warehouse user by userId: $e');
       }
       return null;
     }

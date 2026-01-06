@@ -31,6 +31,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   bool _isSendingEmail = false;
   bool _isSavingInstaller = false;
   bool _isSavingDate = false;
+  bool _isDeleting = false;
   String? _selectedInstallerId;
 
   @override
@@ -191,6 +192,130 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
+  Future<void> _showDeleteConfirmation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 28),
+            const SizedBox(width: 12),
+            const Text('Delete Lead'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This action will permanently delete:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            _buildDeleteItem('This Order'),
+            _buildDeleteItem('Sales Appointment'),
+            _buildDeleteItem('All related Contracts'),
+            _buildDeleteItem('Support Ticket (if exists)'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red[700], size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'This action cannot be undone!',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete Lead'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteLead();
+    }
+  }
+
+  Widget _buildDeleteItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, bottom: 4),
+      child: Row(
+        children: [
+          Icon(Icons.remove_circle, size: 16, color: Colors.red[400]),
+          const SizedBox(width: 8),
+          Text(text),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteLead() async {
+    setState(() => _isDeleting = true);
+
+    try {
+      await _orderService.deleteLeadCompletely(
+        orderId: _currentOrder.id,
+      );
+
+      if (mounted) {
+        // Close the dialog first
+        Navigator.of(context).pop();
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Lead "${_currentOrder.customerName}" and all related data deleted successfully',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Notify parent to refresh
+        widget.onOrderUpdated?.call();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting lead: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isDeleting = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -209,6 +334,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildCustomerInfo(),
+                    const SizedBox(height: 24),
+                    _buildOrderItemsSection(),
                     const SizedBox(height: 24),
                     _buildInstallationBookingSection(),
                     const SizedBox(height: 24),
@@ -299,6 +426,246 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         ),
         _buildInfoRow('Stage', _currentOrder.currentStage.replaceAll('_', ' ').toUpperCase()),
         _buildInfoRow('Time in Stage', _currentOrder.timeInStageDisplay),
+      ],
+    );
+  }
+
+  Widget _buildOrderItemsSection() {
+    final items = _currentOrder.items;
+    final pickedItems = _currentOrder.pickedItems;
+    final pickedCount = pickedItems.values.where((v) => v).length;
+    final totalCount = items.length;
+    final progress = totalCount > 0 ? pickedCount / totalCount : 0.0;
+    final allPicked = pickedCount == totalCount && totalCount > 0;
+
+    return _buildSection(
+      title: 'Order Items',
+      icon: Icons.inventory_2,
+      children: [
+        // Show empty state if no items
+        if (items.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.grey[600]),
+                const SizedBox(width: 12),
+                const Text('No items in this order.'),
+              ],
+            ),
+          )
+        else ...[
+          // Picking progress bar
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: allPicked ? Colors.green.shade50 : Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: allPicked ? Colors.green.shade200 : Colors.blue.shade200,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Picking Progress',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: allPicked ? Colors.green[800] : Colors.blue[800],
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        if (allPicked)
+                          Icon(Icons.check_circle, size: 16, color: Colors.green[700]),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$pickedCount / $totalCount items',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: allPicked ? Colors.green[800] : Colors.blue[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.white,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      allPicked ? Colors.green : AppTheme.primaryColor,
+                    ),
+                    minHeight: 8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Item list
+          ...items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final isPicked = pickedItems[item.name] ?? false;
+
+            return Consumer<InventoryProvider>(
+              builder: (context, inventoryProvider, child) {
+                // Find stock for this item
+                final stockItem = inventoryProvider.allStockItems.firstWhere(
+                  (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
+                  orElse: () => inventoryProvider.allStockItems.isNotEmpty
+                      ? inventoryProvider.allStockItems.first
+                      : throw Exception('No stock'),
+                );
+
+                final hasStock = inventoryProvider.allStockItems.any(
+                  (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
+                );
+
+                return Container(
+                  margin: EdgeInsets.only(bottom: index < items.length - 1 ? 8 : 0),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isPicked ? Colors.green.shade50 : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isPicked ? Colors.green.shade300 : Colors.grey.shade300,
+                      width: isPicked ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Index number
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: isPicked
+                              ? Colors.green.shade100
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isPicked ? Colors.green[700] : Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Item details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.name,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: isPicked ? Colors.grey[600] : Colors.black87,
+                                decoration: isPicked ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Qty: ${item.quantity}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Stock status badge
+                      if (hasStock)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: stockItem.isOutOfStock
+                                ? Colors.red.shade100
+                                : stockItem.isLowStock
+                                    ? Colors.orange.shade100
+                                    : Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            stockItem.isOutOfStock
+                                ? 'Out of Stock'
+                                : stockItem.isLowStock
+                                    ? 'Low (${stockItem.currentQty})'
+                                    : 'In Stock (${stockItem.currentQty})',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: stockItem.isOutOfStock
+                                  ? Colors.red[700]
+                                  : stockItem.isLowStock
+                                      ? Colors.orange[700]
+                                      : Colors.green[700],
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'No stock info',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(width: 8),
+
+                      // Picked status indicator (view only)
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: isPicked ? Colors.green : Colors.transparent,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isPicked ? Colors.green : Colors.grey.shade400,
+                            width: 2,
+                          ),
+                        ),
+                        child: isPicked
+                            ? const Icon(Icons.check, color: Colors.white, size: 16)
+                            : null,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          }),
+        ],
       ],
     );
   }
@@ -608,10 +975,30 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // Delete Lead button (left side)
+          ElevatedButton.icon(
+            onPressed: _isDeleting ? null : _showDeleteConfirmation,
+            icon: _isDeleting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.delete_forever, size: 18),
+            label: Text(_isDeleting ? 'Deleting...' : 'Delete Lead'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          const Spacer(),
+          // Close button (right side)
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: _isDeleting ? null : () => Navigator.of(context).pop(),
             child: const Text('Close'),
           ),
         ],

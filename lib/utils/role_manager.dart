@@ -263,9 +263,9 @@ class RoleManager {
             'trending_up',
           ),
           NavigationItem(
-            'Admin Management',
+            'User Management',
             '/admin/users',
-            'admin_panel_settings',
+            'people',
             subItems: [
               NavigationSubItem(
                 'Admin Users',
@@ -273,10 +273,22 @@ class RoleManager {
                 'admin_panel_settings',
               ),
               NavigationSubItem(
-                'Installer Management',
+                'Warehouse Users',
+                '/admin/warehouse-users',
+                'warehouse',
+              ),
+              NavigationSubItem(
+                'Installers',
                 '/admin/installers',
                 'engineering',
               ),
+            ],
+          ),
+          NavigationItem(
+            'Admin Management',
+            '/admin/product-management',
+            'settings',
+            subItems: [
               NavigationSubItem(
                 'Product Management',
                 '/admin/product-management',

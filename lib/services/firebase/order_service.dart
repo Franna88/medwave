@@ -744,6 +744,83 @@ class OrderService {
     }
   }
 
+  // ============================================================
+  // Lead Deletion Methods (Testing)
+  // ============================================================
+
+  /// Delete a lead completely along with all related data
+  /// This is a destructive action intended for testing purposes.
+  /// Deletes: Order, Sales Appointment, Contracts, Support Ticket (if exists)
+  Future<void> deleteLeadCompletely({
+    required String orderId,
+  }) async {
+    try {
+      // Get the order first
+      final order = await getOrder(orderId);
+      if (order == null) {
+        throw Exception('Order not found');
+      }
+
+      final appointmentId = order.appointmentId;
+      final supportTicketId = order.convertedToTicketId;
+
+      // Use a batch for atomic deletion
+      final batch = _firestore.batch();
+
+      // 1. Delete all contracts linked to the appointment
+      if (appointmentId.isNotEmpty) {
+        final contractsSnapshot = await _firestore
+            .collection('contracts')
+            .where('appointmentId', isEqualTo: appointmentId)
+            .get();
+
+        for (final doc in contractsSnapshot.docs) {
+          batch.delete(doc.reference);
+          if (kDebugMode) {
+            print('Queued contract for deletion: ${doc.id}');
+          }
+        }
+      }
+
+      // 2. Delete support ticket if it exists
+      if (supportTicketId != null && supportTicketId.isNotEmpty) {
+        final ticketRef = _firestore.collection('support_tickets').doc(supportTicketId);
+        batch.delete(ticketRef);
+        if (kDebugMode) {
+          print('Queued support ticket for deletion: $supportTicketId');
+        }
+      }
+
+      // 3. Delete the sales appointment
+      if (appointmentId.isNotEmpty) {
+        final appointmentRef = _firestore.collection('appointments').doc(appointmentId);
+        batch.delete(appointmentRef);
+        if (kDebugMode) {
+          print('Queued appointment for deletion: $appointmentId');
+        }
+      }
+
+      // 4. Delete the order itself
+      final orderRef = _firestore.collection('orders').doc(orderId);
+      batch.delete(orderRef);
+      if (kDebugMode) {
+        print('Queued order for deletion: $orderId');
+      }
+
+      // Commit the batch
+      await batch.commit();
+
+      if (kDebugMode) {
+        print('Successfully deleted lead completely: $orderId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error deleting lead completely: $e');
+      }
+      rethrow;
+    }
+  }
+
   /// Get orders for warehouse (priority_shipment and inventory_packing_list)
   /// with confirmedInstallDate within next 30 days
   Stream<List<models.Order>> getWarehouseOrdersStream() {

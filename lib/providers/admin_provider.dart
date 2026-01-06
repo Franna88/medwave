@@ -6,6 +6,7 @@ import '../models/admin/country_analytics.dart';
 import '../models/admin/admin_report.dart';
 import '../models/admin/admin_user.dart';
 import '../models/admin/installer.dart';
+import '../models/admin/warehouse_user.dart';
 import '../models/practitioner_application.dart';
 import '../services/firebase/admin_service.dart';
 
@@ -33,6 +34,10 @@ class AdminProvider extends ChangeNotifier {
   // Installer Management
   List<Installer> _installers = [];
   StreamSubscription<List<Installer>>? _installersSubscription;
+
+  // Warehouse User Management
+  List<WarehouseUser> _warehouseUsers = [];
+  StreamSubscription<List<WarehouseUser>>? _warehouseUsersSubscription;
   
   // Streams subscriptions
   StreamSubscription<List<PractitionerApplication>>? _practitionersSubscription;
@@ -81,6 +86,14 @@ class AdminProvider extends ChangeNotifier {
   int get activeInstallers => _installers.where((i) => i.status == InstallerStatus.active).length;
   int get inactiveInstallers => _installers.where((i) => i.status == InstallerStatus.inactive).length;
   int get suspendedInstallers => _installers.where((i) => i.status == InstallerStatus.suspended).length;
+
+  // Warehouse User Management getters
+  List<WarehouseUser> get warehouseUsers => _warehouseUsers;
+  bool get hasWarehouseUsers => _warehouseUsers.isNotEmpty;
+  int get totalWarehouseUsers => _warehouseUsers.length;
+  int get activeWarehouseUsers => _warehouseUsers.where((w) => w.status == WarehouseUserStatus.active).length;
+  int get inactiveWarehouseUsers => _warehouseUsers.where((w) => w.status == WarehouseUserStatus.inactive).length;
+  int get suspendedWarehouseUsers => _warehouseUsers.where((w) => w.status == WarehouseUserStatus.suspended).length;
   
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -620,6 +633,7 @@ class AdminProvider extends ChangeNotifier {
     _pendingSubscription?.cancel();
     _adminUsersSubscription?.cancel();
     _installersSubscription?.cancel();
+    _warehouseUsersSubscription?.cancel();
     super.dispose();
   }
 
@@ -947,6 +961,174 @@ class AdminProvider extends ChangeNotifier {
 
       if (kDebugMode) {
         print('❌ ADMIN PROVIDER ERROR: Failed to delete installer: $e');
+      }
+
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // WAREHOUSE USER MANAGEMENT METHODS
+  // ============================================================================
+
+  /// Load warehouse users (Super Admin only)
+  Future<void> loadWarehouseUsers() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Cancel existing subscription
+      _warehouseUsersSubscription?.cancel();
+
+      // Subscribe to warehouse users stream
+      _warehouseUsersSubscription = AdminService.getWarehouseUsersStream().listen(
+        (warehouseUsers) {
+          _warehouseUsers = warehouseUsers;
+          _isLoading = false;
+          notifyListeners();
+
+          if (kDebugMode) {
+            print('✅ ADMIN PROVIDER: Loaded ${warehouseUsers.length} warehouse users');
+          }
+        },
+        onError: (error) {
+          _error = 'Failed to load warehouse users: $error';
+          _isLoading = false;
+          notifyListeners();
+
+          if (kDebugMode) {
+            print('❌ ADMIN PROVIDER ERROR: Failed to load warehouse users: $error');
+          }
+        },
+      );
+    } catch (e) {
+      _error = 'Failed to load warehouse users: $e';
+      _isLoading = false;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to load warehouse users: $e');
+      }
+    }
+  }
+
+  /// Create a new warehouse user (Super Admin only)
+  Future<bool> createWarehouseUser({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String phoneNumber,
+    required String address,
+    required String city,
+    required String province,
+    required String postalCode,
+    required String country,
+    String? countryName,
+    required String createdBy,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await AdminService.createWarehouseUser(
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        phoneNumber: phoneNumber,
+        address: address,
+        city: city,
+        province: province,
+        postalCode: postalCode,
+        country: country,
+        countryName: countryName,
+        createdBy: createdBy,
+        notes: notes,
+      );
+
+      _isLoading = false;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Created warehouse user: $firstName $lastName ($email)');
+      }
+
+      return true;
+    } catch (e) {
+      _error = 'Failed to create warehouse user: $e';
+      _isLoading = false;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to create warehouse user: $e');
+      }
+
+      return false;
+    }
+  }
+
+  /// Update warehouse user status
+  Future<bool> updateWarehouseUserStatus(String userId, WarehouseUserStatus status) async {
+    try {
+      await AdminService.updateWarehouseUserStatus(userId, status);
+
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Updated warehouse user status: $userId -> ${status.value}');
+      }
+
+      return true;
+    } catch (e) {
+      _error = 'Failed to update warehouse user status: $e';
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to update warehouse user status: $e');
+      }
+
+      return false;
+    }
+  }
+
+  /// Update warehouse user details
+  Future<bool> updateWarehouseUser(String userId, Map<String, dynamic> updates) async {
+    try {
+      await AdminService.updateWarehouseUser(userId, updates);
+
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Updated warehouse user: $userId');
+      }
+
+      return true;
+    } catch (e) {
+      _error = 'Failed to update warehouse user: $e';
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to update warehouse user: $e');
+      }
+
+      return false;
+    }
+  }
+
+  /// Delete warehouse user (Super Admin only)
+  Future<bool> deleteWarehouseUser(String userId) async {
+    try {
+      await AdminService.deleteWarehouseUser(userId);
+
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Deleted warehouse user: $userId');
+      }
+
+      return true;
+    } catch (e) {
+      _error = 'Failed to delete warehouse user: $e';
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to delete warehouse user: $e');
       }
 
       return false;

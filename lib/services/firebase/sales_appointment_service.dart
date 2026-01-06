@@ -687,6 +687,15 @@ class SalesAppointmentService {
       // Generate install booking token for email link
       final installBookingToken = const Uuid().v4();
 
+      // Convert appointment optInProducts to OrderItems
+      final orderItems = appointment.optInProducts
+          .map((product) => models.OrderItem(
+                name: product.name,
+                quantity: 1,
+                price: product.price,
+              ))
+          .toList();
+
       // Create new order from appointment data
       final order = models.Order(
         id: '',
@@ -696,7 +705,7 @@ class SalesAppointmentService {
         phone: appointment.phone,
         currentStage: 'orders_placed', // First stage in Operations stream (updated)
         orderDate: now,
-        items: [], // Empty initially - will be filled in later stages
+        items: orderItems, // Products from the appointment
         createdAt: now,
         updatedAt: now,
         stageEnteredAt: now,

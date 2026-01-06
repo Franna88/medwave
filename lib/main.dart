@@ -63,6 +63,7 @@ import 'screens/admin/adverts/admin_adverts_comparison_screen.dart';
 import 'screens/admin/adverts/admin_adverts_ads_screen.dart';
 import 'screens/admin/admin_user_management_screen.dart';
 import 'screens/admin/installer_management_screen.dart';
+import 'screens/admin/warehouse_user_management_screen.dart';
 import 'screens/admin/admin_report_builder_screen.dart';
 import 'screens/admin/admin_forms_screen.dart';
 import 'screens/admin/forms/form_builder_screen.dart';
@@ -548,6 +549,11 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
           path: '/admin/installers',
           name: 'admin-installers',
           builder: (context, state) => const InstallerManagementScreen(),
+        ),
+        GoRoute(
+          path: '/admin/warehouse-users',
+          name: 'admin-warehouse-users',
+          builder: (context, state) => const WarehouseUserManagementScreen(),
         ),
         GoRoute(
           path: '/admin/report-builder',

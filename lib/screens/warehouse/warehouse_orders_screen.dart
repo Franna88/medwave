@@ -41,7 +41,7 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
       if (mounted) {
         setState(() {
           // Filter orders in priority_shipment OR inventory_packing_list stage
-          // with confirmedInstallDate within next 30 days
+          // with install date (confirmed or earliest selected) within next 30 days
           final now = DateTime.now();
           final thirtyDaysFromNow = now.add(const Duration(days: 30));
 
@@ -51,18 +51,19 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
                 order.currentStage == 'inventory_packing_list';
             if (!validStage) return false;
 
-            // Check if confirmedInstallDate exists and is within 30 days
-            if (order.confirmedInstallDate == null) return false;
+            // Use confirmedInstallDate if available, otherwise use earliest selected date
+            final installDate = order.confirmedInstallDate ?? order.earliestSelectedDate;
+            if (installDate == null) return false;
 
-            final installDate = order.confirmedInstallDate!;
             return installDate.isAfter(now.subtract(const Duration(days: 1))) &&
                 installDate.isBefore(thirtyDaysFromNow);
           }).toList();
 
-          // Sort by confirmedInstallDate ascending (nearest first)
+          // Sort by effective install date ascending (nearest first)
+          // Use confirmed date if available, otherwise earliest selected date
           _allOrders.sort((a, b) {
-            final dateA = a.confirmedInstallDate;
-            final dateB = b.confirmedInstallDate;
+            final dateA = a.confirmedInstallDate ?? a.earliestSelectedDate;
+            final dateB = b.confirmedInstallDate ?? b.earliestSelectedDate;
             if (dateA == null && dateB == null) return 0;
             if (dateA == null) return 1;
             if (dateB == null) return -1;
@@ -361,9 +362,12 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
 
   Widget _buildOrderCard(models.Order order) {
     final dateFormat = DateFormat('EEE, MMM d');
-    final daysUntilInstall = order.confirmedInstallDate != null
-        ? order.confirmedInstallDate!.difference(DateTime.now()).inDays
+    // Use confirmed date if available, otherwise earliest selected date
+    final effectiveDate = order.confirmedInstallDate ?? order.earliestSelectedDate;
+    final daysUntilInstall = effectiveDate != null
+        ? effectiveDate.difference(DateTime.now()).inDays
         : 0;
+    final isDateConfirmed = order.confirmedInstallDate != null;
 
     final isUrgent = daysUntilInstall <= 7;
     final isInProgress = order.currentStage == 'inventory_packing_list';
@@ -434,8 +438,8 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
                   children: [
                     _buildInfoChip(
                       Icons.calendar_today,
-                      order.confirmedInstallDate != null
-                          ? dateFormat.format(order.confirmedInstallDate!)
+                      effectiveDate != null
+                          ? '${dateFormat.format(effectiveDate)}${isDateConfirmed ? '' : ' (pending)'}'
                           : 'No date',
                       isUrgent ? AppTheme.errorColor : AppTheme.primaryColor,
                     ),
