@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../models/streams/appointment.dart' as models;
@@ -33,6 +34,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
   final LeadService _leadService = LeadService();
   final LeadBookingService _bookingService = LeadBookingService();
   final TextEditingController _searchController = TextEditingController();
+  StreamSubscription<List<models.SalesAppointment>>? _appointmentsSubscription;
 
   List<models.SalesAppointment> _allAppointments = [];
   List<models.SalesAppointment> _filteredAppointments = [];
@@ -61,17 +63,21 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
 
   @override
   void dispose() {
+    _appointmentsSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
   void _loadAppointments() {
-    _appointmentService.appointmentsStream().listen((appointments) {
-      setState(() {
-        _allAppointments = appointments;
-        _filterAppointments();
-        _isLoading = false;
-      });
+    _appointmentsSubscription?.cancel();
+    _appointmentsSubscription = _appointmentService.appointmentsStream().listen((appointments) {
+      if (mounted) {
+        setState(() {
+          _allAppointments = appointments;
+          _filterAppointments();
+          _isLoading = false;
+        });
+      }
     });
   }
 

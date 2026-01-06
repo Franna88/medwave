@@ -5,6 +5,7 @@ import '../models/admin/healthcare_provider.dart';
 import '../models/admin/country_analytics.dart';
 import '../models/admin/admin_report.dart';
 import '../models/admin/admin_user.dart';
+import '../models/admin/installer.dart';
 import '../models/practitioner_application.dart';
 import '../services/firebase/admin_service.dart';
 
@@ -28,6 +29,10 @@ class AdminProvider extends ChangeNotifier {
   List<AdminUser> _adminUsers = [];
   StreamSubscription<List<AdminUser>>? _adminUsersSubscription;
   Map<String, dynamic> _adminAnalytics = {};
+
+  // Installer Management
+  List<Installer> _installers = [];
+  StreamSubscription<List<Installer>>? _installersSubscription;
   
   // Streams subscriptions
   StreamSubscription<List<PractitionerApplication>>? _practitionersSubscription;
@@ -68,6 +73,14 @@ class AdminProvider extends ChangeNotifier {
   List<PractitionerApplication> get realApprovedPractitioners => 
       _realPractitioners.where((p) => p.isApproved).toList();
   Map<String, dynamic> get adminAnalytics => _adminAnalytics;
+
+  // Installer Management getters
+  List<Installer> get installers => _installers;
+  bool get hasInstallers => _installers.isNotEmpty;
+  int get totalInstallers => _installers.length;
+  int get activeInstallers => _installers.where((i) => i.status == InstallerStatus.active).length;
+  int get inactiveInstallers => _installers.where((i) => i.status == InstallerStatus.inactive).length;
+  int get suspendedInstallers => _installers.where((i) => i.status == InstallerStatus.suspended).length;
   
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -606,6 +619,7 @@ class AdminProvider extends ChangeNotifier {
     _practitionersSubscription?.cancel();
     _pendingSubscription?.cancel();
     _adminUsersSubscription?.cancel();
+    _installersSubscription?.cancel();
     super.dispose();
   }
 
@@ -763,6 +777,176 @@ class AdminProvider extends ChangeNotifier {
 
       if (kDebugMode) {
         print('❌ ADMIN PROVIDER ERROR: Failed to delete admin user: $e');
+      }
+
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // INSTALLER MANAGEMENT METHODS
+  // ============================================================================
+
+  /// Load installers (Super Admin only)
+  Future<void> loadInstallers() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Cancel existing subscription
+      _installersSubscription?.cancel();
+
+      // Subscribe to installers stream
+      _installersSubscription = AdminService.getInstallersStream().listen(
+        (installers) {
+          _installers = installers;
+          _isLoading = false;
+          notifyListeners();
+
+          if (kDebugMode) {
+            print('✅ ADMIN PROVIDER: Loaded ${installers.length} installers');
+          }
+        },
+        onError: (error) {
+          _error = 'Failed to load installers: $error';
+          _isLoading = false;
+          notifyListeners();
+
+          if (kDebugMode) {
+            print('❌ ADMIN PROVIDER ERROR: Failed to load installers: $error');
+          }
+        },
+      );
+    } catch (e) {
+      _error = 'Failed to load installers: $e';
+      _isLoading = false;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to load installers: $e');
+      }
+    }
+  }
+
+  /// Create a new installer (Super Admin only)
+  Future<bool> createInstaller({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String phoneNumber,
+    required String address,
+    required String city,
+    required String province,
+    required String postalCode,
+    required String country,
+    String? countryName,
+    required String serviceArea,
+    required String createdBy,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await AdminService.createInstaller(
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        phoneNumber: phoneNumber,
+        address: address,
+        city: city,
+        province: province,
+        postalCode: postalCode,
+        country: country,
+        countryName: countryName,
+        serviceArea: serviceArea,
+        createdBy: createdBy,
+        notes: notes,
+      );
+
+      _isLoading = false;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Created installer: $firstName $lastName ($email)');
+      }
+
+      return true;
+    } catch (e) {
+      _error = 'Failed to create installer: $e';
+      _isLoading = false;
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to create installer: $e');
+      }
+
+      return false;
+    }
+  }
+
+  /// Update installer status
+  Future<bool> updateInstallerStatus(String installerId, InstallerStatus status) async {
+    try {
+      await AdminService.updateInstallerStatus(installerId, status);
+
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Updated installer status: $installerId -> ${status.value}');
+      }
+
+      return true;
+    } catch (e) {
+      _error = 'Failed to update installer status: $e';
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to update installer status: $e');
+      }
+
+      return false;
+    }
+  }
+
+  /// Update installer details
+  Future<bool> updateInstaller(String installerId, Map<String, dynamic> updates) async {
+    try {
+      await AdminService.updateInstaller(installerId, updates);
+
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Updated installer: $installerId');
+      }
+
+      return true;
+    } catch (e) {
+      _error = 'Failed to update installer: $e';
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to update installer: $e');
+      }
+
+      return false;
+    }
+  }
+
+  /// Delete installer (Super Admin only)
+  Future<bool> deleteInstaller(String installerId, String userId) async {
+    try {
+      await AdminService.deleteInstaller(installerId, userId);
+
+      if (kDebugMode) {
+        print('✅ ADMIN PROVIDER: Deleted installer: $installerId');
+      }
+
+      return true;
+    } catch (e) {
+      _error = 'Failed to delete installer: $e';
+      notifyListeners();
+
+      if (kDebugMode) {
+        print('❌ ADMIN PROVIDER ERROR: Failed to delete installer: $e');
       }
 
       return false;

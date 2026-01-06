@@ -157,7 +157,69 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('Error checking admin users: $e');
     }
 
-    // Not an admin user, listen to regular user profile
+    // Check if this is an installer user
+    try {
+      final installerQuery = await _firestore
+          .collection('installers')
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+
+      if (installerQuery.docs.isNotEmpty) {
+        // This is an installer user - create a UserProfile from installer data
+        final installerDoc = installerQuery.docs.first;
+        final installerData = installerDoc.data();
+
+        // Check if installer is active
+        final installerStatus = installerData['status'] ?? 'inactive';
+        final isActive = installerStatus == 'active';
+
+        _userProfile = UserProfile(
+          id: userId,
+          email: installerData['email'] ?? '',
+          firstName: installerData['firstName'] ?? '',
+          lastName: installerData['lastName'] ?? '',
+          phoneNumber: installerData['phoneNumber'] ?? '',
+          licenseNumber: '',
+          specialization: 'Installer',
+          yearsOfExperience: 0,
+          practiceLocation: installerData['serviceArea'] ?? '',
+          country: installerData['country'] ?? '',
+          countryName: installerData['countryName'] ?? '',
+          province: installerData['province'] ?? '',
+          city: installerData['city'] ?? '',
+          address: installerData['address'] ?? '',
+          postalCode: installerData['postalCode'] ?? '',
+          accountStatus: isActive ? 'approved' : 'suspended',
+          role: 'installer',
+          licenseVerified: true,
+          professionalReferences: [],
+          totalPatients: 0,
+          totalSessions: 0,
+          settings: UserSettings(
+            notificationsEnabled: true,
+            darkModeEnabled: false,
+            biometricEnabled: false,
+            language: 'en',
+            timezone: 'UTC',
+          ),
+          createdAt:
+              (installerData['createdAt'] as Timestamp?)?.toDate() ??
+              DateTime.now(),
+          lastLogin: DateTime.now(),
+        );
+
+        debugPrint(
+          'Installer user profile loaded: ${_userProfile?.role}, status: $installerStatus, canAccessApp: $canAccessApp',
+        );
+        notifyListeners();
+        return;
+      }
+    } catch (e) {
+      debugPrint('Error checking installer users: $e');
+    }
+
+    // Not an admin or installer user, listen to regular user profile
     _userProfileSubscription = _firestore
         .collection('users')
         .doc(userId)

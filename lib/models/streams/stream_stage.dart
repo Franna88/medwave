@@ -151,38 +151,52 @@ class StreamStage {
   static List<StreamStage> getOperationsStages() {
     return [
       StreamStage(
-        id: 'order_placed',
-        name: 'Order Placed',
+        id: 'orders_placed',
+        name: 'Orders Placed',
         position: 0,
         color: '#2196F3', // blue
         streamType: StreamType.operations,
       ),
       StreamStage(
-        id: 'items_selected',
-        name: 'Items Selected',
+        id: 'priority_shipment',
+        name: 'Priority Shipment',
         position: 1,
+        color: '#E91E63', // pink - urgent/priority
+        streamType: StreamType.operations,
+      ),
+      StreamStage(
+        id: 'inventory_packing_list',
+        name: 'Inventory Packing List',
+        position: 2,
         color: '#9C27B0', // purple
+        streamType: StreamType.operations,
+      ),
+      StreamStage(
+        id: 'items_picked',
+        name: 'Items Picked',
+        position: 3,
+        color: '#FF9800', // orange
         streamType: StreamType.operations,
       ),
       StreamStage(
         id: 'out_for_delivery',
         name: 'Out for Delivery',
-        position: 2,
-        color: '#FF9800', // orange
-        streamType: StreamType.operations,
-      ),
-      StreamStage(
-        id: 'invoice_sent',
-        name: 'Invoice Sent',
-        position: 3,
-        color: '#FFC107', // amber
+        position: 4,
+        color: '#00BCD4', // cyan
         streamType: StreamType.operations,
       ),
       StreamStage(
         id: 'installed',
         name: 'Installed',
-        position: 4,
+        position: 5,
         color: '#4CAF50', // green
+        streamType: StreamType.operations,
+      ),
+      StreamStage(
+        id: 'payment',
+        name: 'Payment',
+        position: 6,
+        color: '#2E7D32', // dark green
         streamType: StreamType.operations,
         isFinalStage: true, // Triggers conversion to Support
       ),

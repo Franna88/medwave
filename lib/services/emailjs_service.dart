@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../models/appointment.dart';
 import '../models/streams/appointment.dart' as sales_models;
+import '../models/streams/order.dart' as order_models;
 
 /// EmailJS Service for sending appointment notifications
 ///
@@ -24,6 +25,8 @@ class EmailJSService {
   static const String _depositCustomerTemplateId = 'template_6vqr5ib';
   static const String _depositMarketingTemplateId = 'template_jykxsg3';
   static const String _contractLinkTemplateId = 'template_bdg4s33';
+  // Installation booking template - dedicated template for installation date selection
+  static const String _installationBookingTemplateId = 'template_fvu7nw2';
 
   // Admin email for notifications
   static const String _adminEmail =
@@ -537,5 +540,32 @@ class EmailJSService {
       debugPrint('❌ Error sending practitioner approval email: $error');
       return false;
     }
+  }
+
+  /// Send installation booking email to customer
+  /// Customer clicks the link to select 3 preferred installation dates
+  static Future<bool> sendInstallationBookingEmail({
+    required order_models.Order order,
+    required String bookingUrl,
+  }) async {
+    // Use the same pattern as deposit emails for consistency
+    return _sendDepositEmail(
+      templateId: _installationBookingTemplateId,
+      toEmail: order.email,
+      toName: order.customerName,
+      templateParams: {
+        'customer_name': order.customerName,
+        'customer_email': order.email,
+        'customer_phone': order.phone,
+        'appointment_id': order.id,
+        'deposit_amount': 'N/A',
+        'description':
+            'Congratulations! Your order has been received. Please select your preferred installation dates by clicking the button below.',
+        'yes_label': 'Select Installation Dates',
+        'no_label': '',
+        'yes_url': bookingUrl,
+        'no_url': bookingUrl,
+      },
+    );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../../models/practitioner_application.dart';
 import '../../models/admin/admin_user.dart';
+import '../../models/admin/installer.dart';
 import '../emailjs_service.dart';
 
 /// Firebase service for admin operations
@@ -599,5 +600,205 @@ class AdminService {
   static String _generateTemporaryPassword() {
     final random = DateTime.now().millisecondsSinceEpoch;
     return 'TempPass${random.toString().substring(7)}!';
+  }
+
+  // ============================================================================
+  // INSTALLER MANAGEMENT METHODS
+  // ============================================================================
+
+  /// Collection reference for installers
+  static CollectionReference get _installersCollection =>
+      _firestore.collection('installers');
+
+  /// Get all installers (Super Admin only)
+  static Stream<List<Installer>> getInstallersStream() {
+    return _installersCollection.snapshots().map((snapshot) {
+      if (kDebugMode) {
+        print('✅ ADMIN SERVICE: Found ${snapshot.docs.length} installers');
+      }
+      return snapshot.docs.map((doc) => Installer.fromFirestore(doc)).toList();
+    });
+  }
+
+  /// Get installers by country
+  static Stream<List<Installer>> getInstallersByCountryStream(String country) {
+    return _installersCollection
+        .where('country', isEqualTo: country)
+        .snapshots()
+        .map((snapshot) {
+      if (kDebugMode) {
+        print(
+            '🌍 ADMIN SERVICE: Found ${snapshot.docs.length} installers in $country');
+      }
+      return snapshot.docs.map((doc) => Installer.fromFirestore(doc)).toList();
+    });
+  }
+
+  /// Create a new installer (Super Admin only)
+  static Future<String> createInstaller({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String phoneNumber,
+    required String address,
+    required String city,
+    required String province,
+    required String postalCode,
+    required String country,
+    String? countryName,
+    required String serviceArea,
+    required String createdBy,
+    String? notes,
+  }) async {
+    try {
+      // Create Firebase Auth user first
+      final UserCredential userCredential =
+          await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final String userId = userCredential.user!.uid;
+
+      // Create installer document
+      final installer = Installer(
+        id: '', // Will be set by Firestore
+        userId: userId,
+        email: email,
+        firstName: firstName,
+        lastName: lastName,
+        phoneNumber: phoneNumber,
+        address: address,
+        city: city,
+        province: province,
+        postalCode: postalCode,
+        country: country,
+        countryName: countryName,
+        serviceArea: serviceArea,
+        status: InstallerStatus.active,
+        createdAt: DateTime.now(),
+        createdBy: createdBy,
+        notes: notes,
+      );
+
+      final docRef = await _installersCollection.add(installer.toFirestore());
+
+      if (kDebugMode) {
+        print(
+            '✅ ADMIN SERVICE: Created installer: ${installer.fullName} (${installer.email})');
+      }
+
+      return docRef.id;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to create installer: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Update installer status
+  static Future<void> updateInstallerStatus(
+      String installerId, InstallerStatus status) async {
+    try {
+      await _installersCollection.doc(installerId).update({
+        'status': status.value,
+        'updatedAt': Timestamp.now(),
+      });
+
+      if (kDebugMode) {
+        print(
+            '✅ ADMIN SERVICE: Updated installer status: $installerId -> ${status.value}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to update installer status: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Update installer details
+  static Future<void> updateInstaller(
+      String installerId, Map<String, dynamic> updates) async {
+    try {
+      updates['updatedAt'] = Timestamp.now();
+      await _installersCollection.doc(installerId).update(updates);
+
+      if (kDebugMode) {
+        print('✅ ADMIN SERVICE: Updated installer: $installerId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to update installer: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Delete installer (Super Admin only)
+  static Future<void> deleteInstaller(String installerId, String userId) async {
+    try {
+      // Delete from Firestore
+      await _installersCollection.doc(installerId).delete();
+
+      // Note: Firebase Auth user deletion requires admin privileges
+      // This would typically be done via Firebase Admin SDK on the backend
+
+      if (kDebugMode) {
+        print('✅ ADMIN SERVICE: Deleted installer: $installerId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to delete installer: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Update installer last login
+  static Future<void> updateInstallerLastLogin(String userId) async {
+    try {
+      final querySnapshot = await _installersCollection
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        await querySnapshot.docs.first.reference.update({
+          'lastLogin': Timestamp.now(),
+        });
+
+        if (kDebugMode) {
+          print(
+              '✅ ADMIN SERVICE: Updated last login for installer: $userId');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to update installer last login: $e');
+      }
+    }
+  }
+
+  /// Get installer by user ID
+  static Future<Installer?> getInstallerByUserId(String userId) async {
+    try {
+      final querySnapshot = await _installersCollection
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        return Installer.fromFirestore(querySnapshot.docs.first);
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE ERROR: Failed to get installer by userId: $e');
+      }
+      return null;
+    }
   }
 }

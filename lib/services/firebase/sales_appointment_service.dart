@@ -684,6 +684,9 @@ class SalesAppointmentService {
 
       final now = DateTime.now();
 
+      // Generate install booking token for email link
+      final installBookingToken = const Uuid().v4();
+
       // Create new order from appointment data
       final order = models.Order(
         id: '',
@@ -691,15 +694,15 @@ class SalesAppointmentService {
         customerName: appointment.customerName,
         email: appointment.email,
         phone: appointment.phone,
-        currentStage: 'order_placed', // First stage in Operations stream
+        currentStage: 'orders_placed', // First stage in Operations stream (updated)
         orderDate: now,
-        items: [], // Empty initially - will be filled in "Items Selected" stage
+        items: [], // Empty initially - will be filled in later stages
         createdAt: now,
         updatedAt: now,
         stageEnteredAt: now,
         stageHistory: [
           models.OrderStageHistoryEntry(
-            stage: 'order_placed',
+            stage: 'orders_placed',
             enteredAt: now,
             note: 'Converted from Sales appointment',
           ),
@@ -714,6 +717,10 @@ class SalesAppointmentService {
         ],
         createdBy: userId,
         createdByName: userName,
+        formScore: appointment.formScore,
+        // Installation booking fields
+        installBookingToken: installBookingToken,
+        installBookingStatus: models.InstallBookingStatus.pending,
       );
 
       // Create the order
@@ -728,6 +735,19 @@ class SalesAppointmentService {
 
       if (kDebugMode) {
         print('Converted appointment $appointmentId to order $orderId');
+      }
+
+      // Send installation booking email to customer
+      try {
+        await _orderService.sendInstallationBookingEmail(orderId: orderId);
+        if (kDebugMode) {
+          print('Installation booking email sent for order $orderId');
+        }
+      } catch (emailError) {
+        // Log but don't fail the conversion if email fails
+        if (kDebugMode) {
+          print('Warning: Failed to send installation booking email: $emailError');
+        }
       }
 
       return orderId;

@@ -1,12 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../models/streams/order.dart' as models;
 import '../../../models/streams/stream_stage.dart';
 import '../../../services/firebase/order_service.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/installer_provider.dart';
+import '../../../providers/inventory_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/stream_utils.dart';
 import '../../../widgets/common/score_badge.dart';
+import '../../../widgets/orders/order_detail_dialog.dart';
 
 class OperationsStreamScreen extends StatefulWidget {
   const OperationsStreamScreen({super.key});
@@ -18,6 +23,7 @@ class OperationsStreamScreen extends StatefulWidget {
 class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
   final OrderService _orderService = OrderService();
   final TextEditingController _searchController = TextEditingController();
+  StreamSubscription<List<models.Order>>? _ordersSubscription;
 
   List<models.Order> _allOrders = [];
   List<models.Order> _filteredOrders = [];
@@ -31,21 +37,30 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
     super.initState();
     _loadOrders();
     _searchController.addListener(_onSearchChanged);
+    // Load installers and inventory for order details
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<InstallerProvider>().listenToInstallers();
+      context.read<InventoryProvider>().listenToInventory();
+    });
   }
 
   @override
   void dispose() {
+    _ordersSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
   void _loadOrders() {
-    _orderService.ordersStream().listen((orders) {
-      setState(() {
-        _allOrders = orders;
-        _filterOrders();
-        _isLoading = false;
-      });
+    _ordersSubscription?.cancel();
+    _ordersSubscription = _orderService.ordersStream().listen((orders) {
+      if (mounted) {
+        setState(() {
+          _allOrders = orders;
+          _filterOrders();
+          _isLoading = false;
+        });
+      }
     });
   }
 
@@ -69,9 +84,37 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
   }
 
   List<models.Order> _getOrdersForStage(String stageId) {
-    return _filteredOrders
+    final orders = _filteredOrders
         .where((order) => order.currentStage == stageId)
         .toList();
+
+    // Sort Priority Shipment by earliest selected date (closest first)
+    if (stageId == 'priority_shipment') {
+      orders.sort((a, b) {
+        final dateA = a.earliestSelectedDate;
+        final dateB = b.earliestSelectedDate;
+
+        if (dateA == null && dateB == null) return 0;
+        if (dateA == null) return 1; // Orders without dates go to end
+        if (dateB == null) return -1;
+
+        return dateA.compareTo(dateB);
+      });
+    }
+
+    return orders;
+  }
+
+  void _showOrderDetail(models.Order order) {
+    showDialog(
+      context: context,
+      builder: (context) => OrderDetailDialog(
+        order: order,
+        onOrderUpdated: () {
+          // Orders will auto-update via stream
+        },
+      ),
+    );
   }
 
   Future<void> _moveOrderToStage(models.Order order, String newStageId) async {
@@ -283,14 +326,26 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
   }
 
   Widget _buildStageColumn(StreamStage stage, List<models.Order> orders) {
-    final sortedOrders = StreamUtils.sortByFormScore(
-      orders,
-      (order) => order.formScore,
-    );
-    final tieredOrders = StreamUtils.withTierSeparators(
-      sortedOrders,
-      (order) => order.formScore,
-    );
+    // For Priority Shipment, orders are already sorted by date
+    // For other stages, sort by form score
+    final List<models.Order> sortedOrders;
+    final List<({models.Order? item, bool isDivider, dynamic tier})> tieredOrders;
+
+    if (stage.id == 'priority_shipment') {
+      // Already sorted by date in _getOrdersForStage
+      sortedOrders = orders;
+      // No tier separators for date-sorted list
+      tieredOrders = sortedOrders.map((o) => (item: o, isDivider: false, tier: null)).toList();
+    } else {
+      sortedOrders = StreamUtils.sortByFormScore(
+        orders,
+        (order) => order.formScore,
+      );
+      tieredOrders = StreamUtils.withTierSeparators(
+        sortedOrders,
+        (order) => order.formScore,
+      );
+    }
 
     return Container(
       width: 320,
@@ -458,98 +513,247 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
   }
 
   Widget _buildOrderCard(models.Order order) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                child: Text(
-                  order.customerName.isNotEmpty
-                      ? order.customerName[0].toUpperCase()
-                      : 'O',
-                  style: TextStyle(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.bold,
+    final hasSelectedDates = order.customerSelectedDates.isNotEmpty;
+    final hasInstaller = order.assignedInstallerName != null;
+
+    return GestureDetector(
+      onTap: () => _showOrderDetail(order),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                  child: Text(
+                    order.customerName.isNotEmpty
+                        ? order.customerName[0].toUpperCase()
+                        : 'O',
+                    style: TextStyle(
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        order.customerName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        order.email,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // Show installer if assigned
+            if (hasInstaller) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.engineering, size: 14, color: Colors.blue[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    order.assignedInstallerName!,
+                    style: TextStyle(fontSize: 12, color: Colors.blue[600]),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
+            ],
+            // Show selected dates for Priority Shipment
+            if (hasSelectedDates) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      order.customerName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_month,
+                          size: 14,
+                          color: Colors.green[700],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Preferred Dates:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 4),
+                    ...order.customerSelectedDates.take(3).map(
+                          (date) => Padding(
+                            padding: const EdgeInsets.only(left: 18),
+                            child: Text(
+                              DateFormat('MMM d, yyyy').format(date),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.green[800],
+                              ),
+                            ),
+                          ),
+                        ),
+                  ],
+                ),
+              ),
+            ],
+            // Show confirmed install date if set
+            if (order.confirmedInstallDate != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.event_available, size: 14, color: Colors.blue[800]),
+                    const SizedBox(width: 4),
                     Text(
-                      order.email,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      'Install: ${DateFormat('MMM d').format(order.confirmedInstallDate!)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue[800],
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
-          ),
-          if (order.invoiceNumber != null) ...[
-            const SizedBox(height: 8),
+            // Show booking status badge
+            if (order.installBookingStatus != models.InstallBookingStatus.pending) ...[
+              const SizedBox(height: 8),
+              _buildBookingStatusBadge(order.installBookingStatus),
+            ],
+            if (order.invoiceNumber != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.receipt, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Invoice: ${order.invoiceNumber}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.receipt, size: 14, color: Colors.grey[600]),
+                Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
                 const SizedBox(width: 4),
                 Text(
-                  'Invoice: ${order.invoiceNumber}',
+                  order.timeInStageDisplay,
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                const Spacer(),
+                if (order.formScore != null) ScoreBadge(score: order.formScore),
+                if (order.formScore != null) const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
+                  onSelected: (stageId) => _moveOrderToStage(order, stageId),
+                  itemBuilder: (context) => _stages
+                      .where((s) => s.id != order.currentStage)
+                      .map(
+                        (stage) => PopupMenuItem(
+                          value: stage.id,
+                          child: Text('Move to ${stage.name}'),
+                        ),
+                      )
+                      .toList(),
                 ),
               ],
             ),
           ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
-              const SizedBox(width: 4),
-              Text(
-                order.timeInStageDisplay,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              const Spacer(),
-              if (order.formScore != null) ScoreBadge(score: order.formScore),
-              if (order.formScore != null) const SizedBox(width: 8),
-              PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
-                onSelected: (stageId) => _moveOrderToStage(order, stageId),
-                itemBuilder: (context) => _stages
-                    .where((s) => s.id != order.currentStage)
-                    .map(
-                      (stage) => PopupMenuItem(
-                        value: stage.id,
-                        child: Text('Move to ${stage.name}'),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookingStatusBadge(models.InstallBookingStatus status) {
+    Color bgColor;
+    Color textColor;
+    String label;
+    IconData icon;
+
+    switch (status) {
+      case models.InstallBookingStatus.pending:
+        bgColor = Colors.orange.shade100;
+        textColor = Colors.orange.shade800;
+        label = 'Awaiting Dates';
+        icon = Icons.schedule;
+        break;
+      case models.InstallBookingStatus.datesSelected:
+        bgColor = Colors.green.shade100;
+        textColor = Colors.green.shade800;
+        label = 'Dates Selected';
+        icon = Icons.check_circle_outline;
+        break;
+      case models.InstallBookingStatus.confirmed:
+        bgColor = Colors.blue.shade100;
+        textColor = Colors.blue.shade800;
+        label = 'Confirmed';
+        icon = Icons.verified;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: textColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
           ),
         ],
       ),

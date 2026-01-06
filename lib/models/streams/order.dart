@@ -1,5 +1,33 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Status for installation booking
+enum InstallBookingStatus {
+  pending('pending'),
+  datesSelected('dates_selected'),
+  confirmed('confirmed');
+
+  const InstallBookingStatus(this.value);
+  final String value;
+
+  static InstallBookingStatus fromString(String value) {
+    return InstallBookingStatus.values.firstWhere(
+      (status) => status.value == value,
+      orElse: () => InstallBookingStatus.pending,
+    );
+  }
+
+  String get displayName {
+    switch (this) {
+      case InstallBookingStatus.pending:
+        return 'Pending';
+      case InstallBookingStatus.datesSelected:
+        return 'Dates Selected';
+      case InstallBookingStatus.confirmed:
+        return 'Confirmed';
+    }
+  }
+}
+
 /// Model for an order in the Operations stream
 class Order {
   final String id;
@@ -23,6 +51,23 @@ class Order {
   final String? convertedToTicketId; // Set when moved to Support
   final double? formScore;
 
+  // Installation booking fields
+  final String? installBookingToken; // Security token for email link
+  final List<DateTime> customerSelectedDates; // Customer's 3 preferred dates
+  final DateTime? confirmedInstallDate; // Final admin-set install date
+  final String? assignedInstallerId; // Installer assignment
+  final String? assignedInstallerName;
+  final InstallBookingStatus installBookingStatus;
+  final DateTime? installBookingEmailSentAt;
+
+  // Inventory picking fields
+  final Map<String, bool> pickedItems; // item name -> picked status
+  final String? trackingNumber;
+  final String? waybillPhotoUrl;
+  final DateTime? pickedAt;
+  final String? pickedBy;
+  final String? pickedByName;
+
   Order({
     required this.id,
     required this.appointmentId,
@@ -44,6 +89,21 @@ class Order {
     this.createdByName,
     this.convertedToTicketId,
     this.formScore,
+    // Installation booking fields
+    this.installBookingToken,
+    this.customerSelectedDates = const [],
+    this.confirmedInstallDate,
+    this.assignedInstallerId,
+    this.assignedInstallerName,
+    this.installBookingStatus = InstallBookingStatus.pending,
+    this.installBookingEmailSentAt,
+    // Inventory picking fields
+    this.pickedItems = const {},
+    this.trackingNumber,
+    this.waybillPhotoUrl,
+    this.pickedAt,
+    this.pickedBy,
+    this.pickedByName,
   });
 
   /// Get time in current stage
@@ -106,6 +166,30 @@ class Order {
       formScore: map['formScore'] != null
           ? (map['formScore'] as num?)?.toDouble()
           : null,
+      // Installation booking fields
+      installBookingToken: map['installBookingToken']?.toString(),
+      customerSelectedDates: (map['customerSelectedDates'] as List<dynamic>?)
+              ?.map((d) => (d as Timestamp).toDate())
+              .toList() ??
+          [],
+      confirmedInstallDate:
+          (map['confirmedInstallDate'] as Timestamp?)?.toDate(),
+      assignedInstallerId: map['assignedInstallerId']?.toString(),
+      assignedInstallerName: map['assignedInstallerName']?.toString(),
+      installBookingStatus: InstallBookingStatus.fromString(
+        map['installBookingStatus']?.toString() ?? 'pending',
+      ),
+      installBookingEmailSentAt:
+          (map['installBookingEmailSentAt'] as Timestamp?)?.toDate(),
+      // Inventory picking fields
+      pickedItems: (map['pickedItems'] as Map<String, dynamic>?)
+              ?.map((key, value) => MapEntry(key, value as bool)) ??
+          {},
+      trackingNumber: map['trackingNumber']?.toString(),
+      waybillPhotoUrl: map['waybillPhotoUrl']?.toString(),
+      pickedAt: (map['pickedAt'] as Timestamp?)?.toDate(),
+      pickedBy: map['pickedBy']?.toString(),
+      pickedByName: map['pickedByName']?.toString(),
     );
   }
 
@@ -134,6 +218,27 @@ class Order {
       'createdByName': createdByName,
       'convertedToTicketId': convertedToTicketId,
       'formScore': formScore,
+      // Installation booking fields
+      'installBookingToken': installBookingToken,
+      'customerSelectedDates': customerSelectedDates
+          .map((d) => Timestamp.fromDate(d))
+          .toList(),
+      'confirmedInstallDate': confirmedInstallDate != null
+          ? Timestamp.fromDate(confirmedInstallDate!)
+          : null,
+      'assignedInstallerId': assignedInstallerId,
+      'assignedInstallerName': assignedInstallerName,
+      'installBookingStatus': installBookingStatus.value,
+      'installBookingEmailSentAt': installBookingEmailSentAt != null
+          ? Timestamp.fromDate(installBookingEmailSentAt!)
+          : null,
+      // Inventory picking fields
+      'pickedItems': pickedItems,
+      'trackingNumber': trackingNumber,
+      'waybillPhotoUrl': waybillPhotoUrl,
+      'pickedAt': pickedAt != null ? Timestamp.fromDate(pickedAt!) : null,
+      'pickedBy': pickedBy,
+      'pickedByName': pickedByName,
     };
   }
 
@@ -158,6 +263,21 @@ class Order {
     String? createdByName,
     String? convertedToTicketId,
     double? formScore,
+    // Installation booking fields
+    String? installBookingToken,
+    List<DateTime>? customerSelectedDates,
+    DateTime? confirmedInstallDate,
+    String? assignedInstallerId,
+    String? assignedInstallerName,
+    InstallBookingStatus? installBookingStatus,
+    DateTime? installBookingEmailSentAt,
+    // Inventory picking fields
+    Map<String, bool>? pickedItems,
+    String? trackingNumber,
+    String? waybillPhotoUrl,
+    DateTime? pickedAt,
+    String? pickedBy,
+    String? pickedByName,
   }) {
     return Order(
       id: id ?? this.id,
@@ -180,8 +300,67 @@ class Order {
       createdByName: createdByName ?? this.createdByName,
       convertedToTicketId: convertedToTicketId ?? this.convertedToTicketId,
       formScore: formScore ?? this.formScore,
+      // Installation booking fields
+      installBookingToken: installBookingToken ?? this.installBookingToken,
+      customerSelectedDates:
+          customerSelectedDates ?? this.customerSelectedDates,
+      confirmedInstallDate: confirmedInstallDate ?? this.confirmedInstallDate,
+      assignedInstallerId: assignedInstallerId ?? this.assignedInstallerId,
+      assignedInstallerName:
+          assignedInstallerName ?? this.assignedInstallerName,
+      installBookingStatus: installBookingStatus ?? this.installBookingStatus,
+      installBookingEmailSentAt:
+          installBookingEmailSentAt ?? this.installBookingEmailSentAt,
+      // Inventory picking fields
+      pickedItems: pickedItems ?? this.pickedItems,
+      trackingNumber: trackingNumber ?? this.trackingNumber,
+      waybillPhotoUrl: waybillPhotoUrl ?? this.waybillPhotoUrl,
+      pickedAt: pickedAt ?? this.pickedAt,
+      pickedBy: pickedBy ?? this.pickedBy,
+      pickedByName: pickedByName ?? this.pickedByName,
     );
   }
+
+  /// Get the earliest customer selected date for sorting
+  DateTime? get earliestSelectedDate {
+    if (customerSelectedDates.isEmpty) return null;
+    return customerSelectedDates.reduce(
+      (a, b) => a.isBefore(b) ? a : b,
+    );
+  }
+
+  /// Get count of picked items
+  int get pickedItemCount => pickedItems.values.where((v) => v).length;
+
+  /// Get total item count (sum of quantities)
+  int get totalItemCount => items.fold(0, (sum, item) => sum + item.quantity);
+
+  /// Check if all items are picked
+  bool get allItemsPicked {
+    if (items.isEmpty) return false;
+    for (final item in items) {
+      // Check each item by name - if quantity > 1, we still just need one tick
+      if (pickedItems[item.name] != true) return false;
+    }
+    return true;
+  }
+
+  /// Get picking progress as percentage (0.0 to 1.0)
+  double get pickingProgress {
+    if (items.isEmpty) return 0.0;
+    return pickedItemCount / items.length;
+  }
+
+  /// Check if picking has started but not completed
+  bool get isPartiallyPicked => pickedItemCount > 0 && !allItemsPicked;
+
+  /// Check if order is ready for shipping (all picked + tracking + waybill)
+  bool get isReadyForDelivery =>
+      allItemsPicked &&
+      trackingNumber != null &&
+      trackingNumber!.isNotEmpty &&
+      waybillPhotoUrl != null &&
+      waybillPhotoUrl!.isNotEmpty;
 }
 
 /// Model for order items

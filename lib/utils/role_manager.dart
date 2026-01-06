@@ -6,6 +6,7 @@
 enum UserRole {
   practitioner('practitioner'),
   warehouse('warehouse'),
+  installer('installer'),
   countryAdmin('country_admin'),
   superAdmin('super_admin'),
   marketingAdmin('marketing'),
@@ -138,6 +139,8 @@ class RoleManager {
         return '/dashboard';
       case UserRole.warehouse:
         return '/warehouse/inventory';
+      case UserRole.installer:
+        return '/installer/dashboard'; // Future installer mobile app dashboard
       case UserRole.countryAdmin:
       case UserRole.superAdmin:
       case UserRole.marketingAdmin:
@@ -155,6 +158,8 @@ class RoleManager {
         return 'Healthcare Practitioner';
       case UserRole.warehouse:
         return 'Warehouse Staff';
+      case UserRole.installer:
+        return 'Installer';
       case UserRole.countryAdmin:
         return 'Country Administrator';
       case UserRole.superAdmin:
@@ -266,6 +271,11 @@ class RoleManager {
                 'Admin Users',
                 '/admin/users',
                 'admin_panel_settings',
+              ),
+              NavigationSubItem(
+                'Installer Management',
+                '/admin/installers',
+                'engineering',
               ),
               NavigationSubItem(
                 'Product Management',
