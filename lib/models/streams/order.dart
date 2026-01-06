@@ -57,6 +57,8 @@ class Order {
   final DateTime? confirmedInstallDate; // Final admin-set install date
   final String? assignedInstallerId; // Installer assignment
   final String? assignedInstallerName;
+  final String? assignedInstallerPhone; // Installer phone for customer contact
+  final String? assignedInstallerEmail; // Installer email for customer contact
   final InstallBookingStatus installBookingStatus;
   final DateTime? installBookingEmailSentAt;
 
@@ -95,6 +97,8 @@ class Order {
     this.confirmedInstallDate,
     this.assignedInstallerId,
     this.assignedInstallerName,
+    this.assignedInstallerPhone,
+    this.assignedInstallerEmail,
     this.installBookingStatus = InstallBookingStatus.pending,
     this.installBookingEmailSentAt,
     // Inventory picking fields
@@ -176,6 +180,8 @@ class Order {
           (map['confirmedInstallDate'] as Timestamp?)?.toDate(),
       assignedInstallerId: map['assignedInstallerId']?.toString(),
       assignedInstallerName: map['assignedInstallerName']?.toString(),
+      assignedInstallerPhone: map['assignedInstallerPhone']?.toString(),
+      assignedInstallerEmail: map['assignedInstallerEmail']?.toString(),
       installBookingStatus: InstallBookingStatus.fromString(
         map['installBookingStatus']?.toString() ?? 'pending',
       ),
@@ -228,6 +234,8 @@ class Order {
           : null,
       'assignedInstallerId': assignedInstallerId,
       'assignedInstallerName': assignedInstallerName,
+      'assignedInstallerPhone': assignedInstallerPhone,
+      'assignedInstallerEmail': assignedInstallerEmail,
       'installBookingStatus': installBookingStatus.value,
       'installBookingEmailSentAt': installBookingEmailSentAt != null
           ? Timestamp.fromDate(installBookingEmailSentAt!)
@@ -269,6 +277,8 @@ class Order {
     DateTime? confirmedInstallDate,
     String? assignedInstallerId,
     String? assignedInstallerName,
+    String? assignedInstallerPhone,
+    String? assignedInstallerEmail,
     InstallBookingStatus? installBookingStatus,
     DateTime? installBookingEmailSentAt,
     // Inventory picking fields
@@ -308,6 +318,10 @@ class Order {
       assignedInstallerId: assignedInstallerId ?? this.assignedInstallerId,
       assignedInstallerName:
           assignedInstallerName ?? this.assignedInstallerName,
+      assignedInstallerPhone:
+          assignedInstallerPhone ?? this.assignedInstallerPhone,
+      assignedInstallerEmail:
+          assignedInstallerEmail ?? this.assignedInstallerEmail,
       installBookingStatus: installBookingStatus ?? this.installBookingStatus,
       installBookingEmailSentAt:
           installBookingEmailSentAt ?? this.installBookingEmailSentAt,

@@ -85,6 +85,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         orderId: _currentOrder.id,
         installerId: installer.id,
         installerName: installer.fullName,
+        installerPhone: installer.phoneNumber,
+        installerEmail: installer.email,
       );
 
       setState(() {
@@ -92,6 +94,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         _currentOrder = _currentOrder.copyWith(
           assignedInstallerId: installer.id,
           assignedInstallerName: installer.fullName,
+          assignedInstallerPhone: installer.phoneNumber,
+          assignedInstallerEmail: installer.email,
         );
       });
 

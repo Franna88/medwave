@@ -4,9 +4,10 @@ import '../../models/streams/order.dart' as models;
 import '../../services/firebase/order_service.dart';
 import '../../theme/app_theme.dart';
 import 'order_processing_screen.dart';
+import 'shipping_details_screen.dart';
 
-/// Screen displaying orders due for installation within 30 days
-/// Shows orders in Priority Shipment stage, sorted by nearest install date
+/// Screen displaying warehouse orders with tab-based filtering
+/// Tabs: To Pick, Needs Waybill, Out for Delivery
 class WarehouseOrdersScreen extends StatefulWidget {
   const WarehouseOrdersScreen({super.key});
 
@@ -14,24 +15,31 @@ class WarehouseOrdersScreen extends StatefulWidget {
   State<WarehouseOrdersScreen> createState() => _WarehouseOrdersScreenState();
 }
 
-class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
+class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
+    with SingleTickerProviderStateMixin {
   final OrderService _orderService = OrderService();
   final TextEditingController _searchController = TextEditingController();
 
+  late TabController _tabController;
+
   List<models.Order> _allOrders = [];
-  List<models.Order> _filteredOrders = [];
+  List<models.Order> _toPickOrders = [];
+  List<models.Order> _needsWaybillOrders = [];
+  List<models.Order> _outForDeliveryOrders = [];
   bool _isLoading = true;
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _loadOrders();
     _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -40,66 +48,86 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
     _orderService.ordersStream().listen((orders) {
       if (mounted) {
         setState(() {
-          // Filter orders in priority_shipment OR inventory_packing_list stage
-          // with install date (confirmed or earliest selected) within next 30 days
-          final now = DateTime.now();
-          final thirtyDaysFromNow = now.add(const Duration(days: 30));
-
-          _allOrders = orders.where((order) {
-            // Check stage - show priority_shipment and inventory_packing_list
-            final validStage = order.currentStage == 'priority_shipment' ||
-                order.currentStage == 'inventory_packing_list';
-            if (!validStage) return false;
-
-            // Use confirmedInstallDate if available, otherwise use earliest selected date
-            final installDate = order.confirmedInstallDate ?? order.earliestSelectedDate;
-            if (installDate == null) return false;
-
-            return installDate.isAfter(now.subtract(const Duration(days: 1))) &&
-                installDate.isBefore(thirtyDaysFromNow);
-          }).toList();
-
-          // Sort by effective install date ascending (nearest first)
-          // Use confirmed date if available, otherwise earliest selected date
-          _allOrders.sort((a, b) {
-            final dateA = a.confirmedInstallDate ?? a.earliestSelectedDate;
-            final dateB = b.confirmedInstallDate ?? b.earliestSelectedDate;
-            if (dateA == null && dateB == null) return 0;
-            if (dateA == null) return 1;
-            if (dateB == null) return -1;
-            return dateA.compareTo(dateB);
-          });
-
-          _filterOrders();
+          _allOrders = orders;
+          _categorizeOrders();
           _isLoading = false;
         });
       }
     });
   }
 
-  void _onSearchChanged() {
-    setState(() {
-      _searchQuery = _searchController.text.toLowerCase();
-      _filterOrders();
-    });
-  }
-
-  void _filterOrders() {
-    if (_searchQuery.isEmpty) {
-      _filteredOrders = _allOrders;
-    } else {
-      _filteredOrders = _allOrders.where((order) {
+  void _categorizeOrders() {
+    // Filter by search query first
+    var filteredOrders = _allOrders;
+    if (_searchQuery.isNotEmpty) {
+      filteredOrders = _allOrders.where((order) {
         return order.customerName.toLowerCase().contains(_searchQuery) ||
             order.email.toLowerCase().contains(_searchQuery) ||
             order.phone.contains(_searchQuery);
       }).toList();
     }
+
+    // To Pick: priority_shipment or inventory_packing_list
+    _toPickOrders = filteredOrders.where((order) {
+      return order.currentStage == 'priority_shipment' ||
+          order.currentStage == 'inventory_packing_list';
+    }).toList();
+
+    // Sort by install date (nearest first)
+    _toPickOrders.sort((a, b) {
+      final dateA = a.confirmedInstallDate ?? a.earliestSelectedDate;
+      final dateB = b.confirmedInstallDate ?? b.earliestSelectedDate;
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+      return dateA.compareTo(dateB);
+    });
+
+    // Needs Waybill: items_picked stage
+    _needsWaybillOrders = filteredOrders.where((order) {
+      return order.currentStage == 'items_picked';
+    }).toList();
+
+    // Sort by picked date (most recent first)
+    _needsWaybillOrders.sort((a, b) {
+      final dateA = a.pickedAt;
+      final dateB = b.pickedAt;
+      if (dateA == null && dateB == null) return 0;
+      if (dateA == null) return 1;
+      if (dateB == null) return -1;
+      return dateB.compareTo(dateA);
+    });
+
+    // Out for Delivery: out_for_delivery stage
+    _outForDeliveryOrders = filteredOrders.where((order) {
+      return order.currentStage == 'out_for_delivery';
+    }).toList();
+
+    // Sort by most recent first
+    _outForDeliveryOrders.sort((a, b) {
+      return b.updatedAt.compareTo(a.updatedAt);
+    });
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+      _categorizeOrders();
+    });
   }
 
   void _navigateToProcessing(models.Order order) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => OrderProcessingScreen(order: order),
+      ),
+    );
+  }
+
+  void _navigateToShipping(models.Order order) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ShippingDetailsScreen(order: order),
       ),
     );
   }
@@ -111,14 +139,19 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
       body: Column(
         children: [
           _buildHeader(context),
-          _buildStatsRow(),
+          _buildTabBar(),
           _buildSearchBar(),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _filteredOrders.isEmpty
-                    ? _buildEmptyState()
-                    : _buildOrdersList(),
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildOrdersList(_toPickOrders, OrderTabType.toPick),
+                      _buildOrdersList(_needsWaybillOrders, OrderTabType.needsWaybill),
+                      _buildOrdersList(_outForDeliveryOrders, OrderTabType.outForDelivery),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -155,11 +188,11 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
               ),
             ),
             const SizedBox(width: 16),
-            Expanded(
+            const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Orders',
                     style: TextStyle(
                       color: Colors.white,
@@ -168,28 +201,13 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
                     ),
                   ),
                   Text(
-                    'Due within 30 days',
+                    'Warehouse Fulfillment',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white70,
                       fontSize: 14,
                     ),
                   ),
                 ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${_filteredOrders.length}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
               ),
             ),
           ],
@@ -198,45 +216,61 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
     );
   }
 
-  Widget _buildStatsRow() {
-    final pendingCount = _allOrders
-        .where((o) => o.currentStage == 'priority_shipment')
-        .length;
-    final inProgressCount = _allOrders
-        .where((o) => o.currentStage == 'inventory_packing_list')
-        .length;
-    final partiallyPickedCount = _allOrders
-        .where((o) => o.isPartiallyPicked)
-        .length;
-
+  Widget _buildTabBar() {
     return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildStatCard(
-              'Pending',
-              pendingCount.toString(),
-              AppTheme.primaryColor,
-              Icons.pending_actions,
+      color: Colors.white,
+      child: TabBar(
+        controller: _tabController,
+        onTap: (_) => setState(() {}),
+        labelColor: AppTheme.primaryColor,
+        unselectedLabelColor: AppTheme.secondaryColor,
+        indicatorColor: AppTheme.primaryColor,
+        indicatorWeight: 3,
+        labelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+        tabs: [
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.inventory_2, size: 18),
+                const SizedBox(width: 6),
+                const Text('To Pick'),
+                if (_toPickOrders.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  _buildTabBadge(_toPickOrders.length, AppTheme.primaryColor),
+                ],
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard(
-              'In Progress',
-              inProgressCount.toString(),
-              AppTheme.warningColor,
-              Icons.inventory_2,
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.receipt_long, size: 18),
+                const SizedBox(width: 6),
+                const Text('Waybill'),
+                if (_needsWaybillOrders.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  _buildTabBadge(_needsWaybillOrders.length, AppTheme.warningColor),
+                ],
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatCard(
-              'Partial',
-              partiallyPickedCount.toString(),
-              AppTheme.pinkColor,
-              Icons.checklist,
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.local_shipping, size: 18),
+                const SizedBox(width: 6),
+                const Text('Shipped'),
+                if (_outForDeliveryOrders.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  _buildTabBadge(_outForDeliveryOrders.length, AppTheme.successColor),
+                ],
+              ],
             ),
           ),
         ],
@@ -244,41 +278,27 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, Color color, IconData icon) {
+  Widget _buildTabBadge(int count, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: color,
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: color.withOpacity(0.8),
-            ),
-          ),
-        ],
+      child: Text(
+        '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
@@ -304,7 +324,53 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildOrdersList(List<models.Order> orders, OrderTabType tabType) {
+    if (orders.isEmpty) {
+      return _buildEmptyState(tabType);
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        _loadOrders();
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        itemCount: orders.length,
+        itemBuilder: (context, index) {
+          final order = orders[index];
+          return _buildOrderCard(order, tabType);
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(OrderTabType tabType) {
+    String title;
+    String subtitle;
+    IconData icon;
+    Color color;
+
+    switch (tabType) {
+      case OrderTabType.toPick:
+        title = 'No Orders to Pick';
+        subtitle = 'All orders have been picked';
+        icon = Icons.check_circle_outline;
+        color = AppTheme.successColor;
+        break;
+      case OrderTabType.needsWaybill:
+        title = 'No Waybills Pending';
+        subtitle = 'All picked orders have waybills';
+        icon = Icons.receipt_long;
+        color = AppTheme.primaryColor;
+        break;
+      case OrderTabType.outForDelivery:
+        title = 'No Shipments';
+        subtitle = 'No orders out for delivery yet';
+        icon = Icons.local_shipping;
+        color = AppTheme.secondaryColor;
+        break;
+    }
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -312,19 +378,15 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withOpacity(0.1),
+              color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.check_circle_outline,
-              size: 64,
-              color: AppTheme.primaryColor,
-            ),
+            child: Icon(icon, size: 64, color: color),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'No Orders Due',
-            style: TextStyle(
+          Text(
+            title,
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: AppTheme.textColor,
@@ -332,7 +394,7 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'No orders are due for installation\nwithin the next 30 days',
+            subtitle,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
@@ -344,33 +406,8 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
     );
   }
 
-  Widget _buildOrdersList() {
-    return RefreshIndicator(
-      onRefresh: () async {
-        _loadOrders();
-      },
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: _filteredOrders.length,
-        itemBuilder: (context, index) {
-          final order = _filteredOrders[index];
-          return _buildOrderCard(order);
-        },
-      ),
-    );
-  }
-
-  Widget _buildOrderCard(models.Order order) {
+  Widget _buildOrderCard(models.Order order, OrderTabType tabType) {
     final dateFormat = DateFormat('EEE, MMM d');
-    // Use confirmed date if available, otherwise earliest selected date
-    final effectiveDate = order.confirmedInstallDate ?? order.earliestSelectedDate;
-    final daysUntilInstall = effectiveDate != null
-        ? effectiveDate.difference(DateTime.now()).inDays
-        : 0;
-    final isDateConfirmed = order.confirmedInstallDate != null;
-
-    final isUrgent = daysUntilInstall <= 7;
-    final isInProgress = order.currentStage == 'inventory_packing_list';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -378,12 +415,8 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isUrgent
-              ? AppTheme.errorColor.withOpacity(0.3)
-              : isInProgress
-                  ? AppTheme.warningColor.withOpacity(0.3)
-                  : AppTheme.borderColor,
-          width: isUrgent || isInProgress ? 2 : 1,
+          color: _getBorderColor(order, tabType),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
@@ -397,7 +430,7 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => _navigateToProcessing(order),
+          onTap: () => _handleOrderTap(order, tabType),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -428,55 +461,32 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
                         ],
                       ),
                     ),
-                    _buildStatusBadge(order, isUrgent, daysUntilInstall),
+                    _buildStatusBadge(order, tabType),
                   ],
                 ),
                 const SizedBox(height: 12),
                 const Divider(height: 1),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildInfoChip(
-                      Icons.calendar_today,
-                      effectiveDate != null
-                          ? '${dateFormat.format(effectiveDate)}${isDateConfirmed ? '' : ' (pending)'}'
-                          : 'No date',
-                      isUrgent ? AppTheme.errorColor : AppTheme.primaryColor,
-                    ),
-                    const SizedBox(width: 12),
-                    _buildInfoChip(
-                      Icons.inventory_2_outlined,
-                      '${order.items.length} items',
-                      AppTheme.secondaryColor,
-                    ),
-                  ],
-                ),
-                if (isInProgress) ...[
+
+                // Info chips based on tab type
+                _buildInfoRow(order, tabType, dateFormat),
+
+                // Progress bar for picking orders
+                if (tabType == OrderTabType.toPick &&
+                    order.currentStage == 'inventory_packing_list') ...[
                   const SizedBox(height: 12),
                   _buildPickingProgress(order),
                 ],
+
+                // Tracking info for shipped orders
+                if (tabType == OrderTabType.outForDelivery &&
+                    order.trackingNumber != null) ...[
+                  const SizedBox(height: 12),
+                  _buildTrackingInfo(order),
+                ],
+
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _navigateToProcessing(order),
-                    icon: Icon(
-                      isInProgress ? Icons.checklist : Icons.play_arrow,
-                      size: 20,
-                    ),
-                    label: Text(isInProgress ? 'Continue Picking' : 'Process'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isInProgress
-                          ? AppTheme.warningColor
-                          : AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                ),
+                _buildActionButton(order, tabType),
               ],
             ),
           ),
@@ -485,28 +495,46 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
     );
   }
 
-  Widget _buildStatusBadge(models.Order order, bool isUrgent, int daysUntilInstall) {
+  Color _getBorderColor(models.Order order, OrderTabType tabType) {
+    switch (tabType) {
+      case OrderTabType.toPick:
+        if (order.currentStage == 'inventory_packing_list') {
+          return AppTheme.warningColor.withOpacity(0.5);
+        }
+        return AppTheme.borderColor;
+      case OrderTabType.needsWaybill:
+        return AppTheme.warningColor.withOpacity(0.5);
+      case OrderTabType.outForDelivery:
+        return AppTheme.successColor.withOpacity(0.5);
+    }
+  }
+
+  Widget _buildStatusBadge(models.Order order, OrderTabType tabType) {
     String text;
     Color color;
 
-    if (order.currentStage == 'inventory_packing_list') {
-      if (order.isPartiallyPicked) {
-        text = '${(order.pickingProgress * 100).toInt()}% picked';
+    switch (tabType) {
+      case OrderTabType.toPick:
+        if (order.currentStage == 'inventory_packing_list') {
+          if (order.isPartiallyPicked) {
+            text = '${(order.pickingProgress * 100).toInt()}% picked';
+          } else {
+            text = 'Picking';
+          }
+          color = AppTheme.warningColor;
+        } else {
+          text = 'Pending';
+          color = AppTheme.primaryColor;
+        }
+        break;
+      case OrderTabType.needsWaybill:
+        text = 'Needs Waybill';
         color = AppTheme.warningColor;
-      } else {
-        text = 'Picking';
-        color = AppTheme.warningColor;
-      }
-    } else if (isUrgent) {
-      text = daysUntilInstall == 0
-          ? 'Today!'
-          : daysUntilInstall == 1
-              ? 'Tomorrow'
-              : '$daysUntilInstall days';
-      color = AppTheme.errorColor;
-    } else {
-      text = '$daysUntilInstall days';
-      color = AppTheme.primaryColor;
+        break;
+      case OrderTabType.outForDelivery:
+        text = 'Shipped';
+        color = AppTheme.successColor;
+        break;
     }
 
     return Container(
@@ -524,6 +552,36 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
           color: color,
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoRow(models.Order order, OrderTabType tabType, DateFormat dateFormat) {
+    final effectiveDate = order.confirmedInstallDate ?? order.earliestSelectedDate;
+
+    return Row(
+      children: [
+        _buildInfoChip(
+          Icons.calendar_today,
+          effectiveDate != null
+              ? dateFormat.format(effectiveDate)
+              : 'No date',
+          AppTheme.primaryColor,
+        ),
+        const SizedBox(width: 12),
+        _buildInfoChip(
+          Icons.inventory_2_outlined,
+          '${order.items.length} items',
+          AppTheme.secondaryColor,
+        ),
+        if (tabType == OrderTabType.needsWaybill) ...[
+          const SizedBox(width: 12),
+          _buildInfoChip(
+            Icons.check_circle,
+            'All Picked',
+            AppTheme.successColor,
+          ),
+        ],
+      ],
     );
   }
 
@@ -582,5 +640,111 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen> {
       ],
     );
   }
+
+  Widget _buildTrackingInfo(models.Order order) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.successColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.successColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.local_shipping, size: 20, color: AppTheme.successColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Tracking Number',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.secondaryColor,
+                  ),
+                ),
+                Text(
+                  order.trackingNumber ?? 'N/A',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.successColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (order.waybillPhotoUrl != null)
+            Icon(Icons.photo, size: 20, color: AppTheme.successColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(models.Order order, OrderTabType tabType) {
+    String label;
+    IconData icon;
+    Color color;
+    VoidCallback? onPressed;
+
+    switch (tabType) {
+      case OrderTabType.toPick:
+        final isInProgress = order.currentStage == 'inventory_packing_list';
+        label = isInProgress ? 'Continue Picking' : 'Start Picking';
+        icon = isInProgress ? Icons.checklist : Icons.play_arrow;
+        color = isInProgress ? AppTheme.warningColor : AppTheme.primaryColor;
+        onPressed = () => _navigateToProcessing(order);
+        break;
+      case OrderTabType.needsWaybill:
+        label = 'Add Tracking & Waybill';
+        icon = Icons.add_photo_alternate;
+        color = AppTheme.warningColor;
+        onPressed = () => _navigateToShipping(order);
+        break;
+      case OrderTabType.outForDelivery:
+        label = 'View Details';
+        icon = Icons.visibility;
+        color = AppTheme.successColor;
+        onPressed = null; // View only for now
+        break;
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 20),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleOrderTap(models.Order order, OrderTabType tabType) {
+    switch (tabType) {
+      case OrderTabType.toPick:
+        _navigateToProcessing(order);
+        break;
+      case OrderTabType.needsWaybill:
+        _navigateToShipping(order);
+        break;
+      case OrderTabType.outForDelivery:
+        // Could show a detail view in the future
+        break;
+    }
+  }
 }
 
+enum OrderTabType {
+  toPick,
+  needsWaybill,
+  outForDelivery,
+}

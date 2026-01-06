@@ -27,6 +27,8 @@ class EmailJSService {
   static const String _contractLinkTemplateId = 'template_bdg4s33';
   // Installation booking template - dedicated template for installation date selection
   static const String _installationBookingTemplateId = 'template_fvu7nw2';
+  // Out for delivery template - notifies customer with tracking and installer info
+  static const String _outForDeliveryTemplateId = 'template_bvaj5t6';
 
   // Admin email for notifications
   static const String _adminEmail =
@@ -567,5 +569,53 @@ class EmailJSService {
         'no_url': bookingUrl,
       },
     );
+  }
+
+  /// Send out for delivery email to customer
+  /// Notifies customer that parcel is on the way with tracking number and installer details
+  static Future<bool> sendOutForDeliveryEmail({
+    required order_models.Order order,
+  }) async {
+    try {
+      debugPrint(
+        '📧 Sending out for delivery email to ${order.email}',
+      );
+
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _outForDeliveryTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            'to_email': order.email,
+            'to_name': order.customerName,
+            'email': order.email, // Some templates use 'email' as recipient
+            'customer_name': order.customerName,
+            'tracking_number': order.trackingNumber ?? 'Not available',
+            'installer_name': order.assignedInstallerName ?? 'To be assigned',
+            'installer_phone': order.assignedInstallerPhone ?? 'Not available',
+            'installer_email': order.assignedInstallerEmail ?? 'Not available',
+            'description':
+                'Great news! Your parcel is on the way. Below are your tracking details and installer information.',
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ Out for delivery email sent successfully');
+        return true;
+      } else {
+        debugPrint(
+          '❌ Failed to send out for delivery email: ${response.body}',
+        );
+        return false;
+      }
+    } catch (error) {
+      debugPrint('❌ Error sending out for delivery email: $error');
+      return false;
+    }
   }
 }

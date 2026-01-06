@@ -195,6 +195,29 @@ class OrderService {
 
       await updateOrder(updatedOrder);
 
+      // Send out for delivery email when moving to that stage
+      if (newStage == 'out_for_delivery') {
+        // Validate required fields before sending email
+        if (updatedOrder.trackingNumber != null &&
+            updatedOrder.trackingNumber!.isNotEmpty &&
+            updatedOrder.assignedInstallerId != null) {
+          final emailSent = await EmailJSService.sendOutForDeliveryEmail(
+            order: updatedOrder,
+          );
+          if (kDebugMode) {
+            print(
+              'Out for delivery email ${emailSent ? 'sent' : 'failed'} for order $orderId',
+            );
+          }
+        } else {
+          if (kDebugMode) {
+            print(
+              'Skipped out for delivery email - missing tracking number or installer for order $orderId',
+            );
+          }
+        }
+      }
+
       // Check if we need to convert to Support Ticket (final stage)
       if (newStage == 'installed') {
         await convertToSupportTicket(
@@ -558,6 +581,8 @@ class OrderService {
     required String orderId,
     required String installerId,
     required String installerName,
+    String? installerPhone,
+    String? installerEmail,
   }) async {
     try {
       final order = await getOrder(orderId);
@@ -568,6 +593,8 @@ class OrderService {
       final updatedOrder = order.copyWith(
         assignedInstallerId: installerId,
         assignedInstallerName: installerName,
+        assignedInstallerPhone: installerPhone,
+        assignedInstallerEmail: installerEmail,
         updatedAt: DateTime.now(),
       );
 
