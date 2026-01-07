@@ -198,24 +198,15 @@ class OrderService {
 
       // Send out for delivery email when moving to that stage
       if (newStage == 'out_for_delivery') {
-        // Validate required fields before sending email
-        if (updatedOrder.trackingNumber != null &&
-            updatedOrder.trackingNumber!.isNotEmpty &&
-            updatedOrder.assignedInstallerId != null) {
-          final emailSent = await EmailJSService.sendOutForDeliveryEmail(
-            order: updatedOrder,
+        // Always send email when order moves to out_for_delivery stage
+        // Email template handles missing data gracefully
+        final emailSent = await EmailJSService.sendOutForDeliveryEmail(
+          order: updatedOrder,
+        );
+        if (kDebugMode) {
+          print(
+            'Out for delivery email ${emailSent ? 'sent' : 'failed'} for order $orderId',
           );
-          if (kDebugMode) {
-            print(
-              'Out for delivery email ${emailSent ? 'sent' : 'failed'} for order $orderId',
-            );
-          }
-        } else {
-          if (kDebugMode) {
-            print(
-              'Skipped out for delivery email - missing tracking number or installer for order $orderId',
-            );
-          }
         }
       }
 
