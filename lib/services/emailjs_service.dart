@@ -590,9 +590,7 @@ class EmailJSService {
           'template_id': _outForDeliveryTemplateId,
           'user_id': _userId,
           'template_params': {
-            'to_email': order.email,
-            'to_name': order.customerName,
-            'email': order.email, // Some templates use 'email' as recipient
+            'customer_email': order.email, // Template uses {{customer_email}} for recipient
             'customer_name': order.customerName,
             'tracking_number': order.trackingNumber ?? 'Not available',
             'installer_name': order.assignedInstallerName ?? 'To be assigned',

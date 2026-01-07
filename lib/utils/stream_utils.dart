@@ -4,7 +4,8 @@ enum FormScoreTier { high, mid, low, none }
 
 // Utility functions for stream drag-and-drop validation and stage management
 class StreamUtils {
-  // Only allows forward movement to the next immediate stage (position + 1)
+  // TODO: TESTING MODE - Remove backward movement before production!
+  // Allows movement to any stage (forward or backward) for testing
   static bool canMoveToStage(
     String currentStageId,
     String targetStageId,
@@ -15,26 +16,10 @@ class StreamUtils {
       return false;
     }
 
-    // Find current and target stages
-    final currentStage = stages.firstWhere(
-      (s) => s.id == currentStageId,
-      orElse: () => throw Exception('Current stage not found: $currentStageId'),
-    );
-
-    final targetStage = stages.firstWhere(
-      (s) => s.id == targetStageId,
-      orElse: () => throw Exception('Target stage not found: $targetStageId'),
-    );
-
-    // Sales exception: allow jumping directly from Appointments -> Opt In
-    final isSalesDirectOptIn =
-        currentStage.streamType == StreamType.sales &&
-        currentStage.id == 'appointments' &&
-        targetStage.id == 'opt_in';
-    if (isSalesDirectOptIn) return true;
-
-    // Only allow forward movement to the next immediate stage
-    return targetStage.position == currentStage.position + 1;
+    // TESTING: Allow any movement (forward or backward)
+    // TODO: Restore original logic before production:
+    // return targetStage.position == currentStage.position + 1;
+    return true;
   }
 
   // Checks if a stage is the final stage (using isFinalStage property)
