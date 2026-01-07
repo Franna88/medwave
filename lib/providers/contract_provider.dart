@@ -4,6 +4,7 @@ import '../models/contracts/contract.dart';
 import '../models/streams/appointment.dart';
 import '../services/firebase/contract_service.dart';
 import '../services/emailjs_service.dart';
+import '../services/whatsapp_service.dart';
 
 /// Provider for managing contract state
 class ContractProvider extends ChangeNotifier {
@@ -47,19 +48,39 @@ class ContractProvider extends ChangeNotifier {
       // Send contract link email (best-effort; non-blocking to signing flow)
       try {
         final contractUrl = getFullContractUrl(contract);
-        final sent = await EmailJSService.sendContractLinkEmail(
+        debugPrint('📧 ContractProvider: Sending contract email to ${appointment.email}');
+        
+        final emailSent = await EmailJSService.sendContractLinkEmail(
           appointment: appointment,
           contractUrl: contractUrl,
         );
-        if (kDebugMode && !sent) {
-          debugPrint('⚠️ ContractProvider: Contract link email failed to send');
+        debugPrint('📧 ContractProvider: Email sent: $emailSent');
+        
+        // Also send WhatsApp notification to let customer know email was sent
+        debugPrint('📱 ContractProvider: Checking WhatsApp...');
+        debugPrint('📱 ContractProvider: isConfigured=${WhatsAppService.isConfigured()}');
+        debugPrint('📱 ContractProvider: phone=${appointment.phone}');
+        debugPrint('📱 ContractProvider: isValidPhone=${WhatsAppService.isValidPhoneNumber(appointment.phone)}');
+        
+        if (WhatsAppService.isConfigured() && 
+            WhatsAppService.isValidPhoneNumber(appointment.phone)) {
+          debugPrint('📱 ContractProvider: Sending WhatsApp to ${appointment.phone}...');
+          final whatsappResult = await WhatsAppService.sendOptInThankYou(
+            customerPhone: appointment.phone,
+            customerName: appointment.customerName,
+          );
+          debugPrint(
+            '📱 ContractProvider: WhatsApp result - success=${whatsappResult.success}, message=${whatsappResult.message}',
+          );
+        } else {
+          if (!WhatsAppService.isConfigured()) {
+            debugPrint('📱 ContractProvider: WhatsApp not configured - skipping');
+          } else {
+            debugPrint('📱 ContractProvider: Invalid phone for WhatsApp: ${appointment.phone}');
+          }
         }
       } catch (emailError) {
-        if (kDebugMode) {
-          debugPrint(
-            '⚠️ ContractProvider: Error sending contract email: $emailError',
-          );
-        }
+        debugPrint('⚠️ ContractProvider: Error in email/WhatsApp block: $emailError');
       }
 
       _isSaving = false;

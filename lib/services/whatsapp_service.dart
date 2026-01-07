@@ -18,10 +18,10 @@ class WhatsAppService {
   // WhatsApp Cloud API Configuration
   // ============================================================
   
-  // TODO: Replace with your actual WhatsApp Cloud API credentials
-  // Get these from: https://developers.facebook.com/ > Your App > WhatsApp > API Setup
-  static const String _accessToken = 'YOUR_WHATSAPP_ACCESS_TOKEN';
-  static const String _phoneNumberId = 'YOUR_PHONE_NUMBER_ID';
+  // WhatsApp Cloud API credentials from Facebook Developer Console
+  // App: Medwave Watsapp | From: +27 72 191 1149 | Business Account ID: 1189345433382923
+  static const String _accessToken = 'EAAbi7vZB0PWIBQdNpfkE7mga57ohFVOZBnwY6YRwAYfhAYoTwjFmYAgnVlE7keQC2ZCTNh2ivlDDYo61R1aY8nnlEsJF88YkOkhEiJOY1idvZBDHxT8c40fk2VZBEbb6g2qOXOKpmonb6kyzBhx2VZCl7YfQ14EvcqfYXszYaohhiIHqxKZBrNoBhi5qoEGdRV8z0ja2ZCpuq38bxnwDKV6CKYyYVncVgpiiOU4vXBGUrBB9sTfi7CKZAg8BZCt1OlJUwjOKfB4Iv2HPr7gK96mWaGWAZDZD';
+  static const String _phoneNumberId = '992013870651962';
   static const String _apiVersion = 'v18.0';
   
   // Base URL for Meta Graph API
@@ -32,6 +32,11 @@ class WhatsAppService {
   // ============================================================
   // These template names must match exactly what you create in Facebook Business Manager
   // Templates must be approved before they can be used
+  
+  /// Template for opt-in thank you / contract sent message
+  /// Message: "Thank you for choosing MedWave! We've sent you an email 
+  /// with your contract and payment details. Please check your inbox."
+  static const String _optInThankYouTemplateId = 'med_welcome';
   
   /// Template for installation booking reminder
   /// Message: "Hi {{1}}, we've sent you an email with a link to schedule your 
@@ -152,6 +157,27 @@ class WhatsAppService {
         message: 'Exception: $e',
       );
     }
+  }
+
+  // ============================================================
+  // Public Methods - Opt In / Contract Flow
+  // ============================================================
+  
+  /// Send opt-in thank you message via WhatsApp
+  /// 
+  /// Notifies the customer that they have opted in and an email with
+  /// contract and payment details has been sent.
+  /// 
+  /// Template message: "Thank you for choosing MedWave! We've sent you an email.."
+  static Future<WhatsAppResult> sendOptInThankYou({
+    required String customerPhone,
+    required String customerName,
+  }) async {
+    // Template has no variables, so no components needed
+    return _sendTemplateMessage(
+      to: customerPhone,
+      templateName: _optInThankYouTemplateId,
+    );
   }
 
   // ============================================================
