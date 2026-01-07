@@ -17,12 +17,14 @@ class AppointmentDetailDialog extends StatefulWidget {
   final SalesAppointment appointment;
   final List<StreamStage> stages;
   final VoidCallback? onAssignmentChanged;
+  final VoidCallback? onDeleted;
 
   const AppointmentDetailDialog({
     super.key,
     required this.appointment,
     required this.stages,
     this.onAssignmentChanged,
+    this.onDeleted,
   });
 
   @override
@@ -35,6 +37,7 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
   final SalesAppointmentService _appointmentService = SalesAppointmentService();
   String? _selectedAssignedTo;
   bool _isSavingAssignment = false;
+  bool _isDeleting = false;
   List<AdminUser> _salesAdmins = [];
 
   @override
@@ -346,10 +349,175 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                 ),
               ),
             ),
+            // Footer with Delete button
+            _buildFooter(),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildFooter() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+      ),
+      child: Row(
+        children: [
+          // Delete Lead button (left side)
+          ElevatedButton.icon(
+            onPressed: _isDeleting ? null : _showDeleteConfirmation,
+            icon: _isDeleting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.delete_forever, size: 18),
+            label: Text(_isDeleting ? 'Deleting...' : 'Delete Lead'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          const Spacer(),
+          // Close button (right side)
+          TextButton(
+            onPressed: _isDeleting ? null : () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showDeleteConfirmation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red[700], size: 28),
+            const SizedBox(width: 12),
+            const Text('Delete Lead'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This action will permanently delete:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            _buildDeleteItem('This Sales Appointment'),
+            _buildDeleteItem('All related Contracts'),
+            _buildDeleteItem('Stage History'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.red[700], size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'This action cannot be undone.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete Lead'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteLead();
+    }
+  }
+
+  Widget _buildDeleteItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, bottom: 4),
+      child: Row(
+        children: [
+          Icon(Icons.remove_circle, size: 16, color: Colors.red[400]),
+          const SizedBox(width: 8),
+          Text(text),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteLead() async {
+    setState(() => _isDeleting = true);
+
+    try {
+      await _appointmentService.deleteAppointment(_currentAppointment.id);
+
+      if (mounted) {
+        // Close the dialog first
+        Navigator.of(context).pop();
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Lead "${_currentAppointment.customerName}" deleted successfully',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Notify parent to refresh
+        widget.onDeleted?.call();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting lead: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
+      }
+    }
   }
 
   Widget _buildAssignmentSection() {

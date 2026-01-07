@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../config/api_keys.dart';
 
 /// WhatsApp Cloud API Service for sending notifications via Meta's Graph API
 ///
@@ -19,10 +18,10 @@ class WhatsAppService {
   // WhatsApp Cloud API Configuration
   // ============================================================
   
-  // Credentials loaded from lib/config/api_keys.dart (git-ignored for security)
-  // See lib/config/api_keys.example.dart for setup instructions
-  static const String _accessToken = ApiKeys.whatsappAccessToken;
-  static const String _phoneNumberId = ApiKeys.whatsappPhoneNumberId;
+  // TODO: Replace with your actual WhatsApp Cloud API credentials
+  // Get these from: https://developers.facebook.com/ > Your App > WhatsApp > API Setup
+  static const String _accessToken = 'YOUR_WHATSAPP_ACCESS_TOKEN';
+  static const String _phoneNumberId = 'YOUR_PHONE_NUMBER_ID';
   static const String _apiVersion = 'v18.0';
   
   // Base URL for Meta Graph API
@@ -260,9 +259,7 @@ class WhatsAppService {
   /// Check if WhatsApp service is configured
   /// Returns false if using placeholder credentials
   static bool isConfigured() {
-    return _accessToken.isNotEmpty &&
-           _accessToken != 'YOUR_WHATSAPP_ACCESS_TOKEN' &&
-           _phoneNumberId.isNotEmpty &&
+    return _accessToken != 'YOUR_WHATSAPP_ACCESS_TOKEN' &&
            _phoneNumberId != 'YOUR_PHONE_NUMBER_ID';
   }
   

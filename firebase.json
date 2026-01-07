@@ -70,15 +70,6 @@
         "**/.*",
         "**/node_modules/**"
       ]
-    },
-    {
-      "site": "privacy-medx-ai",
-      "public": "web",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ]
     }
   ],
   "functions": [

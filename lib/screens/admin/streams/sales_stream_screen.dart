@@ -2050,6 +2050,10 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
             _filterAppointments();
           });
         },
+        onDeleted: () {
+          // Refresh appointments list after deletion
+          _loadAppointments();
+        },
       ),
     );
   }
