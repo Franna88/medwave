@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../models/streams/order.dart' as models;
 import '../../models/streams/support_ticket.dart';
 import '../emailjs_service.dart';
+import '../whatsapp_service.dart';
 import 'support_ticket_service.dart';
 
 // Base URLs for installation booking links
@@ -440,16 +441,38 @@ class OrderService {
       await updateOrder(updatedOrder);
 
       // Send email
-      final sent = await EmailJSService.sendInstallationBookingEmail(
+      final emailSent = await EmailJSService.sendInstallationBookingEmail(
         order: updatedOrder,
         bookingUrl: bookingUrl,
       );
 
       if (kDebugMode) {
-        print('Installation booking email sent: $sent to ${order.email}');
+        print('Installation booking email sent: $emailSent to ${order.email}');
       }
 
-      return sent;
+      // Also send WhatsApp notification to remind customer to check their email
+      if (WhatsAppService.isConfigured() && 
+          WhatsAppService.isValidPhoneNumber(order.phone)) {
+        final whatsappResult = await WhatsAppService.sendInstallationBookingReminder(
+          customerPhone: order.phone,
+          customerName: order.customerName,
+        );
+        
+        if (kDebugMode) {
+          print('Installation booking WhatsApp sent: ${whatsappResult.success} to ${order.phone}');
+          if (!whatsappResult.success) {
+            print('WhatsApp error: ${whatsappResult.message}');
+          }
+        }
+      } else if (kDebugMode) {
+        if (!WhatsAppService.isConfigured()) {
+          print('WhatsApp not configured - skipping notification');
+        } else {
+          print('Invalid phone number for WhatsApp: ${order.phone}');
+        }
+      }
+
+      return emailSent;
     } catch (e) {
       if (kDebugMode) {
         print('Error sending installation booking email: $e');
