@@ -188,6 +188,7 @@ class SalesAppointmentService {
     DateTime? depositConfirmationSentAt,
     DateTime? depositConfirmationRespondedAt,
     bool shouldSendDepositEmail = true,
+    String? paymentType,
   }) async {
     try {
       final appointment = await getAppointment(appointmentId);
@@ -288,6 +289,7 @@ class SalesAppointmentService {
         depositConfirmationRespondedAt:
             confirmationRespondedAt ??
             appointment.depositConfirmationRespondedAt,
+        paymentType: paymentType ?? appointment.paymentType,
       );
 
       await updateAppointment(updatedAppointment);
@@ -696,6 +698,15 @@ class SalesAppointmentService {
               ))
           .toList();
 
+      // Determine if this is a priority order (full payment)
+      final isPriorityOrder = appointment.isFullPayment;
+      final orderNote = isPriorityOrder
+          ? 'PRIORITY ORDER - Full payment received. Order created from appointment ${appointment.id}'
+          : 'Order created from appointment ${appointment.id}';
+      final stageNote = isPriorityOrder
+          ? 'PRIORITY ORDER - Converted from Sales appointment (Full Payment)'
+          : 'Converted from Sales appointment';
+
       // Create new order from appointment data
       final order = models.Order(
         id: '',
@@ -713,12 +724,12 @@ class SalesAppointmentService {
           models.OrderStageHistoryEntry(
             stage: 'orders_placed',
             enteredAt: now,
-            note: 'Converted from Sales appointment',
+            note: stageNote,
           ),
         ],
         notes: [
           models.OrderNote(
-            text: 'Order created from appointment ${appointment.id}',
+            text: orderNote,
             createdAt: now,
             createdBy: userId,
             createdByName: userName,
@@ -730,6 +741,8 @@ class SalesAppointmentService {
         // Installation booking fields
         installBookingToken: installBookingToken,
         installBookingStatus: models.InstallBookingStatus.pending,
+        // Priority order flag for full payment leads
+        isPriorityOrder: isPriorityOrder,
       );
 
       // Create the order
@@ -756,6 +769,27 @@ class SalesAppointmentService {
         // Log but don't fail the conversion if email fails
         if (kDebugMode) {
           print('Warning: Failed to send installation booking email: $emailError');
+        }
+      }
+
+      // Send priority order notification to admin if this is a full payment order
+      if (isPriorityOrder) {
+        try {
+          // Get the created order with the ID to send the notification
+          final createdOrder = await _orderService.getOrder(orderId);
+          if (createdOrder != null) {
+            await EmailJSService.sendPriorityOrderNotification(
+              order: createdOrder,
+            );
+            if (kDebugMode) {
+              print('Priority order notification sent to admin for order $orderId');
+            }
+          }
+        } catch (emailError) {
+          // Log but don't fail the conversion if email fails
+          if (kDebugMode) {
+            print('Warning: Failed to send priority order notification: $emailError');
+          }
         }
       }
 

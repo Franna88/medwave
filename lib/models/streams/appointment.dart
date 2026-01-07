@@ -31,6 +31,7 @@ class SalesAppointment {
   final DateTime? depositConfirmationRespondedAt;
   final bool
   manuallyAdded; // Indicates if appointment was manually added to stream
+  final String paymentType; // 'deposit' or 'full_payment'
 
   SalesAppointment({
     required this.id,
@@ -61,6 +62,7 @@ class SalesAppointment {
     this.depositConfirmationSentAt,
     this.depositConfirmationRespondedAt,
     this.manuallyAdded = false,
+    this.paymentType = 'deposit',
   });
 
   /// Get time in current stage
@@ -138,6 +140,7 @@ class SalesAppointment {
       depositConfirmationRespondedAt:
           (map['depositConfirmationRespondedAt'] as Timestamp?)?.toDate(),
       manuallyAdded: map['manuallyAdded'] == true,
+      paymentType: map['paymentType']?.toString() ?? 'deposit',
     );
   }
 
@@ -176,6 +179,7 @@ class SalesAppointment {
           ? Timestamp.fromDate(depositConfirmationRespondedAt!)
           : null,
       'manuallyAdded': manuallyAdded,
+      'paymentType': paymentType,
     };
   }
 
@@ -208,6 +212,7 @@ class SalesAppointment {
     DateTime? depositConfirmationSentAt,
     DateTime? depositConfirmationRespondedAt,
     bool? manuallyAdded,
+    String? paymentType,
   }) {
     return SalesAppointment(
       id: id ?? this.id,
@@ -242,8 +247,12 @@ class SalesAppointment {
       depositConfirmationRespondedAt:
           depositConfirmationRespondedAt ?? this.depositConfirmationRespondedAt,
       manuallyAdded: manuallyAdded ?? this.manuallyAdded,
+      paymentType: paymentType ?? this.paymentType,
     );
   }
+
+  /// Check if this is a full payment appointment (priority for installation)
+  bool get isFullPayment => paymentType == 'full_payment';
 
   /// Requires: contract signed, deposit paid, and customer confirmed
   bool get isReadyForOperations {

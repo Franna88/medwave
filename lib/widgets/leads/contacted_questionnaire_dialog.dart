@@ -25,16 +25,26 @@ class _ContactedQuestionnaireDialogState
   final Map<String, TextEditingController> _controllers = {};
   final List<String> _questions = [];
   final List<String> _customQuestions = [];
+  
+  // Checklist state management
+  final Map<String, bool> _checklistItems = {};
+  final List<String> _checklistLabels = [];
 
   @override
   void initState() {
     super.initState();
-    // Initialize with default questions
-    _questions.addAll(SalesQuestionnaireConfig.getDefaultQuestions());
+    // Initialize with all questions (default + qualification)
+    _questions.addAll(SalesQuestionnaireConfig.getAllQuestions());
 
-    // Create controllers for each default question
+    // Create controllers for each question
     for (var question in _questions) {
       _controllers[question] = TextEditingController();
+    }
+
+    // Initialize checklist items
+    _checklistLabels.addAll(SalesQuestionnaireConfig.getRapportChecklistItems());
+    for (var item in _checklistLabels) {
+      _checklistItems[item] = false;
     }
   }
 
@@ -97,6 +107,130 @@ class _ContactedQuestionnaireDialogState
       _controllers[question]?.dispose();
       _controllers.remove(question);
     });
+  }
+
+  Widget _buildChecklistSection() {
+    final checkedCount = _checklistItems.values.where((v) => v).length;
+    final totalCount = _checklistItems.length;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with icon and progress
+          Row(
+            children: [
+              Icon(
+                Icons.checklist_rtl,
+                color: Colors.amber[700],
+                size: 24,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Sales Call Checklist',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      'Optional - Track your sales process',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Progress indicator
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: checkedCount == totalCount 
+                      ? Colors.green[100] 
+                      : Colors.amber[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$checkedCount / $totalCount',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: checkedCount == totalCount 
+                        ? Colors.green[700] 
+                        : Colors.amber[800],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Checklist items
+          ...(_checklistLabels.map((item) => _buildChecklistItem(item))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChecklistItem(String label) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _checklistItems[label] = !(_checklistItems[label] ?? false);
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: _checklistItems[label] ?? false,
+                onChanged: (value) {
+                  setState(() {
+                    _checklistItems[label] = value ?? false;
+                  });
+                },
+                activeColor: Colors.green[600],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: (_checklistItems[label] ?? false)
+                      ? Colors.grey[600]
+                      : Colors.black87,
+                  decoration: (_checklistItems[label] ?? false)
+                      ? TextDecoration.lineThrough
+                      : null,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -199,19 +333,24 @@ class _ContactedQuestionnaireDialogState
               ),
               const SizedBox(height: 20),
 
-              // Instructions
-              Text(
-                'Please complete the following sales questionnaire:',
-                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-              ),
-              const SizedBox(height: 16),
-
-              // Scrollable questionnaire fields
+              // Scrollable content area
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Sales Call Checklist Section
+                      _buildChecklistSection(),
+                      const SizedBox(height: 20),
+
+                      // Instructions
+                      Text(
+                        'Please complete the following sales questionnaire:',
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Questionnaire fields
                       for (var i = 0; i < _questions.length; i++) ...[
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,7 +380,8 @@ class _ContactedQuestionnaireDialogState
                                 ),
                                 maxLines:
                                     _questions[i].contains('Pain Points') ||
-                                        _questions[i].contains('Requirements')
+                                        _questions[i].contains('Requirements') ||
+                                        _questions[i].contains('challenges')
                                     ? 2
                                     : 1,
                                 validator: (value) {
@@ -290,6 +430,15 @@ class _ContactedQuestionnaireDialogState
                           responses[question] = _controllers[question]!.text
                               .trim();
                         }
+
+                        // Add checklist completion data
+                        final completedChecklist = _checklistItems.entries
+                            .where((e) => e.value)
+                            .map((e) => e.key)
+                            .toList();
+                        responses['_checklist_completed'] = completedChecklist;
+                        responses['_checklist_count'] = 
+                            '${completedChecklist.length}/${_checklistItems.length}';
 
                         // Return as StageTransitionResult with map as note
                         final result = StageTransitionResult(note: responses);

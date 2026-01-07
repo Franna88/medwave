@@ -760,6 +760,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     final noteController = TextEditingController(
       text: 'Manually moved to ${newStage.name}',
     );
+    String selectedPaymentType = appointment.paymentType; // Keep existing or default
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -785,6 +786,77 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 ),
                 if (isOptIn) ...[
                   const SizedBox(height: 16),
+                  const Text(
+                    'Payment Type',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('Deposit'),
+                          value: 'deposit',
+                          groupValue: selectedPaymentType,
+                          onChanged: (value) {
+                            setState(() {
+                              selectedPaymentType = value!;
+                            });
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
+                      ),
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text(
+                            'Full Payment',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          value: 'full_payment',
+                          groupValue: selectedPaymentType,
+                          onChanged: (value) {
+                            setState(() {
+                              selectedPaymentType = value!;
+                            });
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          activeColor: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (selectedPaymentType == 'full_payment')
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.star, size: 16, color: Colors.green[700]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Priority order - will get installation priority',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.green[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 8),
                   const Text(
                     'Select product(s)',
                     style: TextStyle(fontWeight: FontWeight.w600),
@@ -995,6 +1067,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           assignedToName: assignedToUserName,
           optInNote: isOptIn ? noteText : null,
           optInProducts: optInSelections,
+          paymentType: isOptIn ? selectedPaymentType : null,
         );
 
         if (mounted) {
@@ -1034,6 +1107,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       final noteController = TextEditingController(
         text: 'Manually added to Opt In',
       );
+      String selectedPaymentType = 'deposit'; // Default to deposit
 
       // Show product selection dialog first
       final confirmed = await showDialog<bool>(
@@ -1059,6 +1133,77 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                     maxLines: 3,
                   ),
                   const SizedBox(height: 16),
+                  const Text(
+                    'Payment Type',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text('Deposit'),
+                          value: 'deposit',
+                          groupValue: selectedPaymentType,
+                          onChanged: (value) {
+                            setState(() {
+                              selectedPaymentType = value!;
+                            });
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
+                      ),
+                      Expanded(
+                        child: RadioListTile<String>(
+                          title: const Text(
+                            'Full Payment',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          value: 'full_payment',
+                          groupValue: selectedPaymentType,
+                          onChanged: (value) {
+                            setState(() {
+                              selectedPaymentType = value!;
+                            });
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          activeColor: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (selectedPaymentType == 'full_payment')
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.star, size: 16, color: Colors.green[700]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Priority order - will get installation priority',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.green[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 8),
                   const Text(
                     'Select product(s)',
                     style: TextStyle(fontWeight: FontWeight.w600),
@@ -1292,6 +1437,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         manuallyAdded: true,
         optInNote: noteText,
         optInProducts: optInSelections ?? [],
+        paymentType: selectedPaymentType,
       );
 
       // Create the appointment
@@ -2119,7 +2265,73 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
             if (appointment.currentStage == 'deposit_made') ...[
               const SizedBox(height: 8),
               ReadyForOpsBadge(appointment: appointment, isCompact: true),
+              // Payment Received badge
+              if (appointment.depositPaid) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.purple.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 12,
+                        color: Colors.purple[700],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Payment Received',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.purple[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
+            // Payment type badge
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: appointment.isFullPayment
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: appointment.isFullPayment
+                      ? Colors.green.withOpacity(0.3)
+                      : Colors.orange.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    appointment.isFullPayment ? Icons.star : Icons.payments_outlined,
+                    size: 12,
+                    color: appointment.isFullPayment ? Colors.green[700] : Colors.orange[700],
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    appointment.isFullPayment ? 'Full Payment' : 'Deposit',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: appointment.isFullPayment ? Colors.green[700] : Colors.orange[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             // Assigned to badge
             if (appointment.assignedToName != null &&
                 appointment.assignedToName!.isNotEmpty) ...[

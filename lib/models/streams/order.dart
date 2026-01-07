@@ -70,6 +70,9 @@ class Order {
   final String? pickedBy;
   final String? pickedByName;
 
+  // Priority order flag (full payment leads get installation priority)
+  final bool isPriorityOrder;
+
   Order({
     required this.id,
     required this.appointmentId,
@@ -108,6 +111,8 @@ class Order {
     this.pickedAt,
     this.pickedBy,
     this.pickedByName,
+    // Priority order flag
+    this.isPriorityOrder = false,
   });
 
   /// Get time in current stage
@@ -196,6 +201,7 @@ class Order {
       pickedAt: (map['pickedAt'] as Timestamp?)?.toDate(),
       pickedBy: map['pickedBy']?.toString(),
       pickedByName: map['pickedByName']?.toString(),
+      isPriorityOrder: map['isPriorityOrder'] == true,
     );
   }
 
@@ -247,6 +253,7 @@ class Order {
       'pickedAt': pickedAt != null ? Timestamp.fromDate(pickedAt!) : null,
       'pickedBy': pickedBy,
       'pickedByName': pickedByName,
+      'isPriorityOrder': isPriorityOrder,
     };
   }
 
@@ -288,6 +295,8 @@ class Order {
     DateTime? pickedAt,
     String? pickedBy,
     String? pickedByName,
+    // Priority order flag
+    bool? isPriorityOrder,
   }) {
     return Order(
       id: id ?? this.id,
@@ -332,6 +341,7 @@ class Order {
       pickedAt: pickedAt ?? this.pickedAt,
       pickedBy: pickedBy ?? this.pickedBy,
       pickedByName: pickedByName ?? this.pickedByName,
+      isPriorityOrder: isPriorityOrder ?? this.isPriorityOrder,
     );
   }
 

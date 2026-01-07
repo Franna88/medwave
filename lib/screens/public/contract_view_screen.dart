@@ -326,48 +326,102 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                 ),
               const SizedBox(height: 24),
 
-              // Next steps
+              // Next steps - different messaging for full payment vs deposit
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: contract.isFullPayment ? Colors.green[50] : Colors.blue[50],
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue[200]!),
+                  border: Border.all(
+                    color: contract.isFullPayment ? Colors.green[200]! : Colors.blue[200]!,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.info_outline, color: Colors.blue[700]),
+                        Icon(
+                          contract.isFullPayment ? Icons.star : Icons.info_outline,
+                          color: contract.isFullPayment ? Colors.green[700] : Colors.blue[700],
+                        ),
                         const SizedBox(width: 8),
-                        const Text(
+                        Text(
                           'What\'s Next?',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: contract.isFullPayment ? Colors.green[800] : null,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      'You will receive deposit payment instructions via email shortly. '
-                      'Please complete the payment to proceed with your order.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                        height: 1.5,
+                    if (contract.isFullPayment) ...[
+                      // Full Payment messaging
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.green[100],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green[300]!),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.verified, color: Colors.green[700], size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'PRIORITY ORDER - Full Payment',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[800],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Deposit Amount: R ${contract.depositAmount.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      Text(
+                        'Thank you for choosing full payment! You will receive payment instructions via email shortly. '
+                        'As a full payment customer, your order will receive priority scheduling for installation.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                          height: 1.5,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Total Amount: R ${contract.subtotal.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green[700],
+                        ),
+                      ),
+                    ] else ...[
+                      // Deposit messaging (original)
+                      Text(
+                        'You will receive deposit payment instructions via email shortly. '
+                        'Please complete the payment to proceed with your order.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Deposit Amount: R ${contract.depositAmount.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

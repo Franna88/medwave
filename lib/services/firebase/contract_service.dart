@@ -108,6 +108,7 @@ class ContractService {
         createdAt: DateTime.now(),
         createdBy: createdBy,
         createdByName: createdByName,
+        paymentType: appointment.paymentType,
       );
 
       // Save to Firestore

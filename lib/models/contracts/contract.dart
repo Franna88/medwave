@@ -110,6 +110,9 @@ class Contract {
   final DateTime? voidedAt;
   final String? voidReason;
 
+  // Payment type ('deposit' or 'full_payment')
+  final String paymentType;
+
   Contract({
     required this.id,
     required this.accessToken,
@@ -139,7 +142,11 @@ class Contract {
     this.voidedBy,
     this.voidedAt,
     this.voidReason,
+    this.paymentType = 'deposit',
   });
+
+  /// Check if this is a full payment contract
+  bool get isFullPayment => paymentType == 'full_payment';
 
   /// Check if contract is accessible (not voided)
   bool get isAccessible => status != ContractStatus.voided;
@@ -211,6 +218,7 @@ class Contract {
       voidedBy: map['voidedBy']?.toString(),
       voidedAt: (map['voidedAt'] as Timestamp?)?.toDate(),
       voidReason: map['voidReason']?.toString(),
+      paymentType: map['paymentType']?.toString() ?? 'deposit',
     );
   }
 
@@ -243,6 +251,7 @@ class Contract {
       'voidedBy': voidedBy,
       'voidedAt': voidedAt != null ? Timestamp.fromDate(voidedAt!) : null,
       'voidReason': voidReason,
+      'paymentType': paymentType,
     };
   }
 
@@ -275,6 +284,7 @@ class Contract {
     String? voidedBy,
     DateTime? voidedAt,
     String? voidReason,
+    String? paymentType,
   }) {
     return Contract(
       id: id ?? this.id,
@@ -307,6 +317,7 @@ class Contract {
       voidedBy: voidedBy ?? this.voidedBy,
       voidedAt: voidedAt ?? this.voidedAt,
       voidReason: voidReason ?? this.voidReason,
+      paymentType: paymentType ?? this.paymentType,
     );
   }
 

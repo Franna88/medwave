@@ -29,6 +29,8 @@ class EmailJSService {
   static const String _installationBookingTemplateId = 'template_fvu7nw2';
   // Out for delivery template - notifies customer with tracking and installer info
   static const String _outForDeliveryTemplateId = 'template_bvaj5t6';
+  // Priority order template - notifies admin when full payment order is created
+  static const String _priorityOrderTemplateId = 'template_4iqsrt3';
 
   // Admin email for notifications
   static const String _adminEmail =
@@ -368,13 +370,17 @@ class EmailJSService {
     required String yesLabel,
     required String noLabel,
   }) {
+    // Calculate amount from optInProducts if depositAmount is null
+    final calculatedAmount = appointment.depositAmount ??
+        appointment.optInProducts.fold<double>(0, (sum, p) => sum + p.price);
+
     return {
       'customer_name': appointment.customerName,
       'customer_email': appointment.email,
       'customer_phone': appointment.phone,
       'appointment_id': appointment.id,
-      'deposit_amount': appointment.depositAmount != null
-          ? appointment.depositAmount!.toStringAsFixed(2)
+      'deposit_amount': calculatedAmount > 0
+          ? 'R ${calculatedAmount.toStringAsFixed(2)}'
           : 'N/A',
       'description': description,
       'yes_label': yesLabel,
@@ -613,6 +619,69 @@ class EmailJSService {
       }
     } catch (error) {
       debugPrint('❌ Error sending out for delivery email: $error');
+      return false;
+    }
+  }
+
+  /// Send priority order notification to admin when a full payment order is created
+  /// This notifies the admin that a priority order needs installation scheduling
+  static Future<bool> sendPriorityOrderNotification({
+    required order_models.Order order,
+    String? adminEmail,
+  }) async {
+    try {
+      final resolvedAdminEmail = adminEmail ?? _adminEmail;
+      debugPrint(
+        '📧 Sending priority order notification to $resolvedAdminEmail',
+      );
+
+      // Build products list string
+      final productsList = order.items
+          .map((item) => '• ${item.name} (Qty: ${item.quantity})')
+          .join('\n');
+
+      // Calculate total amount
+      final totalAmount = order.items.fold<double>(
+        0,
+        (sum, item) => sum + (item.price ?? 0) * item.quantity,
+      );
+
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _priorityOrderTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            'admin_email': resolvedAdminEmail,
+            'customer_name': order.customerName,
+            'customer_email': order.email,
+            'customer_phone': order.phone,
+            'order_id': order.id,
+            'products_list': productsList,
+            'total_amount': 'R ${totalAmount.toStringAsFixed(2)}',
+            'order_date': order.orderDate != null
+                ? DateFormat('EEEE, MMMM d, yyyy').format(order.orderDate!)
+                : 'N/A',
+            'description':
+                'A PRIORITY ORDER has been placed. This customer paid in full and should receive installation priority.',
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ Priority order notification email sent successfully');
+        return true;
+      } else {
+        debugPrint(
+          '❌ Failed to send priority order notification email: ${response.body}',
+        );
+        return false;
+      }
+    } catch (error) {
+      debugPrint('❌ Error sending priority order notification email: $error');
       return false;
     }
   }
