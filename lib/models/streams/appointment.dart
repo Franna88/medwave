@@ -301,12 +301,14 @@ class SalesAppointmentNote {
   final DateTime createdAt;
   final String createdBy;
   final String? createdByName;
+  final String? stageTransition; // e.g., "opt_in → deposit_requested"
 
   SalesAppointmentNote({
     required this.text,
     required this.createdAt,
     required this.createdBy,
     this.createdByName,
+    this.stageTransition,
   });
 
   factory SalesAppointmentNote.fromMap(Map<String, dynamic> map) {
@@ -315,6 +317,7 @@ class SalesAppointmentNote {
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdBy: map['createdBy']?.toString() ?? '',
       createdByName: map['createdByName']?.toString(),
+      stageTransition: map['stageTransition']?.toString(),
     );
   }
 
@@ -324,6 +327,7 @@ class SalesAppointmentNote {
       'createdAt': Timestamp.fromDate(createdAt),
       'createdBy': createdBy,
       'createdByName': createdByName,
+      'stageTransition': stageTransition,
     };
   }
 }

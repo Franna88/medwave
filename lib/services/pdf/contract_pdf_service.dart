@@ -585,16 +585,8 @@ class ContractPdfService {
             child: pw.Row(
               children: [
                 pw.Expanded(
-                  flex: 3,
+                  flex: 4,
                   child: pw.Text('Name', style: PdfStyles.bodyTextBold),
-                ),
-                pw.Expanded(
-                  flex: 1,
-                  child: pw.Text(
-                    'Price',
-                    style: PdfStyles.bodyTextBold,
-                    textAlign: pw.TextAlign.right,
-                  ),
                 ),
                 pw.Expanded(
                   flex: 1,
@@ -604,18 +596,10 @@ class ContractPdfService {
                     textAlign: pw.TextAlign.center,
                   ),
                 ),
-                pw.Expanded(
-                  flex: 1,
-                  child: pw.Text(
-                    'Subtotal',
-                    style: PdfStyles.bodyTextBold,
-                    textAlign: pw.TextAlign.right,
-                  ),
-                ),
               ],
             ),
           ),
-          // Products (no prices shown)
+          // Products
           ...contract.products
               .map(
                 (product) => pw.Container(
@@ -628,20 +612,12 @@ class ContractPdfService {
                   child: pw.Row(
                     children: [
                       pw.Expanded(
-                        flex: 3,
+                        flex: 4,
                         child: pw.Text(product.name, style: PdfStyles.bodyText),
                       ),
                       pw.Expanded(
                         flex: 1,
-                        child: pw.Text('-', textAlign: pw.TextAlign.right),
-                      ),
-                      pw.Expanded(
-                        flex: 1,
                         child: pw.Text('1', textAlign: pw.TextAlign.center),
-                      ),
-                      pw.Expanded(
-                        flex: 1,
-                        child: pw.Text('-', textAlign: pw.TextAlign.right),
                       ),
                     ],
                   ),

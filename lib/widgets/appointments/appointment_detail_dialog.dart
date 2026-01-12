@@ -661,6 +661,9 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
   }
 
   Widget _buildOptInProductsList(List<OptInProduct> products) {
+    final authProvider = context.watch<AuthProvider>();
+    final isSuperAdmin = authProvider.userRole == UserRole.superAdmin;
+    
     return Column(
       children: [
         Container(
@@ -678,7 +681,7 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                   vertical: 4,
                 ),
                 child: Row(
-                  children: const [
+                  children: [
                     Expanded(
                       flex: 4,
                       child: Text(
@@ -689,18 +692,20 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                         ),
                       ),
                     ),
-                    SizedBox(width: 12),
-                    SizedBox(
-                      width: 120,
-                      child: Text(
-                        'Price',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
+                    if (isSuperAdmin) ...[
+                      SizedBox(width: 12),
+                      SizedBox(
+                        width: 120,
+                        child: Text(
+                          'Price',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -723,18 +728,20 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      SizedBox(
-                        width: 120,
-                        child: Text(
-                          'R ${p.price.toStringAsFixed(2)}',
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                      if (isSuperAdmin) ...[
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 120,
+                          child: Text(
+                            'R ${p.price.toStringAsFixed(2)}',
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 );
@@ -778,7 +785,10 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
             ],
           ),
           const SizedBox(height: 8),
-          Text(note.text, style: const TextStyle(fontSize: 14)),
+          Text(
+            '${note.text}${note.stageTransition != null ? ' | Moved by ${note.createdByName ?? 'Unknown'}' : (note.createdBy == 'system' ? ' | Added by System' : ' | Added by ${note.createdByName ?? 'Unknown'}')}',
+            style: const TextStyle(fontSize: 14),
+          ),
         ],
       ),
     );
