@@ -318,9 +318,10 @@ class ContractService {
       }
 
       if (kDebugMode) {
-        print('📄 Generating PDF for contract: $contractId');
+        print('📄 Generating PDF with cover page for contract: $contractId');
       }
 
+      // Generate PDF (now includes cover page automatically)
       final pdfBytes = await _pdfService.generatePdfBytes(contract);
       final pdfUrl = await _pdfService.uploadPdfToStorage(contract, pdfBytes);
 

@@ -330,10 +330,14 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: contract.isFullPayment ? Colors.green[50] : Colors.blue[50],
+                  color: contract.isFullPayment
+                      ? Colors.green[50]
+                      : Colors.blue[50],
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: contract.isFullPayment ? Colors.green[200]! : Colors.blue[200]!,
+                    color: contract.isFullPayment
+                        ? Colors.green[200]!
+                        : Colors.blue[200]!,
                   ),
                 ),
                 child: Column(
@@ -342,8 +346,12 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     Row(
                       children: [
                         Icon(
-                          contract.isFullPayment ? Icons.star : Icons.info_outline,
-                          color: contract.isFullPayment ? Colors.green[700] : Colors.blue[700],
+                          contract.isFullPayment
+                              ? Icons.star
+                              : Icons.info_outline,
+                          color: contract.isFullPayment
+                              ? Colors.green[700]
+                              : Colors.blue[700],
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -351,7 +359,9 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: contract.isFullPayment ? Colors.green[800] : null,
+                            color: contract.isFullPayment
+                                ? Colors.green[800]
+                                : null,
                           ),
                         ),
                       ],
@@ -369,7 +379,11 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.verified, color: Colors.green[700], size: 20),
+                            Icon(
+                              Icons.verified,
+                              color: Colors.green[700],
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -464,12 +478,12 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     _buildContractContent(contract),
                     SizedBox(height: isMobile ? 16 : 24),
 
-                    // Legal compliance
-                    _buildLegalCompliance(),
-                    SizedBox(height: isMobile ? 16 : 24),
-
                     // Signature section
                     _buildSignatureSection(),
+                    SizedBox(height: isMobile ? 16 : 24),
+
+                    // Legal compliance
+                    _buildLegalCompliance(),
                     const SizedBox(height: 100), // Space for fixed button
                   ],
                 ),
@@ -558,31 +572,26 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
   }
 
   Widget _buildQuoteSection(Contract contract) {
+    // Calculate deposit percentage
+    final depositPercentage = contract.subtotal > 0
+        ? ((contract.depositAmount / contract.subtotal) * 100).toStringAsFixed(
+            0,
+          )
+        : '40';
+
     return _buildCard(
       title: 'Quote',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Products
+          // Products - without prices
           ...contract.products.map((product) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      product.name,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                  Text(
-                    'R ${product.price.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text(product.name, style: const TextStyle(fontSize: 16)),
                 ],
               ),
             );
@@ -594,19 +603,17 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Subtotal
-              _buildPriceRow('Subtotal', contract.subtotal),
-              const SizedBox(height: 12),
-
-              // Deposit (40%)
-              _buildPriceRow('Initial Deposit (40%)', contract.depositAmount),
-              const SizedBox(height: 12),
-
-              // Remaining balance (60%)
+              // Total Amount
               _buildPriceRow(
-                'Remaining Balance (60%)',
-                contract.remainingBalance,
-                isSubdued: true,
+                'Total Amount',
+                contract.subtotal,
+                isHighlighted: true,
+              ),
+              const SizedBox(height: 12),
+              // Deposit Amount with percentage
+              _buildPriceRow(
+                'Deposit Amount ($depositPercentage%)',
+                contract.depositAmount,
               ),
             ],
           ),
