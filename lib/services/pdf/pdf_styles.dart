@@ -83,7 +83,7 @@ class PdfStyles {
 
   static pw.Widget get thickDivider => pw.Container(
         height: 2,
-        color: primaryColor,
+        color: textColor,
         margin: const pw.EdgeInsets.symmetric(vertical: spacingMedium),
       );
 }

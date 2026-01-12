@@ -712,7 +712,7 @@ class ContractPdfService {
         pw.Container(
           padding: const pw.EdgeInsets.all(12),
           decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.grey50),
+            border: pw.Border.all(color: PdfColors.grey100),
           ),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -785,11 +785,11 @@ class ContractPdfService {
         children: [
           pw.TextSpan(
             text: '$label ',
-            style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+            style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
           ),
           pw.TextSpan(
             text: value,
-            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
           ),
         ],
       ),

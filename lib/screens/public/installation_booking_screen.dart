@@ -9,11 +9,7 @@ class InstallationBookingScreen extends StatefulWidget {
   final String? orderId;
   final String? token;
 
-  const InstallationBookingScreen({
-    super.key,
-    this.orderId,
-    this.token,
-  });
+  const InstallationBookingScreen({super.key, this.orderId, this.token});
 
   @override
   State<InstallationBookingScreen> createState() =>
@@ -76,8 +72,7 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
       // Check if already selected
       if (order.installBookingStatus ==
               models.InstallBookingStatus.datesSelected ||
-          order.installBookingStatus ==
-              models.InstallBookingStatus.confirmed) {
+          order.installBookingStatus == models.InstallBookingStatus.confirmed) {
         setState(() {
           _isLoading = false;
           _isCompleted = true;
@@ -146,7 +141,9 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
         // Show message that max 3 dates can be selected
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('You can only select 3 dates. Remove one to add another.'),
+            content: Text(
+              'You can only select 3 dates. Remove one to add another.',
+            ),
             duration: Duration(seconds: 2),
           ),
         );
@@ -257,18 +254,11 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.redAccent,
-            ),
+            const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
             const SizedBox(height: 16),
             const Text(
               'Oops!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Text(
@@ -320,21 +310,13 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
             const Text(
               'Your preferred installation dates have been saved.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-                height: 1.5,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
             ),
             const SizedBox(height: 8),
             const Text(
               'Our team will contact you to confirm the final installation date.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-                height: 1.5,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
             ),
             if (_order != null && _order!.customerSelectedDates.isNotEmpty) ...[
               const SizedBox(height: 24),
@@ -381,10 +363,7 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF1A1A2E),
-                  const Color(0xFF16213E),
-                ],
+                colors: [const Color(0xFF1A1A2E), const Color(0xFF16213E)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -394,11 +373,7 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
             ),
             child: Column(
               children: [
-                const Icon(
-                  Icons.calendar_month,
-                  size: 48,
-                  color: Colors.white,
-                ),
+                const Icon(Icons.calendar_month, size: 48, color: Colors.white),
                 const SizedBox(height: 16),
                 const Text(
                   'Select Installation Dates',
@@ -418,7 +393,7 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Please select 3 preferred dates for your installation',
+                  'Please select 3 possible convienient dates for your installation',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -579,8 +554,9 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Text(
@@ -600,10 +576,7 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
             child: Text(
               'Select dates starting from ${DateFormat('MMMM d, yyyy').format(_firstAvailableDate)} (3 weeks from order placement)',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
           ),
         ],
@@ -611,4 +584,3 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
     );
   }
 }
-
