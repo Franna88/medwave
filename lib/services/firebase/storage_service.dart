@@ -70,6 +70,130 @@ class StorageService {
     }
   }
 
+  /// Upload proof of installation photo to Firebase Storage
+  /// Returns the download URL of the uploaded image
+  Future<String> uploadInstallationPhoto({
+    required String orderId,
+    required XFile imageFile,
+  }) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'proof_$timestamp.jpg';
+      final storagePath = 'installations/$orderId/$fileName';
+
+      final ref = _storage.ref(storagePath);
+
+      // Set metadata for the image
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {
+          'orderId': orderId,
+          'uploadedAt': DateTime.now().toIso8601String(),
+          'type': 'installation_proof',
+        },
+      );
+
+      // Upload based on platform
+      UploadTask uploadTask;
+      if (kIsWeb) {
+        // For web, read as bytes
+        final bytes = await imageFile.readAsBytes();
+        uploadTask = ref.putData(bytes, metadata);
+      } else {
+        // For mobile, use file
+        final file = File(imageFile.path);
+        uploadTask = ref.putFile(file, metadata);
+      }
+
+      // Monitor upload progress
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        if (kDebugMode) {
+          debugPrint('Installation photo upload progress: ${progress.toStringAsFixed(1)}%');
+        }
+      });
+
+      // Wait for upload to complete
+      final snapshot = await uploadTask;
+
+      // Get download URL
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      if (kDebugMode) {
+        debugPrint('Installation photo uploaded: $downloadUrl');
+      }
+
+      return downloadUrl;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error uploading installation photo: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Upload customer signature photo to Firebase Storage
+  /// Returns the download URL of the uploaded image
+  Future<String> uploadCustomerSignature({
+    required String orderId,
+    required XFile imageFile,
+  }) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'signature_$timestamp.jpg';
+      final storagePath = 'installations/$orderId/$fileName';
+
+      final ref = _storage.ref(storagePath);
+
+      // Set metadata for the image
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {
+          'orderId': orderId,
+          'uploadedAt': DateTime.now().toIso8601String(),
+          'type': 'customer_signature',
+        },
+      );
+
+      // Upload based on platform
+      UploadTask uploadTask;
+      if (kIsWeb) {
+        // For web, read as bytes
+        final bytes = await imageFile.readAsBytes();
+        uploadTask = ref.putData(bytes, metadata);
+      } else {
+        // For mobile, use file
+        final file = File(imageFile.path);
+        uploadTask = ref.putFile(file, metadata);
+      }
+
+      // Monitor upload progress
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        if (kDebugMode) {
+          debugPrint('Customer signature upload progress: ${progress.toStringAsFixed(1)}%');
+        }
+      });
+
+      // Wait for upload to complete
+      final snapshot = await uploadTask;
+
+      // Get download URL
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      if (kDebugMode) {
+        debugPrint('Customer signature uploaded: $downloadUrl');
+      }
+
+      return downloadUrl;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error uploading customer signature: $e');
+      }
+      rethrow;
+    }
+  }
+
   /// Upload any image to Firebase Storage
   Future<String> uploadImage({
     required String path,

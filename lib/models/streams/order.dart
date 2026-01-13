@@ -70,6 +70,18 @@ class Order {
   final String? pickedBy;
   final String? pickedByName;
 
+  // Installation completion fields
+  final List<String>
+  proofOfInstallationPhotoUrls; // Multiple images for multiple installations
+  final String? customerSignaturePhotoUrl;
+
+  // Payment confirmation fields
+  final String? paymentConfirmationToken; // Security token for email link
+  final String?
+  paymentConfirmationStatus; // 'pending' | 'confirmed' | 'declined'
+  final DateTime? paymentConfirmationSentAt; // When email was sent
+  final DateTime? paymentConfirmationRespondedAt; // When customer responded
+
   // Priority order flag (full payment leads get installation priority)
   final bool isPriorityOrder;
 
@@ -111,6 +123,14 @@ class Order {
     this.pickedAt,
     this.pickedBy,
     this.pickedByName,
+    // Installation completion fields
+    this.proofOfInstallationPhotoUrls = const [],
+    this.customerSignaturePhotoUrl,
+    // Payment confirmation fields
+    this.paymentConfirmationToken,
+    this.paymentConfirmationStatus,
+    this.paymentConfirmationSentAt,
+    this.paymentConfirmationRespondedAt,
     // Priority order flag
     this.isPriorityOrder = false,
   });
@@ -177,12 +197,13 @@ class Order {
           : null,
       // Installation booking fields
       installBookingToken: map['installBookingToken']?.toString(),
-      customerSelectedDates: (map['customerSelectedDates'] as List<dynamic>?)
+      customerSelectedDates:
+          (map['customerSelectedDates'] as List<dynamic>?)
               ?.map((d) => (d as Timestamp).toDate())
               .toList() ??
           [],
-      confirmedInstallDate:
-          (map['confirmedInstallDate'] as Timestamp?)?.toDate(),
+      confirmedInstallDate: (map['confirmedInstallDate'] as Timestamp?)
+          ?.toDate(),
       assignedInstallerId: map['assignedInstallerId']?.toString(),
       assignedInstallerName: map['assignedInstallerName']?.toString(),
       assignedInstallerPhone: map['assignedInstallerPhone']?.toString(),
@@ -193,14 +214,32 @@ class Order {
       installBookingEmailSentAt:
           (map['installBookingEmailSentAt'] as Timestamp?)?.toDate(),
       // Inventory picking fields
-      pickedItems: (map['pickedItems'] as Map<String, dynamic>?)
-              ?.map((key, value) => MapEntry(key, value as bool)) ??
+      pickedItems:
+          (map['pickedItems'] as Map<String, dynamic>?)?.map(
+            (key, value) => MapEntry(key, value as bool),
+          ) ??
           {},
       trackingNumber: map['trackingNumber']?.toString(),
       waybillPhotoUrl: map['waybillPhotoUrl']?.toString(),
       pickedAt: (map['pickedAt'] as Timestamp?)?.toDate(),
       pickedBy: map['pickedBy']?.toString(),
       pickedByName: map['pickedByName']?.toString(),
+      // Installation completion fields
+      proofOfInstallationPhotoUrls:
+          (map['proofOfInstallationPhotoUrls'] as List<dynamic>?)
+              ?.map((url) => url.toString())
+              .toList() ??
+          (map['proofOfInstallationPhotoUrl'] != null
+              ? [map['proofOfInstallationPhotoUrl'].toString()]
+              : []), // Support legacy single image format
+      customerSignaturePhotoUrl: map['customerSignaturePhotoUrl']?.toString(),
+      // Payment confirmation fields
+      paymentConfirmationToken: map['paymentConfirmationToken']?.toString(),
+      paymentConfirmationStatus: map['paymentConfirmationStatus']?.toString(),
+      paymentConfirmationSentAt:
+          (map['paymentConfirmationSentAt'] as Timestamp?)?.toDate(),
+      paymentConfirmationRespondedAt:
+          (map['paymentConfirmationRespondedAt'] as Timestamp?)?.toDate(),
       isPriorityOrder: map['isPriorityOrder'] == true,
     );
   }
@@ -253,6 +292,18 @@ class Order {
       'pickedAt': pickedAt != null ? Timestamp.fromDate(pickedAt!) : null,
       'pickedBy': pickedBy,
       'pickedByName': pickedByName,
+      // Installation completion fields
+      'proofOfInstallationPhotoUrls': proofOfInstallationPhotoUrls,
+      'customerSignaturePhotoUrl': customerSignaturePhotoUrl,
+      // Payment confirmation fields
+      'paymentConfirmationToken': paymentConfirmationToken,
+      'paymentConfirmationStatus': paymentConfirmationStatus,
+      'paymentConfirmationSentAt': paymentConfirmationSentAt != null
+          ? Timestamp.fromDate(paymentConfirmationSentAt!)
+          : null,
+      'paymentConfirmationRespondedAt': paymentConfirmationRespondedAt != null
+          ? Timestamp.fromDate(paymentConfirmationRespondedAt!)
+          : null,
       'isPriorityOrder': isPriorityOrder,
     };
   }
@@ -295,6 +346,14 @@ class Order {
     DateTime? pickedAt,
     String? pickedBy,
     String? pickedByName,
+    // Installation completion fields
+    List<String>? proofOfInstallationPhotoUrls,
+    String? customerSignaturePhotoUrl,
+    // Payment confirmation fields
+    String? paymentConfirmationToken,
+    String? paymentConfirmationStatus,
+    DateTime? paymentConfirmationSentAt,
+    DateTime? paymentConfirmationRespondedAt,
     // Priority order flag
     bool? isPriorityOrder,
   }) {
@@ -341,6 +400,20 @@ class Order {
       pickedAt: pickedAt ?? this.pickedAt,
       pickedBy: pickedBy ?? this.pickedBy,
       pickedByName: pickedByName ?? this.pickedByName,
+      // Installation completion fields
+      proofOfInstallationPhotoUrls:
+          proofOfInstallationPhotoUrls ?? this.proofOfInstallationPhotoUrls,
+      customerSignaturePhotoUrl:
+          customerSignaturePhotoUrl ?? this.customerSignaturePhotoUrl,
+      // Payment confirmation fields
+      paymentConfirmationToken:
+          paymentConfirmationToken ?? this.paymentConfirmationToken,
+      paymentConfirmationStatus:
+          paymentConfirmationStatus ?? this.paymentConfirmationStatus,
+      paymentConfirmationSentAt:
+          paymentConfirmationSentAt ?? this.paymentConfirmationSentAt,
+      paymentConfirmationRespondedAt:
+          paymentConfirmationRespondedAt ?? this.paymentConfirmationRespondedAt,
       isPriorityOrder: isPriorityOrder ?? this.isPriorityOrder,
     );
   }
@@ -348,9 +421,7 @@ class Order {
   /// Get the earliest customer selected date for sorting
   DateTime? get earliestSelectedDate {
     if (customerSelectedDates.isEmpty) return null;
-    return customerSelectedDates.reduce(
-      (a, b) => a.isBefore(b) ? a : b,
-    );
+    return customerSelectedDates.reduce((a, b) => a.isBefore(b) ? a : b);
   }
 
   /// Get count of picked items

@@ -420,7 +420,8 @@ class SalesAppointmentService {
           print('📤 Calling EmailJS.sendMarketingDepositNotification...');
           final sent = await EmailJSService.sendMarketingDepositNotification(
             appointment: appointment,
-            marketingEmail: 'info@barefootbytes.com',
+            //marketingEmail: 'info@barefootbytes.com',
+            marketingEmail: 'tertiusva@gmail.com',
             yesUrl: financeUrl,
             noUrl: financeUrl,
             yesLabel: 'Deposit received',
@@ -431,7 +432,8 @@ class SalesAppointmentService {
 
           print('✉️ Finance email sent status: $sent');
           if (sent) {
-            print('✅ SUCCESS: Finance team notified at info@barefootbytes.com');
+            //print('✅ SUCCESS: Finance team notified at info@barefootbytes.com');
+            print('✅ SUCCESS: Finance team notified at tertiusva@gmail.com');
           } else {
             print(
               '❌ FAILED: Finance email was not sent (EmailJS returned false)',
