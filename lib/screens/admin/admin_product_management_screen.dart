@@ -235,7 +235,8 @@ class _AdminProductManagementScreenState
                 DataColumn2(label: Text('Description'), size: ColumnSize.L),
                 DataColumn2(label: Text('Country')),
                 DataColumn2(label: Text('Status')),
-                DataColumn2(label: Text('Price')),
+                DataColumn2(label: Text('Sell Rate')),
+                DataColumn2(label: Text('Cost to Company')),
                 DataColumn2(label: Text('Actions'), fixedWidth: 130),
               ],
               rows: provider.items.map((product) {
@@ -252,6 +253,13 @@ class _AdminProductManagementScreenState
                     DataCell(Text(product.country)),
                     DataCell(_buildStatusChip(product.isActive)),
                     DataCell(Text('R ${product.price.toStringAsFixed(2)}')),
+                    DataCell(
+                      Text(
+                        product.costAmount != null
+                            ? 'R ${product.costAmount!.toStringAsFixed(2)}'
+                            : '-',
+                      ),
+                    ),
                     DataCell(
                       Row(
                         mainAxisAlignment: MainAxisAlignment.start,
@@ -305,6 +313,11 @@ class _AdminProductManagementScreenState
     );
     final priceController = TextEditingController(
       text: product != null ? product.price.toStringAsFixed(2) : '',
+    );
+    final costAmountController = TextEditingController(
+      text: product?.costAmount != null
+          ? product!.costAmount!.toStringAsFixed(2)
+          : '',
     );
     bool isActive = product?.isActive ?? true;
     String selectedCountry = _countryOptions.first['name']!;
@@ -384,7 +397,7 @@ class _AdminProductManagementScreenState
                         TextFormField(
                           controller: priceController,
                           decoration: const InputDecoration(
-                            labelText: 'Price',
+                            labelText: 'Sell Rate',
                             prefixText: 'R ',
                             border: OutlineInputBorder(),
                             hintText: '0.00',
@@ -399,11 +412,38 @@ class _AdminProductManagementScreenState
                           ],
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Please enter a price';
+                              return 'Please enter a sell rate';
                             }
                             final parsed = double.tryParse(value);
                             if (parsed == null) {
                               return 'Enter a valid number';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: costAmountController,
+                          decoration: const InputDecoration(
+                            labelText: 'Cost to Company',
+                            prefixText: 'R ',
+                            border: OutlineInputBorder(),
+                            hintText: '0.00',
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d+\.?\d{0,2}'),
+                            ),
+                          ],
+                          validator: (value) {
+                            if (value != null && value.trim().isNotEmpty) {
+                              final parsed = double.tryParse(value);
+                              if (parsed == null) {
+                                return 'Enter a valid number';
+                              }
                             }
                             return null;
                           },
@@ -437,6 +477,10 @@ class _AdminProductManagementScreenState
                     if (!formKey.currentState!.validate()) return;
                     final price =
                         double.tryParse(priceController.text.trim()) ?? 0.0;
+                    final costAmountText = costAmountController.text.trim();
+                    final costAmount = costAmountText.isNotEmpty
+                        ? double.tryParse(costAmountText)
+                        : null;
 
                     try {
                       final provider = context.read<ProductItemsProvider>();
@@ -447,6 +491,7 @@ class _AdminProductManagementScreenState
                           description: descriptionController.text.trim(),
                           country: selectedCountry,
                           price: price,
+                          costAmount: costAmount,
                           isActive: isActive,
                         );
                         await provider.updateProductItem(updated);
@@ -457,6 +502,7 @@ class _AdminProductManagementScreenState
                           country: selectedCountry,
                           isActive: isActive,
                           price: price,
+                          costAmount: costAmount,
                         );
                       }
 
