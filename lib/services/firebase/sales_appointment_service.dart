@@ -748,6 +748,7 @@ class SalesAppointmentService {
         createdBy: userId,
         createdByName: userName,
         formScore: appointment.formScore,
+        optInQuestions: appointment.optInQuestions,
         // Installation booking fields
         installBookingToken: installBookingToken,
         installBookingStatus: models.InstallBookingStatus.pending,

@@ -148,8 +148,14 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
                     controller: _tabController,
                     children: [
                       _buildOrdersList(_toPickOrders, OrderTabType.toPick),
-                      _buildOrdersList(_needsWaybillOrders, OrderTabType.needsWaybill),
-                      _buildOrdersList(_outForDeliveryOrders, OrderTabType.outForDelivery),
+                      _buildOrdersList(
+                        _needsWaybillOrders,
+                        OrderTabType.needsWaybill,
+                      ),
+                      _buildOrdersList(
+                        _outForDeliveryOrders,
+                        OrderTabType.outForDelivery,
+                      ),
                     ],
                   ),
           ),
@@ -165,10 +171,7 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            AppTheme.headerGradientStart,
-            AppTheme.headerGradientEnd,
-          ],
+          colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
         ),
       ),
       child: SafeArea(
@@ -202,10 +205,7 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
                   ),
                   Text(
                     'Warehouse Fulfillment',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
               ),
@@ -226,10 +226,7 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
         unselectedLabelColor: AppTheme.secondaryColor,
         indicatorColor: AppTheme.primaryColor,
         indicatorWeight: 3,
-        labelStyle: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 13,
-        ),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         tabs: [
           Tab(
             child: Row(
@@ -254,7 +251,10 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
                 const Text('Waybill'),
                 if (_needsWaybillOrders.isNotEmpty) ...[
                   const SizedBox(width: 6),
-                  _buildTabBadge(_needsWaybillOrders.length, AppTheme.warningColor),
+                  _buildTabBadge(
+                    _needsWaybillOrders.length,
+                    AppTheme.warningColor,
+                  ),
                 ],
               ],
             ),
@@ -268,7 +268,10 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
                 const Text('Shipped'),
                 if (_outForDeliveryOrders.isNotEmpty) ...[
                   const SizedBox(width: 6),
-                  _buildTabBadge(_outForDeliveryOrders.length, AppTheme.successColor),
+                  _buildTabBadge(
+                    _outForDeliveryOrders.length,
+                    AppTheme.successColor,
+                  ),
                 ],
               ],
             ),
@@ -318,7 +321,10 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
         ),
       ),
     );
@@ -414,10 +420,7 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _getBorderColor(order, tabType),
-          width: 1.5,
-        ),
+        border: Border.all(color: _getBorderColor(order, tabType), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -470,6 +473,12 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
 
                 // Info chips based on tab type
                 _buildInfoRow(order, tabType, dateFormat),
+
+                if (order.optInQuestions?['Shipping address'] != null &&
+                    order.optInQuestions!['Shipping address']!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildShippingAddressInfo(order),
+                ],
 
                 // Progress bar for picking orders
                 if (tabType == OrderTabType.toPick &&
@@ -555,16 +564,19 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
     );
   }
 
-  Widget _buildInfoRow(models.Order order, OrderTabType tabType, DateFormat dateFormat) {
-    final effectiveDate = order.confirmedInstallDate ?? order.earliestSelectedDate;
+  Widget _buildInfoRow(
+    models.Order order,
+    OrderTabType tabType,
+    DateFormat dateFormat,
+  ) {
+    final effectiveDate =
+        order.confirmedInstallDate ?? order.earliestSelectedDate;
 
     return Row(
       children: [
         _buildInfoChip(
           Icons.calendar_today,
-          effectiveDate != null
-              ? dateFormat.format(effectiveDate)
-              : 'No date',
+          effectiveDate != null ? dateFormat.format(effectiveDate) : 'No date',
           AppTheme.primaryColor,
         ),
         const SizedBox(width: 12),
@@ -633,11 +645,56 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
           child: LinearProgressIndicator(
             value: order.pickingProgress,
             backgroundColor: AppTheme.borderColor,
-            valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.warningColor),
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              AppTheme.warningColor,
+            ),
             minHeight: 6,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildShippingAddressInfo(models.Order order) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.location_on, size: 20, color: Colors.blue[700]),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Shipping Address',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.secondaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  order.optInQuestions!['Shipping address']!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textColor,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -743,8 +800,4 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
   }
 }
 
-enum OrderTabType {
-  toPick,
-  needsWaybill,
-  outForDelivery,
-}
+enum OrderTabType { toPick, needsWaybill, outForDelivery }
