@@ -317,6 +317,70 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                       const SizedBox(height: 24),
                     ],
 
+                    // Opt In Questionnaire (always show for opt-in stage)
+                    if (_currentAppointment.currentStage == 'opt_in') ...[
+                      _buildSection(
+                        'Opt-In Questionnaire',
+                        Icons.question_answer,
+                        [
+                          // Show existing data or empty state message
+                          if (_currentAppointment.optInQuestions != null &&
+                              _currentAppointment.optInQuestions!.isNotEmpty)
+                            ..._currentAppointment.optInQuestions!.entries.map((
+                              entry,
+                            ) {
+                              return _buildInfoRow(
+                                Icons.check_circle_outline,
+                                entry.key,
+                                entry.value,
+                              );
+                            }).toList()
+                          else
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                'No questionnaire data yet. Click button below to add.',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          // Add/Edit button (always visible for opt-in stage)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: ElevatedButton.icon(
+                              onPressed: _showEditQuestionnaireDialog,
+                              icon: Icon(
+                                (_currentAppointment.optInQuestions == null ||
+                                        _currentAppointment
+                                            .optInQuestions!
+                                            .isEmpty)
+                                    ? Icons.add
+                                    : Icons.edit,
+                                size: 18,
+                              ),
+                              label: Text(
+                                (_currentAppointment.optInQuestions == null ||
+                                        _currentAppointment
+                                            .optInQuestions!
+                                            .isEmpty)
+                                    ? 'Add Questionnaire'
+                                    : 'Edit Questionnaire',
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
                     // Contract Section (for Opt In stage)
                     ContractSectionWidget(
                       appointment: _currentAppointment,
@@ -663,7 +727,7 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
   Widget _buildOptInProductsList(List<OptInProduct> products) {
     final authProvider = context.watch<AuthProvider>();
     final isSuperAdmin = authProvider.userRole == UserRole.superAdmin;
-    
+
     return Column(
       children: [
         Container(
@@ -858,6 +922,131 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
       return '${duration.inHours} hour${duration.inHours > 1 ? 's' : ''}';
     } else {
       return '${duration.inMinutes} minute${duration.inMinutes > 1 ? 's' : ''}';
+    }
+  }
+
+  Future<void> _showEditQuestionnaireDialog() async {
+    final Map<String, TextEditingController> controllers = {
+      'Best phone number': TextEditingController(
+        text: _currentAppointment.optInQuestions?['Best phone number'] ?? '',
+      ),
+      'Name of business': TextEditingController(
+        text: _currentAppointment.optInQuestions?['Name of business'] ?? '',
+      ),
+      'Best email': TextEditingController(
+        text: _currentAppointment.optInQuestions?['Best email'] ?? '',
+      ),
+      'Sales person dealing with': TextEditingController(
+        text:
+            _currentAppointment.optInQuestions?['Sales person dealing with'] ??
+            '',
+      ),
+      'Shipping address': TextEditingController(
+        text: _currentAppointment.optInQuestions?['Shipping address'] ?? '',
+      ),
+      'Method of payment': TextEditingController(
+        text: _currentAppointment.optInQuestions?['Method of payment'] ?? '',
+      ),
+      'Interested package': TextEditingController(
+        text: _currentAppointment.optInQuestions?['Interested package'] ?? '',
+      ),
+    };
+
+    final result = await showDialog<Map<String, String>?>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Opt-In Questionnaire'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: controllers.entries.map((entry) {
+              final isRequired = entry.key == 'Shipping address';
+              final isMultiline = entry.key == 'Shipping address';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: entry.value,
+                  decoration: InputDecoration(
+                    labelText: '${entry.key}${isRequired ? ' *' : ''}',
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                  maxLines: isMultiline ? 3 : 1,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Build map with only non-empty values
+              final answers = <String, String>{};
+              controllers.forEach((question, controller) {
+                if (controller.text.trim().isNotEmpty) {
+                  answers[question] = controller.text.trim();
+                }
+              });
+              Navigator.of(context).pop(answers.isNotEmpty ? answers : null);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    // Dispose controllers
+    controllers.values.forEach((c) => c.dispose());
+
+    if (result != null && mounted) {
+      // Update appointment with new questionnaire answers
+      await _updateQuestionnaireAnswers(result);
+    }
+  }
+
+  Future<void> _updateQuestionnaireAnswers(Map<String, String> answers) async {
+    if (!mounted) return;
+
+    try {
+      // Update the appointment with new questionnaire
+      await _appointmentService.updateAppointment(
+        _currentAppointment.copyWith(
+          optInQuestions: answers,
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      // Refresh appointment data
+      if (!mounted) return;
+
+      final updatedAppointment = await _appointmentService.getAppointment(
+        _currentAppointment.id,
+      );
+
+      if (!mounted) return;
+
+      if (updatedAppointment != null) {
+        setState(() {
+          _currentAppointment = updatedAppointment;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Questionnaire updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating questionnaire: $e')),
+      );
     }
   }
 }

@@ -69,6 +69,15 @@ class ContractService {
         );
       }
 
+      // Extract and validate shipping address
+      final shippingAddress = appointment.optInQuestions?['Shipping address'];
+
+      if (shippingAddress == null || shippingAddress.trim().isEmpty) {
+        throw Exception(
+          'Shipping address is required for contract generation. Please update the appointment details.',
+        );
+      }
+
       // Calculate totals
       double subtotal = 0;
       for (final product in appointment.optInProducts) {
@@ -94,6 +103,7 @@ class ContractService {
         customerName: appointment.customerName,
         email: appointment.email,
         phone: appointment.phone,
+        shippingAddress: shippingAddress,
         contractContentVersion: contractContent.version,
         contractContentData: {
           'content': contractContent.content,

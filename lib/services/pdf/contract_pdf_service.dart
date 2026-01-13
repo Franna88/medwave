@@ -545,6 +545,11 @@ class ContractPdfService {
               _buildInfoLine('Customer Phone:', contract.phone),
               pw.SizedBox(height: 4),
               _buildInfoLine('Customer Email:', contract.email),
+              if (contract.shippingAddress != null &&
+                  contract.shippingAddress!.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                _buildInfoLine('Shipping Address:', contract.shippingAddress!),
+              ],
             ],
           ),
         ),

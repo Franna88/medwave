@@ -183,6 +183,7 @@ class SalesAppointmentService {
     String? assignedToName,
     String? optInNote,
     List<models.OptInProduct>? optInProducts,
+    Map<String, String>? optInQuestions,
     String? depositConfirmationToken,
     String? depositConfirmationStatus,
     DateTime? depositConfirmationSentAt,
@@ -281,6 +282,7 @@ class SalesAppointmentService {
         assignedToName: assignedToName ?? appointment.assignedToName,
         optInNote: optInNote ?? appointment.optInNote,
         optInProducts: optInProducts ?? appointment.optInProducts,
+        optInQuestions: optInQuestions ?? appointment.optInQuestions,
         depositConfirmationToken:
             confirmationToken ?? appointment.depositConfirmationToken,
         depositConfirmationStatus:

@@ -25,6 +25,7 @@ class SalesAppointment {
   final String? assignedToName; // name of assigned Sales Admin
   final String? optInNote;
   final List<OptInProduct> optInProducts;
+  final Map<String, String>? optInQuestions;
   final String? depositConfirmationToken;
   final String? depositConfirmationStatus; // pending | confirmed | declined
   final DateTime? depositConfirmationSentAt;
@@ -57,6 +58,7 @@ class SalesAppointment {
     this.assignedToName,
     this.optInNote,
     this.optInProducts = const [],
+    this.optInQuestions,
     this.depositConfirmationToken,
     this.depositConfirmationStatus,
     this.depositConfirmationSentAt,
@@ -133,6 +135,8 @@ class SalesAppointment {
               )
               .toList() ??
           [],
+      optInQuestions: (map['optInQuestions'] as Map<String, dynamic>?)
+          ?.map((k, v) => MapEntry(k, v.toString())),
       depositConfirmationToken: map['depositConfirmationToken']?.toString(),
       depositConfirmationStatus: map['depositConfirmationStatus']?.toString(),
       depositConfirmationSentAt:
@@ -170,6 +174,7 @@ class SalesAppointment {
       'assignedToName': assignedToName,
       'optInNote': optInNote,
       'optInProducts': optInProducts.map((p) => p.toMap()).toList(),
+      if (optInQuestions != null) 'optInQuestions': optInQuestions,
       'depositConfirmationToken': depositConfirmationToken,
       'depositConfirmationStatus': depositConfirmationStatus,
       'depositConfirmationSentAt': depositConfirmationSentAt != null
@@ -207,6 +212,7 @@ class SalesAppointment {
     String? assignedToName,
     String? optInNote,
     List<OptInProduct>? optInProducts,
+    Map<String, String>? optInQuestions,
     String? depositConfirmationToken,
     String? depositConfirmationStatus,
     DateTime? depositConfirmationSentAt,
@@ -238,6 +244,7 @@ class SalesAppointment {
       assignedToName: assignedToName ?? this.assignedToName,
       optInNote: optInNote ?? this.optInNote,
       optInProducts: optInProducts ?? this.optInProducts,
+      optInQuestions: optInQuestions ?? this.optInQuestions,
       depositConfirmationToken:
           depositConfirmationToken ?? this.depositConfirmationToken,
       depositConfirmationStatus:

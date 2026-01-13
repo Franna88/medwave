@@ -561,6 +561,10 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
           _buildInfoRow('Email', contract.email),
           const SizedBox(height: 12),
           _buildInfoRow('Phone', contract.phone),
+          if (contract.shippingAddress != null && contract.shippingAddress!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildInfoRow('Shipping Address', contract.shippingAddress!),
+          ],
           const SizedBox(height: 12),
           _buildInfoRow(
             'Date',

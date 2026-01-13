@@ -224,6 +224,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       text: 'Manually moved to ${newStage.name}',
     );
 
+    // Opt-in questionnaire controllers
+    final Map<String, TextEditingController> questionControllers = {
+      'Best phone number': TextEditingController(),
+      'Name of business': TextEditingController(),
+      'Best email': TextEditingController(),
+      'Sales person dealing with': TextEditingController(),
+      'Shipping address': TextEditingController(),
+      'Method of payment': TextEditingController(),
+      'Interested package': TextEditingController(),
+    };
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -234,185 +245,220 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
             return AlertDialog(
               backgroundColor: Colors.white,
               title: Text('Move ${appointment.customerName}'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('From: ${oldStage.name}'),
-                  Text('To: ${newStage.name}'),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: noteController,
-                    decoration: const InputDecoration(
-                      labelText: 'Note (optional)',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                  if (isOptIn) ...[
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('From: ${oldStage.name}'),
+                    Text('To: ${newStage.name}'),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Select product(s)',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                    TextField(
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Note (optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
                     ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 260,
-                      width: 720,
-                      child: products.isEmpty
-                          ? const Text('No products available')
-                          : Column(
-                              children: [
-                                // Header row
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8.0,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      SizedBox(width: 24), // checkbox space
-                                      SizedBox(width: 12),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          'Product',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          'Description',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          'Country',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      if (isSuperAdmin) ...[
+                    if (isOptIn) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Select product(s)',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 260,
+                        width: 720,
+                        child: products.isEmpty
+                            ? const Text('No products available')
+                            : Column(
+                                children: [
+                                  // Header row
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(width: 24), // checkbox space
                                         SizedBox(width: 12),
-                                        SizedBox(
-                                          width: 120,
+                                        Expanded(
+                                          flex: 3,
                                           child: Text(
-                                            'Price',
-                                            textAlign: TextAlign.right,
+                                            'Product',
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
                                               fontSize: 13,
                                             ),
                                           ),
                                         ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                const Divider(height: 1),
-                                const SizedBox(height: 8),
-                                Expanded(
-                                  child: ListView.separated(
-                                    primary: false,
-                                    shrinkWrap: false,
-                                    itemCount: products.length,
-                                    separatorBuilder: (_, __) =>
-                                        const Divider(height: 1),
-                                    itemBuilder: (context, index) {
-                                      final product = products[index];
-                                      final isSelected = selectedProductIds
-                                          .contains(product.id);
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 10,
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Description',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
                                         ),
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Checkbox(
-                                              value: isSelected,
-                                              onChanged: (checked) {
-                                                setState(() {
-                                                  if (checked == true) {
-                                                    selectedProductIds.add(
-                                                      product.id,
-                                                    );
-                                                  } else {
-                                                    selectedProductIds.remove(
-                                                      product.id,
-                                                    );
-                                                  }
-                                                });
-                                              },
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            'Country',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              flex: 3,
-                                              child: Text(
-                                                product.name,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 14,
-                                                ),
+                                          ),
+                                        ),
+                                        if (isSuperAdmin) ...[
+                                          SizedBox(width: 12),
+                                          SizedBox(
+                                            width: 120,
+                                            child: Text(
+                                              'Price',
+                                              textAlign: TextAlign.right,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 13,
                                               ),
                                             ),
-                                            Expanded(
-                                              flex: 3,
-                                              child: Text(
-                                                product.description,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey[700],
-                                                ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      primary: false,
+                                      shrinkWrap: false,
+                                      itemCount: products.length,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, index) {
+                                        final product = products[index];
+                                        final isSelected = selectedProductIds
+                                            .contains(product.id);
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Checkbox(
+                                                value: isSelected,
+                                                onChanged: (checked) {
+                                                  setState(() {
+                                                    if (checked == true) {
+                                                      selectedProductIds.add(
+                                                        product.id,
+                                                      );
+                                                    } else {
+                                                      selectedProductIds.remove(
+                                                        product.id,
+                                                      );
+                                                    }
+                                                  });
+                                                },
                                               ),
-                                            ),
-                                            Expanded(
-                                              flex: 2,
-                                              child: Text(
-                                                product.country,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                            if (isSuperAdmin) ...[
                                               const SizedBox(width: 12),
-                                              SizedBox(
-                                                width: 120,
+                                              Expanded(
+                                                flex: 3,
                                                 child: Text(
-                                                  'R ${product.price.toStringAsFixed(2)}',
-                                                  textAlign: TextAlign.right,
+                                                  product.name,
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.w600,
-                                                    fontSize: 13,
+                                                    fontSize: 14,
                                                   ),
                                                 ),
                                               ),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  product.description,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700],
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: Text(
+                                                  product.country,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (isSuperAdmin) ...[
+                                                const SizedBox(width: 12),
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Text(
+                                                    'R ${product.price.toStringAsFixed(2)}',
+                                                    textAlign: TextAlign.right,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ],
-                                          ],
-                                        ),
-                                      );
-                                    },
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                      ),
+                      // Opt-In Questionnaire
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Opt-In Questionnaire (Optional)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...questionControllers.entries.map((entry) {
+                        final isMultiline = entry.key == 'Shipping address';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: TextField(
+                            controller: entry.value,
+                            decoration: InputDecoration(
+                              labelText: entry.key,
+                              hintText: _getQuestionHint(entry.key),
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
                             ),
-                    ),
+                            maxLines: isMultiline ? 3 : 1,
+                          ),
+                        );
+                      }),
+                    ], // Close if (isOptIn) block
                   ],
-                ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -453,6 +499,20 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           }).toList();
         }
 
+        // Build opt-in questions map
+        Map<String, String>? optInQuestions;
+        if (isOptIn) {
+          final answers = <String, String>{};
+          questionControllers.forEach((question, controller) {
+            if (controller.text.trim().isNotEmpty) {
+              answers[question] = controller.text.trim();
+            }
+          });
+          if (answers.isNotEmpty) {
+            optInQuestions = answers;
+          }
+        }
+
         final noteText = noteController.text.isEmpty
             ? 'Moved to ${newStage.name}'
             : noteController.text;
@@ -467,6 +527,12 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           assignedToName: assignedToUserName,
           optInNote: isOptIn ? noteText : null,
           optInProducts: optInSelections,
+          optInQuestions: optInQuestions,
+        );
+
+        // Dispose question controllers
+        questionControllers.values.forEach(
+          (controller) => controller.dispose(),
         );
 
         if (mounted) {
@@ -495,6 +561,11 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
             SnackBar(content: Text('Error moving appointment: $e')),
           );
         }
+      } finally {
+        // Ensure controllers are disposed even on error
+        questionControllers.values.forEach(
+          (controller) => controller.dispose(),
+        );
       }
     }
   }
@@ -774,6 +845,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     String selectedPaymentType =
         appointment.paymentType; // Keep existing or default
 
+    // Opt-in questionnaire controllers
+    final Map<String, TextEditingController> questionControllers = {
+      'Best phone number': TextEditingController(),
+      'Name of business': TextEditingController(),
+      'Best email': TextEditingController(),
+      'Sales person dealing with': TextEditingController(),
+      'Shipping address': TextEditingController(),
+      'Method of payment': TextEditingController(),
+      'Interested package': TextEditingController(),
+    };
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -784,262 +866,297 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
             return AlertDialog(
               backgroundColor: Colors.white,
               title: Text('Move ${appointment.customerName}'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('From: ${oldStage.name}'),
-                  Text('To: ${newStage.name}'),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: noteController,
-                    decoration: const InputDecoration(
-                      labelText: 'Note (optional)',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                  if (isOptIn) ...[
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('From: ${oldStage.name}'),
+                    Text('To: ${newStage.name}'),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Payment Type',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                    TextField(
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Note (optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text('Deposit'),
-                            value: 'deposit',
-                            groupValue: selectedPaymentType,
-                            onChanged: (value) {
-                              setState(() {
-                                selectedPaymentType = value!;
-                              });
-                            },
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                          ),
-                        ),
-                        Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text(
-                              'Full Payment',
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.w600,
-                              ),
+                    if (isOptIn) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Payment Type',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Deposit'),
+                              value: 'deposit',
+                              groupValue: selectedPaymentType,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedPaymentType = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
                             ),
-                            value: 'full_payment',
-                            groupValue: selectedPaymentType,
-                            onChanged: (value) {
-                              setState(() {
-                                selectedPaymentType = value!;
-                              });
-                            },
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                            activeColor: Colors.green,
                           ),
-                        ),
-                      ],
-                    ),
-                    if (selectedPaymentType == 'full_payment')
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: Colors.green.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.star,
-                              size: 16,
-                              color: Colors.green[700],
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Priority order - will get installation priority',
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text(
+                                'Full Payment',
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.green[700],
-                                  fontWeight: FontWeight.w500,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              value: 'full_payment',
+                              groupValue: selectedPaymentType,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedPaymentType = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              activeColor: Colors.green,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Select product(s)',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 260,
-                      width: 720,
-                      child: products.isEmpty
-                          ? const Text('No products available')
-                          : Column(
-                              children: [
-                                // Header row
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8.0,
+                      if (selectedPaymentType == 'full_payment')
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: Colors.green.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.star,
+                                size: 16,
+                                color: Colors.green[700],
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Priority order - will get installation priority',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green[700],
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                  child: Row(
-                                    children: [
-                                      SizedBox(width: 24),
-                                      SizedBox(width: 12),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          'Product',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          'Description',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          'Country',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      if (isSuperAdmin) ...[
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Select product(s)',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 260,
+                        width: 720,
+                        child: products.isEmpty
+                            ? const Text('No products available')
+                            : Column(
+                                children: [
+                                  // Header row
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(width: 24),
                                         SizedBox(width: 12),
-                                        SizedBox(
-                                          width: 120,
+                                        Expanded(
+                                          flex: 3,
                                           child: Text(
-                                            'Price',
-                                            textAlign: TextAlign.right,
+                                            'Product',
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
                                               fontSize: 13,
                                             ),
                                           ),
                                         ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                const Divider(height: 1),
-                                const SizedBox(height: 8),
-                                Expanded(
-                                  child: ListView.separated(
-                                    primary: false,
-                                    shrinkWrap: false,
-                                    itemCount: products.length,
-                                    separatorBuilder: (_, __) =>
-                                        const Divider(height: 1),
-                                    itemBuilder: (context, index) {
-                                      final product = products[index];
-                                      final isSelected = selectedProductIds
-                                          .contains(product.id);
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 10,
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Description',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
                                         ),
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Checkbox(
-                                              value: isSelected,
-                                              onChanged: (checked) {
-                                                setState(() {
-                                                  if (checked == true) {
-                                                    selectedProductIds.add(
-                                                      product.id,
-                                                    );
-                                                  } else {
-                                                    selectedProductIds.remove(
-                                                      product.id,
-                                                    );
-                                                  }
-                                                });
-                                              },
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            'Country',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              flex: 3,
-                                              child: Text(
-                                                product.name,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 14,
-                                                ),
+                                          ),
+                                        ),
+                                        if (isSuperAdmin) ...[
+                                          SizedBox(width: 12),
+                                          SizedBox(
+                                            width: 120,
+                                            child: Text(
+                                              'Price',
+                                              textAlign: TextAlign.right,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 13,
                                               ),
                                             ),
-                                            Expanded(
-                                              flex: 3,
-                                              child: Text(
-                                                product.description,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey[700],
-                                                ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      primary: false,
+                                      shrinkWrap: false,
+                                      itemCount: products.length,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, index) {
+                                        final product = products[index];
+                                        final isSelected = selectedProductIds
+                                            .contains(product.id);
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Checkbox(
+                                                value: isSelected,
+                                                onChanged: (checked) {
+                                                  setState(() {
+                                                    if (checked == true) {
+                                                      selectedProductIds.add(
+                                                        product.id,
+                                                      );
+                                                    } else {
+                                                      selectedProductIds.remove(
+                                                        product.id,
+                                                      );
+                                                    }
+                                                  });
+                                                },
                                               ),
-                                            ),
-                                            Expanded(
-                                              flex: 2,
-                                              child: Text(
-                                                product.country,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                            if (isSuperAdmin) ...[
                                               const SizedBox(width: 12),
-                                              SizedBox(
-                                                width: 120,
+                                              Expanded(
+                                                flex: 3,
                                                 child: Text(
-                                                  'R ${product.price.toStringAsFixed(2)}',
-                                                  textAlign: TextAlign.right,
+                                                  product.name,
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.w600,
-                                                    fontSize: 13,
+                                                    fontSize: 14,
                                                   ),
                                                 ),
                                               ),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  product.description,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700],
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: Text(
+                                                  product.country,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (isSuperAdmin) ...[
+                                                const SizedBox(width: 12),
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Text(
+                                                    'R ${product.price.toStringAsFixed(2)}',
+                                                    textAlign: TextAlign.right,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ],
-                                          ],
-                                        ),
-                                      );
-                                    },
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                      ),
+                      // Opt-In Questionnaire
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Opt-In Questionnaire (Optional)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...questionControllers.entries.map((entry) {
+                        final isMultiline = entry.key == 'Shipping address';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: TextField(
+                            controller: entry.value,
+                            decoration: InputDecoration(
+                              labelText: entry.key,
+                              hintText: _getQuestionHint(entry.key),
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
                             ),
-                    ),
+                            maxLines: isMultiline ? 3 : 1,
+                          ),
+                        );
+                      }),
+                    ], // Close if (isOptIn) block
                   ],
-                ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -1080,6 +1197,20 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           }).toList();
         }
 
+        // Build opt-in questions map
+        Map<String, String>? optInQuestions;
+        if (isOptIn) {
+          final answers = <String, String>{};
+          questionControllers.forEach((question, controller) {
+            if (controller.text.trim().isNotEmpty) {
+              answers[question] = controller.text.trim();
+            }
+          });
+          if (answers.isNotEmpty) {
+            optInQuestions = answers;
+          }
+        }
+
         final noteText = noteController.text.isEmpty
             ? 'Moved to ${newStage.name}'
             : noteController.text;
@@ -1094,7 +1225,13 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           assignedToName: assignedToUserName,
           optInNote: isOptIn ? noteText : null,
           optInProducts: optInSelections,
+          optInQuestions: optInQuestions,
           paymentType: isOptIn ? selectedPaymentType : null,
+        );
+
+        // Dispose question controllers
+        questionControllers.values.forEach(
+          (controller) => controller.dispose(),
         );
 
         if (mounted) {
@@ -1136,6 +1273,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       );
       String selectedPaymentType = 'deposit'; // Default to deposit
 
+      // Opt-in questionnaire controllers
+      final Map<String, TextEditingController> questionControllers = {
+        'Best phone number': TextEditingController(),
+        'Name of business': TextEditingController(),
+        'Best email': TextEditingController(),
+        'Sales person dealing with': TextEditingController(),
+        'Shipping address': TextEditingController(),
+        'Method of payment': TextEditingController(),
+        'Interested package': TextEditingController(),
+      };
+
       // Show product selection dialog first
       final confirmed = await showDialog<bool>(
         context: context,
@@ -1147,259 +1295,263 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
               return AlertDialog(
                 backgroundColor: Colors.white,
                 title: Text('Add ${lead.fullName} to Opt In'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Email: ${lead.email}'),
-                    Text('Phone: ${lead.phone}'),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: noteController,
-                      decoration: const InputDecoration(
-                        labelText: 'Note (optional)',
-                        border: OutlineInputBorder(),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Email: ${lead.email}'),
+                      Text('Phone: ${lead.phone}'),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: noteController,
+                        decoration: const InputDecoration(
+                          labelText: 'Note (optional)',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 3,
                       ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Payment Type',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text('Deposit'),
-                            value: 'deposit',
-                            groupValue: selectedPaymentType,
-                            onChanged: (value) {
-                              setState(() {
-                                selectedPaymentType = value!;
-                              });
-                            },
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                          ),
-                        ),
-                        Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text(
-                              'Full Payment',
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.w600,
-                              ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Payment Type',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Deposit'),
+                              value: 'deposit',
+                              groupValue: selectedPaymentType,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedPaymentType = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
                             ),
-                            value: 'full_payment',
-                            groupValue: selectedPaymentType,
-                            onChanged: (value) {
-                              setState(() {
-                                selectedPaymentType = value!;
-                              });
-                            },
-                            contentPadding: EdgeInsets.zero,
-                            dense: true,
-                            activeColor: Colors.green,
                           ),
-                        ),
-                      ],
-                    ),
-                    if (selectedPaymentType == 'full_payment')
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: Colors.green.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.star,
-                              size: 16,
-                              color: Colors.green[700],
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Priority order - will get installation priority',
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text(
+                                'Full Payment',
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.green[700],
-                                  fontWeight: FontWeight.w500,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
+                              value: 'full_payment',
+                              groupValue: selectedPaymentType,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedPaymentType = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              activeColor: Colors.green,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Select product(s)',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 260,
-                      width: 720,
-                      child: products.isEmpty
-                          ? const Text('No products available')
-                          : Column(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8.0,
+                      if (selectedPaymentType == 'full_payment')
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: Colors.green.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.star,
+                                size: 16,
+                                color: Colors.green[700],
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Priority order - will get installation priority',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green[700],
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                  child: Row(
-                                    children: [
-                                      SizedBox(width: 24),
-                                      SizedBox(width: 12),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          'Product',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          'Description',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          'Country',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      if (isSuperAdmin) ...[
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Select product(s)',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 260,
+                        width: 720,
+                        child: products.isEmpty
+                            ? const Text('No products available')
+                            : Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(width: 24),
                                         SizedBox(width: 12),
-                                        SizedBox(
-                                          width: 120,
+                                        Expanded(
+                                          flex: 3,
                                           child: Text(
-                                            'Price',
-                                            textAlign: TextAlign.right,
+                                            'Product',
                                             style: TextStyle(
                                               fontWeight: FontWeight.w700,
                                               fontSize: 13,
                                             ),
                                           ),
                                         ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                const Divider(height: 1),
-                                const SizedBox(height: 8),
-                                Expanded(
-                                  child: ListView.separated(
-                                    primary: false,
-                                    shrinkWrap: false,
-                                    itemCount: products.length,
-                                    separatorBuilder: (_, __) =>
-                                        const Divider(height: 1),
-                                    itemBuilder: (context, index) {
-                                      final product = products[index];
-                                      final isSelected = selectedProductIds
-                                          .contains(product.id);
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 10,
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Description',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
                                         ),
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Checkbox(
-                                              value: isSelected,
-                                              onChanged: (checked) {
-                                                setState(() {
-                                                  if (checked == true) {
-                                                    selectedProductIds.add(
-                                                      product.id,
-                                                    );
-                                                  } else {
-                                                    selectedProductIds.remove(
-                                                      product.id,
-                                                    );
-                                                  }
-                                                });
-                                              },
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            'Country',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              flex: 3,
-                                              child: Text(
-                                                product.name,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 14,
-                                                ),
+                                          ),
+                                        ),
+                                        if (isSuperAdmin) ...[
+                                          SizedBox(width: 12),
+                                          SizedBox(
+                                            width: 120,
+                                            child: Text(
+                                              'Price',
+                                              textAlign: TextAlign.right,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 13,
                                               ),
                                             ),
-                                            Expanded(
-                                              flex: 3,
-                                              child: Text(
-                                                product.description,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey[700],
-                                                ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      primary: false,
+                                      shrinkWrap: false,
+                                      itemCount: products.length,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, index) {
+                                        final product = products[index];
+                                        final isSelected = selectedProductIds
+                                            .contains(product.id);
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Checkbox(
+                                                value: isSelected,
+                                                onChanged: (checked) {
+                                                  setState(() {
+                                                    if (checked == true) {
+                                                      selectedProductIds.add(
+                                                        product.id,
+                                                      );
+                                                    } else {
+                                                      selectedProductIds.remove(
+                                                        product.id,
+                                                      );
+                                                    }
+                                                  });
+                                                },
                                               ),
-                                            ),
-                                            Expanded(
-                                              flex: 2,
-                                              child: Text(
-                                                product.country,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                            if (isSuperAdmin) ...[
                                               const SizedBox(width: 12),
-                                              SizedBox(
-                                                width: 120,
+                                              Expanded(
+                                                flex: 3,
                                                 child: Text(
-                                                  'R ${product.price.toStringAsFixed(2)}',
-                                                  textAlign: TextAlign.right,
+                                                  product.name,
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.w600,
-                                                    fontSize: 13,
+                                                    fontSize: 14,
                                                   ),
                                                 ),
                                               ),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  product.description,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700],
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: Text(
+                                                  product.country,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (isSuperAdmin) ...[
+                                                const SizedBox(width: 12),
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Text(
+                                                    'R ${product.price.toStringAsFixed(2)}',
+                                                    textAlign: TextAlign.right,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             ],
-                                          ],
-                                        ),
-                                      );
-                                    },
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ],
+                                ],
+                              ),
+                      ),
+                    ],
+                  ),
                 ),
                 actions: [
                   TextButton(
@@ -1433,6 +1585,15 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           );
         }).toList();
       }
+
+      // Build opt-in questions map
+      final answers = <String, String>{};
+      questionControllers.forEach((question, controller) {
+        if (controller.text.trim().isNotEmpty) {
+          answers[question] = controller.text.trim();
+        }
+      });
+      final optInQuestions = answers.isNotEmpty ? answers : null;
 
       final noteText = noteController.text.isEmpty
           ? 'Manually added to Opt In'
@@ -1478,8 +1639,12 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         manuallyAdded: true,
         optInNote: noteText,
         optInProducts: optInSelections ?? [],
+        optInQuestions: optInQuestions,
         paymentType: selectedPaymentType,
       );
+
+      // Dispose question controllers
+      questionControllers.values.forEach((controller) => controller.dispose());
 
       // Create the appointment
       final appointmentId = await _appointmentService.createAppointment(
@@ -2464,5 +2629,26 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         ),
       ),
     );
+  }
+
+  String _getQuestionHint(String question) {
+    switch (question) {
+      case 'Best phone number':
+        return 'Enter best contact number';
+      case 'Name of business':
+        return 'Enter business name';
+      case 'Best email':
+        return 'Enter preferred email address';
+      case 'Sales person dealing with':
+        return 'Name of sales representative';
+      case 'Shipping address':
+        return 'Full shipping address including postal code';
+      case 'Method of payment':
+        return 'e.g., Cash, Credit Card, EFT';
+      case 'Interested package':
+        return 'Package or product bundle of interest';
+      default:
+        return '';
+    }
   }
 }
