@@ -91,10 +91,10 @@ class OrderService {
       final orders = snapshot.docs
           .map((doc) => models.Order.fromFirestore(doc))
           .toList();
-          // Sort in memory instead of using orderBy to avoid index requirement
-          orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          return orders;
-        });
+      // Sort in memory instead of using orderBy to avoid index requirement
+      orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return orders;
+    });
   }
 
   /// Create a new order
@@ -163,20 +163,20 @@ class OrderService {
         if (lastEntry.exitedAt == null) {
           updatedHistory[updatedHistory.length -
               1] = models.OrderStageHistoryEntry(
-                stage: lastEntry.stage,
-                enteredAt: lastEntry.enteredAt,
-                exitedAt: now,
-                note: note,
-              );
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: now,
+            note: note,
+          );
         }
       }
 
       // Add new stage history entry
       updatedHistory.add(
         models.OrderStageHistoryEntry(
-        stage: newStage,
-        enteredAt: now,
-        note: note,
+          stage: newStage,
+          enteredAt: now,
+          note: note,
         ),
       );
 
@@ -503,14 +503,14 @@ class OrderService {
       }
 
       // Also send WhatsApp notification to remind customer to check their email
-      if (WhatsAppService.isConfigured() && 
+      if (WhatsAppService.isConfigured() &&
           WhatsAppService.isValidPhoneNumber(order.phone)) {
         final whatsappResult =
             await WhatsAppService.sendInstallationBookingReminder(
-          customerPhone: order.phone,
-          customerName: order.customerName,
-        );
-        
+              customerPhone: order.phone,
+              customerName: order.customerName,
+            );
+
         if (kDebugMode) {
           print(
             'Installation booking WhatsApp sent: ${whatsappResult.success} to ${order.phone}',
@@ -619,9 +619,9 @@ class OrderService {
 
       updatedHistory.add(
         models.OrderStageHistoryEntry(
-        stage: 'priority_shipment',
-        enteredAt: now,
-        note: 'Moved after customer selected installation dates',
+          stage: 'priority_shipment',
+          enteredAt: now,
+          note: 'Moved after customer selected installation dates',
         ),
       );
 
@@ -936,38 +936,38 @@ class OrderService {
   /// with confirmedInstallDate within next 30 days
   Stream<List<models.Order>> getWarehouseOrdersStream() {
     return _firestore.collection('orders').snapshots().map((snapshot) {
-          final now = DateTime.now();
-          final thirtyDaysFromNow = now.add(const Duration(days: 30));
+      final now = DateTime.now();
+      final thirtyDaysFromNow = now.add(const Duration(days: 30));
 
-          final orders = snapshot.docs
-              .map((doc) => models.Order.fromFirestore(doc))
-              .where((order) {
-                // Check stage
+      final orders = snapshot.docs
+          .map((doc) => models.Order.fromFirestore(doc))
+          .where((order) {
+            // Check stage
             final validStage =
                 order.currentStage == 'priority_shipment' ||
-                    order.currentStage == 'inventory_packing_list';
-                if (!validStage) return false;
+                order.currentStage == 'inventory_packing_list';
+            if (!validStage) return false;
 
-                // Check install date within 30 days
-                if (order.confirmedInstallDate == null) return false;
-                final installDate = order.confirmedInstallDate!;
-                return installDate.isAfter(now.subtract(const Duration(days: 1))) &&
-                    installDate.isBefore(thirtyDaysFromNow);
-              })
-              .toList();
+            // Check install date within 30 days
+            if (order.confirmedInstallDate == null) return false;
+            final installDate = order.confirmedInstallDate!;
+            return installDate.isAfter(now.subtract(const Duration(days: 1))) &&
+                installDate.isBefore(thirtyDaysFromNow);
+          })
+          .toList();
 
-          // Sort by confirmedInstallDate ascending
-          orders.sort((a, b) {
-            final dateA = a.confirmedInstallDate;
-            final dateB = b.confirmedInstallDate;
-            if (dateA == null && dateB == null) return 0;
-            if (dateA == null) return 1;
-            if (dateB == null) return -1;
-            return dateA.compareTo(dateB);
-          });
+      // Sort by confirmedInstallDate ascending
+      orders.sort((a, b) {
+        final dateA = a.confirmedInstallDate;
+        final dateB = b.confirmedInstallDate;
+        if (dateA == null && dateB == null) return 0;
+        if (dateA == null) return 1;
+        if (dateB == null) return -1;
+        return dateA.compareTo(dateB);
+      });
 
-          return orders;
-        });
+      return orders;
+    });
   }
 
   // ============================================================
