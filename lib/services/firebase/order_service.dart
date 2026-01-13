@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 import '../../models/streams/order.dart' as models;
 import '../../models/streams/support_ticket.dart';
 import '../emailjs_service.dart';
@@ -10,6 +11,10 @@ import 'support_ticket_service.dart';
 // Base URLs for installation booking links
 const String _installBookingLinkBaseProd = 'https://app.medwave.com';
 const String _installBookingLinkBaseLocal = 'http://localhost:52961';
+
+// Base URLs for payment confirmation links
+const String _paymentLinkBaseProd = 'https://app.medwave.com';
+const String _paymentLinkBaseLocal = 'http://localhost:52961';
 
 /// Service for managing orders in Firebase
 class OrderService {
@@ -29,7 +34,9 @@ class OrderService {
       }
 
       final snapshot = await query.get();
-      return snapshot.docs.map((doc) => models.Order.fromFirestore(doc)).toList();
+      return snapshot.docs
+          .map((doc) => models.Order.fromFirestore(doc))
+          .toList();
     } catch (e) {
       if (kDebugMode) {
         print('Error getting all orders: $e');
@@ -46,7 +53,9 @@ class OrderService {
           .where('currentStage', isEqualTo: stage)
           .get();
 
-      final orders = snapshot.docs.map((doc) => models.Order.fromFirestore(doc)).toList();
+      final orders = snapshot.docs
+          .map((doc) => models.Order.fromFirestore(doc))
+          .toList();
       // Sort in memory to avoid index requirement
       orders.sort((a, b) => a.stageEnteredAt.compareTo(b.stageEnteredAt));
       return orders;
@@ -78,11 +87,10 @@ class OrderService {
 
   /// Stream of all orders
   Stream<List<models.Order>> ordersStream() {
-    return _firestore
-        .collection('orders')
-        .snapshots()
-        .map((snapshot) {
-          final orders = snapshot.docs.map((doc) => models.Order.fromFirestore(doc)).toList();
+    return _firestore.collection('orders').snapshots().map((snapshot) {
+      final orders = snapshot.docs
+          .map((doc) => models.Order.fromFirestore(doc))
+          .toList();
           // Sort in memory instead of using orderBy to avoid index requirement
           orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
           return orders;
@@ -105,10 +113,7 @@ class OrderService {
   /// Update an existing order
   Future<void> updateOrder(models.Order order) async {
     try {
-      await _firestore
-          .collection('orders')
-          .doc(order.id)
-          .update(order.toMap());
+      await _firestore.collection('orders').doc(order.id).update(order.toMap());
     } catch (e) {
       if (kDebugMode) {
         print('Error updating order: $e');
@@ -140,6 +145,8 @@ class OrderService {
     DateTime? deliveryDate,
     String? invoiceNumber,
     DateTime? installDate,
+    List<String>? proofOfInstallationPhotoUrls,
+    String? customerSignaturePhotoUrl,
   }) async {
     try {
       final order = await getOrder(orderId);
@@ -154,8 +161,8 @@ class OrderService {
       if (updatedHistory.isNotEmpty) {
         final lastEntry = updatedHistory.last;
         if (lastEntry.exitedAt == null) {
-          updatedHistory[updatedHistory.length - 1] =
-              models.OrderStageHistoryEntry(
+          updatedHistory[updatedHistory.length -
+              1] = models.OrderStageHistoryEntry(
                 stage: lastEntry.stage,
                 enteredAt: lastEntry.enteredAt,
                 exitedAt: now,
@@ -165,11 +172,13 @@ class OrderService {
       }
 
       // Add new stage history entry
-      updatedHistory.add(models.OrderStageHistoryEntry(
+      updatedHistory.add(
+        models.OrderStageHistoryEntry(
         stage: newStage,
         enteredAt: now,
         note: note,
-      ));
+        ),
+      );
 
       // Create note for the transition
       final transitionNote = models.OrderNote(
@@ -180,6 +189,20 @@ class OrderService {
       );
 
       final updatedNotes = [...order.notes, transitionNote];
+
+      // Determine if we need to send payment confirmation email
+      final movedFromOutForDeliveryToInstalled =
+          order.currentStage == 'out_for_delivery' && newStage == 'installed';
+
+      String? confirmationToken = order.paymentConfirmationToken;
+      String? confirmationStatus = order.paymentConfirmationStatus;
+      DateTime? confirmationSentAt = order.paymentConfirmationSentAt;
+
+      if (movedFromOutForDeliveryToInstalled) {
+        confirmationToken = const Uuid().v4();
+        confirmationStatus = 'pending';
+        confirmationSentAt = now;
+      }
 
       // Update order
       final updatedOrder = order.copyWith(
@@ -192,6 +215,16 @@ class OrderService {
         deliveryDate: deliveryDate ?? order.deliveryDate,
         invoiceNumber: invoiceNumber ?? order.invoiceNumber,
         installDate: installDate ?? order.installDate,
+        proofOfInstallationPhotoUrls:
+            proofOfInstallationPhotoUrls ?? order.proofOfInstallationPhotoUrls,
+        customerSignaturePhotoUrl:
+            customerSignaturePhotoUrl ?? order.customerSignaturePhotoUrl,
+        paymentConfirmationToken:
+            confirmationToken ?? order.paymentConfirmationToken,
+        paymentConfirmationStatus:
+            confirmationStatus ?? order.paymentConfirmationStatus,
+        paymentConfirmationSentAt:
+            confirmationSentAt ?? order.paymentConfirmationSentAt,
       );
 
       await updateOrder(updatedOrder);
@@ -208,6 +241,34 @@ class OrderService {
             'Out for delivery email ${emailSent ? 'sent' : 'failed'} for order $orderId',
           );
         }
+      }
+
+      // Send invoice email if moving to installed stage
+      if (movedFromOutForDeliveryToInstalled) {
+        // Build invoice link
+        final invoiceLink = _buildInvoiceLink(
+          orderId: order.id,
+          token: confirmationToken!,
+        );
+
+        // Send invoice email
+        final invoiceEmailSent = await EmailJSService.sendInvoiceEmail(
+          order: updatedOrder,
+          invoiceLink: invoiceLink,
+        );
+
+        if (kDebugMode) {
+          if (invoiceEmailSent) {
+            print('Invoice email sent for order $orderId');
+          } else {
+            print('Failed to send invoice email for order $orderId');
+          }
+        }
+
+        // Update order with paymentConfirmationSentAt to track that invoice email was sent
+        await _firestore.collection('orders').doc(orderId).update({
+          'paymentConfirmationSentAt': Timestamp.fromDate(DateTime.now()),
+        });
       }
 
       // Check if we need to convert to Support Ticket (final stage)
@@ -394,14 +455,13 @@ class OrderService {
     final runtimeOrigin = Uri.base.origin;
     final baseOrigin = runtimeOrigin.isNotEmpty
         ? runtimeOrigin
-        : (kReleaseMode ? _installBookingLinkBaseProd : _installBookingLinkBaseLocal);
+        : (kReleaseMode
+              ? _installBookingLinkBaseProd
+              : _installBookingLinkBaseLocal);
 
     final uri = Uri.parse(baseOrigin).replace(
       path: '/installation-booking',
-      queryParameters: {
-        'orderId': orderId,
-        'token': token,
-      },
+      queryParameters: {'orderId': orderId, 'token': token},
     );
 
     return uri.toString();
@@ -409,9 +469,7 @@ class OrderService {
 
   /// Send installation booking email to customer
   /// Generates token, saves it, and sends email with booking link
-  Future<bool> sendInstallationBookingEmail({
-    required String orderId,
-  }) async {
+  Future<bool> sendInstallationBookingEmail({required String orderId}) async {
     try {
       final order = await getOrder(orderId);
       if (order == null) {
@@ -420,7 +478,10 @@ class OrderService {
 
       // Generate token if not exists
       final token = order.installBookingToken ?? _generateInstallBookingToken();
-      final bookingUrl = _buildInstallBookingLink(orderId: orderId, token: token);
+      final bookingUrl = _buildInstallBookingLink(
+        orderId: orderId,
+        token: token,
+      );
 
       // Update order with token and email sent timestamp
       final now = DateTime.now();
@@ -444,13 +505,16 @@ class OrderService {
       // Also send WhatsApp notification to remind customer to check their email
       if (WhatsAppService.isConfigured() && 
           WhatsAppService.isValidPhoneNumber(order.phone)) {
-        final whatsappResult = await WhatsAppService.sendInstallationBookingReminder(
+        final whatsappResult =
+            await WhatsAppService.sendInstallationBookingReminder(
           customerPhone: order.phone,
           customerName: order.customerName,
         );
         
         if (kDebugMode) {
-          print('Installation booking WhatsApp sent: ${whatsappResult.success} to ${order.phone}');
+          print(
+            'Installation booking WhatsApp sent: ${whatsappResult.success} to ${order.phone}',
+          );
           if (!whatsappResult.success) {
             print('WhatsApp error: ${whatsappResult.message}');
           }
@@ -500,7 +564,8 @@ class OrderService {
       }
 
       // Check if dates already selected
-      if (order.installBookingStatus == models.InstallBookingStatus.datesSelected ||
+      if (order.installBookingStatus ==
+              models.InstallBookingStatus.datesSelected ||
           order.installBookingStatus == models.InstallBookingStatus.confirmed) {
         return const InstallationBookingResult(
           success: false,
@@ -542,8 +607,8 @@ class OrderService {
       if (updatedHistory.isNotEmpty) {
         final lastEntry = updatedHistory.last;
         if (lastEntry.exitedAt == null) {
-          updatedHistory[updatedHistory.length - 1] =
-              models.OrderStageHistoryEntry(
+          updatedHistory[updatedHistory.length -
+              1] = models.OrderStageHistoryEntry(
             stage: lastEntry.stage,
             enteredAt: lastEntry.enteredAt,
             exitedAt: now,
@@ -552,11 +617,13 @@ class OrderService {
         }
       }
 
-      updatedHistory.add(models.OrderStageHistoryEntry(
+      updatedHistory.add(
+        models.OrderStageHistoryEntry(
         stage: 'priority_shipment',
         enteredAt: now,
         note: 'Moved after customer selected installation dates',
-      ));
+        ),
+      );
 
       final updatedOrder = order.copyWith(
         customerSelectedDates: sortedDates,
@@ -575,7 +642,8 @@ class OrderService {
 
       return const InstallationBookingResult(
         success: true,
-        message: 'Thank you! Your preferred installation dates have been saved.',
+        message:
+            'Thank you! Your preferred installation dates have been saved.',
         status: InstallationBookingStatus.success,
       );
     } catch (e) {
@@ -792,9 +860,7 @@ class OrderService {
   /// Delete a lead completely along with all related data
   /// This is a destructive action intended for testing purposes.
   /// Deletes: Order, Sales Appointment, Contracts, Support Ticket (if exists)
-  Future<void> deleteLeadCompletely({
-    required String orderId,
-  }) async {
+  Future<void> deleteLeadCompletely({required String orderId}) async {
     try {
       // Get the order first
       final order = await getOrder(orderId);
@@ -825,7 +891,9 @@ class OrderService {
 
       // 2. Delete support ticket if it exists
       if (supportTicketId != null && supportTicketId.isNotEmpty) {
-        final ticketRef = _firestore.collection('support_tickets').doc(supportTicketId);
+        final ticketRef = _firestore
+            .collection('support_tickets')
+            .doc(supportTicketId);
         batch.delete(ticketRef);
         if (kDebugMode) {
           print('Queued support ticket for deletion: $supportTicketId');
@@ -834,7 +902,9 @@ class OrderService {
 
       // 3. Delete the sales appointment
       if (appointmentId.isNotEmpty) {
-        final appointmentRef = _firestore.collection('appointments').doc(appointmentId);
+        final appointmentRef = _firestore
+            .collection('appointments')
+            .doc(appointmentId);
         batch.delete(appointmentRef);
         if (kDebugMode) {
           print('Queued appointment for deletion: $appointmentId');
@@ -865,10 +935,7 @@ class OrderService {
   /// Get orders for warehouse (priority_shipment and inventory_packing_list)
   /// with confirmedInstallDate within next 30 days
   Stream<List<models.Order>> getWarehouseOrdersStream() {
-    return _firestore
-        .collection('orders')
-        .snapshots()
-        .map((snapshot) {
+    return _firestore.collection('orders').snapshots().map((snapshot) {
           final now = DateTime.now();
           final thirtyDaysFromNow = now.add(const Duration(days: 30));
 
@@ -876,7 +943,8 @@ class OrderService {
               .map((doc) => models.Order.fromFirestore(doc))
               .where((order) {
                 // Check stage
-                final validStage = order.currentStage == 'priority_shipment' ||
+            final validStage =
+                order.currentStage == 'priority_shipment' ||
                     order.currentStage == 'inventory_packing_list';
                 if (!validStage) return false;
 
@@ -901,14 +969,448 @@ class OrderService {
           return orders;
         });
   }
+
+  // ============================================================
+  // Payment Confirmation Methods
+  // ============================================================
+
+  String _buildPaymentConfirmationLink({
+    required String orderId,
+    required String decision,
+    required String token,
+  }) {
+    final runtimeOrigin = Uri.base.origin;
+    final baseOrigin = runtimeOrigin.isNotEmpty
+        ? runtimeOrigin
+        : (kReleaseMode ? _paymentLinkBaseProd : _paymentLinkBaseLocal);
+
+    final uri = Uri.parse(baseOrigin).replace(
+      path: '/payment-confirmation',
+      queryParameters: {
+        'orderId': orderId,
+        'decision': decision,
+        'token': token,
+      },
+    );
+
+    return uri.toString();
+  }
+
+  String _buildFinancePaymentConfirmationLink({
+    required String orderId,
+    required String token,
+  }) {
+    final runtimeOrigin = Uri.base.origin;
+    final baseOrigin = runtimeOrigin.isNotEmpty
+        ? runtimeOrigin
+        : (kReleaseMode ? _paymentLinkBaseProd : _paymentLinkBaseLocal);
+
+    final uri = Uri.parse(baseOrigin).replace(
+      path: '/finance-payment-confirmation',
+      queryParameters: {'orderId': orderId, 'token': token},
+    );
+
+    return uri.toString();
+  }
+
+  String _buildInvoiceLink({required String orderId, required String token}) {
+    final runtimeOrigin = Uri.base.origin;
+    final baseOrigin = runtimeOrigin.isNotEmpty
+        ? runtimeOrigin
+        : (kReleaseMode ? _paymentLinkBaseProd : _paymentLinkBaseLocal);
+
+    final uri = Uri.parse(baseOrigin).replace(
+      path: '/invoice-view',
+      queryParameters: {'orderId': orderId, 'token': token},
+    );
+
+    return uri.toString();
+  }
+
+  /// Handle payment confirmation response from public link
+  Future<PaymentConfirmationResult> handlePaymentConfirmationResponse({
+    required String orderId,
+    required String decision,
+    required String token,
+  }) async {
+    final normalizedDecision = decision.toLowerCase();
+    if (normalizedDecision != 'yes' && normalizedDecision != 'no') {
+      return const PaymentConfirmationResult(
+        success: false,
+        message: 'Unknown decision.',
+        status: PaymentResponseStatus.invalid,
+      );
+    }
+
+    try {
+      // 1. Fetch the order to validate token
+      final order = await getOrder(orderId);
+
+      if (order == null) {
+        return const PaymentConfirmationResult(
+          success: false,
+          message: 'Order not found.',
+          status: PaymentResponseStatus.invalid,
+        );
+      }
+
+      // 2. Validate token matches
+      if (order.paymentConfirmationToken != token) {
+        return const PaymentConfirmationResult(
+          success: false,
+          message: 'Invalid or expired confirmation link.',
+          status: PaymentResponseStatus.invalid,
+        );
+      }
+
+      // 3. Check if already responded
+      if (order.paymentConfirmationStatus != null &&
+          order.paymentConfirmationStatus != 'pending') {
+        return const PaymentConfirmationResult(
+          success: false,
+          message: 'You have already responded to this confirmation.',
+          status: PaymentResponseStatus.invalid,
+        );
+      }
+
+      // 4. Prepare update data
+      final now = DateTime.now();
+      final isConfirmed = normalizedDecision == 'yes';
+      final newStatus = isConfirmed ? 'confirmed' : 'declined';
+
+      // Create stage history note
+      final stageNote = isConfirmed
+          ? 'Customer ${order.customerName} has made payment, finance department will confirm'
+          : 'We will send a follow up email in 2 days';
+
+      // Add new stage history entry (append to existing history)
+      final updatedHistory = [...order.stageHistory];
+      if (updatedHistory.isNotEmpty) {
+        // Update the last entry's note if it's the current stage and has no exit time
+        final lastEntry = updatedHistory.last;
+        if (lastEntry.stage == 'installed' && lastEntry.exitedAt == null) {
+          updatedHistory[updatedHistory.length -
+              1] = models.OrderStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: lastEntry.exitedAt,
+            note: stageNote,
+          );
+        }
+      }
+
+      // 5. Update order in Firestore
+      await _firestore.collection('orders').doc(orderId).update({
+        'paymentConfirmationStatus': newStatus,
+        'paymentConfirmationRespondedAt': Timestamp.fromDate(now),
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      print('✅ PAYMENT CONFIRMATION: $orderId -> $newStatus');
+      print('📧 Customer: ${order.customerName} (${order.email})');
+
+      if (isConfirmed) {
+        print('🔵 Customer said YES - Sending finance notification...');
+        try {
+          final financeUrl = _buildFinancePaymentConfirmationLink(
+            orderId: order.id,
+            token: order.paymentConfirmationToken ?? token,
+          );
+
+          print('📤 Calling EmailJS.sendFinancePaymentNotification...');
+          final sent = await EmailJSService.sendFinancePaymentNotification(
+            order: order,
+            financeEmail: 'tertiusva@gmail.com',
+            yesUrl: financeUrl,
+            noUrl: financeUrl,
+            yesLabel: 'Payment received',
+            noLabel: '',
+            description:
+                'Please confirm you have received the customer payment.',
+          );
+
+          print('✉️ Finance email sent status: $sent');
+          if (sent) {
+            print('✅ SUCCESS: Finance team notified at tertiusva@gmail.com');
+          } else {
+            print(
+              '❌ FAILED: Finance email was not sent (EmailJS returned false)',
+            );
+          }
+        } catch (e) {
+          print('❌ ERROR sending finance notification: $e');
+        }
+      } else {
+        print('🔴 Customer said NO - Will follow up in 2 days');
+      }
+
+      // 6. Return success result
+      return PaymentConfirmationResult(
+        success: true,
+        message: isConfirmed
+            ? 'Thank you for confirming your payment.'
+            : 'Thank you for your response.',
+        status: isConfirmed
+            ? PaymentResponseStatus.confirmed
+            : PaymentResponseStatus.declined,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error handling payment confirmation response: $e');
+      }
+      return const PaymentConfirmationResult(
+        success: false,
+        message: 'Something went wrong. Please try again later.',
+        status: PaymentResponseStatus.invalid,
+      );
+    }
+  }
+
+  /// Handle finance confirmation (single button) to mark payment as received
+  Future<PaymentConfirmationResult> handleFinancePaymentConfirmation({
+    required String orderId,
+    required String token,
+  }) async {
+    try {
+      final order = await getOrder(orderId);
+
+      if (order == null) {
+        return const PaymentConfirmationResult(
+          success: false,
+          message: 'Order not found.',
+          status: PaymentResponseStatus.invalid,
+        );
+      }
+
+      if (order.paymentConfirmationToken != token) {
+        return const PaymentConfirmationResult(
+          success: false,
+          message: 'Invalid or expired confirmation link.',
+          status: PaymentResponseStatus.invalid,
+        );
+      }
+
+      if (order.paymentConfirmationStatus != 'confirmed') {
+        return const PaymentConfirmationResult(
+          success: false,
+          message: 'Customer has not confirmed payment yet.',
+          status: PaymentResponseStatus.invalid,
+        );
+      }
+
+      // Finance confirms receipt - update stage history
+      final now = DateTime.now();
+      final updatedHistory = [...order.stageHistory];
+      if (updatedHistory.isNotEmpty) {
+        final lastEntry = updatedHistory.last;
+        if (lastEntry.stage == 'installed' && lastEntry.exitedAt == null) {
+          updatedHistory[updatedHistory.length -
+              1] = models.OrderStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: lastEntry.exitedAt,
+            note:
+                'Payment confirmed by finance department. Order completed successfully.',
+          );
+        }
+      }
+
+      await _firestore.collection('orders').doc(orderId).update({
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      print('✅ FINANCE PAYMENT CONFIRMATION: $orderId');
+      print('📧 Order: ${order.customerName} (${order.email})');
+
+      // Send thank you email to customer
+      try {
+        final thankYouEmailSent = await EmailJSService.sendThankYouPaymentEmail(
+          order: order,
+        );
+        if (kDebugMode) {
+          if (thankYouEmailSent) {
+            print('✅ Thank you email sent to customer');
+          } else {
+            print('❌ Failed to send thank you email to customer');
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Error sending thank you email: $e');
+        }
+      }
+
+      return const PaymentConfirmationResult(
+        success: true,
+        message: 'Payment confirmed. Thank you!',
+        status: PaymentResponseStatus.confirmed,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error handling finance payment confirmation: $e');
+      }
+      return const PaymentConfirmationResult(
+        success: false,
+        message: 'Something went wrong. Please try again later.',
+        status: PaymentResponseStatus.invalid,
+      );
+    }
+  }
+
+  /// Send payment confirmation email after customer views invoice
+  /// This is called when the customer clicks the invoice link
+  Future<bool> sendPaymentConfirmationEmailAfterInvoice({
+    required String orderId,
+    required String token,
+  }) async {
+    try {
+      // Get order
+      final order = await getOrder(orderId);
+      if (order == null) {
+        if (kDebugMode) {
+          print('Order not found: $orderId');
+        }
+        return false;
+      }
+
+      // Validate token
+      if (order.paymentConfirmationToken != token) {
+        if (kDebugMode) {
+          print('Invalid token for order: $orderId');
+        }
+        return false;
+      }
+
+      // Check if payment confirmation email was already sent (prevent duplicates)
+      if (order.paymentConfirmationSentAt != null) {
+        // Check if it was sent more than 1 minute ago (to allow retries for recent sends)
+        final timeSinceSent = DateTime.now().difference(
+          order.paymentConfirmationSentAt!,
+        );
+        if (timeSinceSent.inMinutes < 1) {
+          if (kDebugMode) {
+            print(
+              'Payment confirmation email already sent recently for order: $orderId',
+            );
+          }
+          return true; // Already sent, return success
+        }
+      }
+
+      // Calculate remaining payment: total invoice - deposit
+      final totalInvoice = order.items.fold<double>(
+        0,
+        (sum, item) => sum + ((item.price ?? 0) * item.quantity),
+      );
+
+      // Get deposit amount from appointment
+      double depositAmount = 0;
+      try {
+        if (order.appointmentId.isNotEmpty) {
+          final appointmentDoc = await _firestore
+              .collection('appointments')
+              .doc(order.appointmentId)
+              .get();
+
+          if (appointmentDoc.exists) {
+            final appointmentData = appointmentDoc.data();
+            if (appointmentData != null) {
+              final storedDeposit = appointmentData['depositAmount'];
+              if (storedDeposit != null) {
+                depositAmount = (storedDeposit as num).toDouble();
+              } else {
+                // Calculate 40% of total from optInProducts
+                final optInProducts =
+                    appointmentData['optInProducts'] as List<dynamic>?;
+                if (optInProducts != null && optInProducts.isNotEmpty) {
+                  double total = 0;
+                  for (final product in optInProducts) {
+                    if (product is Map<String, dynamic>) {
+                      final price = product['price'];
+                      if (price != null) {
+                        total += (price as num).toDouble();
+                      }
+                    }
+                  }
+                  depositAmount = total * 0.40; // 40% deposit
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error fetching appointment for deposit: $e');
+        }
+      }
+
+      final remainingPayment = totalInvoice - depositAmount;
+
+      // Build yes/no URLs
+      final yesUrl = _buildPaymentConfirmationLink(
+        orderId: order.id,
+        decision: 'yes',
+        token: token,
+      );
+      final noUrl = _buildPaymentConfirmationLink(
+        orderId: order.id,
+        decision: 'no',
+        token: token,
+      );
+
+      // Send payment confirmation email
+      final emailSent = await EmailJSService.sendCustomerPaymentRequest(
+        order: order,
+        yesUrl: yesUrl,
+        noUrl: noUrl,
+        remainingPaymentAmount: remainingPayment,
+      );
+
+      if (emailSent) {
+        // Update order with paymentConfirmationSentAt timestamp
+        await _firestore.collection('orders').doc(orderId).update({
+          'paymentConfirmationSentAt': Timestamp.fromDate(DateTime.now()),
+        });
+
+        if (kDebugMode) {
+          print(
+            'Payment confirmation email sent for order $orderId (remaining: R ${remainingPayment.toStringAsFixed(2)})',
+          );
+        }
+      } else {
+        if (kDebugMode) {
+          print('Failed to send payment confirmation email for order $orderId');
+        }
+      }
+
+      return emailSent;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error sending payment confirmation email after invoice: $e');
+      }
+      return false;
+    }
+  }
+}
+
+enum PaymentResponseStatus { confirmed, declined, invalid }
+
+class PaymentConfirmationResult {
+  final bool success;
+  final String message;
+  final PaymentResponseStatus status;
+
+  const PaymentConfirmationResult({
+    required this.success,
+    required this.message,
+    required this.status,
+  });
 }
 
 /// Result status for installation booking
-enum InstallationBookingStatus {
-  success,
-  invalid,
-  alreadySelected,
-}
+enum InstallationBookingStatus { success, invalid, alreadySelected }
 
 /// Result of installation booking operation
 class InstallationBookingResult {
@@ -922,4 +1424,3 @@ class InstallationBookingResult {
     required this.status,
   });
 }
-

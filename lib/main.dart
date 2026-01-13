@@ -47,6 +47,7 @@ import 'screens/notifications/notification_preferences_screen.dart';
 import 'screens/web/mobile_warning_screen.dart';
 import 'screens/forms/public_form_screen.dart';
 import 'screens/public/deposit_confirmation_screen.dart';
+import 'screens/public/payment_confirmation_screen.dart';
 import 'screens/public/contract_view_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_provider_management_screen.dart';
@@ -91,7 +92,9 @@ import 'services/web_image_service.dart';
 import 'utils/responsive_utils.dart';
 import 'services/firebase/app_settings_service.dart';
 import 'screens/public/finance_deposit_confirmation_screen.dart';
+import 'screens/public/finance_payment_confirmation_screen.dart';
 import 'screens/public/installation_booking_screen.dart';
+import 'screens/public/invoice_view_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -229,7 +232,10 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         currentPath.startsWith('/verify-email') ||
         currentPath.startsWith('/deposit-confirmation') ||
         currentPath.startsWith('/finance-confirmation') ||
+        currentPath.startsWith('/payment-confirmation') ||
+        currentPath.startsWith('/finance-payment-confirmation') ||
         currentPath.startsWith('/installation-booking') ||
+        currentPath.startsWith('/invoice-view') ||
         currentPath.startsWith('/contract');
 
     // Wait for auth to initialize - preserve current route during loading
@@ -363,6 +369,32 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       name: 'finance-confirmation',
       builder: (context, state) => FinanceDepositConfirmationScreen(
         appointmentId: state.uri.queryParameters['appointmentId'],
+        token: state.uri.queryParameters['token'],
+      ),
+    ),
+    GoRoute(
+      path: '/payment-confirmation',
+      name: 'payment-confirmation',
+      builder: (context, state) => PaymentConfirmationScreen(
+        orderId: state.uri.queryParameters['orderId'],
+        decision: state.uri.queryParameters['decision'],
+        token: state.uri.queryParameters['token'],
+      ),
+    ),
+    GoRoute(
+      path: '/finance-payment-confirmation',
+      name: 'finance-payment-confirmation',
+      builder: (context, state) => FinancePaymentConfirmationScreen(
+        orderId: state.uri.queryParameters['orderId'],
+        token: state.uri.queryParameters['token'],
+      ),
+    ),
+    // Invoice view (public - customer views invoice and triggers payment confirmation email)
+    GoRoute(
+      path: '/invoice-view',
+      name: 'invoice-view',
+      builder: (context, state) => InvoiceViewScreen(
+        orderId: state.uri.queryParameters['orderId'],
         token: state.uri.queryParameters['token'],
       ),
     ),

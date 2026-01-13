@@ -417,7 +417,8 @@ class SalesAppointmentService {
           print('📤 Calling EmailJS.sendMarketingDepositNotification...');
           final sent = await EmailJSService.sendMarketingDepositNotification(
             appointment: appointment,
-            marketingEmail: 'info@barefootbytes.com',
+            //marketingEmail: 'info@barefootbytes.com',
+            marketingEmail: 'tertiusva@gmail.com',
             yesUrl: financeUrl,
             noUrl: financeUrl,
             yesLabel: 'Deposit received',
@@ -428,9 +429,12 @@ class SalesAppointmentService {
 
           print('✉️ Finance email sent status: $sent');
           if (sent) {
-            print('✅ SUCCESS: Finance team notified at info@barefootbytes.com');
+            //print('✅ SUCCESS: Finance team notified at info@barefootbytes.com');
+            print('✅ SUCCESS: Finance team notified at tertiusva@gmail.com');
           } else {
-            print('❌ FAILED: Finance email was not sent (EmailJS returned false)');
+            print(
+              '❌ FAILED: Finance email was not sent (EmailJS returned false)',
+            );
           }
         } catch (e) {
           print('❌ ERROR sending finance notification: $e');
@@ -691,11 +695,13 @@ class SalesAppointmentService {
 
       // Convert appointment optInProducts to OrderItems
       final orderItems = appointment.optInProducts
-          .map((product) => models.OrderItem(
-                name: product.name,
-                quantity: 1,
-                price: product.price,
-              ))
+          .map(
+            (product) => models.OrderItem(
+              name: product.name,
+              quantity: 1,
+              price: product.price,
+            ),
+          )
           .toList();
 
       // Determine if this is a priority order (full payment)
@@ -714,7 +720,8 @@ class SalesAppointmentService {
         customerName: appointment.customerName,
         email: appointment.email,
         phone: appointment.phone,
-        currentStage: 'orders_placed', // First stage in Operations stream (updated)
+        currentStage:
+            'orders_placed', // First stage in Operations stream (updated)
         orderDate: now,
         items: orderItems, // Products from the appointment
         createdAt: now,
@@ -768,7 +775,9 @@ class SalesAppointmentService {
       } catch (emailError) {
         // Log but don't fail the conversion if email fails
         if (kDebugMode) {
-          print('Warning: Failed to send installation booking email: $emailError');
+          print(
+            'Warning: Failed to send installation booking email: $emailError',
+          );
         }
       }
 
@@ -782,13 +791,17 @@ class SalesAppointmentService {
               order: createdOrder,
             );
             if (kDebugMode) {
-              print('Priority order notification sent to admin for order $orderId');
+              print(
+                'Priority order notification sent to admin for order $orderId',
+              );
             }
           }
         } catch (emailError) {
           // Log but don't fail the conversion if email fails
           if (kDebugMode) {
-            print('Warning: Failed to send priority order notification: $emailError');
+            print(
+              'Warning: Failed to send priority order notification: $emailError',
+            );
           }
         }
       }

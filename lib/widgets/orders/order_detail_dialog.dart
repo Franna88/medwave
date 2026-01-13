@@ -131,7 +131,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     final userName = authProvider.userName;
 
     // Show date picker starting from customer's earliest selected date or now
-    final initialDate = _currentOrder.earliestSelectedDate ??
+    final initialDate =
+        _currentOrder.earliestSelectedDate ??
         DateTime.now().add(const Duration(days: 21));
 
     final pickedDate = await showDatePicker(
@@ -190,10 +191,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   void _showStockDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => _StockViewDialog(),
-    );
+    showDialog(context: context, builder: (context) => _StockViewDialog());
   }
 
   Future<void> _showDeleteConfirmation() async {
@@ -286,9 +284,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     setState(() => _isDeleting = true);
 
     try {
-      await _orderService.deleteLeadCompletely(
-        orderId: _currentOrder.id,
-      );
+      await _orderService.deleteLeadCompletely(orderId: _currentOrder.id);
 
       if (mounted) {
         // Close the dialog first
@@ -347,6 +343,20 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     ],
                     _buildOrderItemsSection(),
                     const SizedBox(height: 24),
+                    // Show installation proof and signature if they exist
+                    if (_currentOrder.proofOfInstallationPhotoUrls.isNotEmpty ||
+                        _currentOrder.customerSignaturePhotoUrl != null) ...[
+                      if (_currentOrder
+                          .proofOfInstallationPhotoUrls
+                          .isNotEmpty) ...[
+                        _buildInstallationProofSection(),
+                        const SizedBox(height: 24),
+                      ],
+                      if (_currentOrder.customerSignaturePhotoUrl != null) ...[
+                        _buildCustomerSignatureSection(),
+                        const SizedBox(height: 24),
+                      ],
+                    ],
                     _buildInstallationBookingSection(),
                     const SizedBox(height: 24),
                     _buildInstallerSection(),
@@ -434,16 +444,21 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               ? DateFormat('MMM d, yyyy').format(_currentOrder.orderDate!)
               : 'N/A',
         ),
-        _buildInfoRow('Stage', _currentOrder.currentStage.replaceAll('_', ' ').toUpperCase()),
+        _buildInfoRow(
+          'Stage',
+          _currentOrder.currentStage.replaceAll('_', ' ').toUpperCase(),
+        ),
         _buildInfoRow('Time in Stage', _currentOrder.timeInStageDisplay),
       ],
     );
   }
 
   Widget _buildDeliveryInfoSection() {
-    final hasTracking = _currentOrder.trackingNumber != null &&
+    final hasTracking =
+        _currentOrder.trackingNumber != null &&
         _currentOrder.trackingNumber!.isNotEmpty;
-    final hasWaybill = _currentOrder.waybillPhotoUrl != null &&
+    final hasWaybill =
+        _currentOrder.waybillPhotoUrl != null &&
         _currentOrder.waybillPhotoUrl!.isNotEmpty;
 
     return _buildSection(
@@ -454,10 +469,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         if (hasTracking) ...[
           const Text(
             'Tracking Number:',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 14,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
           ),
           const SizedBox(height: 8),
           Container(
@@ -519,10 +531,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         // Waybill Photo
         const Text(
           'Parcel Photo:',
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
         ),
         const SizedBox(height: 8),
         if (hasWaybill) ...[
@@ -548,7 +557,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           child: CircularProgressIndicator(
                             value: loadingProgress.expectedTotalBytes != null
                                 ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
+                                      loadingProgress.expectedTotalBytes!
                                 : null,
                           ),
                         );
@@ -559,8 +568,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.broken_image,
-                                  size: 48, color: Colors.grey[400]),
+                              Icon(
+                                Icons.broken_image,
+                                size: 48,
+                                color: Colors.grey[400],
+                              ),
                               const SizedBox(height: 8),
                               Text(
                                 'Failed to load image',
@@ -616,8 +628,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.image_not_supported,
-                      size: 48, color: Colors.grey[400]),
+                  Icon(
+                    Icons.image_not_supported,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'Parcel photo not available',
@@ -652,7 +667,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       child: CircularProgressIndicator(
                         value: loadingProgress.expectedTotalBytes != null
                             ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
+                                  loadingProgress.expectedTotalBytes!
                             : null,
                       ),
                     );
@@ -664,8 +679,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.error_outline,
-                              size: 64, color: Colors.red[300]),
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red[300],
+                          ),
                           const SizedBox(height: 16),
                           const Text(
                             'Failed to load image',
@@ -696,6 +714,309 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInstallationProofSection() {
+    final proofUrls = _currentOrder.proofOfInstallationPhotoUrls
+        .where((url) => url.isNotEmpty)
+        .toList();
+    final hasProof = proofUrls.isNotEmpty;
+
+    return _buildSection(
+      title: 'Proof of Installation',
+      icon: Icons.photo_camera,
+      children: [
+        Text(
+          'Installation Photo${proofUrls.length > 1 ? 's' : ''}:',
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        if (hasProof) ...[
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: proofUrls.asMap().entries.map((entry) {
+                final index = entry.key;
+                final url = entry.value;
+                return Container(
+                  margin: EdgeInsets.only(
+                    right: index < proofUrls.length - 1 ? 12 : 0,
+                  ),
+                  width: 200,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showFullImage(url),
+                        child: Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.grey.shade300,
+                              width: 2,
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.network(
+                                  url,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            value:
+                                                loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        );
+                                      },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey.shade200,
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.broken_image,
+                                            size: 48,
+                                            color: Colors.grey[400],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Failed to load',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                                Positioned(
+                                  bottom: 8,
+                                  right: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.6),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.zoom_in,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Tap to enlarge',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (proofUrls.length > 1) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Image ${index + 1}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ] else ...[
+          Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.image_not_supported,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Installation proof not available',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCustomerSignatureSection() {
+    final hasSignature =
+        _currentOrder.customerSignaturePhotoUrl != null &&
+        _currentOrder.customerSignaturePhotoUrl!.isNotEmpty;
+
+    return _buildSection(
+      title: 'Customer Signature',
+      icon: Icons.draw,
+      children: [
+        const Text(
+          'Signature Photo:',
+          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        if (hasSignature) ...[
+          GestureDetector(
+            onTap: () =>
+                _showFullImage(_currentOrder.customerSignaturePhotoUrl!),
+            child: Container(
+              height: 200,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300, width: 2),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      _currentOrder.customerSignaturePhotoUrl!,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey.shade200,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.broken_image,
+                                size: 48,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Failed to load image',
+                                style: TextStyle(color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    Positioned(
+                      bottom: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.zoom_in, color: Colors.white, size: 16),
+                            SizedBox(width: 4),
+                            Text(
+                              'Tap to enlarge',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ] else ...[
+          Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.image_not_supported,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Customer signature not available',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -754,13 +1075,19 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     Row(
                       children: [
                         if (allPicked)
-                          Icon(Icons.check_circle, size: 16, color: Colors.green[700]),
+                          Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: Colors.green[700],
+                          ),
                         const SizedBox(width: 4),
                         Text(
                           '$pickedCount / $totalCount items',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: allPicked ? Colors.green[800] : Colors.blue[800],
+                            color: allPicked
+                                ? Colors.green[800]
+                                : Colors.blue[800],
                           ),
                         ),
                       ],
@@ -805,13 +1132,17 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 );
 
                 return Container(
-                  margin: EdgeInsets.only(bottom: index < items.length - 1 ? 8 : 0),
+                  margin: EdgeInsets.only(
+                    bottom: index < items.length - 1 ? 8 : 0,
+                  ),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isPicked ? Colors.green.shade50 : Colors.white,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: isPicked ? Colors.green.shade300 : Colors.grey.shade300,
+                      color: isPicked
+                          ? Colors.green.shade300
+                          : Colors.grey.shade300,
                       width: isPicked ? 2 : 1,
                     ),
                   ),
@@ -832,7 +1163,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                             '${index + 1}',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: isPicked ? Colors.green[700] : Colors.grey[600],
+                              color: isPicked
+                                  ? Colors.green[700]
+                                  : Colors.grey[600],
                             ),
                           ),
                         ),
@@ -848,8 +1181,12 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                               item.name,
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
-                                color: isPicked ? Colors.grey[600] : Colors.black87,
-                                decoration: isPicked ? TextDecoration.lineThrough : null,
+                                color: isPicked
+                                    ? Colors.grey[600]
+                                    : Colors.black87,
+                                decoration: isPicked
+                                    ? TextDecoration.lineThrough
+                                    : null,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -867,35 +1204,41 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       // Stock status badge
                       if (hasStock)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: stockItem.isOutOfStock
                                 ? Colors.red.shade100
                                 : stockItem.isLowStock
-                                    ? Colors.orange.shade100
-                                    : Colors.green.shade100,
+                                ? Colors.orange.shade100
+                                : Colors.green.shade100,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             stockItem.isOutOfStock
                                 ? 'Out of Stock'
                                 : stockItem.isLowStock
-                                    ? 'Low (${stockItem.currentQty})'
-                                    : 'In Stock (${stockItem.currentQty})',
+                                ? 'Low (${stockItem.currentQty})'
+                                : 'In Stock (${stockItem.currentQty})',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                               color: stockItem.isOutOfStock
                                   ? Colors.red[700]
                                   : stockItem.isLowStock
-                                      ? Colors.orange[700]
-                                      : Colors.green[700],
+                                  ? Colors.orange[700]
+                                  : Colors.green[700],
                             ),
                           ),
                         )
                       else
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(12),
@@ -920,12 +1263,18 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           color: isPicked ? Colors.green : Colors.transparent,
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color: isPicked ? Colors.green : Colors.grey.shade400,
+                            color: isPicked
+                                ? Colors.green
+                                : Colors.grey.shade400,
                             width: 2,
                           ),
                         ),
                         child: isPicked
-                            ? const Icon(Icons.check, color: Colors.white, size: 16)
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 16,
+                              )
                             : null,
                       ),
                     ],
@@ -950,7 +1299,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         // Booking status
         Row(
           children: [
-            const Text('Status: ', style: TextStyle(fontWeight: FontWeight.w500)),
+            const Text(
+              'Status: ',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
             _buildStatusChip(_currentOrder.installBookingStatus),
           ],
         ),
@@ -1013,14 +1365,16 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                   const SizedBox(height: 4),
                   Text(
                     hasConfirmedDate
-                        ? DateFormat('EEEE, MMMM d, yyyy')
-                            .format(_currentOrder.confirmedInstallDate!)
+                        ? DateFormat(
+                            'EEEE, MMMM d, yyyy',
+                          ).format(_currentOrder.confirmedInstallDate!)
                         : 'Not set',
                     style: TextStyle(
                       fontSize: 16,
                       color: hasConfirmedDate ? Colors.blue[700] : Colors.grey,
-                      fontWeight:
-                          hasConfirmedDate ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: hasConfirmedDate
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                 ],
@@ -1189,10 +1543,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           const SizedBox(height: 8),
           Text(
             'Last email sent: ${DateFormat('MMM d, yyyy h:mm a').format(_currentOrder.installBookingEmailSentAt!)}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
         ],
       ],
@@ -1204,7 +1555,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       title: 'Notes',
       icon: Icons.note,
       children: [
-        ..._currentOrder.notes.reversed.take(5).map(
+        ..._currentOrder.notes.reversed
+            .take(5)
+            .map(
               (note) => Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(12),
@@ -1216,17 +1569,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      note.text,
-                      style: const TextStyle(fontSize: 14),
-                    ),
+                    Text(note.text, style: const TextStyle(fontSize: 14)),
                     const SizedBox(height: 4),
                     Text(
                       '${note.createdByName ?? 'Unknown'} • ${DateFormat('MMM d, h:mm a').format(note.createdAt)}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -1289,10 +1636,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             const SizedBox(width: 8),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -1312,19 +1656,13 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             width: 120,
             child: Text(
               label,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
             ),
           ),
         ],
@@ -1389,8 +1727,9 @@ class _StockViewDialog extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppTheme.primaryColor,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
               ),
               child: Row(
                 children: [
@@ -1442,15 +1781,15 @@ class _StockViewDialog extends StatelessWidget {
                           color: stock.isOutOfStock
                               ? Colors.red.shade50
                               : stock.isLowStock
-                                  ? Colors.orange.shade50
-                                  : Colors.green.shade50,
+                              ? Colors.orange.shade50
+                              : Colors.green.shade50,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: stock.isOutOfStock
                                 ? Colors.red.shade200
                                 : stock.isLowStock
-                                    ? Colors.orange.shade200
-                                    : Colors.green.shade200,
+                                ? Colors.orange.shade200
+                                : Colors.green.shade200,
                           ),
                         ),
                         child: Row(
@@ -1486,8 +1825,8 @@ class _StockViewDialog extends StatelessWidget {
                                     color: stock.isOutOfStock
                                         ? Colors.red[700]
                                         : stock.isLowStock
-                                            ? Colors.orange[700]
-                                            : Colors.green[700],
+                                        ? Colors.orange[700]
+                                        : Colors.green[700],
                                   ),
                                 ),
                                 Text(
@@ -1497,8 +1836,8 @@ class _StockViewDialog extends StatelessWidget {
                                     color: stock.isOutOfStock
                                         ? Colors.red[700]
                                         : stock.isLowStock
-                                            ? Colors.orange[700]
-                                            : Colors.green[700],
+                                        ? Colors.orange[700]
+                                        : Colors.green[700],
                                   ),
                                 ),
                               ],
@@ -1517,4 +1856,3 @@ class _StockViewDialog extends StatelessWidget {
     );
   }
 }
-

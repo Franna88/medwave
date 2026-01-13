@@ -45,7 +45,8 @@ const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 const MARKETING_EMAIL =
   functions.config().marketing?.deposit_email ||
   process.env.MARKETING_EMAIL ||
-  'info@barefootbytes.com';
+  //'info@barefootbytes.com';
+  'tertiusva@gmail.com';
 
 // Validate API key is configured
 if (!GHL_API_KEY) {
