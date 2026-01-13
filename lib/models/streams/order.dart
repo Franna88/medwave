@@ -50,6 +50,7 @@ class Order {
   final String? createdByName;
   final String? convertedToTicketId; // Set when moved to Support
   final double? formScore;
+  final Map<String, String>? optInQuestions; // Questionnaire from opt-in stage
 
   // Installation booking fields
   final String? installBookingToken; // Security token for email link
@@ -106,6 +107,7 @@ class Order {
     this.createdByName,
     this.convertedToTicketId,
     this.formScore,
+    this.optInQuestions,
     // Installation booking fields
     this.installBookingToken,
     this.customerSelectedDates = const [],
@@ -195,6 +197,9 @@ class Order {
       formScore: map['formScore'] != null
           ? (map['formScore'] as num?)?.toDouble()
           : null,
+      optInQuestions: (map['optInQuestions'] as Map<String, dynamic>?)?.map(
+        (k, v) => MapEntry(k, v.toString()),
+      ),
       // Installation booking fields
       installBookingToken: map['installBookingToken']?.toString(),
       customerSelectedDates:
@@ -269,6 +274,7 @@ class Order {
       'createdByName': createdByName,
       'convertedToTicketId': convertedToTicketId,
       'formScore': formScore,
+      if (optInQuestions != null) 'optInQuestions': optInQuestions,
       // Installation booking fields
       'installBookingToken': installBookingToken,
       'customerSelectedDates': customerSelectedDates
@@ -329,6 +335,7 @@ class Order {
     String? createdByName,
     String? convertedToTicketId,
     double? formScore,
+    Map<String, String>? optInQuestions,
     // Installation booking fields
     String? installBookingToken,
     List<DateTime>? customerSelectedDates,
@@ -378,6 +385,7 @@ class Order {
       createdByName: createdByName ?? this.createdByName,
       convertedToTicketId: convertedToTicketId ?? this.convertedToTicketId,
       formScore: formScore ?? this.formScore,
+      optInQuestions: optInQuestions ?? this.optInQuestions,
       // Installation booking fields
       installBookingToken: installBookingToken ?? this.installBookingToken,
       customerSelectedDates:

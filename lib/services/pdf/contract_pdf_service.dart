@@ -521,11 +521,26 @@ class ContractPdfService {
                 ),
               ),
               pw.SizedBox(height: 8),
-              pw.Text('Blaaukrans Office Park', style: PdfStyles.bodyText),
-              pw.Text('Jeffreys Bay, 6330', style: PdfStyles.bodyText),
-              pw.Text('Call: +27 79 427 2486', style: PdfStyles.bodyText),
-              pw.Text('info@medwavegroup.com', style: PdfStyles.bodyText),
-              pw.Text('www.medwavegroup.com', style: PdfStyles.bodyText),
+              pw.Text(
+                'Blaaukrans Office Park',
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+              ),
+              pw.Text(
+                'Jeffreys Bay, 6330',
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+              ),
+              pw.Text(
+                'Call: +27 79 427 2486',
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+              ),
+              pw.Text(
+                'info@medwavegroup.com',
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+              ),
+              pw.Text(
+                'www.medwavegroup.com',
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+              ),
             ],
           ),
         ),
@@ -562,8 +577,20 @@ class ContractPdfService {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text('$label ', style: PdfStyles.labelText),
-        pw.Expanded(child: pw.Text(value, style: PdfStyles.bodyText)),
+        pw.Text(
+          '$label ',
+          style: pw.TextStyle(
+            fontSize: 12,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfStyles.grayColor,
+          ),
+        ),
+        pw.Expanded(
+          child: pw.Text(
+            value,
+            style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+          ),
+        ),
       ],
     );
   }

@@ -343,6 +343,12 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     ],
                     _buildOrderItemsSection(),
                     const SizedBox(height: 24),
+                    // Show business information if questionnaire data exists
+                    if (_currentOrder.optInQuestions != null &&
+                        _currentOrder.optInQuestions!.isNotEmpty) ...[
+                      _buildBusinessInformationSection(),
+                      const SizedBox(height: 24),
+                    ],
                     // Show installation proof and signature if they exist
                     if (_currentOrder.proofOfInstallationPhotoUrls.isNotEmpty ||
                         _currentOrder.customerSignaturePhotoUrl != null) ...[
@@ -438,6 +444,12 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       children: [
         _buildInfoRow('Email', _currentOrder.email),
         _buildInfoRow('Phone', _currentOrder.phone),
+        if (_currentOrder.optInQuestions?['Shipping address'] != null &&
+            _currentOrder.optInQuestions!['Shipping address']!.isNotEmpty)
+          _buildInfoRow(
+            'Shipping Address',
+            _currentOrder.optInQuestions!['Shipping address']!,
+          ),
         _buildInfoRow(
           'Order Date',
           _currentOrder.orderDate != null
@@ -1284,6 +1296,18 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             );
           }),
         ],
+      ],
+    );
+  }
+
+  Widget _buildBusinessInformationSection() {
+    return _buildSection(
+      title: 'Business Information',
+      icon: Icons.business_center,
+      children: [
+        ..._currentOrder.optInQuestions!.entries.map((entry) {
+          return _buildInfoRow(entry.key, entry.value);
+        }).toList(),
       ],
     );
   }

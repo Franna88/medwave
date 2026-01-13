@@ -295,14 +295,24 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                         _currentAppointment.depositPaid)
                       const SizedBox(height: 24),
 
-                    // Opt In Products (whenever present)
-                    if (_currentAppointment.optInProducts.isNotEmpty ||
-                        (_currentAppointment.optInNote?.isNotEmpty ??
-                            false)) ...[
+                    // Opt In Products & Questionnaire (show for opt-in stage and all forward stages)
+                    if (_isAtOptInOrBeyond()) ...[
+                      // Opt In Products (always show for opt-in stage and beyond)
                       _buildSection('Opt In Products', Icons.shopping_cart, [
                         if (_currentAppointment.optInProducts.isNotEmpty)
                           _buildOptInProductsList(
                             _currentAppointment.optInProducts,
+                          )
+                        else
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'No products selected yet.',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
                           ),
                         if (_currentAppointment.optInNote?.isNotEmpty ?? false)
                           Padding(
@@ -315,69 +325,63 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                           ),
                       ]),
                       const SizedBox(height: 24),
-                    ],
 
-                    // Opt In Questionnaire (always show for opt-in stage)
-                    if (_currentAppointment.currentStage == 'opt_in') ...[
-                      _buildSection(
-                        'Opt-In Questionnaire',
-                        Icons.question_answer,
-                        [
-                          // Show existing data or empty state message
-                          if (_currentAppointment.optInQuestions != null &&
-                              _currentAppointment.optInQuestions!.isNotEmpty)
-                            ..._currentAppointment.optInQuestions!.entries.map((
-                              entry,
-                            ) {
-                              return _buildInfoRow(
-                                Icons.check_circle_outline,
-                                entry.key,
-                                entry.value,
-                              );
-                            }).toList()
-                          else
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Text(
-                                'No questionnaire data yet. Click button below to add.',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-                          // Add/Edit button (always visible for opt-in stage)
+                      // Opt In Questionnaire (always show for opt-in stage and beyond)
+                      _buildSection('Opt-In Questionnaire', Icons.question_answer, [
+                        // Show existing data or empty state message
+                        if (_currentAppointment.optInQuestions != null &&
+                            _currentAppointment.optInQuestions!.isNotEmpty)
+                          ..._currentAppointment.optInQuestions!.entries.map((
+                            entry,
+                          ) {
+                            return _buildInfoRow(
+                              Icons.check_circle_outline,
+                              entry.key,
+                              entry.value,
+                            );
+                          }).toList()
+                        else
                           Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: ElevatedButton.icon(
-                              onPressed: _showEditQuestionnaireDialog,
-                              icon: Icon(
-                                (_currentAppointment.optInQuestions == null ||
-                                        _currentAppointment
-                                            .optInQuestions!
-                                            .isEmpty)
-                                    ? Icons.add
-                                    : Icons.edit,
-                                size: 18,
-                              ),
-                              label: Text(
-                                (_currentAppointment.optInQuestions == null ||
-                                        _currentAppointment
-                                            .optInQuestions!
-                                            .isEmpty)
-                                    ? 'Add Questionnaire'
-                                    : 'Edit Questionnaire',
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'No questionnaire data yet. Click button below to add.',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontStyle: FontStyle.italic,
                               ),
                             ),
                           ),
-                        ],
-                      ),
+                        // Add/Edit button (always visible for opt-in stage and beyond)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: ElevatedButton.icon(
+                            onPressed: _showEditQuestionnaireDialog,
+                            icon: Icon(
+                              (_currentAppointment.optInQuestions == null ||
+                                      _currentAppointment
+                                          .optInQuestions!
+                                          .isEmpty)
+                                  ? Icons.add
+                                  : Icons.edit,
+                              size: 18,
+                            ),
+                            label: Text(
+                              (_currentAppointment.optInQuestions == null ||
+                                      _currentAppointment
+                                          .optInQuestions!
+                                          .isEmpty)
+                                  ? 'Add Questionnaire'
+                                  : 'Edit Questionnaire',
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ]),
                       const SizedBox(height: 24),
                     ],
 
@@ -913,6 +917,41 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
       ),
     );
     return stage.name;
+  }
+
+  /// Check if appointment is at opt_in stage or any stage after it
+  bool _isAtOptInOrBeyond() {
+    try {
+      final optInStage = widget.stages.firstWhere(
+        (s) => s.id == 'opt_in',
+        orElse: () => StreamStage(
+          id: 'opt_in',
+          name: 'Opt In',
+          position: 0,
+          color: '#2196F3',
+          streamType: StreamType.sales,
+        ),
+      );
+
+      final currentStage = widget.stages.firstWhere(
+        (s) => s.id == _currentAppointment.currentStage,
+        orElse: () => StreamStage(
+          id: _currentAppointment.currentStage,
+          name: _currentAppointment.currentStage,
+          position: 0,
+          color: '#2196F3',
+          streamType: StreamType.sales,
+        ),
+      );
+
+      return currentStage.position >= optInStage.position;
+    } catch (e) {
+      // Fallback: check by stage ID if position comparison fails
+      return _currentAppointment.currentStage == 'opt_in' ||
+          _currentAppointment.currentStage == 'deposit_requested' ||
+          _currentAppointment.currentStage == 'deposit_made' ||
+          _currentAppointment.currentStage == 'send_to_operations';
+    }
   }
 
   String _formatDuration(Duration duration) {
