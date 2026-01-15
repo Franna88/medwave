@@ -232,7 +232,8 @@ class OrderService {
 
       // Send out for delivery email when moving to that stage
       // Skip for split orders (Order 2) - email was already sent with Order 1
-      if (newStage == 'out_for_delivery' && updatedOrder.splitFromOrderId == null) {
+      if (newStage == 'out_for_delivery' &&
+          updatedOrder.splitFromOrderId == null) {
         // Always send email when order moves to out_for_delivery stage
         // Email template handles missing data gracefully
         final emailSent = await EmailJSService.sendOutForDeliveryEmail(
@@ -243,7 +244,8 @@ class OrderService {
             'Out for delivery email ${emailSent ? 'sent' : 'failed'} for order $orderId',
           );
         }
-      } else if (newStage == 'out_for_delivery' && updatedOrder.splitFromOrderId != null) {
+      } else if (newStage == 'out_for_delivery' &&
+          updatedOrder.splitFromOrderId != null) {
         if (kDebugMode) {
           print(
             'Skipping out for delivery email for split order $orderId (email already sent with Order 1)',
@@ -253,7 +255,8 @@ class OrderService {
 
       // Send invoice email if moving to installed stage
       // Skip for split orders (Order 2) - invoice email was already sent with Order 1
-      if (movedFromOutForDeliveryToInstalled && updatedOrder.splitFromOrderId == null) {
+      if (movedFromOutForDeliveryToInstalled &&
+          updatedOrder.splitFromOrderId == null) {
         try {
           // Fetch deposit amount and shipping address from appointment
           double depositAmount = 0;
@@ -1586,8 +1589,8 @@ class OrderService {
               itemName: item.name,
               quantity: item.quantity,
               trackingNumber: originalOrder.trackingNumber,
-              waybillNumber:
-                  originalOrder.trackingNumber, // Use trackingNumber as waybill number
+              waybillNumber: originalOrder
+                  .trackingNumber, // Use trackingNumber as waybill number
               waybillPhotoUrl: originalOrder.waybillPhotoUrl,
             ),
           );
@@ -1656,7 +1659,9 @@ class OrderService {
       final newOrderId = await createOrder(newOrder);
 
       // Update original order (Order 1) to remove overridden items
-      final updatedPickedItems = Map<String, bool>.from(originalOrder.pickedItems);
+      final updatedPickedItems = Map<String, bool>.from(
+        originalOrder.pickedItems,
+      );
       // Remove overridden items from pickedItems map
       for (final itemName in overriddenItemNames) {
         updatedPickedItems.remove(itemName);
@@ -1673,7 +1678,8 @@ class OrderService {
 
       final updatedOrder = originalOrder.copyWith(
         items: remainingItems, // Remove overridden items
-        pickedItems: updatedPickedItems, // Remove overridden items from pickedItems
+        pickedItems:
+            updatedPickedItems, // Remove overridden items from pickedItems
         notes: [...originalOrder.notes, splitNote],
         updatedAt: now,
       );

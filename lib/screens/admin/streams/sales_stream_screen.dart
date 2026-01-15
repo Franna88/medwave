@@ -636,13 +636,14 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
               try {
                 // Search both appointments and leads simultaneously (parallel search)
                 final searchQuery = query.trim();
-                
+
                 final results = await Future.wait([
                   _appointmentService.searchAppointments(searchQuery),
                   _leadService.searchLeadsAcrossAllChannels(searchQuery),
                 ]);
 
-                final appointments = results[0] as List<models.SalesAppointment>;
+                final appointments =
+                    results[0] as List<models.SalesAppointment>;
                 final leads = results[1] as List<Lead>;
 
                 // Sort results by relevance (exact matches first, then partial)
@@ -669,9 +670,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                   isSearching = false;
                 });
                 if (mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Error searching: $e')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error searching: $e')),
+                  );
                 }
               }
             });
@@ -706,7 +707,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                         child: CircularProgressIndicator(),
                       ),
                     )
-                  else if (appointmentResults.isNotEmpty || leadResults.isNotEmpty)
+                  else if (appointmentResults.isNotEmpty ||
+                      leadResults.isNotEmpty)
                     SizedBox(
                       height: 300,
                       child: SingleChildScrollView(
@@ -716,7 +718,11 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                             if (appointmentResults.isNotEmpty) ...[
                               Row(
                                 children: [
-                                  Icon(Icons.event, size: 16, color: AppTheme.primaryColor),
+                                  Icon(
+                                    Icons.event,
+                                    size: 16,
+                                    color: AppTheme.primaryColor,
+                                  ),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Appointments (${appointmentResults.length})',
@@ -729,7 +735,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                               ),
                               const SizedBox(height: 8),
                               ...appointmentResults.map((apt) {
-                                final isSelected = selectedAppointmentId == apt.id;
+                                final isSelected =
+                                    selectedAppointmentId == apt.id;
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 4),
                                   decoration: BoxDecoration(
@@ -765,7 +772,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.primaryColor.withOpacity(0.1),
+                                        color: AppTheme.primaryColor
+                                            .withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
@@ -790,12 +798,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                   ),
                                 );
                               }),
-                              if (leadResults.isNotEmpty) const SizedBox(height: 16),
+                              if (leadResults.isNotEmpty)
+                                const SizedBox(height: 16),
                             ],
                             if (leadResults.isNotEmpty) ...[
                               Row(
                                 children: [
-                                  Icon(Icons.person, size: 16, color: Colors.orange),
+                                  Icon(
+                                    Icons.person,
+                                    size: 16,
+                                    color: Colors.orange,
+                                  ),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Leads (${leadResults.length})',
@@ -876,7 +889,11 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                       child: Center(
                         child: Column(
                           children: [
-                            Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+                            Icon(
+                              Icons.search_off,
+                              size: 48,
+                              color: Colors.grey[400],
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               'No results found',

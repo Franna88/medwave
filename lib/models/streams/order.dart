@@ -89,11 +89,12 @@ class Order {
   final bool isPriorityOrder;
 
   // Order splitting fields
-  final String? splitFromOrderId; // Reference to parent order when this is a split order
+  final String?
+  splitFromOrderId; // Reference to parent order when this is a split order
   final List<ShippedItemFromParent>
-      shippedItemsFromParentOrder; // Items already shipped in parent order with waybill info
+  shippedItemsFromParentOrder; // Items already shipped in parent order with waybill info
   final List<OrderItem>
-      remainingItemsFromParentOrder; // Items from parent order that were NOT overridden (stayed in Order 1)
+  remainingItemsFromParentOrder; // Items from parent order that were NOT overridden (stayed in Order 1)
 
   Order({
     required this.id,
@@ -262,8 +263,9 @@ class Order {
       splitFromOrderId: map['splitFromOrderId']?.toString(),
       shippedItemsFromParentOrder:
           (map['shippedItemsFromParentOrder'] as List<dynamic>?)
-              ?.map((i) =>
-                  ShippedItemFromParent.fromMap(i as Map<String, dynamic>))
+              ?.map(
+                (i) => ShippedItemFromParent.fromMap(i as Map<String, dynamic>),
+              )
               .toList() ??
           [],
       remainingItemsFromParentOrder:
@@ -338,10 +340,12 @@ class Order {
       'isPriorityOrder': isPriorityOrder,
       // Order splitting fields
       'splitFromOrderId': splitFromOrderId,
-      'shippedItemsFromParentOrder':
-          shippedItemsFromParentOrder.map((i) => i.toMap()).toList(),
-      'remainingItemsFromParentOrder':
-          remainingItemsFromParentOrder.map((i) => i.toMap()).toList(),
+      'shippedItemsFromParentOrder': shippedItemsFromParentOrder
+          .map((i) => i.toMap())
+          .toList(),
+      'remainingItemsFromParentOrder': remainingItemsFromParentOrder
+          .map((i) => i.toMap())
+          .toList(),
     };
   }
 
@@ -567,7 +571,8 @@ class ShippedItemFromParent {
   final String itemName;
   final int quantity;
   final String? trackingNumber; // Tracking number from Order 1
-  final String? waybillNumber; // Waybill number from Order 1 - MUST be prominently displayed
+  final String?
+  waybillNumber; // Waybill number from Order 1 - MUST be prominently displayed
   final String? waybillPhotoUrl; // Waybill photo URL from Order 1
 
   ShippedItemFromParent({

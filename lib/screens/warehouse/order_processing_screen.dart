@@ -76,9 +76,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     } catch (e) {
       setState(() => _isMovingToPickList = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -87,7 +87,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     // If trying to pick an item, validate stock availability
     if (picked) {
       final inventoryProvider = context.read<InventoryProvider>();
-      
+
       // Check if item exists in inventory
       final hasStock = inventoryProvider.allStockItems.any(
         (s) => s.productName.toLowerCase() == itemName.toLowerCase(),
@@ -165,9 +165,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
         _pickedItems[itemName] = !picked;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving: $e')));
       }
     }
   }
@@ -236,9 +236,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -254,9 +254,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
             const LinearProgressIndicator()
           else
             _buildProgressBar(),
-          Expanded(
-            child: _buildItemsList(),
-          ),
+          Expanded(child: _buildItemsList()),
           _buildBottomBar(),
         ],
       ),
@@ -272,10 +270,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            AppTheme.headerGradientStart,
-            AppTheme.headerGradientEnd,
-          ],
+          colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
         ),
       ),
       child: SafeArea(
@@ -315,7 +310,10 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
@@ -323,11 +321,17 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.calendar_today, color: Colors.white, size: 14),
+                      const Icon(
+                        Icons.calendar_today,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         _currentOrder.confirmedInstallDate != null
-                            ? dateFormat.format(_currentOrder.confirmedInstallDate!)
+                            ? dateFormat.format(
+                                _currentOrder.confirmedInstallDate!,
+                              )
                             : 'No date',
                         style: const TextStyle(
                           color: Colors.white,
@@ -368,7 +372,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: _allItemsPicked ? AppTheme.successColor : AppTheme.primaryColor,
+                  color: _allItemsPicked
+                      ? AppTheme.successColor
+                      : AppTheme.primaryColor,
                 ),
               ),
             ],
@@ -390,7 +396,11 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.check_circle, color: AppTheme.successColor, size: 16),
+                Icon(
+                  Icons.check_circle,
+                  color: AppTheme.successColor,
+                  size: 16,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'All items picked!',
@@ -439,7 +449,11 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.orange[700],
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -469,10 +483,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                     Expanded(
                       child: Text(
                         'This order has no items to pick.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[700],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                       ),
                     ),
                   ],
@@ -525,24 +536,28 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
             color: isPicked
                 ? Colors.white
                 : isOutOfStock
-                    ? Colors.red.shade50
-                    : Colors.white,
+                ? Colors.red.shade50
+                : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isPicked
                   ? AppTheme.successColor.withOpacity(0.5)
                   : isOutOfStock
-                      ? Colors.red.shade300
-                      : AppTheme.borderColor,
-              width: isPicked ? 2 : isOutOfStock ? 2 : 1,
+                  ? Colors.red.shade300
+                  : AppTheme.borderColor,
+              width: isPicked
+                  ? 2
+                  : isOutOfStock
+                  ? 2
+                  : 1,
             ),
             boxShadow: [
               BoxShadow(
                 color: isPicked
                     ? AppTheme.successColor.withOpacity(0.1)
                     : isOutOfStock
-                        ? Colors.red.withOpacity(0.1)
-                        : Colors.black.withOpacity(0.03),
+                    ? Colors.red.withOpacity(0.1)
+                    : Colors.black.withOpacity(0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -552,7 +567,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
-              onTap: canPick ? () => _toggleItemPicked(item.name, !isPicked) : null,
+              onTap: canPick
+                  ? () => _toggleItemPicked(item.name, !isPicked)
+                  : null,
               child: Opacity(
                 opacity: canPick ? 1.0 : 0.6,
                 child: Padding(
@@ -566,8 +583,8 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                           color: isPicked
                               ? AppTheme.successColor.withOpacity(0.1)
                               : isOutOfStock
-                                  ? Colors.red.shade100
-                                  : AppTheme.primaryColor.withOpacity(0.1),
+                              ? Colors.red.shade100
+                              : AppTheme.primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Center(
@@ -579,8 +596,8 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                               color: isPicked
                                   ? AppTheme.successColor
                                   : isOutOfStock
-                                      ? Colors.red[700]
-                                      : AppTheme.primaryColor,
+                                  ? Colors.red[700]
+                                  : AppTheme.primaryColor,
                             ),
                           ),
                         ),
@@ -599,12 +616,15 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                       color: isPicked
-                                          ? AppTheme.secondaryColor.withOpacity(0.6)
+                                          ? AppTheme.secondaryColor.withOpacity(
+                                              0.6,
+                                            )
                                           : isOutOfStock
-                                              ? Colors.red[800]
-                                              : AppTheme.textColor,
-                                      decoration:
-                                          isPicked ? TextDecoration.lineThrough : null,
+                                          ? Colors.red[800]
+                                          : AppTheme.textColor,
+                                      decoration: isPicked
+                                          ? TextDecoration.lineThrough
+                                          : null,
                                     ),
                                   ),
                                 ),
@@ -619,31 +639,31 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                                       color: isOutOfStock
                                           ? Colors.red.shade100
                                           : isLowStock
-                                              ? Colors.orange.shade100
-                                              : Colors.green.shade100,
+                                          ? Colors.orange.shade100
+                                          : Colors.green.shade100,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: isOutOfStock
                                             ? Colors.red.shade300
                                             : isLowStock
-                                                ? Colors.orange.shade300
-                                                : Colors.green.shade300,
+                                            ? Colors.orange.shade300
+                                            : Colors.green.shade300,
                                       ),
                                     ),
                                     child: Text(
                                       isOutOfStock
                                           ? 'Out of Stock'
                                           : isLowStock
-                                              ? 'Low ($stockQty)'
-                                              : 'In Stock ($stockQty)',
+                                          ? 'Low ($stockQty)'
+                                          : 'In Stock ($stockQty)',
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
                                         color: isOutOfStock
                                             ? Colors.red[700]
                                             : isLowStock
-                                                ? Colors.orange[700]
-                                                : Colors.green[700],
+                                            ? Colors.orange[700]
+                                            : Colors.green[700],
                                       ),
                                     ),
                                   ),
@@ -662,7 +682,11 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                               const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  Icon(Icons.block, size: 14, color: Colors.red[700]),
+                                  Icon(
+                                    Icons.block,
+                                    size: 14,
+                                    color: Colors.red[700],
+                                  ),
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
@@ -688,23 +712,31 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                           color: isPicked
                               ? AppTheme.successColor
                               : isOutOfStock
-                                  ? Colors.red.shade200
-                                  : Colors.transparent,
+                              ? Colors.red.shade200
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isPicked
                                 ? AppTheme.successColor
                                 : isOutOfStock
-                                    ? Colors.red.shade400
-                                    : AppTheme.borderColor,
+                                ? Colors.red.shade400
+                                : AppTheme.borderColor,
                             width: 2,
                           ),
                         ),
                         child: isPicked
-                            ? const Icon(Icons.check, color: Colors.white, size: 20)
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 20,
+                              )
                             : isOutOfStock
-                                ? Icon(Icons.block, color: Colors.red[700], size: 18)
-                                : null,
+                            ? Icon(
+                                Icons.block,
+                                color: Colors.red[700],
+                                size: 18,
+                              )
+                            : null,
                       ),
                     ],
                   ),
@@ -735,7 +767,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: _isLoading || !_allItemsPicked ? null : _proceedToShipping,
+            onPressed: _isLoading || !_allItemsPicked
+                ? null
+                : _proceedToShipping,
             icon: _isLoading
                 ? const SizedBox(
                     width: 20,
@@ -769,4 +803,3 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     );
   }
 }
-
