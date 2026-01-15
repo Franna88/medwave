@@ -36,6 +36,8 @@ class EmailJSService {
   static const String _invoiceTemplateId = 'template_g8i6vvl';
   // Thank you email template - sent to customer after finance confirms payment
   static const String _thankYouPaymentTemplateId = 'template_zih8yg9';
+  // Internal lead notification template - sent to finance and sales team when contract is generated
+  static const String _internalLeadNotificationTemplateId = 'template_xonvsxf';
 
   // Admin email for notifications
   static const String _adminEmail =
@@ -867,20 +869,24 @@ class EmailJSService {
     }
   }
 
-  /// Send invoice email to customer with invoice link
+  /// Send invoice email to customer with invoice link and PDF
   static Future<bool> sendInvoiceEmail({
     required order_models.Order order,
     required String invoiceLink,
     String? websiteLink,
+    String? invoicePdfUrl,
+    double? invoiceAmount,
   }) async {
     try {
       debugPrint('📧 Sending invoice email to ${order.email}');
 
-      // Calculate total invoice from order items
-      final totalInvoice = order.items.fold<double>(
-        0,
-        (sum, item) => sum + ((item.price ?? 0) * item.quantity),
-      );
+      // Calculate invoice amount if not provided
+      final calculatedInvoiceAmount =
+          invoiceAmount ??
+          order.items.fold<double>(
+            0,
+            (sum, item) => sum + ((item.price ?? 0) * item.quantity),
+          );
 
       final resolvedWebsiteLink =
           websiteLink ??
@@ -902,10 +908,11 @@ class EmailJSService {
             'to_name': order.customerName,
             'username': order.customerName,
             'invoice_number': order.invoiceNumber ?? 'N/A',
-            'invoice_amount': totalInvoice > 0
-                ? 'R ${totalInvoice.toStringAsFixed(2)}'
+            'invoice_amount': calculatedInvoiceAmount > 0
+                ? 'R ${calculatedInvoiceAmount.toStringAsFixed(2)}'
                 : 'N/A',
             'invoice_link': invoiceLink,
+            'invoice_pdf_url': invoicePdfUrl ?? '',
             'website_link': resolvedWebsiteLink,
           },
         }),
@@ -913,6 +920,9 @@ class EmailJSService {
 
       if (response.statusCode == 200) {
         debugPrint('✅ Invoice email sent successfully');
+        if (invoicePdfUrl != null) {
+          debugPrint('   PDF URL included: $invoicePdfUrl');
+        }
         return true;
       } else {
         debugPrint('❌ Failed to send invoice email: ${response.body}');
@@ -989,6 +999,154 @@ class EmailJSService {
       }
     } catch (error) {
       debugPrint('❌ Error sending thank you payment email: $error');
+      return false;
+    }
+  }
+
+  /// Format lead and customer details as HTML detail rows
+  static String _formatLeadCustomerDetails(
+    sales_models.SalesAppointment appointment,
+  ) {
+    final buffer = StringBuffer();
+    buffer.writeln(
+      '<div class="detail-row"><strong>Lead ID:</strong> ${appointment.leadId}</div>',
+    );
+    buffer.writeln(
+      '<div class="detail-row"><strong>Customer Name:</strong> ${appointment.customerName}</div>',
+    );
+    buffer.writeln(
+      '<div class="detail-row"><strong>Email:</strong> ${appointment.email}</div>',
+    );
+    buffer.writeln(
+      '<div class="detail-row"><strong>Phone:</strong> ${appointment.phone}</div>',
+    );
+    return buffer.toString();
+  }
+
+  /// Format date and contact details as HTML detail rows
+  static String _formatDateContactDetails(
+    sales_models.SalesAppointment appointment,
+  ) {
+    final buffer = StringBuffer();
+    if (appointment.appointmentDate != null) {
+      final dateStr = DateFormat(
+        'yyyy-MM-dd',
+      ).format(appointment.appointmentDate!);
+      buffer.writeln(
+        '<div class="detail-row"><strong>Appointment Date:</strong> $dateStr</div>',
+      );
+    }
+    if (appointment.appointmentTime != null &&
+        appointment.appointmentTime!.isNotEmpty) {
+      buffer.writeln(
+        '<div class="detail-row"><strong>Appointment Time:</strong> ${appointment.appointmentTime}</div>',
+      );
+    }
+    buffer.writeln(
+      '<div class="detail-row"><strong>Customer Email:</strong> ${appointment.email}</div>',
+    );
+    buffer.writeln(
+      '<div class="detail-row"><strong>Customer Phone:</strong> ${appointment.phone}</div>',
+    );
+    return buffer.toString();
+  }
+
+  /// Format selected items as HTML formatted list
+  static String _formatSelectedItems(
+    sales_models.SalesAppointment appointment,
+  ) {
+    if (appointment.optInProducts.isEmpty) {
+      return '<div class="detail-row">No items selected</div>';
+    }
+    final buffer = StringBuffer();
+    for (final product in appointment.optInProducts) {
+      buffer.writeln(
+        '<div class="detail-row"><strong>${product.name}:</strong> R ${product.price.toStringAsFixed(2)}</div>',
+      );
+    }
+    return buffer.toString();
+  }
+
+  /// Format opt-in questions and answers as HTML key-value pairs
+  static String _formatOptInQuestions(
+    sales_models.SalesAppointment appointment,
+  ) {
+    if (appointment.optInQuestions == null ||
+        appointment.optInQuestions!.isEmpty) {
+      return '<div class="detail-row">No opt-in questions answered</div>';
+    }
+    final buffer = StringBuffer();
+    appointment.optInQuestions!.forEach((key, value) {
+      buffer.writeln(
+        '<div class="detail-row"><strong>$key:</strong> $value</div>',
+      );
+    });
+    return buffer.toString();
+  }
+
+  /// Send internal lead notification email to finance and sales team
+  /// This email is sent when a contract is generated in the sales stream
+  static Future<bool> sendInternalLeadNotification({
+    required sales_models.SalesAppointment appointment,
+  }) async {
+    try {
+      // Format all template placeholders
+      final leadCustomerDetails = _formatLeadCustomerDetails(appointment);
+      final dateContactDetails = _formatDateContactDetails(appointment);
+      final salesAgent =
+          appointment.assignedToName ??
+          appointment.createdByName ??
+          'Not assigned';
+      final selectedItems = _formatSelectedItems(appointment);
+      final optInQuestions = _formatOptInQuestions(appointment);
+
+      // Hardcoded recipient emails
+      const recipients = ['tertiusva@gmail.com', 'tertiustest13@gmail.com'];
+
+      // Send to both recipients (EmailJS supports single recipient per call)
+      bool atLeastOneSuccess = false;
+      for (final recipient in recipients) {
+        try {
+          final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+          final response = await http.post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'service_id': _serviceId,
+              'template_id': _internalLeadNotificationTemplateId,
+              'user_id': _userId,
+              'template_params': {
+                'email': recipient,
+                'to_email': recipient,
+                'admin_email':
+                    recipient, // Template uses {{admin_email}} as recipient field
+                'lead_customer_details': leadCustomerDetails,
+                'date_contact_details': dateContactDetails,
+                'sales_agent': salesAgent,
+                'selected_items': selectedItems,
+                'opt_in_questions': optInQuestions,
+              },
+            }),
+          );
+
+          if (response.statusCode == 200) {
+            debugPrint('✅ Internal lead notification sent to $recipient');
+            atLeastOneSuccess = true;
+          } else {
+            debugPrint(
+              '❌ Failed to send internal lead notification to $recipient: ${response.body}',
+            );
+          }
+        } catch (error) {
+          debugPrint(
+            '❌ Error sending internal lead notification to $recipient: $error',
+          );
+        }
+      }
+
+      return atLeastOneSuccess;
+    } catch (error) {
+      debugPrint('❌ Error in sendInternalLeadNotification: $error');
       return false;
     }
   }

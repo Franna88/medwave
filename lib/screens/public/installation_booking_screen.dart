@@ -81,8 +81,14 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
         return;
       }
 
-      // Calculate available date range (3 weeks from order creation)
-      _firstAvailableDate = order.createdAt.add(const Duration(days: 21));
+      // Calculate available date range (2 weeks from order creation)
+      // Normalize order creation date to start of day to ensure accurate calculation
+      final orderDate = DateTime(
+        order.createdAt.year,
+        order.createdAt.month,
+        order.createdAt.day,
+      );
+      _firstAvailableDate = orderDate.add(const Duration(days: 14));
       _lastAvailableDate = _firstAvailableDate.add(const Duration(days: 90));
       _focusedDay = _firstAvailableDate;
 
@@ -99,7 +105,7 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
   }
 
   bool _isDateSelectable(DateTime day) {
-    // Only allow dates from 3 weeks after order creation
+    // Only allow dates from 2 weeks after order creation
     final normalizedDay = DateTime(day.year, day.month, day.day);
     final normalizedFirst = DateTime(
       _firstAvailableDate.year,
@@ -574,7 +580,7 @@ class _InstallationBookingScreenState extends State<InstallationBookingScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Text(
-              'Select dates starting from ${DateFormat('MMMM d, yyyy').format(_firstAvailableDate)} (3 weeks from order placement)',
+              'Select dates starting from ${DateFormat('MMMM d, yyyy').format(_firstAvailableDate)} (2 weeks from order placement)',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),

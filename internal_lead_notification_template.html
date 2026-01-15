@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 700px;
+            margin: 30px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            padding: 35px 30px;
+            text-align: center;
+            color: #ffffff;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 26px;
+        }
+        .header p {
+            margin-top: 8px;
+            font-size: 15px;
+            opacity: 0.95;
+        }
+        .content {
+            padding: 35px 30px;
+        }
+        .intro {
+            color: #374151;
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e40af;
+            margin: 25px 0 10px;
+        }
+        .details-box {
+            background: #f9fafb;
+            border-radius: 6px;
+            padding: 18px 20px;
+            border: 1px solid #e5e7eb;
+        }
+        .detail-row {
+            padding: 6px 0;
+            color: #374151;
+            font-size: 14px;
+        }
+        .detail-row strong {
+            display: inline-block;
+            min-width: 180px;
+            color: #111827;
+        }
+        .notice {
+            margin-top: 30px;
+            padding: 16px 20px;
+            background: #f0f9ff;
+            border-left: 4px solid #0284c7;
+            border-radius: 4px;
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .footer {
+            background: #f9fafb;
+            padding: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <h1>New Lead & Deal Summary</h1>
+        <p>Internal Notification – Management & Finance</p>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <p class="intro">
+            A new lead has been finalized and processed by the sales team.
+            The details below are provided for internal review, record-keeping,
+            and financial preparation.
+        </p>
+
+        <!-- Lead & Customer Details -->
+        <div class="section-title">📌 Lead & Customer Details</div>
+        <div class="details-box">
+            {{{lead_customer_details}}}
+        </div>
+
+        <!-- Date & Contact -->
+        <div class="section-title">📅 Date & Customer Contact Information</div>
+        <div class="details-box">
+            {{{date_contact_details}}}
+        </div>
+
+        <!-- Sales Agent -->
+        <div class="section-title">👤 Sales Agent</div>
+        <div class="details-box">
+            <div class="detail-row">
+                <strong>Sales Agent:</strong> {{sales_agent}}
+            </div>
+        </div>
+
+        <!-- Selected Items -->
+        <div class="section-title">🛒 Products & Services Selected</div>
+        <div class="details-box">
+            {{{selected_items}}}
+        </div>
+
+        <!-- Opt-in -->
+        <div class="section-title">✅ Opt-In Questions & Customer Responses</div>
+        <div class="details-box">
+            {{{opt_in_questions}}}
+        </div>
+
+        <!-- Notice -->
+        <div class="notice">
+            This information is intended for internal use only and supports
+            operational, financial, and compliance workflows.
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>
+            Automated internal notification<br>
+            Questions: <strong>info@medwavegroup.com</strong>
+        </p>
+        <p>© 2025 MedWave. All rights reserved.</p>
+    </div>
+
+</div>
+</body>
+</html>

@@ -403,7 +403,9 @@ class _BookingStageTransitionDialogState
                               datesWithBookings: _datesWithBookings,
                               onDateSelected: _onDateSelected,
                               minDate: DateTime.now(),
-                              maxDate: DateTime.now().add(const Duration(days: 14)),
+                              maxDate: DateTime.now().add(
+                                const Duration(days: 14),
+                              ),
                             ),
                       const SizedBox(height: 24),
 

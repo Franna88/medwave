@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../services/firebase/order_service.dart';
 
@@ -29,6 +32,63 @@ class _InvoiceViewScreenState extends State<InvoiceViewScreen> {
     super.initState();
     // Initialize once - survives widget rebuilds
     _emailFuture = _processInvoiceView();
+    // Start download immediately
+    _downloadInvoice();
+  }
+
+  Future<void> _downloadInvoice() async {
+    final orderId = widget.orderId;
+    final token = widget.token;
+
+    if (orderId == null || token == null) {
+      return;
+    }
+
+    try {
+      // Get order to fetch invoice PDF URL
+      final order = await _service.getOrder(orderId);
+      if (order == null) {
+        return;
+      }
+
+      // Validate token
+      if (order.paymentConfirmationToken != token) {
+        return;
+      }
+
+      // Get invoice PDF URL - try stored URL first, then construct path as fallback
+      String? pdfUrl = order.invoicePdfUrl;
+      if (pdfUrl == null || pdfUrl.isEmpty) {
+        // Construct path as fallback: invoices/{orderId}/invoice_{orderId}.pdf
+        // Note: This requires the file to be publicly accessible or we need signed URL
+        // For now, we'll try to get it from Firebase Storage
+        try {
+          final storage = FirebaseStorage.instance;
+          final ref = storage.ref().child('invoices/$orderId/invoice_$orderId.pdf');
+          pdfUrl = await ref.getDownloadURL();
+        } catch (e) {
+          if (kDebugMode) {
+            print('Could not get invoice PDF URL: $e');
+          }
+          return;
+        }
+      }
+
+      // Download/Open PDF
+      if (pdfUrl.isNotEmpty) {
+        final uri = Uri.parse(pdfUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error downloading invoice: $e');
+      }
+    }
   }
 
   Future<bool> _processInvoiceView() async {

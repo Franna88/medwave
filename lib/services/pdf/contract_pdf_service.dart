@@ -570,13 +570,6 @@ class ContractPdfService {
 
   /// Build invoice-style quote table
   pw.Widget _buildInvoiceQuoteTable(Contract contract) {
-    // Calculate deposit percentage
-    final depositPercentage = contract.subtotal > 0
-        ? ((contract.depositAmount / contract.subtotal) * 100).toStringAsFixed(
-            0,
-          )
-        : '40';
-
     return pw.Container(
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.grey400),
@@ -637,7 +630,7 @@ class ContractPdfService {
                 _buildTotalRow('Subtotal', contract.subtotal),
                 pw.SizedBox(height: 4),
                 _buildTotalRow(
-                  'Deposit ($depositPercentage%)',
+                  'Deposit Allocate',
                   contract.depositAmount,
                   isBold: true,
                 ),

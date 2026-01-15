@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/streams/order.dart' as models;
 import '../../providers/auth_provider.dart';
+import '../../providers/inventory_provider.dart';
 import '../../services/firebase/order_service.dart';
 import '../../theme/app_theme.dart';
 import 'shipping_details_screen.dart';
@@ -42,6 +43,11 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     if (_currentOrder.currentStage == 'priority_shipment') {
       _moveToPackingList();
     }
+
+    // Load inventory for stock validation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<InventoryProvider>().listenToInventory();
+    });
   }
 
   Future<void> _moveToPackingList() async {
@@ -78,6 +84,71 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
   }
 
   Future<void> _toggleItemPicked(String itemName, bool picked) async {
+    // If trying to pick an item, validate stock availability
+    if (picked) {
+      final inventoryProvider = context.read<InventoryProvider>();
+      
+      // Check if item exists in inventory
+      final hasStock = inventoryProvider.allStockItems.any(
+        (s) => s.productName.toLowerCase() == itemName.toLowerCase(),
+      );
+
+      if (hasStock) {
+        final stockItem = inventoryProvider.allStockItems.firstWhere(
+          (s) => s.productName.toLowerCase() == itemName.toLowerCase(),
+        );
+
+        // Block picking if item is out of stock
+        if (stockItem.isOutOfStock) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Cannot pick "$itemName": Item is out of stock. Please contact admin to override.',
+                ),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+                action: SnackBarAction(
+                  label: 'OK',
+                  textColor: Colors.white,
+                  onPressed: () {},
+                ),
+              ),
+            );
+          }
+          return; // Don't proceed with picking
+        }
+
+        // Warn if item is low stock
+        if (stockItem.isLowStock) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Warning: "$itemName" is low stock (${stockItem.currentQty} remaining)',
+                ),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      } else {
+        // Item not found in inventory - allow picking but warn
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Warning: "$itemName" not found in inventory system',
+              ),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+
     setState(() {
       _pickedItems[itemName] = picked;
     });
@@ -356,6 +427,58 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                 color: AppTheme.secondaryColor.withOpacity(0.7),
               ),
             ),
+            if (_currentOrder.splitFromOrderId != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'All items were moved to a split order due to out of stock override.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange[800],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.grey[600], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This order has no items to pick.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -373,106 +496,224 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
   }
 
   Widget _buildItemCard(models.OrderItem item, bool isPicked, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isPicked
-              ? AppTheme.successColor.withOpacity(0.5)
-              : AppTheme.borderColor,
-          width: isPicked ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
+    return Consumer<InventoryProvider>(
+      builder: (context, inventoryProvider, child) {
+        // Check stock status for this item
+        final hasStock = inventoryProvider.allStockItems.any(
+          (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
+        );
+
+        bool isOutOfStock = false;
+        bool isLowStock = false;
+        int? stockQty;
+
+        if (hasStock) {
+          final stockItem = inventoryProvider.allStockItems.firstWhere(
+            (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
+          );
+          isOutOfStock = stockItem.isOutOfStock;
+          isLowStock = stockItem.isLowStock;
+          stockQty = stockItem.currentQty;
+        }
+
+        // Block picking if out of stock (unless already picked)
+        final canPick = !isOutOfStock || isPicked;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
             color: isPicked
-                ? AppTheme.successColor.withOpacity(0.1)
-                : Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+                ? Colors.white
+                : isOutOfStock
+                    ? Colors.red.shade50
+                    : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isPicked
+                  ? AppTheme.successColor.withOpacity(0.5)
+                  : isOutOfStock
+                      ? Colors.red.shade300
+                      : AppTheme.borderColor,
+              width: isPicked ? 2 : isOutOfStock ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isPicked
+                    ? AppTheme.successColor.withOpacity(0.1)
+                    : isOutOfStock
+                        ? Colors.red.withOpacity(0.1)
+                        : Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _toggleItemPicked(item.name, !isPicked),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isPicked
-                        ? AppTheme.successColor.withOpacity(0.1)
-                        : AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${index + 1}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isPicked ? AppTheme.successColor : AppTheme.primaryColor,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: canPick ? () => _toggleItemPicked(item.name, !isPicked) : null,
+              child: Opacity(
+                opacity: canPick ? 1.0 : 0.6,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
-                      Text(
-                        item.name,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
                           color: isPicked
-                              ? AppTheme.secondaryColor.withOpacity(0.6)
-                              : AppTheme.textColor,
-                          decoration: isPicked ? TextDecoration.lineThrough : null,
+                              ? AppTheme.successColor.withOpacity(0.1)
+                              : isOutOfStock
+                                  ? Colors.red.shade100
+                                  : AppTheme.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isPicked
+                                  ? AppTheme.successColor
+                                  : isOutOfStock
+                                      ? Colors.red[700]
+                                      : AppTheme.primaryColor,
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Qty: ${item.quantity}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.secondaryColor.withOpacity(0.6),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    item.name,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: isPicked
+                                          ? AppTheme.secondaryColor.withOpacity(0.6)
+                                          : isOutOfStock
+                                              ? Colors.red[800]
+                                              : AppTheme.textColor,
+                                      decoration:
+                                          isPicked ? TextDecoration.lineThrough : null,
+                                    ),
+                                  ),
+                                ),
+                                // Stock status badge
+                                if (hasStock && !isPicked)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isOutOfStock
+                                          ? Colors.red.shade100
+                                          : isLowStock
+                                              ? Colors.orange.shade100
+                                              : Colors.green.shade100,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isOutOfStock
+                                            ? Colors.red.shade300
+                                            : isLowStock
+                                                ? Colors.orange.shade300
+                                                : Colors.green.shade300,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      isOutOfStock
+                                          ? 'Out of Stock'
+                                          : isLowStock
+                                              ? 'Low ($stockQty)'
+                                              : 'In Stock ($stockQty)',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: isOutOfStock
+                                            ? Colors.red[700]
+                                            : isLowStock
+                                                ? Colors.orange[700]
+                                                : Colors.green[700],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Qty: ${item.quantity}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.secondaryColor.withOpacity(0.6),
+                              ),
+                            ),
+                            // Warning message for out of stock
+                            if (isOutOfStock && !isPicked) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(Icons.block, size: 14, color: Colors.red[700]),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Cannot pick - Out of stock',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.red[700],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
                         ),
+                      ),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: isPicked
+                              ? AppTheme.successColor
+                              : isOutOfStock
+                                  ? Colors.red.shade200
+                                  : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isPicked
+                                ? AppTheme.successColor
+                                : isOutOfStock
+                                    ? Colors.red.shade400
+                                    : AppTheme.borderColor,
+                            width: 2,
+                          ),
+                        ),
+                        child: isPicked
+                            ? const Icon(Icons.check, color: Colors.white, size: 20)
+                            : isOutOfStock
+                                ? Icon(Icons.block, color: Colors.red[700], size: 18)
+                                : null,
                       ),
                     ],
                   ),
                 ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: isPicked ? AppTheme.successColor : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isPicked
-                          ? AppTheme.successColor
-                          : AppTheme.borderColor,
-                      width: 2,
-                    ),
-                  ),
-                  child: isPicked
-                      ? const Icon(Icons.check, color: Colors.white, size: 20)
-                      : null,
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

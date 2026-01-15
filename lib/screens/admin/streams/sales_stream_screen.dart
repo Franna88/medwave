@@ -577,12 +577,45 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     bool isSearching = false;
     String? selectedAppointmentId;
     String? selectedLeadId;
+    Timer? _searchDebounce;
 
     final result = await showDialog<Map<String, dynamic>?>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
+          // Helper function to sort search results by relevance
+          List<T> sortSearchResults<T>(
+            List<T> results,
+            String query,
+            String Function(T) getName,
+          ) {
+            final lowerQuery = query.toLowerCase();
+            results.sort((a, b) {
+              final nameA = getName(a).toLowerCase();
+              final nameB = getName(b).toLowerCase();
+
+              // Exact match at start gets highest priority
+              final aStarts = nameA.startsWith(lowerQuery);
+              final bStarts = nameB.startsWith(lowerQuery);
+              if (aStarts && !bStarts) return -1;
+              if (!aStarts && bStarts) return 1;
+
+              // Exact match anywhere gets second priority
+              final aContains = nameA.contains(lowerQuery);
+              final bContains = nameB.contains(lowerQuery);
+              if (aContains && !bContains) return -1;
+              if (!aContains && bContains) return 1;
+
+              // Alphabetical order for same priority
+              return nameA.compareTo(nameB);
+            });
+            return results;
+          }
+
           Future<void> performSearch(String query) async {
+            // Cancel previous debounce timer
+            _searchDebounce?.cancel();
+
             if (query.trim().isEmpty) {
               setDialogState(() {
                 appointmentResults = [];
@@ -592,41 +625,56 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
               return;
             }
 
-            setDialogState(() {
-              isSearching = true;
-              appointmentResults = [];
-              leadResults = [];
+            // Debounce search - wait 300ms after user stops typing
+            _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
+              setDialogState(() {
+                isSearching = true;
+                appointmentResults = [];
+                leadResults = [];
+              });
+
+              try {
+                // Search both appointments and leads simultaneously (parallel search)
+                final searchQuery = query.trim();
+                
+                final results = await Future.wait([
+                  _appointmentService.searchAppointments(searchQuery),
+                  _leadService.searchLeadsAcrossAllChannels(searchQuery),
+                ]);
+
+                final appointments = results[0] as List<models.SalesAppointment>;
+                final leads = results[1] as List<Lead>;
+
+                // Sort results by relevance (exact matches first, then partial)
+                final sortedAppointments = sortSearchResults(
+                  appointments,
+                  searchQuery,
+                  (apt) => apt.customerName,
+                );
+                final sortedLeads = sortSearchResults(
+                  leads,
+                  searchQuery,
+                  (lead) => lead.fullName,
+                );
+
+                setDialogState(() {
+                  appointmentResults = sortedAppointments;
+                  leadResults = sortedLeads;
+                  isSearching = false;
+                  selectedAppointmentId = null;
+                  selectedLeadId = null;
+                });
+              } catch (e) {
+                setDialogState(() {
+                  isSearching = false;
+                });
+                if (mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Error searching: $e')));
+                }
+              }
             });
-
-            try {
-              // First, search appointments
-              final appointments = await _appointmentService.searchAppointments(
-                query,
-              );
-
-              // If no appointments found, search leads
-              List<Lead> leads = [];
-              if (appointments.isEmpty) {
-                leads = await _leadService.searchLeadsAcrossAllChannels(query);
-              }
-
-              setDialogState(() {
-                appointmentResults = appointments;
-                leadResults = leads;
-                isSearching = false;
-                selectedAppointmentId = null;
-                selectedLeadId = null;
-              });
-            } catch (e) {
-              setDialogState(() {
-                isSearching = false;
-              });
-              if (mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Error searching: $e')));
-              }
-            }
           }
 
           return AlertDialog(
@@ -658,85 +706,194 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                         child: CircularProgressIndicator(),
                       ),
                     )
-                  else if (appointmentResults.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Appointments Found:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 200,
-                          child: ListView.builder(
-                            itemCount: appointmentResults.length,
-                            itemBuilder: (context, index) {
-                              final apt = appointmentResults[index];
-                              final isSelected =
-                                  selectedAppointmentId == apt.id;
-                              return ListTile(
-                                selected: isSelected,
-                                title: Text(apt.customerName),
-                                subtitle: Text('${apt.email} • ${apt.phone}'),
-                                trailing: Text(
-                                  'Current: ${_stages.firstWhere((s) => s.id == apt.currentStage).name}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
+                  else if (appointmentResults.isNotEmpty || leadResults.isNotEmpty)
+                    SizedBox(
+                      height: 300,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (appointmentResults.isNotEmpty) ...[
+                              Row(
+                                children: [
+                                  Icon(Icons.event, size: 16, color: AppTheme.primaryColor),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Appointments (${appointmentResults.length})',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
                                   ),
-                                ),
-                                onTap: () {
-                                  setDialogState(() {
-                                    selectedAppointmentId = apt.id;
-                                    selectedLeadId = null;
-                                  });
-                                },
-                              );
-                            },
-                          ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              ...appointmentResults.map((apt) {
+                                final isSelected = selectedAppointmentId == apt.id;
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppTheme.primaryColor.withOpacity(0.1)
+                                        : Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppTheme.primaryColor
+                                          : Colors.grey.shade300,
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                  ),
+                                  child: ListTile(
+                                    dense: true,
+                                    selected: isSelected,
+                                    title: Text(
+                                      apt.customerName,
+                                      style: TextStyle(
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${apt.email} • ${apt.phone}',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                    trailing: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryColor.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        _stages
+                                            .firstWhere(
+                                              (s) => s.id == apt.currentStage,
+                                            )
+                                            .name,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.primaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      setDialogState(() {
+                                        selectedAppointmentId = apt.id;
+                                        selectedLeadId = null;
+                                      });
+                                    },
+                                  ),
+                                );
+                              }),
+                              if (leadResults.isNotEmpty) const SizedBox(height: 16),
+                            ],
+                            if (leadResults.isNotEmpty) ...[
+                              Row(
+                                children: [
+                                  Icon(Icons.person, size: 16, color: Colors.orange),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Leads (${leadResults.length})',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              ...leadResults.map((lead) {
+                                final isSelected = selectedLeadId == lead.id;
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? Colors.orange.withOpacity(0.1)
+                                        : Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? Colors.orange
+                                          : Colors.grey.shade300,
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                  ),
+                                  child: ListTile(
+                                    dense: true,
+                                    selected: isSelected,
+                                    title: Text(
+                                      lead.fullName,
+                                      style: TextStyle(
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${lead.email} • ${lead.phone}',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                    trailing: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        'Lead',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.orange[700],
+                                        ),
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      setDialogState(() {
+                                        selectedLeadId = lead.id;
+                                        selectedAppointmentId = null;
+                                      });
+                                    },
+                                  ),
+                                );
+                              }),
+                            ],
+                          ],
                         ),
-                      ],
-                    )
-                  else if (leadResults.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Leads Found:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 200,
-                          child: ListView.builder(
-                            itemCount: leadResults.length,
-                            itemBuilder: (context, index) {
-                              final lead = leadResults[index];
-                              final isSelected = selectedLeadId == lead.id;
-                              return ListTile(
-                                selected: isSelected,
-                                title: Text(lead.fullName),
-                                subtitle: Text('${lead.email} • ${lead.phone}'),
-                                onTap: () {
-                                  setDialogState(() {
-                                    selectedLeadId = lead.id;
-                                    selectedAppointmentId = null;
-                                  });
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                      ),
                     )
                   else if (searchController.text.trim().isNotEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(16.0),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
                       child: Center(
-                        child: Text(
-                          'No results found',
-                          style: TextStyle(color: Colors.grey),
+                        child: Column(
+                          children: [
+                            Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+                            const SizedBox(height: 8),
+                            Text(
+                              'No results found',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Try searching by name, email, or phone number',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -767,6 +924,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _searchDebounce?.cancel();
       searchController.dispose();
     });
 
