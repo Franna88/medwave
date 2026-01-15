@@ -83,8 +83,19 @@ class Order {
   final DateTime? paymentConfirmationSentAt; // When email was sent
   final DateTime? paymentConfirmationRespondedAt; // When customer responded
 
+  // Invoice PDF
+  final String? invoicePdfUrl; // Firebase Storage URL for invoice PDF
+
   // Priority order flag (full payment leads get installation priority)
   final bool isPriorityOrder;
+
+  // Order splitting fields
+  final String?
+  splitFromOrderId; // Reference to parent order when this is a split order
+  final List<ShippedItemFromParent>
+  shippedItemsFromParentOrder; // Items already shipped in parent order with waybill info
+  final List<OrderItem>
+  remainingItemsFromParentOrder; // Items from parent order that were NOT overridden (stayed in Order 1)
 
   Order({
     required this.id,
@@ -133,8 +144,14 @@ class Order {
     this.paymentConfirmationStatus,
     this.paymentConfirmationSentAt,
     this.paymentConfirmationRespondedAt,
+    // Invoice PDF
+    this.invoicePdfUrl,
     // Priority order flag
     this.isPriorityOrder = false,
+    // Order splitting fields
+    this.splitFromOrderId,
+    this.shippedItemsFromParentOrder = const [],
+    this.remainingItemsFromParentOrder = const [],
   });
 
   /// Get time in current stage
@@ -245,7 +262,22 @@ class Order {
           (map['paymentConfirmationSentAt'] as Timestamp?)?.toDate(),
       paymentConfirmationRespondedAt:
           (map['paymentConfirmationRespondedAt'] as Timestamp?)?.toDate(),
+      invoicePdfUrl: map['invoicePdfUrl']?.toString(),
       isPriorityOrder: map['isPriorityOrder'] == true,
+      // Order splitting fields
+      splitFromOrderId: map['splitFromOrderId']?.toString(),
+      shippedItemsFromParentOrder:
+          (map['shippedItemsFromParentOrder'] as List<dynamic>?)
+              ?.map(
+                (i) => ShippedItemFromParent.fromMap(i as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
+      remainingItemsFromParentOrder:
+          (map['remainingItemsFromParentOrder'] as List<dynamic>?)
+              ?.map((i) => OrderItem.fromMap(i as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
   }
 
@@ -310,7 +342,16 @@ class Order {
       'paymentConfirmationRespondedAt': paymentConfirmationRespondedAt != null
           ? Timestamp.fromDate(paymentConfirmationRespondedAt!)
           : null,
+      'invoicePdfUrl': invoicePdfUrl,
       'isPriorityOrder': isPriorityOrder,
+      // Order splitting fields
+      'splitFromOrderId': splitFromOrderId,
+      'shippedItemsFromParentOrder': shippedItemsFromParentOrder
+          .map((i) => i.toMap())
+          .toList(),
+      'remainingItemsFromParentOrder': remainingItemsFromParentOrder
+          .map((i) => i.toMap())
+          .toList(),
     };
   }
 
@@ -361,8 +402,14 @@ class Order {
     String? paymentConfirmationStatus,
     DateTime? paymentConfirmationSentAt,
     DateTime? paymentConfirmationRespondedAt,
+    // Invoice PDF
+    String? invoicePdfUrl,
     // Priority order flag
     bool? isPriorityOrder,
+    // Order splitting fields
+    String? splitFromOrderId,
+    List<ShippedItemFromParent>? shippedItemsFromParentOrder,
+    List<OrderItem>? remainingItemsFromParentOrder,
   }) {
     return Order(
       id: id ?? this.id,
@@ -422,7 +469,14 @@ class Order {
           paymentConfirmationSentAt ?? this.paymentConfirmationSentAt,
       paymentConfirmationRespondedAt:
           paymentConfirmationRespondedAt ?? this.paymentConfirmationRespondedAt,
+      invoicePdfUrl: invoicePdfUrl ?? this.invoicePdfUrl,
       isPriorityOrder: isPriorityOrder ?? this.isPriorityOrder,
+      // Order splitting fields
+      splitFromOrderId: splitFromOrderId ?? this.splitFromOrderId,
+      shippedItemsFromParentOrder:
+          shippedItemsFromParentOrder ?? this.shippedItemsFromParentOrder,
+      remainingItemsFromParentOrder:
+          remainingItemsFromParentOrder ?? this.remainingItemsFromParentOrder,
     );
   }
 
@@ -517,6 +571,60 @@ class OrderStageHistoryEntry {
       'exitedAt': exitedAt != null ? Timestamp.fromDate(exitedAt!) : null,
       'note': note,
     };
+  }
+}
+
+/// Model for items shipped in parent order (for split orders)
+class ShippedItemFromParent {
+  final String itemName;
+  final int quantity;
+  final String? trackingNumber; // Tracking number from Order 1
+  final String?
+  waybillNumber; // Waybill number from Order 1 - MUST be prominently displayed
+  final String? waybillPhotoUrl; // Waybill photo URL from Order 1
+
+  ShippedItemFromParent({
+    required this.itemName,
+    required this.quantity,
+    this.trackingNumber,
+    this.waybillNumber,
+    this.waybillPhotoUrl,
+  });
+
+  factory ShippedItemFromParent.fromMap(Map<String, dynamic> map) {
+    return ShippedItemFromParent(
+      itemName: map['itemName']?.toString() ?? '',
+      quantity: (map['quantity'] as num?)?.toInt() ?? 1,
+      trackingNumber: map['trackingNumber']?.toString(),
+      waybillNumber: map['waybillNumber']?.toString(),
+      waybillPhotoUrl: map['waybillPhotoUrl']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'itemName': itemName,
+      'quantity': quantity,
+      'trackingNumber': trackingNumber,
+      'waybillNumber': waybillNumber,
+      'waybillPhotoUrl': waybillPhotoUrl,
+    };
+  }
+
+  ShippedItemFromParent copyWith({
+    String? itemName,
+    int? quantity,
+    String? trackingNumber,
+    String? waybillNumber,
+    String? waybillPhotoUrl,
+  }) {
+    return ShippedItemFromParent(
+      itemName: itemName ?? this.itemName,
+      quantity: quantity ?? this.quantity,
+      trackingNumber: trackingNumber ?? this.trackingNumber,
+      waybillNumber: waybillNumber ?? this.waybillNumber,
+      waybillPhotoUrl: waybillPhotoUrl ?? this.waybillPhotoUrl,
+    );
   }
 }
 

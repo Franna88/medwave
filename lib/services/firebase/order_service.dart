@@ -7,6 +7,7 @@ import '../../models/streams/support_ticket.dart';
 import '../emailjs_service.dart';
 import '../whatsapp_service.dart';
 import 'support_ticket_service.dart';
+import '../pdf/invoice_pdf_service.dart';
 
 // Base URLs for installation booking links
 const String _installBookingLinkBaseProd = 'https://app.medwave.com';
@@ -230,7 +231,9 @@ class OrderService {
       await updateOrder(updatedOrder);
 
       // Send out for delivery email when moving to that stage
-      if (newStage == 'out_for_delivery') {
+      // Skip for split orders (Order 2) - email was already sent with Order 1
+      if (newStage == 'out_for_delivery' &&
+          updatedOrder.splitFromOrderId == null) {
         // Always send email when order moves to out_for_delivery stage
         // Email template handles missing data gracefully
         final emailSent = await EmailJSService.sendOutForDeliveryEmail(
@@ -241,34 +244,140 @@ class OrderService {
             'Out for delivery email ${emailSent ? 'sent' : 'failed'} for order $orderId',
           );
         }
+      } else if (newStage == 'out_for_delivery' &&
+          updatedOrder.splitFromOrderId != null) {
+        if (kDebugMode) {
+          print(
+            'Skipping out for delivery email for split order $orderId (email already sent with Order 1)',
+          );
+        }
       }
 
       // Send invoice email if moving to installed stage
-      if (movedFromOutForDeliveryToInstalled) {
-        // Build invoice link
-        final invoiceLink = _buildInvoiceLink(
-          orderId: order.id,
-          token: confirmationToken!,
-        );
+      // Skip for split orders (Order 2) - invoice email was already sent with Order 1
+      if (movedFromOutForDeliveryToInstalled &&
+          updatedOrder.splitFromOrderId == null) {
+        try {
+          // Fetch deposit amount and shipping address from appointment
+          double depositAmount = 0;
+          String? shippingAddress;
+          try {
+            if (order.appointmentId.isNotEmpty) {
+              final appointmentDoc = await _firestore
+                  .collection('appointments')
+                  .doc(order.appointmentId)
+                  .get();
 
-        // Send invoice email
-        final invoiceEmailSent = await EmailJSService.sendInvoiceEmail(
-          order: updatedOrder,
-          invoiceLink: invoiceLink,
-        );
+              if (appointmentDoc.exists) {
+                final appointmentData = appointmentDoc.data();
+                if (appointmentData != null) {
+                  // Get deposit amount
+                  final storedDeposit = appointmentData['depositAmount'];
+                  if (storedDeposit != null) {
+                    depositAmount = (storedDeposit as num).toDouble();
+                  } else {
+                    // Calculate 40% of total from optInProducts if deposit not stored
+                    final optInProducts =
+                        appointmentData['optInProducts'] as List<dynamic>?;
+                    if (optInProducts != null && optInProducts.isNotEmpty) {
+                      double total = 0;
+                      for (final product in optInProducts) {
+                        if (product is Map<String, dynamic>) {
+                          final price = product['price'];
+                          if (price != null) {
+                            total += (price as num).toDouble();
+                          }
+                        }
+                      }
+                      depositAmount = total * 0.40; // 40% deposit
+                    }
+                  }
 
-        if (kDebugMode) {
-          if (invoiceEmailSent) {
-            print('Invoice email sent for order $orderId');
-          } else {
-            print('Failed to send invoice email for order $orderId');
+                  // Get shipping address
+                  final optInQuestions =
+                      appointmentData['optInQuestions']
+                          as Map<String, dynamic>?;
+                  if (optInQuestions != null) {
+                    shippingAddress = optInQuestions['Shipping address']
+                        ?.toString();
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error fetching appointment for deposit/shipping: $e');
+            }
+            // Continue with depositAmount = 0 if fetch fails
           }
-        }
 
-        // Update order with paymentConfirmationSentAt to track that invoice email was sent
-        await _firestore.collection('orders').doc(orderId).update({
-          'paymentConfirmationSentAt': Timestamp.fromDate(DateTime.now()),
-        });
+          // Calculate invoice amount (total - deposit)
+          final totalInvoice = updatedOrder.items.fold<double>(
+            0,
+            (sum, item) => sum + ((item.price ?? 0) * item.quantity),
+          );
+          final invoiceAmount = totalInvoice - depositAmount;
+
+          // Generate invoice PDF
+          final invoicePdfService = InvoicePdfService();
+          final pdfBytes = await invoicePdfService.generatePdfBytes(
+            order: updatedOrder,
+            depositAmount: depositAmount,
+            shippingAddress: shippingAddress,
+          );
+
+          // Upload PDF to Firebase Storage
+          final pdfUrl = await invoicePdfService.uploadPdfToStorage(
+            pdfBytes: pdfBytes,
+            orderId: order.id,
+          );
+
+          // Store invoice PDF URL in order
+          await _firestore.collection('orders').doc(orderId).update({
+            'invoicePdfUrl': pdfUrl,
+          });
+
+          // Build invoice link (for backward compatibility)
+          final invoiceLink = _buildInvoiceLink(
+            orderId: order.id,
+            token: confirmationToken!,
+          );
+
+          // Send invoice email with PDF URL
+          final invoiceEmailSent = await EmailJSService.sendInvoiceEmail(
+            order: updatedOrder,
+            invoiceLink: invoiceLink,
+            invoicePdfUrl: pdfUrl,
+            invoiceAmount: invoiceAmount,
+          );
+
+          if (kDebugMode) {
+            if (invoiceEmailSent) {
+              print(
+                'Invoice email sent for order $orderId (Amount: R ${invoiceAmount.toStringAsFixed(2)}, Deposit: R ${depositAmount.toStringAsFixed(2)})',
+              );
+            } else {
+              print('Failed to send invoice email for order $orderId');
+            }
+          }
+
+          // Update order with paymentConfirmationSentAt to track that invoice email was sent
+          await _firestore.collection('orders').doc(orderId).update({
+            'paymentConfirmationSentAt': Timestamp.fromDate(DateTime.now()),
+          });
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error generating and sending invoice: $e');
+          }
+          // Don't throw - allow order to move to installed stage even if invoice fails
+        }
+      } else if (movedFromOutForDeliveryToInstalled &&
+          updatedOrder.splitFromOrderId != null) {
+        if (kDebugMode) {
+          print(
+            'Skipping invoice email for split order $orderId (invoice email already sent with Order 1)',
+          );
+        }
       }
 
       // Check if we need to convert to Support Ticket (final stage)
@@ -469,11 +578,22 @@ class OrderService {
 
   /// Send installation booking email to customer
   /// Generates token, saves it, and sends email with booking link
+  /// Note: For split orders (Order 2), this email was already sent with Order 1
   Future<bool> sendInstallationBookingEmail({required String orderId}) async {
     try {
       final order = await getOrder(orderId);
       if (order == null) {
         throw Exception('Order not found');
+      }
+
+      // Skip for split orders - installation booking email was already sent with Order 1
+      if (order.splitFromOrderId != null) {
+        if (kDebugMode) {
+          print(
+            'Skipping installation booking email for split order $orderId (email already sent with Order 1)',
+          );
+        }
+        return true; // Return true to indicate "handled" (even though we skipped it)
       }
 
       // Generate token if not exists
@@ -583,14 +703,20 @@ class OrderService {
         );
       }
 
-      // Validate dates are at least 3 weeks from order creation
-      final minDate = order.createdAt.add(const Duration(days: 21));
+      // Validate dates are at least 2 weeks from order creation
+      // Normalize order creation date to start of day to ensure accurate calculation
+      final orderDate = DateTime(
+        order.createdAt.year,
+        order.createdAt.month,
+        order.createdAt.day,
+      );
+      final minDate = orderDate.add(const Duration(days: 14));
       for (final date in selectedDates) {
         if (date.isBefore(minDate)) {
           return InstallationBookingResult(
             success: false,
             message:
-                'Selected dates must be at least 3 weeks from order placement.',
+                'Selected dates must be at least 2 weeks from order placement.',
             status: InstallationBookingStatus.invalid,
           );
         }
@@ -1261,6 +1387,7 @@ class OrderService {
 
   /// Send payment confirmation email after customer views invoice
   /// This is called when the customer clicks the invoice link
+  /// Note: For split orders (Order 2), this email was already sent with Order 1
   Future<bool> sendPaymentConfirmationEmailAfterInvoice({
     required String orderId,
     required String token,
@@ -1273,6 +1400,16 @@ class OrderService {
           print('Order not found: $orderId');
         }
         return false;
+      }
+
+      // Skip for split orders - payment confirmation email was already sent with Order 1
+      if (order.splitFromOrderId != null) {
+        if (kDebugMode) {
+          print(
+            'Skipping payment confirmation email for split order $orderId (email already sent with Order 1)',
+          );
+        }
+        return true; // Return true to indicate "handled" (even though we skipped it)
       }
 
       // Validate token
@@ -1391,6 +1528,176 @@ class OrderService {
         print('Error sending payment confirmation email after invoice: $e');
       }
       return false;
+    }
+  }
+
+  /// Split order for overridden items (out of stock items)
+  /// Creates a new order (Order 2) with only the overridden items
+  /// Removes overridden items from the original order (Order 1)
+  Future<String> splitOrderForOverriddenItems({
+    required String orderId,
+    required List<String> overriddenItemNames, // Items to move to new order
+    required String userId,
+    String? userName,
+  }) async {
+    try {
+      // Fetch the original order
+      final originalOrder = await getOrder(orderId);
+      if (originalOrder == null) {
+        throw Exception('Order not found');
+      }
+
+      // Validate items exist
+      final itemNames = originalOrder.items.map((i) => i.name).toList();
+      for (final itemName in overriddenItemNames) {
+        if (!itemNames.contains(itemName)) {
+          throw Exception('Item "$itemName" not found in order');
+        }
+      }
+
+      // Validate items are not already picked
+      // Only prevent override of items that have been picked - allow override of unpicked out-of-stock items
+      for (final itemName in overriddenItemNames) {
+        if (originalOrder.pickedItems[itemName] == true) {
+          throw Exception(
+            'Item "$itemName" has already been picked by the warehouse team and cannot be overridden.',
+          );
+        }
+      }
+
+      final now = DateTime.now();
+
+      // Extract overridden items
+      final overriddenItems = originalOrder.items
+          .where((item) => overriddenItemNames.contains(item.name))
+          .toList();
+
+      // Get remaining items for Order 1
+      final remainingItems = originalOrder.items
+          .where((item) => !overriddenItemNames.contains(item.name))
+          .toList();
+
+      // Build shipped items from parent order (Order 1)
+      // Include ALL items from Order 1 that have shipping information
+      final List<models.ShippedItemFromParent> shippedItems = [];
+      if (originalOrder.trackingNumber != null &&
+          originalOrder.trackingNumber!.isNotEmpty) {
+        // Order 1 has shipping info - include all remaining items
+        for (final item in remainingItems) {
+          shippedItems.add(
+            models.ShippedItemFromParent(
+              itemName: item.name,
+              quantity: item.quantity,
+              trackingNumber: originalOrder.trackingNumber,
+              waybillNumber: originalOrder
+                  .trackingNumber, // Use trackingNumber as waybill number
+              waybillPhotoUrl: originalOrder.waybillPhotoUrl,
+            ),
+          );
+        }
+      }
+
+      // Create new order (Order 2) with overridden items
+      final newOrder = models.Order(
+        id: '', // Will be set by Firestore
+        appointmentId: originalOrder.appointmentId,
+        customerName: originalOrder.customerName,
+        email: originalOrder.email,
+        phone: originalOrder.phone,
+        currentStage: originalOrder.currentStage, // Same stage as original
+        orderDate: originalOrder.orderDate,
+        items: overriddenItems, // Only overridden items
+        deliveryDate: originalOrder.deliveryDate,
+        invoiceNumber:
+            originalOrder.invoiceNumber, // Same invoice number as Order 1
+        installDate: originalOrder.installDate,
+        createdAt: now,
+        updatedAt: now,
+        stageEnteredAt: originalOrder.stageEnteredAt,
+        stageHistory: [
+          models.OrderStageHistoryEntry(
+            stage: originalOrder.currentStage,
+            enteredAt: now,
+            note:
+                'Order split from Order #${originalOrder.id.substring(0, 8)} - Overridden items due to out of stock',
+          ),
+        ],
+        notes: [
+          models.OrderNote(
+            text:
+                'Order created by splitting Order #${originalOrder.id.substring(0, 8)}. Items overridden due to out of stock.',
+            createdAt: now,
+            createdBy: userId,
+            createdByName: userName,
+          ),
+        ],
+        createdBy: userId,
+        createdByName: userName,
+        formScore: originalOrder.formScore,
+        // Installation booking fields
+        installBookingToken: originalOrder.installBookingToken,
+        customerSelectedDates: originalOrder.customerSelectedDates,
+        confirmedInstallDate: originalOrder.confirmedInstallDate,
+        assignedInstallerId: originalOrder.assignedInstallerId,
+        assignedInstallerName: originalOrder.assignedInstallerName,
+        assignedInstallerPhone: originalOrder.assignedInstallerPhone,
+        assignedInstallerEmail: originalOrder.assignedInstallerEmail,
+        installBookingStatus: originalOrder.installBookingStatus,
+        installBookingEmailSentAt: originalOrder.installBookingEmailSentAt,
+        // Inventory picking fields - start fresh for new order
+        pickedItems: {},
+        // Order splitting fields
+        splitFromOrderId: originalOrder.id, // Reference to Order 1
+        shippedItemsFromParentOrder: shippedItems, // Items shipped in Order 1
+        remainingItemsFromParentOrder:
+            remainingItems, // Items from Order 1 that were NOT overridden
+        // Priority order flag
+        isPriorityOrder: originalOrder.isPriorityOrder,
+      );
+
+      // Create the new order
+      final newOrderId = await createOrder(newOrder);
+
+      // Update original order (Order 1) to remove overridden items
+      final updatedPickedItems = Map<String, bool>.from(
+        originalOrder.pickedItems,
+      );
+      // Remove overridden items from pickedItems map
+      for (final itemName in overriddenItemNames) {
+        updatedPickedItems.remove(itemName);
+      }
+
+      // Add note to original order
+      final splitNote = models.OrderNote(
+        text:
+            'Order split - Items ${overriddenItemNames.join(", ")} moved to Order #${newOrderId.substring(0, 8)} due to out of stock override',
+        createdAt: now,
+        createdBy: userId,
+        createdByName: userName,
+      );
+
+      final updatedOrder = originalOrder.copyWith(
+        items: remainingItems, // Remove overridden items
+        pickedItems:
+            updatedPickedItems, // Remove overridden items from pickedItems
+        notes: [...originalOrder.notes, splitNote],
+        updatedAt: now,
+      );
+
+      await updateOrder(updatedOrder);
+
+      if (kDebugMode) {
+        print(
+          'Order split: Order #$orderId -> Order #$newOrderId (${overriddenItemNames.length} items)',
+        );
+      }
+
+      return newOrderId;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error splitting order: $e');
+      }
+      rethrow;
     }
   }
 }
