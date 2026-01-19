@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+import 'package:intl/intl.dart';
 import '../../models/streams/order.dart' as models;
 import '../../models/streams/support_ticket.dart';
 import '../emailjs_service.dart';
@@ -312,17 +313,79 @@ class OrderService {
           }
 
           // Calculate invoice amount (total - deposit)
-          final totalInvoice = updatedOrder.items.fold<double>(
+          // For split orders, include items from both parent and split order
+          List<models.OrderItem> allItems = List.from(updatedOrder.items);
+
+          // If this is a split order (Order 2), include items from parent order (Order 1)
+          if (updatedOrder.splitFromOrderId != null) {
+            try {
+              final parentOrder = await getOrder(
+                updatedOrder.splitFromOrderId!,
+              );
+              if (parentOrder != null) {
+                // Add parent order items to the list
+                allItems.addAll(parentOrder.items);
+              }
+            } catch (e) {
+              if (kDebugMode) {
+                print('Error fetching parent order for invoice: $e');
+              }
+              // Continue with current order items only if parent fetch fails
+            }
+          } else {
+            // If this is Order 1, check if there's a split order (Order 2)
+            try {
+              // Find split order where splitFromOrderId matches this order's id
+              final splitOrdersQuery = await _firestore
+                  .collection('orders')
+                  .where('splitFromOrderId', isEqualTo: order.id)
+                  .limit(1)
+                  .get();
+
+              if (splitOrdersQuery.docs.isNotEmpty) {
+                final splitOrder = models.Order.fromFirestore(
+                  splitOrdersQuery.docs.first,
+                );
+                // Add split order items to the list
+                allItems.addAll(splitOrder.items);
+              }
+            } catch (e) {
+              if (kDebugMode) {
+                print('Error fetching split order for invoice: $e');
+              }
+              // Continue with current order items only if split order fetch fails
+            }
+          }
+
+          // Calculate total from all items (both orders if split)
+          final totalInvoice = allItems.fold<double>(
             0,
             (sum, item) => sum + ((item.price ?? 0) * item.quantity),
           );
-          final invoiceAmount = totalInvoice - depositAmount;
+
+          // Cap deposit amount at order total to prevent negative invoice amounts
+          final cappedDepositAmount = depositAmount > totalInvoice
+              ? totalInvoice
+              : depositAmount;
+
+          // Ensure invoice amount is never negative
+          final invoiceAmount = max(0.0, totalInvoice - cappedDepositAmount);
+
+          // Generate invoice number if not already set
+          final invoiceNumber =
+              updatedOrder.invoiceNumber ?? _generateInvoiceNumber(order.id);
+
+          // Update order with invoice number and combined items (for split orders) before generating PDF
+          final orderWithInvoiceNumber = updatedOrder.copyWith(
+            invoiceNumber: invoiceNumber,
+            items: allItems, // Use combined items from both orders if split
+          );
 
           // Generate invoice PDF
           final invoicePdfService = InvoicePdfService();
           final pdfBytes = await invoicePdfService.generatePdfBytes(
-            order: updatedOrder,
-            depositAmount: depositAmount,
+            order: orderWithInvoiceNumber,
+            depositAmount: cappedDepositAmount,
             shippingAddress: shippingAddress,
           );
 
@@ -332,9 +395,10 @@ class OrderService {
             orderId: order.id,
           );
 
-          // Store invoice PDF URL in order
+          // Store invoice PDF URL and invoice number in order
           await _firestore.collection('orders').doc(orderId).update({
             'invoicePdfUrl': pdfUrl,
+            'invoiceNumber': invoiceNumber,
           });
 
           // Build invoice link (for backward compatibility)
@@ -343,9 +407,9 @@ class OrderService {
             token: confirmationToken!,
           );
 
-          // Send invoice email with PDF URL
+          // Send invoice email with PDF URL (use order with invoice number)
           final invoiceEmailSent = await EmailJSService.sendInvoiceEmail(
-            order: updatedOrder,
+            order: orderWithInvoiceNumber,
             invoiceLink: invoiceLink,
             invoicePdfUrl: pdfUrl,
             invoiceAmount: invoiceAmount,
@@ -354,7 +418,7 @@ class OrderService {
           if (kDebugMode) {
             if (invoiceEmailSent) {
               print(
-                'Invoice email sent for order $orderId (Amount: R ${invoiceAmount.toStringAsFixed(2)}, Deposit: R ${depositAmount.toStringAsFixed(2)})',
+                'Invoice email sent for order $orderId (Invoice #: $invoiceNumber, Amount: R ${invoiceAmount.toStringAsFixed(2)}, Deposit: R ${cappedDepositAmount.toStringAsFixed(2)}, Total: R ${totalInvoice.toStringAsFixed(2)})',
               );
             } else {
               print('Failed to send invoice email for order $orderId');
@@ -830,6 +894,14 @@ class OrderService {
       final order = await getOrder(orderId);
       if (order == null) {
         throw Exception('Order not found');
+      }
+
+      // Validate that installer is assigned before confirming install date
+      if (order.assignedInstallerId == null ||
+          order.assignedInstallerId!.isEmpty) {
+        throw Exception(
+          'Installer must be assigned before confirming installation date',
+        );
       }
 
       final now = DateTime.now();
@@ -1699,6 +1771,16 @@ class OrderService {
       }
       rethrow;
     }
+  }
+
+  /// Generate invoice number in format: INV-YYYYMMDD-XXXX
+  String _generateInvoiceNumber(String orderId) {
+    final now = DateTime.now();
+    final dateStr = DateFormat('yyyyMMdd').format(now);
+    final orderSuffix = orderId.length >= 8
+        ? orderId.substring(0, 8).toUpperCase()
+        : orderId.toUpperCase();
+    return 'INV-$dateStr-$orderSuffix';
   }
 }
 

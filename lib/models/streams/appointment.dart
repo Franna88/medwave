@@ -135,8 +135,9 @@ class SalesAppointment {
               )
               .toList() ??
           [],
-      optInQuestions: (map['optInQuestions'] as Map<String, dynamic>?)
-          ?.map((k, v) => MapEntry(k, v.toString())),
+      optInQuestions: (map['optInQuestions'] as Map<String, dynamic>?)?.map(
+        (k, v) => MapEntry(k, v.toString()),
+      ),
       depositConfirmationToken: map['depositConfirmationToken']?.toString(),
       depositConfirmationStatus: map['depositConfirmationStatus']?.toString(),
       depositConfirmationSentAt:
@@ -343,11 +344,13 @@ class OptInProduct {
   final String id;
   final String name;
   final double price;
+  final int quantity;
 
   const OptInProduct({
     required this.id,
     required this.name,
     required this.price,
+    this.quantity = 1,
   });
 
   factory OptInProduct.fromMap(Map<String, dynamic> map) {
@@ -355,10 +358,11 @@ class OptInProduct {
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
       price: (map['price'] is num) ? (map['price'] as num).toDouble() : 0.0,
+      quantity: (map['quantity'] is num) ? (map['quantity'] as num).toInt() : 1,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {'id': id, 'name': name, 'price': price};
+    return {'id': id, 'name': name, 'price': price, 'quantity': quantity};
   }
 }

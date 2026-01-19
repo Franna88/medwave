@@ -467,6 +467,40 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
                     _buildStatusBadge(order, tabType),
                   ],
                 ),
+                // Split order indicator
+                if (order.splitFromOrderId != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.shade300),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.call_split,
+                          size: 12,
+                          color: Colors.orange[800],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Part 2',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 const Divider(height: 1),
                 const SizedBox(height: 12),

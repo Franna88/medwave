@@ -128,6 +128,21 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   Future<void> _setInstallDate() async {
+    // Validate that installer is assigned before confirming install date
+    if (_currentOrder.assignedInstallerId == null ||
+        _currentOrder.assignedInstallerId!.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please assign an installer before confirming installation date'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return; // Prevent date selection
+    }
+
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.user?.uid ?? '';
     final userName = authProvider.userName;

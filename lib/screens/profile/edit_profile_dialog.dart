@@ -21,7 +21,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _postalCodeController = TextEditingController();
-  
+
   bool _isSaving = false;
 
   @override
@@ -33,7 +33,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   void _loadCurrentData() {
     final userProfileProvider = context.read<UserProfileProvider>();
     final profile = userProfileProvider.userProfile;
-    
+
     if (profile != null) {
       _phoneController.text = profile.phoneNumber;
       _specializationController.text = profile.specialization;
@@ -94,7 +94,8 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
         details: {
           'phoneNumber': _phoneController.text.trim(),
           'specialization': _specializationController.text.trim(),
-          'yearsOfExperience': int.tryParse(_yearsExpController.text.trim()) ?? 0,
+          'yearsOfExperience':
+              int.tryParse(_yearsExpController.text.trim()) ?? 0,
         },
       );
 
@@ -131,9 +132,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 600),
         child: SingleChildScrollView(
@@ -319,7 +318,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _isSaving ? null : () => Navigator.of(context).pop(false),
+                        onPressed: _isSaving
+                            ? null
+                            : () => Navigator.of(context).pop(false),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -349,7 +350,9 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text(
@@ -371,4 +374,3 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     );
   }
 }
-

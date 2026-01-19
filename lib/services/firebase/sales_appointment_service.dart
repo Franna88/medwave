@@ -701,7 +701,7 @@ class SalesAppointmentService {
           .map(
             (product) => models.OrderItem(
               name: product.name,
-              quantity: 1,
+              quantity: product.quantity,
               price: product.price,
             ),
           )

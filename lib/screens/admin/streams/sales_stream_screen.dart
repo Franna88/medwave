@@ -219,7 +219,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     final products = productProvider.items
         .where((p) => p.isActive)
         .toList(growable: false);
-    final selectedProductIds = <String>{};
+    final selectedProductQuantities = <String, int>{};
     final noteController = TextEditingController(
       text: 'Manually moved to ${newStage.name}',
     );
@@ -314,6 +314,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                             ),
                                           ),
                                         ),
+                                        SizedBox(width: 12),
+                                        SizedBox(
+                                          width: 100,
+                                          child: Text(
+                                            'Quantity',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
                                         if (isSuperAdmin) ...[
                                           SizedBox(width: 12),
                                           SizedBox(
@@ -342,8 +353,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                           const Divider(height: 1),
                                       itemBuilder: (context, index) {
                                         final product = products[index];
-                                        final isSelected = selectedProductIds
-                                            .contains(product.id);
+                                        final isSelected =
+                                            selectedProductQuantities
+                                                .containsKey(product.id);
+                                        final quantityController =
+                                            TextEditingController(
+                                              text:
+                                                  selectedProductQuantities[product
+                                                          .id]
+                                                      ?.toString() ??
+                                                  '1',
+                                            );
                                         return Padding(
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 10,
@@ -357,13 +377,14 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                                 onChanged: (checked) {
                                                   setState(() {
                                                     if (checked == true) {
-                                                      selectedProductIds.add(
-                                                        product.id,
-                                                      );
+                                                      selectedProductQuantities[product
+                                                              .id] =
+                                                          1;
+                                                      quantityController.text =
+                                                          '1';
                                                     } else {
-                                                      selectedProductIds.remove(
-                                                        product.id,
-                                                      );
+                                                      selectedProductQuantities
+                                                          .remove(product.id);
                                                     }
                                                   });
                                                 },
@@ -400,6 +421,119 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                                     fontSize: 12,
                                                   ),
                                                 ),
+                                              ),
+                                              SizedBox(width: 12),
+                                              SizedBox(
+                                                width: 100,
+                                                child: isSelected
+                                                    ? Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.remove,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              if (currentQty >
+                                                                  1) {
+                                                                setState(() {
+                                                                  selectedProductQuantities[product
+                                                                          .id] =
+                                                                      currentQty -
+                                                                      1;
+                                                                  quantityController
+                                                                          .text =
+                                                                      (currentQty -
+                                                                              1)
+                                                                          .toString();
+                                                                });
+                                                              }
+                                                            },
+                                                          ),
+                                                          Expanded(
+                                                            child: TextField(
+                                                              controller:
+                                                                  quantityController,
+                                                              keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              onChanged: (value) {
+                                                                final qty =
+                                                                    int.tryParse(
+                                                                      value,
+                                                                    ) ??
+                                                                    1;
+                                                                if (qty >= 1) {
+                                                                  setState(() {
+                                                                    selectedProductQuantities[product
+                                                                            .id] =
+                                                                        qty;
+                                                                  });
+                                                                }
+                                                              },
+                                                              decoration: const InputDecoration(
+                                                                border:
+                                                                    OutlineInputBorder(),
+                                                                contentPadding:
+                                                                    EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          4,
+                                                                      vertical:
+                                                                          4,
+                                                                    ),
+                                                                isDense: true,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.add,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              setState(() {
+                                                                selectedProductQuantities[product
+                                                                        .id] =
+                                                                    currentQty +
+                                                                    1;
+                                                                quantityController
+                                                                        .text =
+                                                                    (currentQty +
+                                                                            1)
+                                                                        .toString();
+                                                              });
+                                                            },
+                                                          ),
+                                                        ],
+                                                      )
+                                                    : const SizedBox.shrink(),
                                               ),
                                               if (isSuperAdmin) ...[
                                                 const SizedBox(width: 12),
@@ -488,13 +622,14 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         }
 
         List<models.OptInProduct>? optInSelections;
-        if (isOptIn && selectedProductIds.isNotEmpty) {
-          optInSelections = selectedProductIds.map((id) {
-            final product = products.firstWhere((p) => p.id == id);
+        if (isOptIn && selectedProductQuantities.isNotEmpty) {
+          optInSelections = selectedProductQuantities.entries.map((entry) {
+            final product = products.firstWhere((p) => p.id == entry.key);
             return models.OptInProduct(
               id: product.id,
               name: product.name,
               price: product.price,
+              quantity: entry.value,
             );
           }).toList();
         }
@@ -1013,7 +1148,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     final products = productProvider.items
         .where((p) => p.isActive)
         .toList(growable: false);
-    final selectedProductIds = <String>{};
+    final selectedProductQuantities = <String, int>{};
     final noteController = TextEditingController(
       text: 'Manually moved to ${newStage.name}',
     );
@@ -1187,6 +1322,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                             ),
                                           ),
                                         ),
+                                        SizedBox(width: 12),
+                                        SizedBox(
+                                          width: 100,
+                                          child: Text(
+                                            'Quantity',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
                                         if (isSuperAdmin) ...[
                                           SizedBox(width: 12),
                                           SizedBox(
@@ -1215,8 +1361,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                           const Divider(height: 1),
                                       itemBuilder: (context, index) {
                                         final product = products[index];
-                                        final isSelected = selectedProductIds
-                                            .contains(product.id);
+                                        final isSelected =
+                                            selectedProductQuantities
+                                                .containsKey(product.id);
+                                        final quantityController =
+                                            TextEditingController(
+                                              text:
+                                                  selectedProductQuantities[product
+                                                          .id]
+                                                      ?.toString() ??
+                                                  '1',
+                                            );
                                         return Padding(
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 10,
@@ -1230,13 +1385,14 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                                 onChanged: (checked) {
                                                   setState(() {
                                                     if (checked == true) {
-                                                      selectedProductIds.add(
-                                                        product.id,
-                                                      );
+                                                      selectedProductQuantities[product
+                                                              .id] =
+                                                          1;
+                                                      quantityController.text =
+                                                          '1';
                                                     } else {
-                                                      selectedProductIds.remove(
-                                                        product.id,
-                                                      );
+                                                      selectedProductQuantities
+                                                          .remove(product.id);
                                                     }
                                                   });
                                                 },
@@ -1273,6 +1429,119 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                                     fontSize: 12,
                                                   ),
                                                 ),
+                                              ),
+                                              SizedBox(width: 12),
+                                              SizedBox(
+                                                width: 100,
+                                                child: isSelected
+                                                    ? Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.remove,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              if (currentQty >
+                                                                  1) {
+                                                                setState(() {
+                                                                  selectedProductQuantities[product
+                                                                          .id] =
+                                                                      currentQty -
+                                                                      1;
+                                                                  quantityController
+                                                                          .text =
+                                                                      (currentQty -
+                                                                              1)
+                                                                          .toString();
+                                                                });
+                                                              }
+                                                            },
+                                                          ),
+                                                          Expanded(
+                                                            child: TextField(
+                                                              controller:
+                                                                  quantityController,
+                                                              keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              onChanged: (value) {
+                                                                final qty =
+                                                                    int.tryParse(
+                                                                      value,
+                                                                    ) ??
+                                                                    1;
+                                                                if (qty >= 1) {
+                                                                  setState(() {
+                                                                    selectedProductQuantities[product
+                                                                            .id] =
+                                                                        qty;
+                                                                  });
+                                                                }
+                                                              },
+                                                              decoration: const InputDecoration(
+                                                                border:
+                                                                    OutlineInputBorder(),
+                                                                contentPadding:
+                                                                    EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          4,
+                                                                      vertical:
+                                                                          4,
+                                                                    ),
+                                                                isDense: true,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.add,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              setState(() {
+                                                                selectedProductQuantities[product
+                                                                        .id] =
+                                                                    currentQty +
+                                                                    1;
+                                                                quantityController
+                                                                        .text =
+                                                                    (currentQty +
+                                                                            1)
+                                                                        .toString();
+                                                              });
+                                                            },
+                                                          ),
+                                                        ],
+                                                      )
+                                                    : const SizedBox.shrink(),
                                               ),
                                               if (isSuperAdmin) ...[
                                                 const SizedBox(width: 12),
@@ -1361,13 +1630,14 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         }
 
         List<models.OptInProduct>? optInSelections;
-        if (isOptIn && selectedProductIds.isNotEmpty) {
-          optInSelections = selectedProductIds.map((id) {
-            final product = products.firstWhere((p) => p.id == id);
+        if (isOptIn && selectedProductQuantities.isNotEmpty) {
+          optInSelections = selectedProductQuantities.entries.map((entry) {
+            final product = products.firstWhere((p) => p.id == entry.key);
             return models.OptInProduct(
               id: product.id,
               name: product.name,
               price: product.price,
+              quantity: entry.value,
             );
           }).toList();
         }
@@ -1442,7 +1712,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       final products = productProvider.items
           .where((p) => p.isActive)
           .toList(growable: false);
-      final selectedProductIds = <String>{};
+      final selectedProductQuantities = <String, int>{};
       final noteController = TextEditingController(
         text: 'Manually added to Opt In',
       );
@@ -1614,6 +1884,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                             ),
                                           ),
                                         ),
+                                        SizedBox(width: 12),
+                                        SizedBox(
+                                          width: 100,
+                                          child: Text(
+                                            'Quantity',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
                                         if (isSuperAdmin) ...[
                                           SizedBox(width: 12),
                                           SizedBox(
@@ -1642,8 +1923,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                           const Divider(height: 1),
                                       itemBuilder: (context, index) {
                                         final product = products[index];
-                                        final isSelected = selectedProductIds
-                                            .contains(product.id);
+                                        final isSelected =
+                                            selectedProductQuantities
+                                                .containsKey(product.id);
+                                        final quantityController =
+                                            TextEditingController(
+                                              text:
+                                                  selectedProductQuantities[product
+                                                          .id]
+                                                      ?.toString() ??
+                                                  '1',
+                                            );
                                         return Padding(
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 10,
@@ -1657,13 +1947,14 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                                 onChanged: (checked) {
                                                   setState(() {
                                                     if (checked == true) {
-                                                      selectedProductIds.add(
-                                                        product.id,
-                                                      );
+                                                      selectedProductQuantities[product
+                                                              .id] =
+                                                          1;
+                                                      quantityController.text =
+                                                          '1';
                                                     } else {
-                                                      selectedProductIds.remove(
-                                                        product.id,
-                                                      );
+                                                      selectedProductQuantities
+                                                          .remove(product.id);
                                                     }
                                                   });
                                                 },
@@ -1701,6 +1992,119 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                                   ),
                                                 ),
                                               ),
+                                              SizedBox(width: 12),
+                                              SizedBox(
+                                                width: 100,
+                                                child: isSelected
+                                                    ? Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.remove,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              if (currentQty >
+                                                                  1) {
+                                                                setState(() {
+                                                                  selectedProductQuantities[product
+                                                                          .id] =
+                                                                      currentQty -
+                                                                      1;
+                                                                  quantityController
+                                                                          .text =
+                                                                      (currentQty -
+                                                                              1)
+                                                                          .toString();
+                                                                });
+                                                              }
+                                                            },
+                                                          ),
+                                                          Expanded(
+                                                            child: TextField(
+                                                              controller:
+                                                                  quantityController,
+                                                              keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              onChanged: (value) {
+                                                                final qty =
+                                                                    int.tryParse(
+                                                                      value,
+                                                                    ) ??
+                                                                    1;
+                                                                if (qty >= 1) {
+                                                                  setState(() {
+                                                                    selectedProductQuantities[product
+                                                                            .id] =
+                                                                        qty;
+                                                                  });
+                                                                }
+                                                              },
+                                                              decoration: const InputDecoration(
+                                                                border:
+                                                                    OutlineInputBorder(),
+                                                                contentPadding:
+                                                                    EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          4,
+                                                                      vertical:
+                                                                          4,
+                                                                    ),
+                                                                isDense: true,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.add,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              setState(() {
+                                                                selectedProductQuantities[product
+                                                                        .id] =
+                                                                    currentQty +
+                                                                    1;
+                                                                quantityController
+                                                                        .text =
+                                                                    (currentQty +
+                                                                            1)
+                                                                        .toString();
+                                                              });
+                                                            },
+                                                          ),
+                                                        ],
+                                                      )
+                                                    : const SizedBox.shrink(),
+                                              ),
                                               if (isSuperAdmin) ...[
                                                 const SizedBox(width: 12),
                                                 SizedBox(
@@ -1725,6 +2129,37 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                 ],
                               ),
                       ),
+                      // Opt-In Questionnaire
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Opt-In Questionnaire (Optional)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...questionControllers.entries.map((entry) {
+                        final isMultiline = entry.key == 'Shipping address';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: TextField(
+                            controller: entry.value,
+                            decoration: InputDecoration(
+                              labelText: entry.key,
+                              hintText: _getQuestionHint(entry.key),
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            maxLines: isMultiline ? 3 : 1,
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -1750,13 +2185,14 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
 
       // Create list of opt-in products
       List<models.OptInProduct>? optInSelections;
-      if (selectedProductIds.isNotEmpty) {
-        optInSelections = selectedProductIds.map((id) {
-          final product = products.firstWhere((p) => p.id == id);
+      if (selectedProductQuantities.isNotEmpty) {
+        optInSelections = selectedProductQuantities.entries.map((entry) {
+          final product = products.firstWhere((p) => p.id == entry.key);
           return models.OptInProduct(
             id: product.id,
             name: product.name,
             price: product.price,
+            quantity: entry.value,
           );
         }).toList();
       }

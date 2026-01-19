@@ -130,7 +130,7 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
     if (order.currentStage == 'out_for_delivery' && newStageId == 'installed') {
       // Save ScaffoldMessenger reference before async operation
       final scaffoldMessenger = ScaffoldMessenger.of(context);
-      
+
       await showDialog(
         context: context,
         builder: (context) => InstallationCompletionDialog(
@@ -716,6 +716,34 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: Colors.blue[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            // Show warning if install date is confirmed but no installer assigned
+            if (order.confirmedInstallDate != null &&
+                (order.assignedInstallerId == null ||
+                    order.assignedInstallerId!.isEmpty)) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.warning, size: 14, color: Colors.orange[800]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Installer required',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange[800],
                       ),
                     ),
                   ],
