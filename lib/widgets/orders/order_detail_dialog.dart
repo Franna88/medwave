@@ -1740,6 +1740,18 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
+  Widget _buildBusinessInformationSection() {
+    return _buildSection(
+      title: 'Business Information',
+      icon: Icons.business_center,
+      children: [
+        ..._currentOrder.optInQuestions!.entries.map((entry) {
+          return _buildInfoRow(entry.key, entry.value);
+        }).toList(),
+      ],
+    );
+  }
+
   Widget _buildInstallationBookingSection() {
     final hasSelectedDates = _currentOrder.customerSelectedDates.isNotEmpty;
     final hasConfirmedDate = _currentOrder.confirmedInstallDate != null;
