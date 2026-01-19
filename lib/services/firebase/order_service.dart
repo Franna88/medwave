@@ -192,18 +192,18 @@ class OrderService {
 
       final updatedNotes = [...order.notes, transitionNote];
 
-      // Determine if we need to send payment confirmation email
-      final movedFromOutForDeliveryToInstalled =
-          order.currentStage == 'out_for_delivery' && newStage == 'installed';
+      // Determine if we need to send invoice email (when moving to out_for_delivery)
+      final movingToOutForDelivery = newStage == 'out_for_delivery';
 
       String? confirmationToken = order.paymentConfirmationToken;
       String? confirmationStatus = order.paymentConfirmationStatus;
       DateTime? confirmationSentAt = order.paymentConfirmationSentAt;
 
-      if (movedFromOutForDeliveryToInstalled) {
+      if (movingToOutForDelivery) {
         confirmationToken = const Uuid().v4();
         confirmationStatus = 'pending';
-        confirmationSentAt = now;
+        // Don't set confirmationSentAt here - it will be set when payment reminder email is sent
+        // (when customer clicks the invoice link)
       }
 
       // Update order
@@ -254,10 +254,9 @@ class OrderService {
         }
       }
 
-      // Send invoice email if moving to installed stage
+      // Send invoice email if moving to out_for_delivery stage
       // Skip for split orders (Order 2) - invoice email was already sent with Order 1
-      if (movedFromOutForDeliveryToInstalled &&
-          updatedOrder.splitFromOrderId == null) {
+      if (movingToOutForDelivery && updatedOrder.splitFromOrderId == null) {
         try {
           // Fetch deposit amount and shipping address from appointment
           double depositAmount = 0;
@@ -285,8 +284,11 @@ class OrderService {
                       for (final product in optInProducts) {
                         if (product is Map<String, dynamic>) {
                           final price = product['price'];
+                          final quantity =
+                              product['quantity'] ??
+                              1; // Default to 1 if not set
                           if (price != null) {
-                            total += (price as num).toDouble();
+                            total += (price as num).toDouble() * quantity;
                           }
                         }
                       }
@@ -315,6 +317,60 @@ class OrderService {
           // Calculate invoice amount (total - deposit)
           // For split orders, include items from both parent and split order
           List<models.OrderItem> allItems = List.from(updatedOrder.items);
+
+          // Fix item quantities from appointment optInProducts if available
+          // This ensures quantities are correct even if order data has incorrect quantities
+          try {
+            if (order.appointmentId.isNotEmpty) {
+              final appointmentDoc = await _firestore
+                  .collection('appointments')
+                  .doc(order.appointmentId)
+                  .get();
+
+              if (appointmentDoc.exists) {
+                final appointmentData = appointmentDoc.data();
+                if (appointmentData != null) {
+                  final optInProducts =
+                      appointmentData['optInProducts'] as List<dynamic>?;
+                  if (optInProducts != null && optInProducts.isNotEmpty) {
+                    // Create a map of product name to quantity from appointment
+                    final appointmentQuantities = <String, int>{};
+                    for (final product in optInProducts) {
+                      if (product is Map<String, dynamic>) {
+                        final name = product['name']?.toString();
+                        final quantity = product['quantity'];
+                        if (name != null && quantity != null) {
+                          final qty = (quantity is num) ? quantity.toInt() : 1;
+                          // If same product appears multiple times, sum the quantities
+                          appointmentQuantities[name] =
+                              (appointmentQuantities[name] ?? 0) + qty;
+                        }
+                      }
+                    }
+
+                    // Update allItems with correct quantities from appointment
+                    allItems = allItems.map((item) {
+                      final correctQty = appointmentQuantities[item.name];
+                      if (correctQty != null && correctQty != item.quantity) {
+                        // Update quantity from appointment data
+                        return models.OrderItem(
+                          name: item.name,
+                          quantity: correctQty,
+                          price: item.price,
+                        );
+                      }
+                      return item;
+                    }).toList();
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error fixing item quantities from appointment: $e');
+            }
+            // Continue with existing items if fix fails
+          }
 
           // If this is a split order (Order 2), include items from parent order (Order 1)
           if (updatedOrder.splitFromOrderId != null) {
@@ -425,17 +481,15 @@ class OrderService {
             }
           }
 
-          // Update order with paymentConfirmationSentAt to track that invoice email was sent
-          await _firestore.collection('orders').doc(orderId).update({
-            'paymentConfirmationSentAt': Timestamp.fromDate(DateTime.now()),
-          });
+          // Note: paymentConfirmationSentAt is set when the payment reminder email is sent
+          // (when customer clicks the invoice link), not when the invoice email is sent
         } catch (e) {
           if (kDebugMode) {
             print('Error generating and sending invoice: $e');
           }
-          // Don't throw - allow order to move to installed stage even if invoice fails
+          // Don't throw - allow order to move to out_for_delivery stage even if invoice fails
         }
-      } else if (movedFromOutForDeliveryToInstalled &&
+      } else if (movingToOutForDelivery &&
           updatedOrder.splitFromOrderId != null) {
         if (kDebugMode) {
           print(
@@ -896,11 +950,13 @@ class OrderService {
         throw Exception('Order not found');
       }
 
-      // Validate that installer is assigned before confirming install date
+      // Validate that installer is assigned or "No Installation Required" is selected
+      // Allow "No Installation Required" option
       if (order.assignedInstallerId == null ||
-          order.assignedInstallerId!.isEmpty) {
+          (order.assignedInstallerId!.isEmpty &&
+              order.assignedInstallerId != 'NO_INSTALLATION_REQUIRED')) {
         throw Exception(
-          'Installer must be assigned before confirming installation date',
+          'Installer must be assigned or "No Installation Required" must be selected before confirming installation date',
         );
       }
 
@@ -1012,7 +1068,9 @@ class OrderService {
   /// Add shipping details (tracking number and waybill photo)
   Future<void> addShippingDetails({
     required String orderId,
-    required String trackingNumber,
+    String? trackingNumber,
+    String? deliveryType,
+    String? vehicleRegistrationNumber,
     required String waybillPhotoUrl,
     required String userId,
     String? userName,
@@ -1024,24 +1082,44 @@ class OrderService {
       }
 
       final now = DateTime.now();
+      final deliveryTypeValue = deliveryType ?? 'courier';
 
       // Create note for shipping
+      final identifier = deliveryTypeValue == 'courier'
+          ? 'Tracking: ${trackingNumber ?? 'N/A'}'
+          : 'Vehicle Registration: ${vehicleRegistrationNumber ?? 'N/A'}';
       final note = models.OrderNote(
-        text: 'Shipping details added. Tracking: $trackingNumber',
+        text:
+            'Shipping details added via ${deliveryTypeValue == 'courier' ? 'courier' : 'manual delivery'}. $identifier',
         createdAt: now,
         createdBy: userId,
         createdByName: userName,
       );
 
-      await _firestore.collection('orders').doc(orderId).update({
-        'trackingNumber': trackingNumber,
+      final updateData = <String, dynamic>{
         'waybillPhotoUrl': waybillPhotoUrl,
+        'deliveryType': deliveryTypeValue,
         'notes': [...order.notes.map((n) => n.toMap()), note.toMap()],
         'updatedAt': Timestamp.fromDate(now),
-      });
+      };
+
+      if (deliveryTypeValue == 'courier' && trackingNumber != null) {
+        updateData['trackingNumber'] = trackingNumber;
+        // Clear vehicle registration if switching to courier
+        updateData['vehicleRegistrationNumber'] = null;
+      } else if (deliveryTypeValue == 'manual' &&
+          vehicleRegistrationNumber != null) {
+        updateData['vehicleRegistrationNumber'] = vehicleRegistrationNumber;
+        // Clear tracking number if switching to manual
+        updateData['trackingNumber'] = null;
+      }
+
+      await _firestore.collection('orders').doc(orderId).update(updateData);
 
       if (kDebugMode) {
-        print('Added shipping details for order $orderId');
+        print(
+          'Added shipping details for order $orderId (delivery type: $deliveryTypeValue)',
+        );
       }
     } catch (e) {
       if (kDebugMode) {
@@ -1538,8 +1616,10 @@ class OrderService {
                   for (final product in optInProducts) {
                     if (product is Map<String, dynamic>) {
                       final price = product['price'];
+                      final quantity =
+                          product['quantity'] ?? 1; // Default to 1 if not set
                       if (price != null) {
-                        total += (price as num).toDouble();
+                        total += (price as num).toDouble() * quantity;
                       }
                     }
                   }

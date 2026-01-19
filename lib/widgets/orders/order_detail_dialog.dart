@@ -11,6 +11,9 @@ import '../../services/firebase/order_service.dart';
 import '../../theme/app_theme.dart';
 import 'installation_signoff_section_widget.dart';
 
+const String _noInstallationRequiredId = 'NO_INSTALLATION_REQUIRED';
+const String _noInstallationRequiredName = 'No Installation Required';
+
 class OrderDetailDialog extends StatefulWidget {
   final models.Order order;
   final VoidCallback? onOrderUpdated;
@@ -128,15 +131,66 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     }
   }
 
+  Future<void> _setNoInstallationRequired() async {
+    setState(() => _isSavingInstaller = true);
+
+    try {
+      await _orderService.assignInstaller(
+        orderId: _currentOrder.id,
+        installerId: _noInstallationRequiredId,
+        installerName: _noInstallationRequiredName,
+        installerPhone: null,
+        installerEmail: null,
+      );
+
+      setState(() {
+        _selectedInstallerId = _noInstallationRequiredId;
+        _currentOrder = _currentOrder.copyWith(
+          assignedInstallerId: _noInstallationRequiredId,
+          assignedInstallerName: _noInstallationRequiredName,
+          assignedInstallerPhone: null,
+          assignedInstallerEmail: null,
+        );
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order marked as: No Installation Required'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      widget.onOrderUpdated?.call();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingInstaller = false);
+      }
+    }
+  }
+
   Future<void> _setInstallDate() async {
-    // Validate that installer is assigned before confirming install date
-    if (_currentOrder.assignedInstallerId == null ||
-        _currentOrder.assignedInstallerId!.isEmpty) {
+    // Validate that installer is assigned or "No Installation Required" is selected
+    // Allow if installer is assigned OR if "No Installation Required" is selected
+    final hasInstaller =
+        _currentOrder.assignedInstallerId != null &&
+        _currentOrder.assignedInstallerId!.isNotEmpty;
+    final isNoInstallationRequired =
+        _currentOrder.assignedInstallerId == _noInstallationRequiredId;
+
+    if (!hasInstaller && !isNoInstallationRequired) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Please assign an installer before confirming installation date',
+              'Please assign an installer or select "No Installation Required" before confirming installation date',
             ),
             backgroundColor: Colors.orange,
             duration: Duration(seconds: 3),
@@ -1318,8 +1372,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                   (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
                 );
                 final itemPicked = pickedItems[item.name] ?? false;
-                // Item must be out of stock AND not already picked to be eligible for override
-                return stockItem.isOutOfStock && !itemPicked;
+                // Item must be out of stock OR have insufficient stock AND not already picked to be eligible for override
+                final isInsufficientStock =
+                    stockItem.currentQty < item.quantity;
+                return (stockItem.isOutOfStock || isInsufficientStock) &&
+                    !itemPicked;
               });
 
               if (hasOutOfStockItems && _selectedItemsForOverride.isNotEmpty) {
@@ -1378,12 +1435,17 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 );
 
                 final isOutOfStock = hasStock && stockItem.isOutOfStock;
+                final isInsufficientStock =
+                    hasStock && stockItem.currentQty < item.quantity;
                 // Allow override in inventory_packing_list OR items_picked stage
                 // (for items that haven't been picked yet)
                 final isInValidStage =
                     _currentOrder.currentStage == 'inventory_packing_list' ||
                     _currentOrder.currentStage == 'items_picked';
-                final canOverride = isOutOfStock && !isPicked && isInValidStage;
+                final canOverride =
+                    (isOutOfStock || isInsufficientStock) &&
+                    !isPicked &&
+                    isInValidStage;
                 final isSelectedForOverride = _selectedItemsForOverride
                     .contains(item.name);
 
@@ -1865,6 +1927,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     value: null,
                     child: Text('Unassigned'),
                   ),
+                  const DropdownMenuItem<String>(
+                    value: _noInstallationRequiredId,
+                    child: Text(_noInstallationRequiredName),
+                  ),
                   ...installers.map((installer) {
                     return DropdownMenuItem<String>(
                       value: installer.id,
@@ -1888,7 +1954,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 onChanged: _isSavingInstaller
                     ? null
                     : (value) {
-                        if (value != null) {
+                        if (value == null) {
+                          // Handle unassigned - could add logic here if needed
+                        } else if (value == _noInstallationRequiredId) {
+                          _setNoInstallationRequired();
+                        } else {
                           final installer = installers.firstWhere(
                             (i) => i.id == value,
                           );
@@ -1901,19 +1971,40 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color:
+                      _currentOrder.assignedInstallerId ==
+                          _noInstallationRequiredId
+                      ? Colors.grey.shade100
+                      : Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.blue[700]),
+                    Icon(
+                      _currentOrder.assignedInstallerId ==
+                              _noInstallationRequiredId
+                          ? Icons.block
+                          : Icons.check_circle,
+                      color:
+                          _currentOrder.assignedInstallerId ==
+                              _noInstallationRequiredId
+                          ? Colors.grey[700]
+                          : Colors.blue[700],
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Assigned to: ${_currentOrder.assignedInstallerName}',
+                        _currentOrder.assignedInstallerId ==
+                                _noInstallationRequiredId
+                            ? 'No Installation Required'
+                            : 'Assigned to: ${_currentOrder.assignedInstallerName}',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: Colors.blue[800],
+                          color:
+                              _currentOrder.assignedInstallerId ==
+                                  _noInstallationRequiredId
+                              ? Colors.grey[800]
+                              : Colors.blue[800],
                         ),
                       ),
                     ),
