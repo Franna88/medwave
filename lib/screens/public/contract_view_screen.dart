@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/contracts/contract.dart';
 import '../../providers/contract_provider.dart';
 import '../../theme/app_theme.dart';
@@ -280,6 +281,11 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     _buildInfoRow(
                       'Signed by',
                       contract.digitalSignature ?? '-',
+                      valueStyle: GoogleFonts.dancingScript(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     _buildInfoRow(
@@ -561,7 +567,8 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
           _buildInfoRow('Email', contract.email),
           const SizedBox(height: 12),
           _buildInfoRow('Phone', contract.phone),
-          if (contract.shippingAddress != null && contract.shippingAddress!.isNotEmpty) ...[
+          if (contract.shippingAddress != null &&
+              contract.shippingAddress!.isNotEmpty) ...[
             const SizedBox(height: 12),
             _buildInfoRow('Shipping Address', contract.shippingAddress!),
           ],
@@ -742,7 +749,12 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
               filled: true,
               fillColor: Colors.white,
             ),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            style: GoogleFonts.dancingScript(
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+              letterSpacing: 1.2,
+            ),
             textCapitalization: TextCapitalization.words,
           ),
         ],
@@ -835,7 +847,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value, {TextStyle? valueStyle}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -853,7 +865,9 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            style:
+                valueStyle ??
+                const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
         ),
       ],

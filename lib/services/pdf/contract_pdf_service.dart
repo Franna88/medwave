@@ -177,6 +177,13 @@ class ContractPdfService {
       // #endregion
     }
 
+    // Load signature font for PDF
+    final signatureFontData = await rootBundle.load(
+      'fonts/DancingScript-Bold.ttf',
+    );
+    final signatureFontBytes = signatureFontData.buffer.asUint8List();
+    final signatureFont = pw.Font.ttf(signatureFontBytes.buffer.asByteData());
+
     // Final Page: Signature Certificate
     // #region agent log
     final sigStartTime = DateTime.now().millisecondsSinceEpoch;
@@ -188,7 +195,7 @@ class ContractPdfService {
         build: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            _buildSignatureCertificate(contract),
+            _buildSignatureCertificate(contract, signatureFont),
             pw.Spacer(),
             _buildFooter(),
           ],
@@ -383,7 +390,10 @@ class ContractPdfService {
   }
 
   /// Build signature certificate section
-  pw.Widget _buildSignatureCertificate(Contract contract) {
+  pw.Widget _buildSignatureCertificate(
+    Contract contract,
+    pw.Font signatureFont,
+  ) {
     final dateFormat = DateFormat('MMMM dd, yyyy \'at\' hh:mm a');
 
     return pw.Container(
@@ -415,14 +425,16 @@ class ContractPdfService {
             ),
           ),
           pw.SizedBox(height: PdfStyles.spacingMedium),
-          // Document Signed On
-          pw.Text('DOCUMENT SIGNED ON', style: PdfStyles.labelText),
-          pw.SizedBox(height: 4),
+          // Signature Display - Large and Prominent
+          pw.Text('SIGNATURE', style: PdfStyles.labelText),
+          pw.SizedBox(height: 8),
           pw.Text(
-            contract.signedAt != null
-                ? dateFormat.format(contract.signedAt!)
-                : 'N/A',
-            style: PdfStyles.bodyTextBold,
+            contract.digitalSignature ?? 'N/A',
+            style: pw.TextStyle(
+              font: signatureFont,
+              fontSize: 32,
+              color: PdfStyles.textColor,
+            ),
           ),
           pw.SizedBox(height: PdfStyles.spacingLarge),
           // Signer Details Box
@@ -447,8 +459,6 @@ class ContractPdfService {
                 _buildInfoRow('Name:', contract.customerName),
                 pw.SizedBox(height: 8),
                 _buildInfoRow('Email:', contract.email),
-                pw.SizedBox(height: 8),
-                _buildInfoRow('Signature:', contract.digitalSignature ?? 'N/A'),
                 pw.SizedBox(height: 8),
                 _buildInfoRow(
                   'Signature Token:',
@@ -798,7 +808,11 @@ class ContractPdfService {
   }
 
   /// Build info row with label and value
-  pw.Widget _buildInfoRow(String label, String value) {
+  pw.Widget _buildInfoRow(
+    String label,
+    String value, {
+    pw.Font? signatureFont,
+  }) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -806,7 +820,14 @@ class ContractPdfService {
           width: 120,
           child: pw.Text(label, style: PdfStyles.labelText),
         ),
-        pw.Expanded(child: pw.Text(value, style: PdfStyles.bodyText)),
+        pw.Expanded(
+          child: pw.Text(
+            value,
+            style: signatureFont != null
+                ? PdfStyles.signatureText(signatureFont)
+                : PdfStyles.bodyText,
+          ),
+        ),
       ],
     );
   }
