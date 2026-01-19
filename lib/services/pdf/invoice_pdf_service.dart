@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
@@ -31,7 +32,11 @@ class InvoicePdfService {
       0,
       (sum, item) => sum + ((item.price ?? 0) * item.quantity),
     );
-    final invoiceAmount = subtotal - depositAmount;
+    // Cap deposit at subtotal and ensure invoice amount is never negative
+    final cappedDepositAmount = depositAmount > subtotal
+        ? subtotal
+        : depositAmount;
+    final invoiceAmount = max(0.0, subtotal - cappedDepositAmount);
 
     // Invoice page (EXACT same layout as contract PDF page 2)
     pdf.addPage(
@@ -89,7 +94,7 @@ class InvoicePdfService {
             _buildInvoiceQuoteTable(
               order,
               subtotal,
-              depositAmount,
+              cappedDepositAmount,
               invoiceAmount,
             ),
             pw.SizedBox(height: 24),

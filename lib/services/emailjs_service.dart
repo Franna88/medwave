@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -379,18 +380,27 @@ class EmailJSService {
     required String yesLabel,
     required String noLabel,
   }) {
-    // Calculate amount from optInProducts if depositAmount is null
-    final calculatedAmount =
-        appointment.depositAmount ??
-        appointment.optInProducts.fold<double>(0, (sum, p) => sum + p.price);
+    // Calculate deposit amount: use stored depositAmount, or calculate 40% of total if not set
+    double calculatedAmount = 0;
+    if (appointment.depositAmount != null) {
+      calculatedAmount = appointment.depositAmount!;
+    } else if (appointment.optInProducts.isNotEmpty) {
+      // Calculate 40% deposit from optInProducts total
+      final total = appointment.optInProducts.fold<double>(
+        0,
+        (sum, p) => sum + p.price,
+      );
+      calculatedAmount = total * 0.40; // 40% deposit
+    }
 
     return {
       'customer_name': appointment.customerName,
       'customer_email': appointment.email,
       'customer_phone': appointment.phone,
       'appointment_id': appointment.id,
+      // Template likely already includes "R" prefix, so just send the number
       'deposit_amount': calculatedAmount > 0
-          ? 'R ${calculatedAmount.toStringAsFixed(2)}'
+          ? calculatedAmount.toStringAsFixed(2)
           : 'N/A',
       'description': description,
       'yes_label': yesLabel,
@@ -908,9 +918,8 @@ class EmailJSService {
             'to_name': order.customerName,
             'username': order.customerName,
             'invoice_number': order.invoiceNumber ?? 'N/A',
-            'invoice_amount': calculatedInvoiceAmount > 0
-                ? 'R ${calculatedInvoiceAmount.toStringAsFixed(2)}'
-                : 'N/A',
+            'invoice_amount':
+                'R ${max(0.0, calculatedInvoiceAmount).toStringAsFixed(2)}',
             'invoice_link': invoiceLink,
             'invoice_pdf_url': invoicePdfUrl ?? '',
             'website_link': resolvedWebsiteLink,

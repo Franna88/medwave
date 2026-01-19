@@ -9,7 +9,8 @@ class ProfilePhotoUploadDialog extends StatefulWidget {
   const ProfilePhotoUploadDialog({super.key});
 
   @override
-  State<ProfilePhotoUploadDialog> createState() => _ProfilePhotoUploadDialogState();
+  State<ProfilePhotoUploadDialog> createState() =>
+      _ProfilePhotoUploadDialogState();
 }
 
 class _ProfilePhotoUploadDialogState extends State<ProfilePhotoUploadDialog> {
@@ -74,9 +75,7 @@ class _ProfilePhotoUploadDialogState extends State<ProfilePhotoUploadDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 400),
         padding: const EdgeInsets.all(32),
@@ -112,10 +111,7 @@ class _ProfilePhotoUploadDialogState extends State<ProfilePhotoUploadDialog> {
 
             Text(
               'Choose a photo source',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
 
             const SizedBox(height: 32),
@@ -183,7 +179,10 @@ class _ProfilePhotoUploadDialogState extends State<ProfilePhotoUploadDialog> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        side: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                        side: const BorderSide(
+                          color: AppTheme.primaryColor,
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
@@ -209,4 +208,3 @@ class _ProfilePhotoUploadDialogState extends State<ProfilePhotoUploadDialog> {
     );
   }
 }
-

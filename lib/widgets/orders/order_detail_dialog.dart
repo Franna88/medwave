@@ -128,6 +128,21 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   Future<void> _setInstallDate() async {
+    // Validate that installer is assigned before confirming install date
+    if (_currentOrder.assignedInstallerId == null ||
+        _currentOrder.assignedInstallerId!.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please assign an installer before confirming installation date'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return; // Prevent date selection
+    }
+
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.user?.uid ?? '';
     final userName = authProvider.userName;
@@ -356,7 +371,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 padding: const EdgeInsets.only(left: 8, bottom: 4),
                 child: Row(
                   children: [
-                    Icon(Icons.remove_circle, size: 16, color: Colors.orange[400]),
+                    Icon(
+                      Icons.remove_circle,
+                      size: 16,
+                      color: Colors.orange[400],
+                    ),
                     const SizedBox(width: 8),
                     Text(itemName),
                   ],
@@ -510,7 +529,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     _buildInstallerSection(),
                     const SizedBox(height: 24),
                     // Show shipped items from parent order if this is a split order
-                    if (_currentOrder.shippedItemsFromParentOrder.isNotEmpty) ...[
+                    if (_currentOrder
+                        .shippedItemsFromParentOrder
+                        .isNotEmpty) ...[
                       _buildShippedItemsFromParentSection(),
                       const SizedBox(height: 24),
                     ],
@@ -1409,8 +1430,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     _currentOrder.currentStage == 'inventory_packing_list' ||
                     _currentOrder.currentStage == 'items_picked';
                 final canOverride = isOutOfStock && !isPicked && isInValidStage;
-                final isSelectedForOverride =
-                    _selectedItemsForOverride.contains(item.name);
+                final isSelectedForOverride = _selectedItemsForOverride
+                    .contains(item.name);
 
                 return Container(
                   margin: EdgeInsets.only(
@@ -1421,15 +1442,15 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     color: isPicked
                         ? Colors.green.shade50
                         : isSelectedForOverride
-                            ? Colors.orange.shade50
-                            : Colors.white,
+                        ? Colors.orange.shade50
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: isPicked
                           ? Colors.green.shade300
                           : isSelectedForOverride
-                              ? Colors.orange.shade300
-                              : Colors.grey.shade300,
+                          ? Colors.orange.shade300
+                          : Colors.grey.shade300,
                       width: isPicked || isSelectedForOverride ? 2 : 1,
                     ),
                   ),
@@ -1604,8 +1625,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.info_outline,
-                        size: 16, color: Colors.grey[700]),
+                    Icon(Icons.info_outline, size: 16, color: Colors.grey[700]),
                     const SizedBox(width: 8),
                     Text(
                       'Other Items from Original Order',
@@ -1620,106 +1640,109 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 const SizedBox(height: 8),
                 Text(
                   'These items remained in Order #${_currentOrder.splitFromOrderId!.substring(0, 8)} and were not overridden:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 8),
                 ..._currentOrder.remainingItemsFromParentOrder
                     .asMap()
                     .entries
                     .map((entry) {
-                  final index = entry.key;
-                  final item = entry.value;
-                  return Container(
-                    margin: EdgeInsets.only(
-                      bottom: index <
-                              _currentOrder.remainingItemsFromParentOrder.length -
-                                  1
-                          ? 6
-                          : 0,
-                    ),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${index + 1}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey[600],
+                      final index = entry.key;
+                      final item = entry.value;
+                      return Container(
+                        margin: EdgeInsets.only(
+                          bottom:
+                              index <
+                                  _currentOrder
+                                          .remainingItemsFromParentOrder
+                                          .length -
+                                      1
+                              ? 6
+                              : 0,
+                        ),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 13,
-                                ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Qty: ${item.quantity}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Qty: ${item.quantity}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
                               ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.blue.shade200),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.inventory_2,
-                                  size: 12, color: Colors.blue[700]),
-                              const SizedBox(width: 4),
-                              Text(
-                                'In Order 1',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.blue[700],
-                                ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue.shade200),
                               ),
-                            ],
-                          ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.inventory_2,
+                                    size: 12,
+                                    color: Colors.blue[700],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'In Order 1',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  );
-                }),
+                      );
+                    }),
               ],
             ),
           ),
@@ -2161,10 +2184,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     ),
                     Text(
                       'Qty: ${shippedItem.quantity}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue[700],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.blue[700]),
                     ),
                   ],
                 ),
@@ -2175,7 +2195,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     decoration: BoxDecoration(
                       color: Colors.blue.shade100,
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.blue.shade300, width: 1.5),
+                      border: Border.all(
+                        color: Colors.blue.shade300,
+                        width: 1.5,
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -2209,18 +2232,20 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                   ),
                 ],
                 if (shippedItem.trackingNumber != null &&
-                    shippedItem.trackingNumber != shippedItem.waybillNumber) ...[
+                    shippedItem.trackingNumber !=
+                        shippedItem.waybillNumber) ...[
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.track_changes, size: 14, color: Colors.blue[600]),
+                      Icon(
+                        Icons.track_changes,
+                        size: 14,
+                        color: Colors.blue[600],
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         'Tracking: ${shippedItem.trackingNumber}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.blue[700],
-                        ),
+                        style: TextStyle(fontSize: 11, color: Colors.blue[700]),
                       ),
                     ],
                   ),
@@ -2243,19 +2268,23 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                             Image.network(
                               shippedItem.waybillPhotoUrl!,
                               fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes !=
-                                            null
-                                        ? loadingProgress.cumulativeBytesLoaded /
-                                              loadingProgress
-                                                  .expectedTotalBytes!
-                                        : null,
-                                  ),
-                                );
-                              },
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        value:
+                                            loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    );
+                                  },
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(
                                   color: Colors.grey.shade200,
@@ -2280,8 +2309,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                                 child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.zoom_in,
-                                        color: Colors.white, size: 12),
+                                    Icon(
+                                      Icons.zoom_in,
+                                      color: Colors.white,
+                                      size: 12,
+                                    ),
                                     SizedBox(width: 2),
                                     Text(
                                       'Tap to view',

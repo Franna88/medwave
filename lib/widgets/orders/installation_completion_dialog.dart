@@ -2,9 +2,12 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../../models/streams/order.dart' as models;
 import '../../services/firebase/storage_service.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/auth_provider.dart';
+import '../../utils/role_manager.dart';
 
 /// Dialog for completing installation by uploading proof and signature images
 class InstallationCompletionDialog extends StatefulWidget {
@@ -41,6 +44,19 @@ class _InstallationCompletionDialogState
 
   bool _isSubmitting = false;
   String? _errorMessage;
+  bool _adminOverride = false;
+
+  bool get _isAdmin {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final role = authProvider.userRole;
+      return role == UserRole.superAdmin ||
+          role == UserRole.countryAdmin ||
+          role == UserRole.operationsAdmin;
+    } catch (e) {
+      return false;
+    }
+  }
 
   @override
   void dispose() {
@@ -176,6 +192,11 @@ class _InstallationCompletionDialogState
   }
 
   bool get _canSubmit {
+    // Admin override: allow submission without images if admin and override is enabled
+    if (_isAdmin && _adminOverride) {
+      return !_isSubmitting;
+    }
+    // Standard validation: require proof images and signature
     final allProofsUploaded =
         _proofUrls.isNotEmpty &&
         _proofUrls.every((url) => url.isNotEmpty) &&
@@ -186,20 +207,30 @@ class _InstallationCompletionDialogState
   Future<void> _handleSubmit() async {
     if (!_canSubmit) {
       setState(() {
-        _errorMessage =
-            'Please upload at least one proof image and the signature before completing installation';
+        if (_isAdmin && !_adminOverride) {
+          _errorMessage =
+              'Please upload at least one proof image and the signature before completing installation, or enable admin override';
+        } else {
+          _errorMessage =
+              'Please upload at least one proof image and the signature before completing installation';
+        }
       });
       return;
     }
 
-    // All images should already be uploaded at this point
+    // All images should already be uploaded at this point (unless admin override)
     final proofUrls = _proofUrls.where((url) => url.isNotEmpty).toList();
-    if (proofUrls.isEmpty || _signatureUrl == null) {
-      setState(() {
-        _errorMessage =
-            'Please upload at least one proof image and the signature before completing installation';
-      });
-      return;
+    final signatureUrl = _signatureUrl;
+    
+    // Admin override: allow empty proofUrls and signatureUrl
+    if (!(_isAdmin && _adminOverride)) {
+      if (proofUrls.isEmpty || signatureUrl == null) {
+        setState(() {
+          _errorMessage =
+              'Please upload at least one proof image and the signature before completing installation';
+        });
+        return;
+      }
     }
 
     setState(() {
@@ -210,7 +241,7 @@ class _InstallationCompletionDialogState
     try {
       widget.onComplete(
         proofUrls,
-        _signatureUrl!,
+        signatureUrl ?? '',
         _noteController.text.trim().isEmpty
             ? null
             : _noteController.text.trim(),
@@ -772,6 +803,40 @@ class _InstallationCompletionDialogState
                       ),
                       maxLines: 3,
                     ),
+                    // Admin override checkbox
+                    if (_isAdmin) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: CheckboxListTile(
+                          title: const Text(
+                            'Complete without images (Admin only)',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'As an admin, you can complete installation without uploading proof images or signature',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          value: _adminOverride,
+                          onChanged: (value) {
+                            setState(() {
+                              _adminOverride = value ?? false;
+                              _errorMessage = null; // Clear error when toggling
+                            });
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                        ),
+                      ),
+                    ],
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 16),
                       Container(

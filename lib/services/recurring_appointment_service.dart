@@ -1,12 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/appointment.dart';
 
-enum RecurrenceFrequency {
-  daily,
-  weekly,
-  biweekly,
-  monthly,
-}
+enum RecurrenceFrequency { daily, weekly, biweekly, monthly }
 
 class RecurringAppointmentPattern {
   final String id;
@@ -76,7 +71,9 @@ class RecurringAppointmentPattern {
         orElse: () => RecurrenceFrequency.weekly,
       ),
       startDate: (data['startDate'] as Timestamp).toDate(),
-      endDate: data['endDate'] != null ? (data['endDate'] as Timestamp).toDate() : null,
+      endDate: data['endDate'] != null
+          ? (data['endDate'] as Timestamp).toDate()
+          : null,
       occurrences: data['occurrences'],
       title: data['title'] ?? '',
       type: data['type'] ?? '',
@@ -95,7 +92,9 @@ class RecurringAppointmentService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   /// Create a recurring appointment pattern
-  Future<String?> createRecurringPattern(RecurringAppointmentPattern pattern) async {
+  Future<String?> createRecurringPattern(
+    RecurringAppointmentPattern pattern,
+  ) async {
     try {
       final docRef = await _firestore
           .collection('recurringAppointments')
@@ -162,7 +161,10 @@ class RecurringAppointmentService {
   }
 
   /// Calculate next occurrence based on frequency
-  DateTime _getNextOccurrence(DateTime current, RecurringAppointmentPattern pattern) {
+  DateTime _getNextOccurrence(
+    DateTime current,
+    RecurringAppointmentPattern pattern,
+  ) {
     switch (pattern.frequency) {
       case RecurrenceFrequency.daily:
         return current.add(const Duration(days: 1));
@@ -184,24 +186,28 @@ class RecurringAppointmentService {
       case RecurrenceFrequency.monthly:
         // Add one month, keeping the same day
         int targetDay = pattern.dayOfMonth;
-        DateTime next = DateTime(
-          current.year,
-          current.month + 1,
-          1,
-        );
-        
+        DateTime next = DateTime(current.year, current.month + 1, 1);
+
         // Handle months with fewer days
         int daysInMonth = DateTime(next.year, next.month + 1, 0).day;
         if (targetDay > daysInMonth) {
           targetDay = daysInMonth;
         }
-        
-        return DateTime(next.year, next.month, targetDay, current.hour, current.minute);
+
+        return DateTime(
+          next.year,
+          next.month,
+          targetDay,
+          current.hour,
+          current.minute,
+        );
     }
   }
 
   /// Create appointments from pattern and save to Firestore
-  Future<int> createAppointmentsFromPattern(RecurringAppointmentPattern pattern) async {
+  Future<int> createAppointmentsFromPattern(
+    RecurringAppointmentPattern pattern,
+  ) async {
     try {
       final appointments = await generateAppointmentsFromPattern(pattern);
       int created = 0;
@@ -223,7 +229,9 @@ class RecurringAppointmentService {
   }
 
   /// Get recurring patterns for a practitioner
-  Future<List<RecurringAppointmentPattern>> getPractitionerPatterns(String practitionerId) async {
+  Future<List<RecurringAppointmentPattern>> getPractitionerPatterns(
+    String practitionerId,
+  ) async {
     try {
       final snapshot = await _firestore
           .collection('recurringAppointments')
@@ -305,4 +313,3 @@ class RecurringAppointmentService {
     }
   }
 }
-

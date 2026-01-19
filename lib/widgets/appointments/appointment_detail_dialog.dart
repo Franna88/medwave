@@ -760,6 +760,17 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                         ),
                       ),
                     ),
+                    SizedBox(width: 12),
+                    SizedBox(
+                      width: 80,
+                      child: Text(
+                        'Quantity',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
                     if (isSuperAdmin) ...[
                       SizedBox(width: 12),
                       SizedBox(
@@ -792,6 +803,17 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                           p.name,
                           style: const TextStyle(
                             fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      SizedBox(
+                        width: 80,
+                        child: Text(
+                          '${p.quantity}',
+                          style: const TextStyle(
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
