@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -385,10 +386,10 @@ class EmailJSService {
     if (appointment.depositAmount != null) {
       calculatedAmount = appointment.depositAmount!;
     } else if (appointment.optInProducts.isNotEmpty) {
-      // Calculate 40% deposit from optInProducts total
+      // Calculate 40% deposit from optInProducts total (multiply price by quantity)
       final total = appointment.optInProducts.fold<double>(
         0,
-        (sum, p) => sum + p.price,
+        (sum, p) => sum + (p.price * p.quantity),
       );
       calculatedAmount = total * 0.40; // 40% deposit
     }
@@ -510,11 +511,66 @@ class EmailJSService {
         description ??
         'Customer ${order.customerName} confirmed payment. Please verify.';
 
-    // Calculate total invoice from order items
+    // Calculate total invoice from order items (with quantities)
     final totalInvoice = order.items.fold<double>(
       0,
       (sum, item) => sum + ((item.price ?? 0) * item.quantity),
     );
+
+    // Calculate deposit amount from appointment optInProducts (with quantities)
+    // This ensures the deposit matches what was calculated in the contract/invoice
+    double depositAmount = 0;
+    try {
+      if (order.appointmentId.isNotEmpty) {
+        final firestore = FirebaseFirestore.instance;
+        final appointmentDoc = await firestore
+            .collection('appointments')
+            .doc(order.appointmentId)
+            .get();
+
+        if (appointmentDoc.exists) {
+          final appointmentData = appointmentDoc.data();
+          if (appointmentData != null) {
+            // Get stored deposit amount first
+            final storedDeposit = appointmentData['depositAmount'];
+            if (storedDeposit != null) {
+              depositAmount = (storedDeposit as num).toDouble();
+            } else {
+              // Calculate 40% of total from optInProducts if deposit not stored
+              final optInProducts =
+                  appointmentData['optInProducts'] as List<dynamic>?;
+              if (optInProducts != null && optInProducts.isNotEmpty) {
+                double total = 0;
+                for (final product in optInProducts) {
+                  if (product is Map<String, dynamic>) {
+                    final price = product['price'];
+                    final quantity =
+                        product['quantity'] ?? 1; // Default to 1 if not set
+                    if (price != null) {
+                      total += (price as num).toDouble() * quantity;
+                    }
+                  }
+                }
+                depositAmount = total * 0.40; // 40% deposit
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error fetching appointment for deposit amount: $e');
+      }
+      // Fallback: calculate from order items if appointment fetch fails
+      depositAmount = totalInvoice * 0.40; // 40% deposit as fallback
+    }
+
+    // Calculate remaining balance (what customer needs to pay for final payment)
+    // Cap deposit at total to prevent negative amounts
+    final cappedDepositAmount = depositAmount > totalInvoice
+        ? totalInvoice
+        : depositAmount;
+    final remainingBalance = max(0.0, totalInvoice - cappedDepositAmount);
 
     // Build template params - the template uses customer_email as the recipient field,
     // so we must set it to the finance email address, not the customer's email
@@ -525,8 +581,8 @@ class EmailJSService {
       'customer_phone': order.phone,
       'appointment_id':
           order.id, // Use order.id as appointment_id for template compatibility
-      'deposit_amount': totalInvoice > 0
-          ? 'R ${totalInvoice.toStringAsFixed(2)}'
+      'deposit_amount': remainingBalance > 0
+          ? remainingBalance.toStringAsFixed(2)
           : 'N/A',
       'description': resolvedDescription,
       'yes_label': yesLabel ?? 'Open operations board',

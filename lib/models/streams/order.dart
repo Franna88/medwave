@@ -66,6 +66,9 @@ class Order {
   // Inventory picking fields
   final Map<String, bool> pickedItems; // item name -> picked status
   final String? trackingNumber;
+  final String? deliveryType; // 'courier' or 'manual'
+  final String?
+  vehicleRegistrationNumber; // Vehicle registration for manual delivery
   final String? waybillPhotoUrl;
   final DateTime? pickedAt;
   final String? pickedBy;
@@ -132,6 +135,8 @@ class Order {
     // Inventory picking fields
     this.pickedItems = const {},
     this.trackingNumber,
+    this.deliveryType,
+    this.vehicleRegistrationNumber,
     this.waybillPhotoUrl,
     this.pickedAt,
     this.pickedBy,
@@ -242,6 +247,8 @@ class Order {
           ) ??
           {},
       trackingNumber: map['trackingNumber']?.toString(),
+      deliveryType: map['deliveryType']?.toString(),
+      vehicleRegistrationNumber: map['vehicleRegistrationNumber']?.toString(),
       waybillPhotoUrl: map['waybillPhotoUrl']?.toString(),
       pickedAt: (map['pickedAt'] as Timestamp?)?.toDate(),
       pickedBy: map['pickedBy']?.toString(),
@@ -326,6 +333,8 @@ class Order {
       // Inventory picking fields
       'pickedItems': pickedItems,
       'trackingNumber': trackingNumber,
+      'deliveryType': deliveryType,
+      'vehicleRegistrationNumber': vehicleRegistrationNumber,
       'waybillPhotoUrl': waybillPhotoUrl,
       'pickedAt': pickedAt != null ? Timestamp.fromDate(pickedAt!) : null,
       'pickedBy': pickedBy,
@@ -390,6 +399,8 @@ class Order {
     // Inventory picking fields
     Map<String, bool>? pickedItems,
     String? trackingNumber,
+    String? deliveryType,
+    String? vehicleRegistrationNumber,
     String? waybillPhotoUrl,
     DateTime? pickedAt,
     String? pickedBy,
@@ -451,6 +462,9 @@ class Order {
       // Inventory picking fields
       pickedItems: pickedItems ?? this.pickedItems,
       trackingNumber: trackingNumber ?? this.trackingNumber,
+      deliveryType: deliveryType ?? this.deliveryType,
+      vehicleRegistrationNumber:
+          vehicleRegistrationNumber ?? this.vehicleRegistrationNumber,
       waybillPhotoUrl: waybillPhotoUrl ?? this.waybillPhotoUrl,
       pickedAt: pickedAt ?? this.pickedAt,
       pickedBy: pickedBy ?? this.pickedBy,

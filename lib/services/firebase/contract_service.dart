@@ -78,10 +78,10 @@ class ContractService {
         );
       }
 
-      // Calculate totals
+      // Calculate totals (multiply price by quantity for each product)
       double subtotal = 0;
       for (final product in appointment.optInProducts) {
-        subtotal += product.price;
+        subtotal += product.price * product.quantity;
       }
 
       final depositAmount = subtotal * 0.40; // 40% deposit
