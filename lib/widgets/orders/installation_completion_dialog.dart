@@ -1,12 +1,14 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../models/streams/order.dart' as models;
 import '../../services/firebase/storage_service.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/installation_signoff_provider.dart';
 import '../../utils/role_manager.dart';
 
 /// Dialog for completing installation by uploading proof and signature images
@@ -37,14 +39,11 @@ class _InstallationCompletionDialogState
   final List<String> _proofUrls = [];
   final Map<int, bool> _proofUploading = {}; // Track which image is uploading
 
-  // Signature - single image
-  XFile? _signatureImage;
-  bool _isUploadingSignature = false;
-  String? _signatureUrl;
-
   bool _isSubmitting = false;
+  bool _isGeneratingSignoff = false;
   String? _errorMessage;
   bool _adminOverride = false;
+  bool _signoffGenerated = false; // Track if signoff was just generated
 
   bool get _isAdmin {
     try {
@@ -137,57 +136,88 @@ class _InstallationCompletionDialogState
     });
   }
 
-  Future<void> _pickSignatureImage() async {
-    try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        setState(() {
-          _signatureImage = image;
-          _signatureUrl = null; // Reset URL when new image is selected
-          _isUploadingSignature = true;
-          _errorMessage = null;
-        });
-
-        // Automatically upload the image after selection
-        await _uploadSignatureImage();
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Error picking image: $e';
-        _isUploadingSignature = false;
-      });
-    }
-  }
-
-  Future<void> _uploadSignatureImage() async {
-    if (_signatureImage == null) return;
-
+  Future<void> _generateSignoff() async {
     setState(() {
-      _isUploadingSignature = true;
+      _isGeneratingSignoff = true;
       _errorMessage = null;
     });
 
     try {
-      final url = await _storageService.uploadCustomerSignature(
-        orderId: widget.order.id,
-        imageFile: _signatureImage!,
+      final authProvider = context.read<AuthProvider>();
+      final signoffProvider = context.read<InstallationSignoffProvider>();
+      
+      final userId = authProvider.user?.uid ?? '';
+      final userName = authProvider.userName ?? 'Unknown';
+
+      final signoff = await signoffProvider.generateSignoffForOrder(
+        order: widget.order,
+        createdBy: userId,
+        createdByName: userName,
       );
 
-      setState(() {
-        _signatureUrl = url;
-        _isUploadingSignature = false;
-      });
+      if (signoff != null && mounted) {
+        setState(() {
+          _isGeneratingSignoff = false;
+          _signoffGenerated = true; // Mark as generated
+          // Trigger rebuild to show "Pending Signature" state
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: const [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text('Item acknowledgement generated! Link ready to copy.'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else if (mounted) {
+        setState(() {
+          _isGeneratingSignoff = false;
+          _errorMessage = signoffProvider.error ?? 'Failed to generate acknowledgement';
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isUploadingSignature = false;
-        _errorMessage = 'Error uploading signature image: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _isGeneratingSignoff = false;
+          _errorMessage = 'Error generating acknowledgement: $e';
+        });
+      }
+    }
+  }
+
+  Future<void> _copySignoffLink() async {
+    try {
+      final signoffProvider = context.read<InstallationSignoffProvider>();
+      final signoffs = await signoffProvider.loadSignoffsByOrderId(widget.order.id);
+      
+      if (signoffs.isNotEmpty) {
+        final url = signoffProvider.getFullSignoffUrl(signoffs.first);
+        await Clipboard.setData(ClipboardData(text: url));
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Acknowledgement link copied to clipboard!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error copying link: $e';
+        });
+      }
     }
   }
 
@@ -196,12 +226,12 @@ class _InstallationCompletionDialogState
     if (_isAdmin && _adminOverride) {
       return !_isSubmitting;
     }
-    // Standard validation: require proof images and signature
+    // Standard validation: require proof images only (signature not required anymore)
     final allProofsUploaded =
         _proofUrls.isNotEmpty &&
         _proofUrls.every((url) => url.isNotEmpty) &&
         _proofUploading.values.every((uploading) => !uploading);
-    return allProofsUploaded && _signatureUrl != null && !_isSubmitting;
+    return allProofsUploaded && !_isSubmitting;
   }
 
   Future<void> _handleSubmit() async {
@@ -209,10 +239,10 @@ class _InstallationCompletionDialogState
       setState(() {
         if (_isAdmin && !_adminOverride) {
           _errorMessage =
-              'Please upload at least one proof image and the signature before completing installation, or enable admin override';
+              'Please upload at least one proof image before completing installation, or enable admin override';
         } else {
           _errorMessage =
-              'Please upload at least one proof image and the signature before completing installation';
+              'Please upload at least one proof image before completing installation';
         }
       });
       return;
@@ -220,14 +250,13 @@ class _InstallationCompletionDialogState
 
     // All images should already be uploaded at this point (unless admin override)
     final proofUrls = _proofUrls.where((url) => url.isNotEmpty).toList();
-    final signatureUrl = _signatureUrl;
     
-    // Admin override: allow empty proofUrls and signatureUrl
+    // Admin override: allow empty proofUrls
     if (!(_isAdmin && _adminOverride)) {
-      if (proofUrls.isEmpty || signatureUrl == null) {
+      if (proofUrls.isEmpty) {
         setState(() {
           _errorMessage =
-              'Please upload at least one proof image and the signature before completing installation';
+              'Please upload at least one proof image before completing installation';
         });
         return;
       }
@@ -241,7 +270,7 @@ class _InstallationCompletionDialogState
     try {
       widget.onComplete(
         proofUrls,
-        signatureUrl ?? '',
+        '', // No signature URL needed anymore
         _noteController.text.trim().isEmpty
             ? null
             : _noteController.text.trim(),
@@ -526,19 +555,21 @@ class _InstallationCompletionDialogState
     );
   }
 
-  Widget _buildSignatureSection() {
-    final hasImage = _signatureImage != null || _signatureUrl != null;
-
+  Widget _buildSignoffSection() {
+    // Check current order state (might have been updated) or if we just generated one
+    final hasSignoff = widget.order.hasInstallationSignoff || _signoffGenerated;
+    final isSigned = widget.order.installationSignoffId != null && widget.order.hasInstallationSignoff;
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: hasImage
+          color: isSigned
               ? AppTheme.successColor.withOpacity(0.3)
               : AppTheme.borderColor,
-          width: hasImage ? 2 : 1,
+          width: isSigned ? 2 : 1,
         ),
       ),
       child: Column(
@@ -547,8 +578,8 @@ class _InstallationCompletionDialogState
           Row(
             children: [
               Icon(
-                Icons.draw,
-                color: hasImage ? AppTheme.successColor : AppTheme.primaryColor,
+                Icons.assignment_turned_in,
+                color: isSigned ? AppTheme.successColor : AppTheme.primaryColor,
                 size: 24,
               ),
               const SizedBox(width: 12),
@@ -557,14 +588,14 @@ class _InstallationCompletionDialogState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Customer Signature',
+                      'Item Acknowledgement',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      'Photo of customer signature',
+                      isSigned ? 'Customer has signed' : 'Generate acknowledgement form',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppTheme.secondaryColor.withOpacity(0.7),
@@ -573,7 +604,7 @@ class _InstallationCompletionDialogState
                   ],
                 ),
               ),
-              if (hasImage)
+              if (isSigned)
                 Icon(
                   Icons.check_circle,
                   color: AppTheme.successColor,
@@ -582,116 +613,48 @@ class _InstallationCompletionDialogState
             ],
           ),
           const SizedBox(height: 16),
-          if (hasImage) ...[
-            // Show image preview
-            Container(
-              height: 200,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.borderColor),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: _signatureImage != null
-                    ? FutureBuilder<Uint8List>(
-                        future: _signatureImage!.readAsBytes(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-                          if (snapshot.hasData) {
-                            return Image.memory(
-                              snapshot.data!,
-                              fit: BoxFit.cover,
-                            );
-                          }
-                          return Container(
-                            color: Colors.grey.shade200,
-                            child: const Center(
-                              child: Icon(Icons.image, size: 48),
-                            ),
-                          );
-                        },
-                      )
-                    : _signatureUrl != null
-                    ? Image.network(
-                        _signatureUrl!,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                  : null,
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: Colors.grey.shade200,
-                          child: const Center(
-                            child: Icon(Icons.broken_image, size: 48),
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+          if (!hasSignoff) ...[
+            ElevatedButton.icon(
+              onPressed: _isGeneratingSignoff ? null : _generateSignoff,
+              icon: _isGeneratingSignoff
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add, size: 18),
+              label: Text(_isGeneratingSignoff ? 'Generating...' : 'Generate Acknowledgement'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
               ),
             ),
-            const SizedBox(height: 12),
-            if (_isUploadingSignature)
-              Column(
+          ] else if (!isSigned) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber[300]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const LinearProgressIndicator(),
+                  Row(
+                    children: [
+                      Icon(Icons.pending, color: Colors.amber[900]),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Pending Signature',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Uploading image...',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.secondaryColor.withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              )
-            else if (_signatureUrl != null)
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.successColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            color: AppTheme.successColor,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Uploaded',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.successColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   OutlinedButton.icon(
-                    onPressed: _pickSignatureImage,
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('Replace'),
+                    onPressed: _copySignoffLink,
+                    icon: const Icon(Icons.copy, size: 16),
+                    label: const Text('Copy Link'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.primaryColor,
                       side: BorderSide(color: AppTheme.primaryColor),
@@ -699,15 +662,24 @@ class _InstallationCompletionDialogState
                   ),
                 ],
               ),
+            ),
           ] else ...[
-            // Show select button - directly opens gallery and auto-uploads
-            ElevatedButton.icon(
-              onPressed: _pickSignatureImage,
-              icon: const Icon(Icons.photo_library, size: 18),
-              label: const Text('Select from Gallery'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[300]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green[900]),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Signed',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
             ),
           ],
@@ -790,8 +762,8 @@ class _InstallationCompletionDialogState
                     // Proof of Installation (multiple images)
                     _buildProofImagesSection(),
                     const SizedBox(height: 16),
-                    // Customer Signature
-                    _buildSignatureSection(),
+                    // Item Acknowledgement
+                    _buildSignoffSection(),
                     const SizedBox(height: 20),
                     // Note field
                     TextField(

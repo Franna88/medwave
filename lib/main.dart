@@ -49,6 +49,7 @@ import 'screens/forms/public_form_screen.dart';
 import 'screens/public/deposit_confirmation_screen.dart';
 import 'screens/public/payment_confirmation_screen.dart';
 import 'screens/public/contract_view_screen.dart';
+import 'screens/public/installation_signoff_view_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_provider_management_screen.dart';
 import 'screens/admin/admin_provider_approvals_screen.dart';
@@ -82,6 +83,7 @@ import 'providers/gohighlevel_provider.dart';
 import 'providers/product_items_provider.dart';
 import 'providers/contract_content_provider.dart';
 import 'providers/contract_provider.dart';
+import 'providers/installation_signoff_provider.dart';
 import 'providers/inventory_provider.dart';
 import 'providers/installer_provider.dart';
 import 'screens/warehouse/warehouse_main_screen.dart';
@@ -160,6 +162,8 @@ class MedWaveApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ContractContentProvider()),
         // Contract provider for managing customer contracts
         ChangeNotifierProvider(create: (_) => ContractProvider()),
+        // Installation Signoff provider for delivery confirmations
+        ChangeNotifierProvider(create: (_) => InstallationSignoffProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
@@ -194,10 +198,11 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
       'Router redirect: currentPath=$currentPath, isAuthenticated=${authProvider.isAuthenticated}, canAccessApp=${authProvider.canAccessApp}, isLoading=${authProvider.isLoading}',
     );
 
-    // Explicitly allow /fb-form and /contract routes - always accessible regardless of authentication status
+    // Explicitly allow /fb-form, /contract, and /installation-signoff routes - always accessible regardless of authentication status
     if (currentPath.startsWith('/fb-form') ||
-        currentPath.startsWith('/contract')) {
-      return null; // Always allow access to public forms and contracts
+        currentPath.startsWith('/contract') ||
+        currentPath.startsWith('/installation-signoff')) {
+      return null; // Always allow access to public forms, contracts, and installation sign-offs
     }
 
     // Check for mobile browser warning on web platform
@@ -236,7 +241,8 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         currentPath.startsWith('/finance-payment-confirmation') ||
         currentPath.startsWith('/installation-booking') ||
         currentPath.startsWith('/invoice-view') ||
-        currentPath.startsWith('/contract');
+        currentPath.startsWith('/contract') ||
+        currentPath.startsWith('/installation-signoff');
 
     // Wait for auth to initialize - preserve current route during loading
     // This prevents redirecting authenticated users away from their current page on reload
@@ -415,6 +421,19 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
         final contractId = state.pathParameters['contractId']!;
         final token = state.uri.queryParameters['token'];
         return ContractViewScreen(contractId: contractId, token: token);
+      },
+    ),
+    // Public installation sign-off view (no authentication required)
+    GoRoute(
+      path: '/installation-signoff/:signoffId',
+      name: 'installation-signoff-view',
+      builder: (context, state) {
+        final signoffId = state.pathParameters['signoffId']!;
+        final token = state.uri.queryParameters['token'];
+        return InstallationSignoffViewScreen(
+          signoffId: signoffId,
+          token: token,
+        );
       },
     ),
     // Authentication routes
