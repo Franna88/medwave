@@ -737,6 +737,54 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                 ),
               ),
             ],
+            // Show acknowledgement status for Installed stage
+            if (order.currentStage == 'installed') ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color:
+                      order.hasInstallationSignoff &&
+                          order.installationSignoffId != null
+                      ? Colors.green.shade100
+                      : Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      order.hasInstallationSignoff &&
+                              order.installationSignoffId != null
+                          ? Icons.check_circle
+                          : Icons.pending,
+                      size: 14,
+                      color:
+                          order.hasInstallationSignoff &&
+                              order.installationSignoffId != null
+                          ? Colors.green[800]
+                          : Colors.amber[800],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      order.hasInstallationSignoff &&
+                              order.installationSignoffId != null
+                          ? 'Signed'
+                          : 'Pending Signature',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color:
+                            order.hasInstallationSignoff &&
+                                order.installationSignoffId != null
+                            ? Colors.green[800]
+                            : Colors.amber[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             // Show warning if install date is confirmed but no installer assigned
             if (order.confirmedInstallDate != null &&
                 (order.assignedInstallerId == null ||

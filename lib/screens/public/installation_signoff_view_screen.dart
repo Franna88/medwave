@@ -1,25 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../models/contracts/contract.dart';
-import '../../providers/contract_provider.dart';
+import '../../models/installation/installation_signoff.dart';
+import '../../providers/installation_signoff_provider.dart';
 import '../../theme/app_theme.dart';
 
-/// Public contract viewing and signing screen (unauthenticated)
-class ContractViewScreen extends StatefulWidget {
-  final String contractId;
+/// Public installation sign-off viewing and signing screen (unauthenticated)
+class InstallationSignoffViewScreen extends StatefulWidget {
+  final String signoffId;
   final String? token;
 
-  const ContractViewScreen({super.key, required this.contractId, this.token});
+  const InstallationSignoffViewScreen({
+    super.key,
+    required this.signoffId,
+    this.token,
+  });
 
   @override
-  State<ContractViewScreen> createState() => _ContractViewScreenState();
+  State<InstallationSignoffViewScreen> createState() =>
+      _InstallationSignoffViewScreenState();
 }
 
-class _ContractViewScreenState extends State<ContractViewScreen> {
+class _InstallationSignoffViewScreenState
+    extends State<InstallationSignoffViewScreen> {
   final TextEditingController _signatureController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _hasAgreed = false;
@@ -28,7 +32,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
   @override
   void initState() {
     super.initState();
-    _loadContract();
+    _loadSignoff();
   }
 
   @override
@@ -38,16 +42,16 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
     super.dispose();
   }
 
-  Future<void> _loadContract() async {
-    final provider = context.read<ContractProvider>();
-    final contract = await provider.loadContractByIdAndToken(
-      widget.contractId,
+  Future<void> _loadSignoff() async {
+    final provider = context.read<InstallationSignoffProvider>();
+    final signoff = await provider.loadSignoffByIdAndToken(
+      widget.signoffId,
       widget.token,
     );
 
     // Mark as viewed if successfully loaded and pending
-    if (contract != null && contract.status == ContractStatus.pending) {
-      await provider.markContractAsViewed(widget.contractId);
+    if (signoff != null && signoff.status == SignoffStatus.pending) {
+      await provider.markSignoffAsViewed(widget.signoffId);
     }
   }
 
@@ -62,20 +66,28 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
     }
 
     if (!_hasAgreed) {
-      _showError('Please agree to the contract terms');
+      _showError('Please agree to confirm receipt');
       return;
     }
 
     setState(() => _isSubmitting = true);
 
     try {
-      final provider = context.read<ContractProvider>();
+      final provider = context.read<InstallationSignoffProvider>();
+      final signoff = provider.currentSignoff;
 
-      // In a real app, you would capture actual IP address from backend
-      // For now, we'll use a placeholder
-      final success = await provider.signContract(
-        contractId: widget.contractId,
+      // Auto-fill all items as confirmed
+      final itemsConfirmed = <String, bool>{};
+      if (signoff != null) {
+        for (final item in signoff.items) {
+          itemsConfirmed[item.name] = true;
+        }
+      }
+
+      final success = await provider.signSignoff(
+        signoffId: widget.signoffId,
         digitalSignature: signature,
+        itemsConfirmed: itemsConfirmed,
         ipAddress: 'client-ip', // TODO: Capture from backend/Firebase Function
         userAgent: 'Flutter App',
       );
@@ -85,7 +97,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
         // Screen will automatically show signed view
       } else if (mounted) {
         setState(() => _isSubmitting = false);
-        _showError(provider.error ?? 'Failed to sign contract');
+        _showError(provider.error ?? 'Failed to sign');
       }
     } catch (e) {
       if (mounted) {
@@ -105,7 +117,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: Consumer<ContractProvider>(
+      body: Consumer<InstallationSignoffProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
             return _buildLoading();
@@ -115,23 +127,18 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
             return _buildError(provider.error!);
           }
 
-          final contract = provider.currentContract;
-          if (contract == null) {
-            return _buildError('Contract not found');
-          }
-
-          // Check if voided
-          if (contract.status == ContractStatus.voided) {
-            return _buildVoided(contract);
+          final signoff = provider.currentSignoff;
+          if (signoff == null) {
+            return _buildError('Installation sign-off not found');
           }
 
           // Check if already signed
-          if (contract.hasSigned) {
-            return _buildSigned(contract);
+          if (signoff.hasSigned) {
+            return _buildSigned(signoff);
           }
 
-          // Active contract - show signing flow
-          return _buildActiveContract(contract);
+          // Active sign-off - show signing flow
+          return _buildActiveSignoff(signoff);
         },
       ),
     );
@@ -144,7 +151,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
         children: [
           CircularProgressIndicator(),
           SizedBox(height: 16),
-          Text('Loading contract...'),
+          Text('Loading installation sign-off...'),
         ],
       ),
     );
@@ -160,7 +167,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
             Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
             const SizedBox(height: 16),
             Text(
-              'Unable to Load Contract',
+              'Unable to Load Sign-off',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -179,52 +186,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
     );
   }
 
-  Widget _buildVoided(Contract contract) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.block, size: 64, color: Colors.orange[300]),
-            const SizedBox(height: 16),
-            Text(
-              'Contract Voided',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[800],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'This contract has been cancelled and is no longer valid.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
-            if (contract.voidReason != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange[200]!),
-                ),
-                child: Text(
-                  'Reason: ${contract.voidReason}',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSigned(Contract contract) {
+  Widget _buildSigned(InstallationSignoff signoff) {
     final dateFormat = DateFormat('MMMM dd, yyyy \'at\' hh:mm a');
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
@@ -254,7 +216,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Contract Signed Successfully!',
+                      'Receipt Confirmed Successfully!',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -263,7 +225,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Signed on ${dateFormat.format(contract.signedAt!)}',
+                      'Signed on ${dateFormat.format(signoff.signedAt!)}',
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       textAlign: TextAlign.center,
                     ),
@@ -274,174 +236,100 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
 
               // Signature details
               _buildCard(
-                title: 'Signature Details',
+                title: 'Confirmation Details',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildInfoRow(
-                      'Signed by',
-                      contract.digitalSignature ?? '-',
+                      'Confirmed by',
+                      signoff.digitalSignature ?? '-',
                       valueStyle: GoogleFonts.dancingScript(
                         fontSize: 24,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
                       ),
                     ),
+                    if (signoff.digitalSignatureToken != null) ...[
+                      const SizedBox(height: 12),
+                      _buildInfoRow(
+                        'Confirmation ID',
+                        signoff.digitalSignatureToken!,
+                      ),
+                    ],
                     const SizedBox(height: 12),
-                    _buildInfoRow(
-                      'Signature ID',
-                      contract.digitalSignatureToken ?? '-',
-                    ),
+                    _buildInfoRow('Customer', signoff.customerName),
                     const SizedBox(height: 12),
-                    _buildInfoRow('Customer', contract.customerName),
+                    _buildInfoRow('Email', signoff.email),
                     const SizedBox(height: 12),
-                    _buildInfoRow('Email', contract.email),
-                    const SizedBox(height: 12),
-                    _buildInfoRow('Phone', contract.phone),
+                    _buildInfoRow('Phone', signoff.phone),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
 
-              // PDF Download (if available)
-              if (contract.pdfUrl != null)
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    try {
-                      final uri = Uri.parse(contract.pdfUrl!);
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    } catch (e) {
-                      _showError('Unable to download PDF: $e');
-                    }
-                  },
-                  icon: const Icon(Icons.download),
-                  label: const Text('Download Signed Contract PDF'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 24,
-                    ),
-                  ),
+              // Acknowledged items
+              _buildCard(
+                title: 'Acknowledged Items',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: signoff.items.map((item) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${item.name} (Qty: ${item.quantity})',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ),
+              ),
               const SizedBox(height: 24),
 
-              // Next steps - different messaging for full payment vs deposit
+              // Thank you message
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: contract.isFullPayment
-                      ? Colors.green[50]
-                      : Colors.blue[50],
+                  color: Colors.blue[50],
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: contract.isFullPayment
-                        ? Colors.green[200]!
-                        : Colors.blue[200]!,
-                  ),
+                  border: Border.all(color: Colors.blue[200]!),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          contract.isFullPayment
-                              ? Icons.star
-                              : Icons.info_outline,
-                          color: contract.isFullPayment
-                              ? Colors.green[700]
-                              : Colors.blue[700],
-                        ),
+                        Icon(Icons.info_outline, color: Colors.blue[700]),
                         const SizedBox(width: 8),
-                        Text(
-                          'What\'s Next?',
+                        const Text(
+                          'Thank You!',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: contract.isFullPayment
-                                ? Colors.green[800]
-                                : null,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    if (contract.isFullPayment) ...[
-                      // Full Payment messaging
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.green[100],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green[300]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.verified,
-                              color: Colors.green[700],
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'PRIORITY ORDER - Full Payment',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green[800],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                    Text(
+                      'Thank you for confirming your installation. Your confirmation has been recorded for our records.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                        height: 1.5,
                       ),
-                      Text(
-                        'Thank you for choosing full payment! You will receive payment instructions via email shortly. '
-                        'As a full payment customer, your order will receive priority scheduling for installation.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Total Amount: R ${contract.subtotal.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green[700],
-                        ),
-                      ),
-                    ] else ...[
-                      // Deposit messaging (original)
-                      Text(
-                        'You will receive deposit payment instructions via email shortly. '
-                        'Please complete the payment to proceed with your order.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Deposit Amount: R ${contract.depositAmount.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                    ),
                   ],
                 ),
               ),
@@ -452,7 +340,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
     );
   }
 
-  Widget _buildActiveContract(Contract contract) {
+  Widget _buildActiveSignoff(InstallationSignoff signoff) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
@@ -473,23 +361,19 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     SizedBox(height: isMobile ? 20 : 32),
 
                     // Customer info
-                    _buildCustomerInfo(contract),
+                    _buildCustomerInfo(signoff),
                     SizedBox(height: isMobile ? 16 : 24),
 
-                    // Quote/Invoice
-                    _buildQuoteSection(contract),
-                    SizedBox(height: isMobile ? 16 : 24),
-
-                    // Contract content
-                    _buildContractContent(contract),
+                    // Items acknowledgement
+                    _buildItemsAcknowledgement(signoff),
                     SizedBox(height: isMobile ? 16 : 24),
 
                     // Signature section
                     _buildSignatureSection(),
                     SizedBox(height: isMobile ? 16 : 24),
 
-                    // Legal compliance
-                    _buildLegalCompliance(),
+                    // Acknowledgment
+                    _buildAcknowledgment(),
                     const SizedBox(height: 100), // Space for fixed button
                   ],
                 ),
@@ -505,7 +389,6 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
   }
 
   Widget _buildHeader() {
-    // Use MediaQuery to make it responsive
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
@@ -526,7 +409,6 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Logo on the left - responsive sizing
           ConstrainedBox(
             constraints: BoxConstraints(
               maxWidth: isMobile ? 120 : 180,
@@ -538,13 +420,12 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          // Title on the right - responsive sizing
           Expanded(
             flex: 3,
             child: Text(
-              'Service Agreement',
+              'Installation Sign-off',
               style: TextStyle(
-                fontSize: isMobile ? 20 : 28,
+                fontSize: isMobile ? 14 : 28,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -556,107 +437,66 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
     );
   }
 
-  Widget _buildCustomerInfo(Contract contract) {
+  Widget _buildCustomerInfo(InstallationSignoff signoff) {
     return _buildCard(
       title: 'Customer Information',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoRow('Name', contract.customerName),
+          _buildInfoRow('Name', signoff.customerName),
           const SizedBox(height: 12),
-          _buildInfoRow('Email', contract.email),
+          _buildInfoRow('Email', signoff.email),
           const SizedBox(height: 12),
-          _buildInfoRow('Phone', contract.phone),
-          if (contract.shippingAddress != null &&
-              contract.shippingAddress!.isNotEmpty) ...[
+          _buildInfoRow('Phone', signoff.phone),
+          if (signoff.deliveryAddress != null &&
+              signoff.deliveryAddress!.isNotEmpty) ...[
             const SizedBox(height: 12),
-            _buildInfoRow('Shipping Address', contract.shippingAddress!),
+            _buildInfoRow('Delivery Address', signoff.deliveryAddress!),
           ],
           const SizedBox(height: 12),
           _buildInfoRow(
             'Date',
-            DateFormat('MMMM dd, yyyy').format(contract.createdAt),
+            DateFormat('MMMM dd, yyyy').format(signoff.createdAt),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuoteSection(Contract contract) {
-    // Calculate deposit percentage
-    final depositPercentage = contract.subtotal > 0
-        ? ((contract.depositAmount / contract.subtotal) * 100).toStringAsFixed(
-            0,
-          )
-        : '40';
-
+  Widget _buildItemsAcknowledgement(InstallationSignoff signoff) {
     return _buildCard(
-      title: 'Quote',
+      title: 'Item Acknowledgement',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Products - without prices
-          ...contract.products.map((product) {
+          const Text(
+            'The following items were delivered/installed:',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 16),
+          ...signoff.items.map((item) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Text(product.name, style: const TextStyle(fontSize: 16)),
+                  Icon(Icons.check_circle, color: Colors.green, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${item.name} (Qty: ${item.quantity})',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
                 ],
               ),
             );
           }).toList(),
-
-          const Divider(height: 32),
-
-          // Pricing summary - right aligned like standard invoices
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Total Amount
-              _buildPriceRow(
-                'Total Amount',
-                contract.subtotal,
-                isHighlighted: true,
-              ),
-              const SizedBox(height: 12),
-              // Deposit Amount with percentage
-              _buildPriceRow(
-                'Deposit Amount ($depositPercentage%)',
-                contract.depositAmount,
-              ),
-            ],
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildContractContent(Contract contract) {
-    // Parse Quill Delta content and display as plain text for now
-    // In a production app, you'd want to properly render the rich text
-    final plainText =
-        contract.contractContentData['plainText'] as String? ?? '';
-
-    return _buildCard(
-      title: 'Agreement Terms',
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 200),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          plainText,
-          style: const TextStyle(fontSize: 14, height: 1.6),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLegalCompliance() {
+  Widget _buildAcknowledgment() {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
@@ -672,11 +512,11 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.gavel, color: Colors.amber[900]),
+              Icon(Icons.assignment_turned_in, color: Colors.amber[900]),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Legal Agreement',
+                  'Acknowledgement',
                   style: TextStyle(
                     fontSize: isMobile ? 16 : 18,
                     fontWeight: FontWeight.bold,
@@ -687,9 +527,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'By signing below, you acknowledge that you have read, understood, '
-            'and agree to be bound by all terms and conditions outlined in this agreement. '
-            'Your electronic signature has the same legal effect as a handwritten signature.',
+            'By signing below, you acknowledge receipt and acceptance of the items listed above.',
             style: TextStyle(
               fontSize: isMobile ? 13 : 14,
               color: Colors.grey[800],
@@ -712,7 +550,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                 ),
                 Expanded(
                   child: Text(
-                    'I have read and agree to the contract terms',
+                    'I acknowledge receipt and accept the items listed above',
                     style: TextStyle(
                       fontSize: isMobile ? 14 : 16,
                       fontWeight: FontWeight.w500,
@@ -800,7 +638,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     ),
                   )
                 : const Text(
-                    'Sign Contract',
+                    'Confirm Receipt',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -865,40 +703,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
         Expanded(
           child: Text(
             value,
-            style:
-                valueStyle ??
-                const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPriceRow(
-    String label,
-    double amount, {
-    bool isHighlighted = false,
-    bool isSubdued = false,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: isHighlighted ? 18 : 16,
-            fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
-            color: isSubdued ? Colors.grey[600] : Colors.black,
-          ),
-        ),
-        Text(
-          'R ${amount.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontSize: isHighlighted ? 20 : 16,
-            fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
-            color: isHighlighted
-                ? AppTheme.primaryColor
-                : (isSubdued ? Colors.grey[600] : Colors.black),
+            style: valueStyle ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
         ),
       ],

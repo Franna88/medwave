@@ -9,6 +9,7 @@ import '../../providers/installer_provider.dart';
 import '../../providers/inventory_provider.dart';
 import '../../services/firebase/order_service.dart';
 import '../../theme/app_theme.dart';
+import 'installation_signoff_section_widget.dart';
 
 const String _noInstallationRequiredId = 'NO_INSTALLATION_REQUIRED';
 const String _noInstallationRequiredName = 'No Installation Required';
@@ -575,14 +576,93 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                         _buildInstallationProofSection(),
                         const SizedBox(height: 24),
                       ],
-                      if (_currentOrder.customerSignaturePhotoUrl != null) ...[
-                        _buildCustomerSignatureSection(),
-                        const SizedBox(height: 24),
-                      ],
                     ],
                     _buildInstallationBookingSection(),
                     const SizedBox(height: 24),
                     _buildInstallerSection(),
+                    const SizedBox(height: 24),
+                    // Show acknowledgement status for Installed stage
+                    if (_currentOrder.currentStage == 'installed') ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color:
+                              _currentOrder.hasInstallationSignoff &&
+                                  _currentOrder.installationSignoffId != null
+                              ? Colors.green[50]
+                              : Colors.amber[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color:
+                                _currentOrder.hasInstallationSignoff &&
+                                    _currentOrder.installationSignoffId != null
+                                ? Colors.green[300]!
+                                : Colors.amber[300]!,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _currentOrder.hasInstallationSignoff &&
+                                      _currentOrder.installationSignoffId !=
+                                          null
+                                  ? Icons.check_circle
+                                  : Icons.pending_actions,
+                              color:
+                                  _currentOrder.hasInstallationSignoff &&
+                                      _currentOrder.installationSignoffId !=
+                                          null
+                                  ? Colors.green[700]
+                                  : Colors.amber[700],
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Item Acknowledgement',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color:
+                                          _currentOrder
+                                                  .hasInstallationSignoff &&
+                                              _currentOrder
+                                                      .installationSignoffId !=
+                                                  null
+                                          ? Colors.green[900]
+                                          : Colors.amber[900],
+                                    ),
+                                  ),
+                                  Text(
+                                    _currentOrder.hasInstallationSignoff &&
+                                            _currentOrder
+                                                    .installationSignoffId !=
+                                                null
+                                        ? 'Customer has signed acknowledgement'
+                                        : 'Awaiting customer signature',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    // Show installation sign-off section for installed and later stages
+                    InstallationSignoffSectionWidget(
+                      order: _currentOrder,
+                      onSignoffGenerated: () {
+                        // Refresh order data if needed
+                        widget.onOrderUpdated?.call();
+                      },
+                    ),
                     const SizedBox(height: 24),
                     // Show shipped items from parent order if this is a split order
                     if (_currentOrder
@@ -1166,134 +1246,6 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                   const SizedBox(height: 8),
                   Text(
                     'Installation proof not available',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildCustomerSignatureSection() {
-    final hasSignature =
-        _currentOrder.customerSignaturePhotoUrl != null &&
-        _currentOrder.customerSignaturePhotoUrl!.isNotEmpty;
-
-    return _buildSection(
-      title: 'Customer Signature',
-      icon: Icons.draw,
-      children: [
-        const Text(
-          'Signature Photo:',
-          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-        ),
-        const SizedBox(height: 8),
-        if (hasSignature) ...[
-          GestureDetector(
-            onTap: () =>
-                _showFullImage(_currentOrder.customerSignaturePhotoUrl!),
-            child: Container(
-              height: 200,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300, width: 2),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network(
-                      _currentOrder.customerSignaturePhotoUrl!,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                : null,
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey.shade200,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.broken_image,
-                                size: 48,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Failed to load image',
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.zoom_in, color: Colors.white, size: 16),
-                            SizedBox(width: 4),
-                            Text(
-                              'Tap to enlarge',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ] else ...[
-          Container(
-            height: 120,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.image_not_supported,
-                    size: 48,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Customer signature not available',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ],

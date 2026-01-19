@@ -100,6 +100,12 @@ class Order {
   final List<OrderItem>
   remainingItemsFromParentOrder; // Items from parent order that were NOT overridden (stayed in Order 1)
 
+  // Installation sign-off fields
+  final String? installationSignoffId; // Reference to sign-off document
+  final bool hasInstallationSignoff;
+  final DateTime? installationSignoffCreatedAt;
+  final DateTime? installationSignedOffAt;
+
   Order({
     required this.id,
     required this.appointmentId,
@@ -157,6 +163,11 @@ class Order {
     this.splitFromOrderId,
     this.shippedItemsFromParentOrder = const [],
     this.remainingItemsFromParentOrder = const [],
+    // Installation sign-off fields
+    this.installationSignoffId,
+    this.hasInstallationSignoff = false,
+    this.installationSignoffCreatedAt,
+    this.installationSignedOffAt,
   });
 
   /// Get time in current stage
@@ -285,6 +296,13 @@ class Order {
               ?.map((i) => OrderItem.fromMap(i as Map<String, dynamic>))
               .toList() ??
           [],
+      // Installation sign-off fields
+      installationSignoffId: map['installationSignoffId']?.toString(),
+      hasInstallationSignoff: map['hasInstallationSignoff'] == true,
+      installationSignoffCreatedAt:
+          (map['installationSignoffCreatedAt'] as Timestamp?)?.toDate(),
+      installationSignedOffAt:
+          (map['installationSignedOffAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -361,6 +379,15 @@ class Order {
       'remainingItemsFromParentOrder': remainingItemsFromParentOrder
           .map((i) => i.toMap())
           .toList(),
+      // Installation sign-off fields
+      'installationSignoffId': installationSignoffId,
+      'hasInstallationSignoff': hasInstallationSignoff,
+      'installationSignoffCreatedAt': installationSignoffCreatedAt != null
+          ? Timestamp.fromDate(installationSignoffCreatedAt!)
+          : null,
+      'installationSignedOffAt': installationSignedOffAt != null
+          ? Timestamp.fromDate(installationSignedOffAt!)
+          : null,
     };
   }
 
@@ -421,6 +448,11 @@ class Order {
     String? splitFromOrderId,
     List<ShippedItemFromParent>? shippedItemsFromParentOrder,
     List<OrderItem>? remainingItemsFromParentOrder,
+    // Installation sign-off fields
+    String? installationSignoffId,
+    bool? hasInstallationSignoff,
+    DateTime? installationSignoffCreatedAt,
+    DateTime? installationSignedOffAt,
   }) {
     return Order(
       id: id ?? this.id,
@@ -491,6 +523,15 @@ class Order {
           shippedItemsFromParentOrder ?? this.shippedItemsFromParentOrder,
       remainingItemsFromParentOrder:
           remainingItemsFromParentOrder ?? this.remainingItemsFromParentOrder,
+      // Installation sign-off fields
+      installationSignoffId:
+          installationSignoffId ?? this.installationSignoffId,
+      hasInstallationSignoff:
+          hasInstallationSignoff ?? this.hasInstallationSignoff,
+      installationSignoffCreatedAt:
+          installationSignoffCreatedAt ?? this.installationSignoffCreatedAt,
+      installationSignedOffAt:
+          installationSignedOffAt ?? this.installationSignedOffAt,
     );
   }
 
