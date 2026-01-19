@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/installation/installation_signoff.dart';
 import '../../providers/installation_signoff_provider.dart';
 import '../../theme/app_theme.dart';
@@ -242,6 +243,11 @@ class _InstallationSignoffViewScreenState
                     _buildInfoRow(
                       'Confirmed by',
                       signoff.digitalSignature ?? '-',
+                      valueStyle: GoogleFonts.dancingScript(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
                     ),
                     if (signoff.digitalSignatureToken != null) ...[
                       const SizedBox(height: 12),
@@ -581,7 +587,12 @@ class _InstallationSignoffViewScreenState
               filled: true,
               fillColor: Colors.white,
             ),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            style: GoogleFonts.dancingScript(
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+              letterSpacing: 1.2,
+            ),
             textCapitalization: TextCapitalization.words,
           ),
         ],
@@ -674,7 +685,7 @@ class _InstallationSignoffViewScreenState
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value, {TextStyle? valueStyle}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -692,7 +703,7 @@ class _InstallationSignoffViewScreenState
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            style: valueStyle ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
         ),
       ],
