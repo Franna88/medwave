@@ -523,7 +523,8 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
 
                 // Tracking info for shipped orders
                 if (tabType == OrderTabType.outForDelivery &&
-                    order.trackingNumber != null) ...[
+                    (order.trackingNumber != null ||
+                        order.vehicleRegistrationNumber != null)) ...[
                   const SizedBox(height: 12),
                   _buildTrackingInfo(order),
                 ],
@@ -733,6 +734,14 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
   }
 
   Widget _buildTrackingInfo(models.Order order) {
+    final deliveryType = order.deliveryType ?? 'courier';
+    final isManual = deliveryType == 'manual';
+    final label = isManual ? 'Vehicle Registration' : 'Tracking Number';
+    final value = isManual
+        ? (order.vehicleRegistrationNumber ?? 'N/A')
+        : (order.trackingNumber ?? 'N/A');
+    final icon = isManual ? Icons.directions_car : Icons.local_shipping;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -742,21 +751,21 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
       ),
       child: Row(
         children: [
-          Icon(Icons.local_shipping, size: 20, color: AppTheme.successColor),
+          Icon(icon, size: 20, color: AppTheme.successColor),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Tracking Number',
-                  style: TextStyle(
+                Text(
+                  label,
+                  style: const TextStyle(
                     fontSize: 11,
                     color: AppTheme.secondaryColor,
                   ),
                 ),
                 Text(
-                  order.trackingNumber ?? 'N/A',
+                  value,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,

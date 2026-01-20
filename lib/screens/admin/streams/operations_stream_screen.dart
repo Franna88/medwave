@@ -634,11 +634,26 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.engineering, size: 14, color: Colors.blue[600]),
+                  Icon(
+                    order.assignedInstallerId == 'NO_INSTALLATION_REQUIRED'
+                        ? Icons.block
+                        : Icons.engineering,
+                    size: 14,
+                    color: order.assignedInstallerId == 'NO_INSTALLATION_REQUIRED'
+                        ? Colors.grey[600]
+                        : Colors.blue[600],
+                  ),
                   const SizedBox(width: 4),
                   Text(
-                    order.assignedInstallerName!,
-                    style: TextStyle(fontSize: 12, color: Colors.blue[600]),
+                    order.assignedInstallerId == 'NO_INSTALLATION_REQUIRED'
+                        ? 'No Installation Required'
+                        : order.assignedInstallerName!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: order.assignedInstallerId == 'NO_INSTALLATION_REQUIRED'
+                          ? Colors.grey[600]
+                          : Colors.blue[600],
+                    ),
                   ),
                 ],
               ),

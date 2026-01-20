@@ -88,6 +88,13 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     if (picked) {
       final inventoryProvider = context.read<InventoryProvider>();
 
+      // Find the order item to get required quantity
+      final orderItem = _currentOrder.items.firstWhere(
+        (item) => item.name == itemName,
+        orElse: () => models.OrderItem(name: itemName, quantity: 1, price: 0),
+      );
+      final requiredQty = orderItem.quantity;
+
       // Check if item exists in inventory
       final hasStock = inventoryProvider.allStockItems.any(
         (s) => s.productName.toLowerCase() == itemName.toLowerCase(),
@@ -98,7 +105,28 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
           (s) => s.productName.toLowerCase() == itemName.toLowerCase(),
         );
 
-        // Block picking if item is out of stock
+        // Block picking if insufficient stock (check quantity requirement)
+        if (stockItem.currentQty < requiredQty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Cannot pick "$itemName": Only ${stockItem.currentQty} in stock, but $requiredQty needed. Please contact admin to override.',
+                ),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+                action: SnackBarAction(
+                  label: 'OK',
+                  textColor: Colors.white,
+                  onPressed: () {},
+                ),
+              ),
+            );
+          }
+          return; // Don't proceed with picking
+        }
+
+        // Block picking if item is out of stock (no stock at all)
         if (stockItem.isOutOfStock) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -516,18 +544,24 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
 
         bool isOutOfStock = false;
         bool isLowStock = false;
+        bool hasInsufficientStock = false;
         int? stockQty;
 
         if (hasStock) {
           final stockItem = inventoryProvider.allStockItems.firstWhere(
             (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
           );
-          isOutOfStock = stockItem.isOutOfStock;
-          isLowStock = stockItem.isLowStock;
           stockQty = stockItem.currentQty;
+
+          // Check if there's enough stock for the required quantity
+          hasInsufficientStock = stockQty < item.quantity;
+
+          // Item is out of stock if no stock at all, or insufficient stock for required quantity
+          isOutOfStock = stockItem.isOutOfStock || hasInsufficientStock;
+          isLowStock = stockItem.isLowStock;
         }
 
-        // Block picking if out of stock (unless already picked)
+        // Block picking if out of stock or insufficient stock (unless already picked)
         final canPick = !isOutOfStock || isPicked;
 
         return Container(
@@ -651,7 +685,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                                       ),
                                     ),
                                     child: Text(
-                                      isOutOfStock
+                                      hasInsufficientStock
+                                          ? 'Low ($stockQty) - Need ${item.quantity}'
+                                          : isOutOfStock
                                           ? 'Out of Stock'
                                           : isLowStock
                                           ? 'Low ($stockQty)'
@@ -659,7 +695,8 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
-                                        color: isOutOfStock
+                                        color:
+                                            hasInsufficientStock || isOutOfStock
                                             ? Colors.red[700]
                                             : isLowStock
                                             ? Colors.orange[700]
