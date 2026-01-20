@@ -12,6 +12,7 @@ import '../../../theme/app_theme.dart';
 import '../../../utils/stream_utils.dart';
 import '../../../widgets/common/score_badge.dart';
 import '../../../widgets/orders/order_detail_dialog.dart';
+import '../../../widgets/orders/installation_completion_dialog.dart';
 
 class OperationsStreamScreen extends StatefulWidget {
   const OperationsStreamScreen({super.key});
@@ -125,6 +126,89 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
     final userId = authProvider.user?.uid ?? '';
     final userName = authProvider.userName;
 
+    // Check if trying to move to "payment" from "installed"
+    if (order.currentStage == 'installed' && newStageId == 'payment') {
+      // Validate both conditions must be met
+      final signoffSigned = order.hasInstallationSignoff == true;
+      final financeConfirmed = order.paymentConfirmationStatus == 'confirmed';
+
+      if (!signoffSigned || !financeConfirmed) {
+        final missingConditions = <String>[];
+        if (!signoffSigned) {
+          missingConditions.add('Installation signoff not signed');
+        }
+        if (!financeConfirmed) {
+          missingConditions.add('Payment not confirmed by finance');
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Cannot move to payment stage. Missing: ${missingConditions.join(', ')}',
+              ),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    // Check if moving from "out_for_delivery" to "installed" - requires image uploads
+    if (order.currentStage == 'out_for_delivery' && newStageId == 'installed') {
+      // Save ScaffoldMessenger reference before async operation
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+      await showDialog(
+        context: context,
+        builder: (context) => InstallationCompletionDialog(
+          order: order,
+          onComplete: (proofUrls, signatureUrl, note) async {
+            try {
+              await _orderService.moveOrderToStage(
+                orderId: order.id,
+                newStage: newStageId,
+                note: note ?? 'Installation completed with proof and signature',
+                userId: userId,
+                userName: userName,
+                proofOfInstallationPhotoUrls: proofUrls,
+                customerSignaturePhotoUrl: signatureUrl,
+              );
+
+              if (mounted) {
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '${order.customerName} moved to ${newStage.name}',
+                    ),
+                  ),
+                );
+
+                // Show success message if converted to support ticket
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Order converted to Support ticket!'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(content: Text('Error moving order: $e')),
+                );
+              }
+            }
+          },
+        ),
+      );
+      return;
+    }
+
+    // Standard move dialog for other stage transitions
     final noteController = TextEditingController();
 
     final confirmed = await showDialog<bool>(
@@ -329,13 +413,16 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
     // For Priority Shipment, orders are already sorted by date
     // For other stages, sort by form score
     final List<models.Order> sortedOrders;
-    final List<({models.Order? item, bool isDivider, dynamic tier})> tieredOrders;
+    final List<({models.Order? item, bool isDivider, dynamic tier})>
+    tieredOrders;
 
     if (stage.id == 'priority_shipment') {
       // Already sorted by date in _getOrdersForStage
       sortedOrders = orders;
       // No tier separators for date-sorted list
-      tieredOrders = sortedOrders.map((o) => (item: o, isDivider: false, tier: null)).toList();
+      tieredOrders = sortedOrders
+          .map((o) => (item: o, isDivider: false, tier: null))
+          .toList();
     } else {
       sortedOrders = StreamUtils.sortByFormScore(
         orders,
@@ -516,8 +603,9 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
     final hasSelectedDates = order.customerSelectedDates.isNotEmpty;
     final hasInstaller = order.assignedInstallerName != null;
 
-    return GestureDetector(
+    return InkWell(
       onTap: () => _showOrderDetail(order),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -576,11 +664,26 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.engineering, size: 14, color: Colors.blue[600]),
+                  Icon(
+                    order.assignedInstallerId == 'NO_INSTALLATION_REQUIRED'
+                        ? Icons.block
+                        : Icons.engineering,
+                    size: 14,
+                    color: order.assignedInstallerId == 'NO_INSTALLATION_REQUIRED'
+                        ? Colors.grey[600]
+                        : Colors.blue[600],
+                  ),
                   const SizedBox(width: 4),
                   Text(
-                    order.assignedInstallerName!,
-                    style: TextStyle(fontSize: 12, color: Colors.blue[600]),
+                    order.assignedInstallerId == 'NO_INSTALLATION_REQUIRED'
+                        ? 'No Installation Required'
+                        : order.assignedInstallerName!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: order.assignedInstallerId == 'NO_INSTALLATION_REQUIRED'
+                          ? Colors.grey[600]
+                          : Colors.blue[600],
+                    ),
                   ),
                 ],
               ),
@@ -616,7 +719,9 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    ...order.customerSelectedDates.take(3).map(
+                    ...order.customerSelectedDates
+                        .take(3)
+                        .map(
                           (date) => Padding(
                             padding: const EdgeInsets.only(left: 18),
                             child: Text(
@@ -644,7 +749,11 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.event_available, size: 14, color: Colors.blue[800]),
+                    Icon(
+                      Icons.event_available,
+                      size: 14,
+                      color: Colors.blue[800],
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Install: ${DateFormat('MMM d').format(order.confirmedInstallDate!)}',
@@ -658,8 +767,85 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                 ),
               ),
             ],
+            // Show acknowledgement status for Installed stage
+            if (order.currentStage == 'installed') ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color:
+                      order.hasInstallationSignoff &&
+                          order.installationSignoffId != null
+                      ? Colors.green.shade100
+                      : Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      order.hasInstallationSignoff &&
+                              order.installationSignoffId != null
+                          ? Icons.check_circle
+                          : Icons.pending,
+                      size: 14,
+                      color:
+                          order.hasInstallationSignoff &&
+                              order.installationSignoffId != null
+                          ? Colors.green[800]
+                          : Colors.amber[800],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      order.hasInstallationSignoff &&
+                              order.installationSignoffId != null
+                          ? 'Signed'
+                          : 'Pending Signature',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color:
+                            order.hasInstallationSignoff &&
+                                order.installationSignoffId != null
+                            ? Colors.green[800]
+                            : Colors.amber[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            // Show warning if install date is confirmed but no installer assigned
+            if (order.confirmedInstallDate != null &&
+                (order.assignedInstallerId == null ||
+                    order.assignedInstallerId!.isEmpty)) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.warning, size: 14, color: Colors.orange[800]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Installer required',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             // Show booking status badge
-            if (order.installBookingStatus != models.InstallBookingStatus.pending) ...[
+            if (order.installBookingStatus !=
+                models.InstallBookingStatus.pending) ...[
               const SizedBox(height: 8),
               _buildBookingStatusBadge(order.installBookingStatus),
             ],
@@ -669,11 +855,40 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                 children: [
                   Icon(Icons.receipt, size: 14, color: Colors.grey[600]),
                   const SizedBox(width: 4),
-                  Text(
-                    'Invoice: ${order.invoiceNumber}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  Expanded(
+                    child: Text(
+                      'Invoice: ${_formatInvoiceNumber(order)}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
                   ),
                 ],
+              ),
+            ],
+            // Split order indicator
+            if (order.splitFromOrderId != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.call_split, size: 12, color: Colors.orange[800]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Part 2',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange[800],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
             const SizedBox(height: 12),
@@ -689,7 +904,11 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                 if (order.formScore != null) ScoreBadge(score: order.formScore),
                 if (order.formScore != null) const SizedBox(width: 8),
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: Colors.grey[600],
+                  ),
                   onSelected: (stageId) => _moveOrderToStage(order, stageId),
                   itemBuilder: (context) => _stages
                       .where((s) => s.id != order.currentStage)
@@ -707,6 +926,14 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
         ),
       ),
     );
+  }
+
+  String _formatInvoiceNumber(models.Order order) {
+    if (order.splitFromOrderId != null && order.invoiceNumber != null) {
+      // Order 2: Same invoice number as Order 1, but with notation showing it's part of Order 1
+      return '${order.invoiceNumber} (Part 2)';
+    }
+    return order.invoiceNumber ?? 'N/A';
   }
 
   Widget _buildBookingStatusBadge(models.InstallBookingStatus status) {

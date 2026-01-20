@@ -183,6 +183,7 @@ class SalesAppointmentService {
     String? assignedToName,
     String? optInNote,
     List<models.OptInProduct>? optInProducts,
+    Map<String, String>? optInQuestions,
     String? depositConfirmationToken,
     String? depositConfirmationStatus,
     DateTime? depositConfirmationSentAt,
@@ -261,6 +262,7 @@ class SalesAppointmentService {
         createdAt: now,
         createdBy: userId,
         createdByName: userName,
+        stageTransition: '${appointment.currentStage} → $newStage',
       );
 
       final updatedNotes = [...appointment.notes, transitionNote];
@@ -280,6 +282,7 @@ class SalesAppointmentService {
         assignedToName: assignedToName ?? appointment.assignedToName,
         optInNote: optInNote ?? appointment.optInNote,
         optInProducts: optInProducts ?? appointment.optInProducts,
+        optInQuestions: optInQuestions ?? appointment.optInQuestions,
         depositConfirmationToken:
             confirmationToken ?? appointment.depositConfirmationToken,
         depositConfirmationStatus:
@@ -428,9 +431,14 @@ class SalesAppointmentService {
 
           print('✉️ Finance email sent status: $sent');
           if (sent) {
-            print('✅ SUCCESS: Finance team notified at info@barefootbytes.com');
+            //print('✅ SUCCESS: Finance team notified at info@barefootbytes.com');
+            print(
+              '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
+            );
           } else {
-            print('❌ FAILED: Finance email was not sent (EmailJS returned false)');
+            print(
+              '❌ FAILED: Finance email was not sent (EmailJS returned false)',
+            );
           }
         } catch (e) {
           print('❌ ERROR sending finance notification: $e');
@@ -691,11 +699,13 @@ class SalesAppointmentService {
 
       // Convert appointment optInProducts to OrderItems
       final orderItems = appointment.optInProducts
-          .map((product) => models.OrderItem(
-                name: product.name,
-                quantity: 1,
-                price: product.price,
-              ))
+          .map(
+            (product) => models.OrderItem(
+              name: product.name,
+              quantity: product.quantity,
+              price: product.price,
+            ),
+          )
           .toList();
 
       // Determine if this is a priority order (full payment)
@@ -714,7 +724,8 @@ class SalesAppointmentService {
         customerName: appointment.customerName,
         email: appointment.email,
         phone: appointment.phone,
-        currentStage: 'orders_placed', // First stage in Operations stream (updated)
+        currentStage:
+            'orders_placed', // First stage in Operations stream (updated)
         orderDate: now,
         items: orderItems, // Products from the appointment
         createdAt: now,
@@ -738,6 +749,7 @@ class SalesAppointmentService {
         createdBy: userId,
         createdByName: userName,
         formScore: appointment.formScore,
+        optInQuestions: appointment.optInQuestions,
         // Installation booking fields
         installBookingToken: installBookingToken,
         installBookingStatus: models.InstallBookingStatus.pending,
@@ -768,7 +780,9 @@ class SalesAppointmentService {
       } catch (emailError) {
         // Log but don't fail the conversion if email fails
         if (kDebugMode) {
-          print('Warning: Failed to send installation booking email: $emailError');
+          print(
+            'Warning: Failed to send installation booking email: $emailError',
+          );
         }
       }
 
@@ -782,13 +796,17 @@ class SalesAppointmentService {
               order: createdOrder,
             );
             if (kDebugMode) {
-              print('Priority order notification sent to admin for order $orderId');
+              print(
+                'Priority order notification sent to admin for order $orderId',
+              );
             }
           }
         } catch (emailError) {
           // Log but don't fail the conversion if email fails
           if (kDebugMode) {
-            print('Warning: Failed to send priority order notification: $emailError');
+            print(
+              'Warning: Failed to send priority order notification: $emailError',
+            );
           }
         }
       }
@@ -843,9 +861,25 @@ class SalesAppointmentService {
       final allAppointments = await getAllAppointments();
 
       // Filter by query
-      final lowerQuery = query.toLowerCase();
+      final lowerQuery = query.toLowerCase().trim();
+      
+      // Normalize search query by removing extra spaces
+      final normalizedSearch = lowerQuery.replaceAll(RegExp(r'\s+'), ' ');
+      
       return allAppointments.where((appointment) {
-        return appointment.customerName.toLowerCase().contains(lowerQuery) ||
+        // Normalize customer name by removing extra spaces
+        final normalizedName = appointment.customerName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+        
+        // Check if search query matches customer name (handles "first last" searches)
+        final nameMatches = normalizedName.contains(normalizedSearch);
+        
+        // Also check if all words in search query appear in customer name (for flexible matching)
+        final searchWords = normalizedSearch.split(' ').where((w) => w.isNotEmpty).toList();
+        final allWordsMatch = searchWords.isNotEmpty &&
+            searchWords.every((word) => normalizedName.contains(word));
+        
+        return nameMatches ||
+            allWordsMatch ||
             appointment.email.toLowerCase().contains(lowerQuery) ||
             appointment.phone.contains(query);
       }).toList();

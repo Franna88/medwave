@@ -196,6 +196,38 @@ service cloud.firestore {
                        request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['installBookingStatus', 'customerSelectedDates', 'currentStage', 'stageEnteredAt', 'stageHistory', 'updatedAt']);
       
+      // Allow public update ONLY for installation sign-off completion
+      // This allows the system to record when a customer has signed off on their installation
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['installationSignoffId', 'hasInstallationSignoff', 'installationSignedOffAt', 'updatedAt']);
+      
+      // Allow unauthenticated updates for payment confirmation (Yes/No response)
+      // This allows updating payment confirmation fields when customer clicks Yes/No in email
+      // Similar to deposit confirmation in appointments collection
+      allow update: if resource.data.paymentConfirmationStatus == 'pending' &&
+                       (request.resource.data.paymentConfirmationStatus == 'confirmed' || 
+                        request.resource.data.paymentConfirmationStatus == 'declined') &&
+                       // Ensure only payment confirmation fields, stageHistory and updatedAt are being modified
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['paymentConfirmationStatus', 'paymentConfirmationRespondedAt', 'stageHistory', 'updatedAt']);
+      
+      // Allow finance to confirm payment received (unauthenticated)
+      // This allows finance to update stage history when confirming payment
+      allow update: if resource.data.paymentConfirmationStatus == 'confirmed' &&
+                       // Only allow updating stageHistory and updatedAt for finance confirmation
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['stageHistory', 'updatedAt']);
+      
+      // Allow automatic stage movement from "installed" to "payment" when both conditions are met
+      // This allows the system to auto-move orders when signoff is signed AND finance confirmed payment
+      allow update: if resource.data.currentStage == 'installed' &&
+                       request.resource.data.currentStage == 'payment' &&
+                       resource.data.hasInstallationSignoff == true &&
+                       resource.data.paymentConfirmationStatus == 'confirmed' &&
+                       // Only allow updating stage-related fields for auto-move
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['currentStage', 'stageEnteredAt', 'stageHistory', 'notes', 'updatedAt']);
+      
       // Authenticated users (admins/staff) can do everything
       allow read, write: if request.auth != null;
     }
@@ -215,6 +247,32 @@ service cloud.firestore {
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pdfUrl']);
 
       // Only authenticated admins can create/delete contracts
+      allow create, delete: if request.auth != null && isAdmin();
+    }
+    
+    // Installation Sign-offs - Public read access, restricted write access
+    match /installation_signoffs/{signoffId} {
+      // Allow public read access (token validation happens in app layer)
+      allow read: if true;
+
+      // Allow marking as viewed (status: pending -> viewed)
+      allow update: if resource.data.status == 'pending' && 
+                       request.resource.data.status == 'viewed' &&
+                       !resource.data.hasSigned &&
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'viewedAt']);
+
+      // Allow public UPDATE only for pending/viewed sign-offs (for signing)
+      // This allows customers to sign off on their installation/delivery
+      allow update: if resource.data.status in ['pending', 'viewed'] && 
+                       !resource.data.hasSigned &&
+                       request.resource.data.hasSigned == true &&
+                       // Only allow updating sign-off fields
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'hasSigned', 'digitalSignature', 'digitalSignatureToken', 
+                                   'signedAt', 'ipAddress', 'userAgent', 'itemsConfirmed']);
+
+      // Only authenticated admins can create/delete sign-offs
       allow create, delete: if request.auth != null && isAdmin();
     }
     

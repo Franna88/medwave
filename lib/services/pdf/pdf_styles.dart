@@ -51,6 +51,13 @@ class PdfStyles {
         color: grayColor,
       );
 
+  /// Signature text style with custom font
+  static pw.TextStyle signatureText(pw.Font font) => pw.TextStyle(
+        font: font,
+        fontSize: 20,
+        color: textColor,
+      );
+
   // Spacing
   static const double spacingSmall = 8;
   static const double spacingMedium = 16;
@@ -83,7 +90,7 @@ class PdfStyles {
 
   static pw.Widget get thickDivider => pw.Container(
         height: 2,
-        color: primaryColor,
+        color: textColor,
         margin: const pw.EdgeInsets.symmetric(vertical: spacingMedium),
       );
 }

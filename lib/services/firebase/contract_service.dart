@@ -69,10 +69,19 @@ class ContractService {
         );
       }
 
-      // Calculate totals
+      // Extract and validate shipping address
+      final shippingAddress = appointment.optInQuestions?['Shipping address'];
+
+      if (shippingAddress == null || shippingAddress.trim().isEmpty) {
+        throw Exception(
+          'Shipping address is required for contract generation. Please update the appointment details.',
+        );
+      }
+
+      // Calculate totals (multiply price by quantity for each product)
       double subtotal = 0;
       for (final product in appointment.optInProducts) {
-        subtotal += product.price;
+        subtotal += product.price * product.quantity;
       }
 
       final depositAmount = subtotal * 0.40; // 40% deposit
@@ -94,6 +103,7 @@ class ContractService {
         customerName: appointment.customerName,
         email: appointment.email,
         phone: appointment.phone,
+        shippingAddress: shippingAddress,
         contractContentVersion: contractContent.version,
         contractContentData: {
           'content': contractContent.content,
@@ -318,9 +328,10 @@ class ContractService {
       }
 
       if (kDebugMode) {
-        print('📄 Generating PDF for contract: $contractId');
+        print('📄 Generating PDF with cover page for contract: $contractId');
       }
 
+      // Generate PDF (now includes cover page automatically)
       final pdfBytes = await _pdfService.generatePdfBytes(contract);
       final pdfUrl = await _pdfService.uploadPdfToStorage(contract, pdfBytes);
 

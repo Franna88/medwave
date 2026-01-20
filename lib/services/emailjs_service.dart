@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -11,7 +13,8 @@ import '../models/streams/order.dart' as order_models;
 /// Uses EmailJS REST API to send emails directly from Flutter app without backend
 class EmailJSService {
   // EmailJS Configuration
-  static const String _serviceId = 'service_lg9tf22';
+  // static const String _serviceId = 'service_lg9tf22';
+  static const String _serviceId = 'service_itl4rns';
   static const String _userId = '0ZWNajCk0zcA8mXhu';
 
   // Template IDs
@@ -24,6 +27,7 @@ class EmailJSService {
       'template_qnmopr1'; // Practitioner approval notification - Application Approved
   static const String _depositCustomerTemplateId = 'template_6vqr5ib';
   static const String _depositMarketingTemplateId = 'template_jykxsg3';
+  static const String _paymentCustomerTemplateId = 'template_10g88s2';
   static const String _contractLinkTemplateId = 'template_bdg4s33';
   // Installation booking template - dedicated template for installation date selection
   static const String _installationBookingTemplateId = 'template_fvu7nw2';
@@ -31,6 +35,14 @@ class EmailJSService {
   static const String _outForDeliveryTemplateId = 'template_bvaj5t6';
   // Priority order template - notifies admin when full payment order is created
   static const String _priorityOrderTemplateId = 'template_4iqsrt3';
+  // Invoice template - sends invoice to customer with download link
+  static const String _invoiceTemplateId = 'template_g8i6vvl';
+  // Thank you email template - sent to customer after finance confirms payment
+  static const String _thankYouPaymentTemplateId = 'template_zih8yg9';
+  // Internal lead notification template - sent to finance and sales team when contract is generated
+  static const String _internalLeadNotificationTemplateId = 'template_xonvsxf';
+  // Installation signoff template - sent to customer to sign acknowledgment of receipt
+  static const String _installationSignoffTemplateId = 'template_vc3mf08';
 
   // Admin email for notifications
   static const String _adminEmail =
@@ -370,17 +382,27 @@ class EmailJSService {
     required String yesLabel,
     required String noLabel,
   }) {
-    // Calculate amount from optInProducts if depositAmount is null
-    final calculatedAmount = appointment.depositAmount ??
-        appointment.optInProducts.fold<double>(0, (sum, p) => sum + p.price);
+    // Calculate deposit amount: use stored depositAmount, or calculate 40% of total if not set
+    double calculatedAmount = 0;
+    if (appointment.depositAmount != null) {
+      calculatedAmount = appointment.depositAmount!;
+    } else if (appointment.optInProducts.isNotEmpty) {
+      // Calculate 40% deposit from optInProducts total (multiply price by quantity)
+      final total = appointment.optInProducts.fold<double>(
+        0,
+        (sum, p) => sum + (p.price * p.quantity),
+      );
+      calculatedAmount = total * 0.40; // 40% deposit
+    }
 
     return {
       'customer_name': appointment.customerName,
       'customer_email': appointment.email,
       'customer_phone': appointment.phone,
       'appointment_id': appointment.id,
+      // Template likely already includes "R" prefix, so just send the number
       'deposit_amount': calculatedAmount > 0
-          ? 'R ${calculatedAmount.toStringAsFixed(2)}'
+          ? calculatedAmount.toStringAsFixed(2)
           : 'N/A',
       'description': description,
       'yes_label': yesLabel,
@@ -408,9 +430,19 @@ class EmailJSService {
           'template_id': templateId,
           'user_id': _userId,
           'template_params': {
+            ...templateParams,
+            // EmailJS template uses "email" and potentially "customer_email" as recipient fields.
+            // Include both standard keys to avoid "recipient address is empty" errors.
+            // Set these AFTER templateParams to ensure recipient is always correct.
+            'email': toEmail,
             'to_email': toEmail,
             'to_name': toName,
-            ...templateParams,
+            // If templateParams contains customer_email (for finance notifications),
+            // ensure it's set to the finance email (toEmail) to override any customer email value.
+            // The cascade operator in sendFinancePaymentNotification should handle this,
+            // but we set it here as a final override to be safe.
+            if (templateParams.containsKey('customer_email'))
+              'customer_email': toEmail,
           },
         }),
       );
@@ -428,6 +460,218 @@ class EmailJSService {
     }
   }
 
+  /// Send customer-facing payment request (Yes/No) for remaining balance
+  static Future<bool> sendCustomerPaymentRequest({
+    required order_models.Order order,
+    required String yesUrl,
+    required String noUrl,
+    required double remainingPaymentAmount,
+    String? description,
+    String? yesLabel,
+    String? noLabel,
+  }) async {
+    final amountText = remainingPaymentAmount > 0
+        ? remainingPaymentAmount.toStringAsFixed(2)
+        : 'N/A';
+    final resolvedDescription =
+        description ??
+        'Have you paid the remaining balance${amountText != 'N/A' ? ' of R $amountText' : ''}?';
+
+    return _sendPaymentEmail(
+      templateId: _paymentCustomerTemplateId,
+      toEmail: order.email,
+      toName: order.customerName,
+      templateParams: _buildPaymentParams(
+        order: order,
+        yesUrl: yesUrl,
+        noUrl: noUrl,
+        remainingPaymentAmount: remainingPaymentAmount,
+        description: resolvedDescription,
+        yesLabel: yesLabel ?? 'Yes, I made the payment',
+        noLabel: noLabel ?? 'No, not yet',
+      ),
+    );
+  }
+
+  /// Send finance department notification when customer confirms payment
+  static Future<bool> sendFinancePaymentNotification({
+    required order_models.Order order,
+    String? financeEmail,
+    String? description,
+    String? yesLabel,
+    String? noLabel,
+    String? yesUrl,
+    String? noUrl,
+  }) async {
+    // Reuse the same email as marketing team (finance department)
+    final resolvedEmail = financeEmail ?? 'rachel@medwavegroup.com';
+    final resolvedYesUrl = yesUrl ?? _defaultOperationsBoardLink();
+    final resolvedNoUrl = noUrl ?? _defaultOperationsBoardLink();
+
+    final resolvedDescription =
+        description ??
+        'Customer ${order.customerName} confirmed payment. Please verify.';
+
+    // Calculate total invoice from order items (with quantities)
+    final totalInvoice = order.items.fold<double>(
+      0,
+      (sum, item) => sum + ((item.price ?? 0) * item.quantity),
+    );
+
+    // Calculate deposit amount from appointment optInProducts (with quantities)
+    // This ensures the deposit matches what was calculated in the contract/invoice
+    double depositAmount = 0;
+    try {
+      if (order.appointmentId.isNotEmpty) {
+        final firestore = FirebaseFirestore.instance;
+        final appointmentDoc = await firestore
+            .collection('appointments')
+            .doc(order.appointmentId)
+            .get();
+
+        if (appointmentDoc.exists) {
+          final appointmentData = appointmentDoc.data();
+          if (appointmentData != null) {
+            // Get stored deposit amount first
+            final storedDeposit = appointmentData['depositAmount'];
+            if (storedDeposit != null) {
+              depositAmount = (storedDeposit as num).toDouble();
+            } else {
+              // Calculate 40% of total from optInProducts if deposit not stored
+              final optInProducts =
+                  appointmentData['optInProducts'] as List<dynamic>?;
+              if (optInProducts != null && optInProducts.isNotEmpty) {
+                double total = 0;
+                for (final product in optInProducts) {
+                  if (product is Map<String, dynamic>) {
+                    final price = product['price'];
+                    final quantity =
+                        product['quantity'] ?? 1; // Default to 1 if not set
+                    if (price != null) {
+                      total += (price as num).toDouble() * quantity;
+                    }
+                  }
+                }
+                depositAmount = total * 0.40; // 40% deposit
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error fetching appointment for deposit amount: $e');
+      }
+      // Fallback: calculate from order items if appointment fetch fails
+      depositAmount = totalInvoice * 0.40; // 40% deposit as fallback
+    }
+
+    // Calculate remaining balance (what customer needs to pay for final payment)
+    // Cap deposit at total to prevent negative amounts
+    final cappedDepositAmount = depositAmount > totalInvoice
+        ? totalInvoice
+        : depositAmount;
+    final remainingBalance = max(0.0, totalInvoice - cappedDepositAmount);
+
+    // Build template params - the template uses customer_email as the recipient field,
+    // so we must set it to the finance email address, not the customer's email
+    final templateParams = {
+      'customer_name': order.customerName,
+      'customer_email':
+          resolvedEmail, // Set to finance email (template uses this as recipient)
+      'customer_phone': order.phone,
+      'appointment_id':
+          order.id, // Use order.id as appointment_id for template compatibility
+      'deposit_amount': remainingBalance > 0
+          ? remainingBalance.toStringAsFixed(2)
+          : 'N/A',
+      'description': resolvedDescription,
+      'yes_label': yesLabel ?? 'Open operations board',
+      'no_label': noLabel ?? 'View order',
+      'yes_url': resolvedYesUrl,
+      'no_url': resolvedNoUrl,
+    };
+
+    return _sendDepositEmail(
+      templateId: _depositMarketingTemplateId,
+      toEmail: resolvedEmail,
+      toName: 'Finance Team',
+      templateParams: templateParams,
+    );
+  }
+
+  static Map<String, dynamic> _buildPaymentParams({
+    required order_models.Order order,
+    required String yesUrl,
+    required String noUrl,
+    required double remainingPaymentAmount,
+    required String description,
+    required String yesLabel,
+    required String noLabel,
+  }) {
+    // Calculate total invoice from order items
+    final totalInvoice = order.items.fold<double>(
+      0,
+      (sum, item) => sum + ((item.price ?? 0) * item.quantity),
+    );
+
+    return {
+      'customer_name': order.customerName,
+      'customer_email': order.email,
+      'customer_phone': order.phone,
+      'order_id': order.id,
+      'remaining_payment_amount': remainingPaymentAmount > 0
+          ? 'R ${remainingPaymentAmount.toStringAsFixed(2)}'
+          : 'N/A',
+      'total_invoice_amount': totalInvoice > 0
+          ? 'R ${totalInvoice.toStringAsFixed(2)}'
+          : 'N/A',
+      'description': description,
+      'yes_label': yesLabel,
+      'no_label': noLabel,
+      'yes_url': yesUrl,
+      'no_url': noUrl,
+    };
+  }
+
+  static Future<bool> _sendPaymentEmail({
+    required String templateId,
+    required String toEmail,
+    required String toName,
+    required Map<String, dynamic> templateParams,
+  }) async {
+    try {
+      debugPrint('📧 Sending payment email via $templateId to $toEmail');
+
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': templateId,
+          'user_id': _userId,
+          'template_params': {
+            'to_email': toEmail,
+            'to_name': toName,
+            ...templateParams,
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ Payment email sent successfully');
+        return true;
+      } else {
+        debugPrint('❌ Failed to send payment email: ${response.body}');
+        return false;
+      }
+    } catch (error) {
+      debugPrint('❌ Error sending payment email: $error');
+      return false;
+    }
+  }
+
   static String _defaultSalesBoardLink() {
     final origin = Uri.base.origin.isNotEmpty
         ? Uri.base.origin
@@ -435,6 +679,15 @@ class EmailJSService {
     return Uri.parse(
       origin,
     ).replace(path: '/admin/streams/sales', queryParameters: {}).toString();
+  }
+
+  static String _defaultOperationsBoardLink() {
+    final origin = Uri.base.origin.isNotEmpty
+        ? Uri.base.origin
+        : 'https://app.medwave.com';
+    return Uri.parse(origin)
+        .replace(path: '/admin/streams/operations', queryParameters: {})
+        .toString();
   }
 
   static String _resolveBaseOrigin({required String fallback}) {
@@ -583,9 +836,7 @@ class EmailJSService {
     required order_models.Order order,
   }) async {
     try {
-      debugPrint(
-        '📧 Sending out for delivery email to ${order.email}',
-      );
+      debugPrint('📧 Sending out for delivery email to ${order.email}');
 
       final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
       final response = await http.post(
@@ -596,7 +847,8 @@ class EmailJSService {
           'template_id': _outForDeliveryTemplateId,
           'user_id': _userId,
           'template_params': {
-            'customer_email': order.email, // Template uses {{customer_email}} for recipient
+            'customer_email':
+                order.email, // Template uses {{customer_email}} for recipient
             'customer_name': order.customerName,
             'tracking_number': order.trackingNumber ?? 'Not available',
             'installer_name': order.assignedInstallerName ?? 'To be assigned',
@@ -612,13 +864,76 @@ class EmailJSService {
         debugPrint('✅ Out for delivery email sent successfully');
         return true;
       } else {
-        debugPrint(
-          '❌ Failed to send out for delivery email: ${response.body}',
-        );
+        debugPrint('❌ Failed to send out for delivery email: ${response.body}');
         return false;
       }
     } catch (error) {
       debugPrint('❌ Error sending out for delivery email: $error');
+      return false;
+    }
+  }
+
+  /// Send installation signoff email to customer
+  /// Customer clicks the link to sign acknowledgment of receipt
+  static Future<bool> sendInstallationSignoffEmail({
+    required order_models.Order order,
+    required String acknowledgementLink,
+  }) async {
+    try {
+      // Validate email address
+      if (order.email.isEmpty) {
+        debugPrint(
+          '❌ Cannot send installation signoff email: order email is empty',
+        );
+        return false;
+      }
+
+      debugPrint('📧 Sending installation signoff email to ${order.email}');
+
+      // Build full URL if needed
+      String fullUrl = acknowledgementLink;
+      if (!acknowledgementLink.startsWith('http')) {
+        // If relative path, make it full URL
+        if (kIsWeb) {
+          final baseUrl = Uri.base.origin;
+          fullUrl = '$baseUrl$acknowledgementLink';
+        } else {
+          // For mobile, use configurable base URL
+          fullUrl = 'https://yourdomain.com$acknowledgementLink';
+        }
+      }
+
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _installationSignoffTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            // EmailJS template recipient fields - include multiple to ensure compatibility
+            'email': order.email,
+            'customer_email': order.email,
+            'to_email': order.email,
+            'username': order.customerName,
+            'acknowledgement_link': fullUrl,
+            'website_link': 'https://www.medwavegroup.com', // Or from config
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ Installation signoff email sent successfully');
+        return true;
+      } else {
+        debugPrint(
+          '❌ Failed to send installation signoff email: ${response.body}',
+        );
+        return false;
+      }
+    } catch (error) {
+      debugPrint('❌ Error sending installation signoff email: $error');
       return false;
     }
   }
@@ -682,6 +997,287 @@ class EmailJSService {
       }
     } catch (error) {
       debugPrint('❌ Error sending priority order notification email: $error');
+      return false;
+    }
+  }
+
+  /// Send invoice email to customer with invoice link and PDF
+  static Future<bool> sendInvoiceEmail({
+    required order_models.Order order,
+    required String invoiceLink,
+    String? websiteLink,
+    String? invoicePdfUrl,
+    double? invoiceAmount,
+  }) async {
+    try {
+      debugPrint('📧 Sending invoice email to ${order.email}');
+
+      // Calculate invoice amount if not provided
+      final calculatedInvoiceAmount =
+          invoiceAmount ??
+          order.items.fold<double>(
+            0,
+            (sum, item) => sum + ((item.price ?? 0) * item.quantity),
+          );
+
+      final resolvedWebsiteLink =
+          websiteLink ??
+          _resolveBaseOrigin(fallback: 'https://app.medwave.com');
+
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _invoiceTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            // EmailJS template uses "email" as the recipient field; include both
+            // standard keys to avoid "recipient address is empty" errors.
+            'email': order.email,
+            'to_email': order.email,
+            'to_name': order.customerName,
+            'username': order.customerName,
+            'invoice_number': order.invoiceNumber ?? 'N/A',
+            'invoice_amount':
+                'R ${max(0.0, calculatedInvoiceAmount).toStringAsFixed(2)}',
+            'invoice_link': invoiceLink,
+            'invoice_pdf_url': invoicePdfUrl ?? '',
+            'website_link': resolvedWebsiteLink,
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ Invoice email sent successfully');
+        if (invoicePdfUrl != null) {
+          debugPrint('   PDF URL included: $invoicePdfUrl');
+        }
+        return true;
+      } else {
+        debugPrint('❌ Failed to send invoice email: ${response.body}');
+        return false;
+      }
+    } catch (error) {
+      debugPrint('❌ Error sending invoice email: $error');
+      return false;
+    }
+  }
+
+  /// Send thank you email to customer after finance confirms payment
+  static Future<bool> sendThankYouPaymentEmail({
+    required order_models.Order order,
+    String? supportUrl,
+  }) async {
+    try {
+      // Validate email address
+      if (order.email.isEmpty) {
+        debugPrint('❌ Cannot send thank you email: order email is empty');
+        return false;
+      }
+
+      debugPrint('📧 Sending thank you payment email to ${order.email}');
+      debugPrint('📧 Order ID: ${order.id}, Customer: ${order.customerName}');
+
+      // Calculate total invoice from order items
+      final totalInvoice = order.items.fold<double>(
+        0,
+        (sum, item) => sum + ((item.price ?? 0) * item.quantity),
+      );
+
+      final resolvedSupportUrl =
+          supportUrl ?? _resolveBaseOrigin(fallback: 'https://app.medwave.com');
+
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _thankYouPaymentTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            // EmailJS template recipient fields - include multiple to ensure compatibility
+            // The template configuration in EmailJS dashboard determines which field is used
+            'email': order.email,
+            'to_email': order.email,
+            'to_name': order.customerName,
+            'reply_to': order.email,
+            'from_email': order.email,
+            'user_email': order.email,
+            'customer_email': order.email,
+            // Template content variables
+            'username': order.customerName,
+            'customer_name': order.customerName,
+            'order_id': order.id,
+            'total_invoice_amount': totalInvoice > 0
+                ? 'R ${totalInvoice.toStringAsFixed(2)}'
+                : 'N/A',
+            'support_url': resolvedSupportUrl,
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ Thank you payment email sent successfully');
+        return true;
+      } else {
+        debugPrint(
+          '❌ Failed to send thank you payment email: ${response.body}',
+        );
+        return false;
+      }
+    } catch (error) {
+      debugPrint('❌ Error sending thank you payment email: $error');
+      return false;
+    }
+  }
+
+  /// Format lead and customer details as HTML detail rows
+  static String _formatLeadCustomerDetails(
+    sales_models.SalesAppointment appointment,
+  ) {
+    final buffer = StringBuffer();
+    buffer.writeln(
+      '<div class="detail-row"><strong>Lead ID:</strong> ${appointment.leadId}</div>',
+    );
+    buffer.writeln(
+      '<div class="detail-row"><strong>Customer Name:</strong> ${appointment.customerName}</div>',
+    );
+    buffer.writeln(
+      '<div class="detail-row"><strong>Email:</strong> ${appointment.email}</div>',
+    );
+    buffer.writeln(
+      '<div class="detail-row"><strong>Phone:</strong> ${appointment.phone}</div>',
+    );
+    return buffer.toString();
+  }
+
+  /// Format date and contact details as HTML detail rows
+  static String _formatDateContactDetails(
+    sales_models.SalesAppointment appointment,
+  ) {
+    final buffer = StringBuffer();
+    if (appointment.appointmentDate != null) {
+      final dateStr = DateFormat(
+        'yyyy-MM-dd',
+      ).format(appointment.appointmentDate!);
+      buffer.writeln(
+        '<div class="detail-row"><strong>Appointment Date:</strong> $dateStr</div>',
+      );
+    }
+    if (appointment.appointmentTime != null &&
+        appointment.appointmentTime!.isNotEmpty) {
+      buffer.writeln(
+        '<div class="detail-row"><strong>Appointment Time:</strong> ${appointment.appointmentTime}</div>',
+      );
+    }
+    buffer.writeln(
+      '<div class="detail-row"><strong>Customer Email:</strong> ${appointment.email}</div>',
+    );
+    buffer.writeln(
+      '<div class="detail-row"><strong>Customer Phone:</strong> ${appointment.phone}</div>',
+    );
+    return buffer.toString();
+  }
+
+  /// Format selected items as HTML formatted list
+  static String _formatSelectedItems(
+    sales_models.SalesAppointment appointment,
+  ) {
+    if (appointment.optInProducts.isEmpty) {
+      return '<div class="detail-row">No items selected</div>';
+    }
+    final buffer = StringBuffer();
+    for (final product in appointment.optInProducts) {
+      buffer.writeln(
+        '<div class="detail-row"><strong>${product.name}:</strong> R ${product.price.toStringAsFixed(2)}</div>',
+      );
+    }
+    return buffer.toString();
+  }
+
+  /// Format opt-in questions and answers as HTML key-value pairs
+  static String _formatOptInQuestions(
+    sales_models.SalesAppointment appointment,
+  ) {
+    if (appointment.optInQuestions == null ||
+        appointment.optInQuestions!.isEmpty) {
+      return '<div class="detail-row">No opt-in questions answered</div>';
+    }
+    final buffer = StringBuffer();
+    appointment.optInQuestions!.forEach((key, value) {
+      buffer.writeln(
+        '<div class="detail-row"><strong>$key:</strong> $value</div>',
+      );
+    });
+    return buffer.toString();
+  }
+
+  /// Send internal lead notification email to finance and sales team
+  /// This email is sent when a contract is generated in the sales stream
+  static Future<bool> sendInternalLeadNotification({
+    required sales_models.SalesAppointment appointment,
+  }) async {
+    try {
+      // Format all template placeholders
+      final leadCustomerDetails = _formatLeadCustomerDetails(appointment);
+      final dateContactDetails = _formatDateContactDetails(appointment);
+      final salesAgent =
+          appointment.assignedToName ??
+          appointment.createdByName ??
+          'Not assigned';
+      final selectedItems = _formatSelectedItems(appointment);
+      final optInQuestions = _formatOptInQuestions(appointment);
+
+      // Hardcoded recipient emails
+      const recipients = ['francois@medwavegroup.com', 'info@medwavegroup.com'];
+
+      // Send to both recipients (EmailJS supports single recipient per call)
+      bool atLeastOneSuccess = false;
+      for (final recipient in recipients) {
+        try {
+          final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+          final response = await http.post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'service_id': _serviceId,
+              'template_id': _internalLeadNotificationTemplateId,
+              'user_id': _userId,
+              'template_params': {
+                'email': recipient,
+                'to_email': recipient,
+                'admin_email':
+                    recipient, // Template uses {{admin_email}} as recipient field
+                'lead_customer_details': leadCustomerDetails,
+                'date_contact_details': dateContactDetails,
+                'sales_agent': salesAgent,
+                'selected_items': selectedItems,
+                'opt_in_questions': optInQuestions,
+              },
+            }),
+          );
+
+          if (response.statusCode == 200) {
+            debugPrint('✅ Internal lead notification sent to $recipient');
+            atLeastOneSuccess = true;
+          } else {
+            debugPrint(
+              '❌ Failed to send internal lead notification to $recipient: ${response.body}',
+            );
+          }
+        } catch (error) {
+          debugPrint(
+            '❌ Error sending internal lead notification to $recipient: $error',
+          );
+        }
+      }
+
+      return atLeastOneSuccess;
+    } catch (error) {
+      debugPrint('❌ Error in sendInternalLeadNotification: $error');
       return false;
     }
   }

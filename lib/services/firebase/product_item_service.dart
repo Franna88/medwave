@@ -22,6 +22,7 @@ class ProductItemService {
     required String country,
     required bool isActive,
     required double price,
+    double? costAmount,
   }) async {
     final now = FieldValue.serverTimestamp();
     await _collection.add({
@@ -30,6 +31,7 @@ class ProductItemService {
       'country': country,
       'isActive': isActive,
       'price': price,
+      if (costAmount != null) 'costAmount': costAmount,
       'createdAt': now,
       'updatedAt': now,
     });
@@ -42,6 +44,7 @@ class ProductItemService {
       'country': item.country,
       'isActive': item.isActive,
       'price': item.price,
+      if (item.costAmount != null) 'costAmount': item.costAmount,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }

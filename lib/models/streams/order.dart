@@ -50,6 +50,7 @@ class Order {
   final String? createdByName;
   final String? convertedToTicketId; // Set when moved to Support
   final double? formScore;
+  final Map<String, String>? optInQuestions; // Questionnaire from opt-in stage
 
   // Installation booking fields
   final String? installBookingToken; // Security token for email link
@@ -65,13 +66,45 @@ class Order {
   // Inventory picking fields
   final Map<String, bool> pickedItems; // item name -> picked status
   final String? trackingNumber;
+  final String? deliveryType; // 'courier' or 'manual'
+  final String?
+  vehicleRegistrationNumber; // Vehicle registration for manual delivery
   final String? waybillPhotoUrl;
   final DateTime? pickedAt;
   final String? pickedBy;
   final String? pickedByName;
 
+  // Installation completion fields
+  final List<String>
+  proofOfInstallationPhotoUrls; // Multiple images for multiple installations
+  final String? customerSignaturePhotoUrl;
+
+  // Payment confirmation fields
+  final String? paymentConfirmationToken; // Security token for email link
+  final String?
+  paymentConfirmationStatus; // 'pending' | 'confirmed' | 'declined'
+  final DateTime? paymentConfirmationSentAt; // When email was sent
+  final DateTime? paymentConfirmationRespondedAt; // When customer responded
+
+  // Invoice PDF
+  final String? invoicePdfUrl; // Firebase Storage URL for invoice PDF
+
   // Priority order flag (full payment leads get installation priority)
   final bool isPriorityOrder;
+
+  // Order splitting fields
+  final String?
+  splitFromOrderId; // Reference to parent order when this is a split order
+  final List<ShippedItemFromParent>
+  shippedItemsFromParentOrder; // Items already shipped in parent order with waybill info
+  final List<OrderItem>
+  remainingItemsFromParentOrder; // Items from parent order that were NOT overridden (stayed in Order 1)
+
+  // Installation sign-off fields
+  final String? installationSignoffId; // Reference to sign-off document
+  final bool hasInstallationSignoff;
+  final DateTime? installationSignoffCreatedAt;
+  final DateTime? installationSignedOffAt;
 
   Order({
     required this.id,
@@ -94,6 +127,7 @@ class Order {
     this.createdByName,
     this.convertedToTicketId,
     this.formScore,
+    this.optInQuestions,
     // Installation booking fields
     this.installBookingToken,
     this.customerSelectedDates = const [],
@@ -107,12 +141,33 @@ class Order {
     // Inventory picking fields
     this.pickedItems = const {},
     this.trackingNumber,
+    this.deliveryType,
+    this.vehicleRegistrationNumber,
     this.waybillPhotoUrl,
     this.pickedAt,
     this.pickedBy,
     this.pickedByName,
+    // Installation completion fields
+    this.proofOfInstallationPhotoUrls = const [],
+    this.customerSignaturePhotoUrl,
+    // Payment confirmation fields
+    this.paymentConfirmationToken,
+    this.paymentConfirmationStatus,
+    this.paymentConfirmationSentAt,
+    this.paymentConfirmationRespondedAt,
+    // Invoice PDF
+    this.invoicePdfUrl,
     // Priority order flag
     this.isPriorityOrder = false,
+    // Order splitting fields
+    this.splitFromOrderId,
+    this.shippedItemsFromParentOrder = const [],
+    this.remainingItemsFromParentOrder = const [],
+    // Installation sign-off fields
+    this.installationSignoffId,
+    this.hasInstallationSignoff = false,
+    this.installationSignoffCreatedAt,
+    this.installationSignedOffAt,
   });
 
   /// Get time in current stage
@@ -175,14 +230,18 @@ class Order {
       formScore: map['formScore'] != null
           ? (map['formScore'] as num?)?.toDouble()
           : null,
+      optInQuestions: (map['optInQuestions'] as Map<String, dynamic>?)?.map(
+        (k, v) => MapEntry(k, v.toString()),
+      ),
       // Installation booking fields
       installBookingToken: map['installBookingToken']?.toString(),
-      customerSelectedDates: (map['customerSelectedDates'] as List<dynamic>?)
+      customerSelectedDates:
+          (map['customerSelectedDates'] as List<dynamic>?)
               ?.map((d) => (d as Timestamp).toDate())
               .toList() ??
           [],
-      confirmedInstallDate:
-          (map['confirmedInstallDate'] as Timestamp?)?.toDate(),
+      confirmedInstallDate: (map['confirmedInstallDate'] as Timestamp?)
+          ?.toDate(),
       assignedInstallerId: map['assignedInstallerId']?.toString(),
       assignedInstallerName: map['assignedInstallerName']?.toString(),
       assignedInstallerPhone: map['assignedInstallerPhone']?.toString(),
@@ -193,15 +252,57 @@ class Order {
       installBookingEmailSentAt:
           (map['installBookingEmailSentAt'] as Timestamp?)?.toDate(),
       // Inventory picking fields
-      pickedItems: (map['pickedItems'] as Map<String, dynamic>?)
-              ?.map((key, value) => MapEntry(key, value as bool)) ??
+      pickedItems:
+          (map['pickedItems'] as Map<String, dynamic>?)?.map(
+            (key, value) => MapEntry(key, value as bool),
+          ) ??
           {},
       trackingNumber: map['trackingNumber']?.toString(),
+      deliveryType: map['deliveryType']?.toString(),
+      vehicleRegistrationNumber: map['vehicleRegistrationNumber']?.toString(),
       waybillPhotoUrl: map['waybillPhotoUrl']?.toString(),
       pickedAt: (map['pickedAt'] as Timestamp?)?.toDate(),
       pickedBy: map['pickedBy']?.toString(),
       pickedByName: map['pickedByName']?.toString(),
+      // Installation completion fields
+      proofOfInstallationPhotoUrls:
+          (map['proofOfInstallationPhotoUrls'] as List<dynamic>?)
+              ?.map((url) => url.toString())
+              .toList() ??
+          (map['proofOfInstallationPhotoUrl'] != null
+              ? [map['proofOfInstallationPhotoUrl'].toString()]
+              : []), // Support legacy single image format
+      customerSignaturePhotoUrl: map['customerSignaturePhotoUrl']?.toString(),
+      // Payment confirmation fields
+      paymentConfirmationToken: map['paymentConfirmationToken']?.toString(),
+      paymentConfirmationStatus: map['paymentConfirmationStatus']?.toString(),
+      paymentConfirmationSentAt:
+          (map['paymentConfirmationSentAt'] as Timestamp?)?.toDate(),
+      paymentConfirmationRespondedAt:
+          (map['paymentConfirmationRespondedAt'] as Timestamp?)?.toDate(),
+      invoicePdfUrl: map['invoicePdfUrl']?.toString(),
       isPriorityOrder: map['isPriorityOrder'] == true,
+      // Order splitting fields
+      splitFromOrderId: map['splitFromOrderId']?.toString(),
+      shippedItemsFromParentOrder:
+          (map['shippedItemsFromParentOrder'] as List<dynamic>?)
+              ?.map(
+                (i) => ShippedItemFromParent.fromMap(i as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
+      remainingItemsFromParentOrder:
+          (map['remainingItemsFromParentOrder'] as List<dynamic>?)
+              ?.map((i) => OrderItem.fromMap(i as Map<String, dynamic>))
+              .toList() ??
+          [],
+      // Installation sign-off fields
+      installationSignoffId: map['installationSignoffId']?.toString(),
+      hasInstallationSignoff: map['hasInstallationSignoff'] == true,
+      installationSignoffCreatedAt:
+          (map['installationSignoffCreatedAt'] as Timestamp?)?.toDate(),
+      installationSignedOffAt:
+          (map['installationSignedOffAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -230,6 +331,7 @@ class Order {
       'createdByName': createdByName,
       'convertedToTicketId': convertedToTicketId,
       'formScore': formScore,
+      if (optInQuestions != null) 'optInQuestions': optInQuestions,
       // Installation booking fields
       'installBookingToken': installBookingToken,
       'customerSelectedDates': customerSelectedDates
@@ -249,11 +351,43 @@ class Order {
       // Inventory picking fields
       'pickedItems': pickedItems,
       'trackingNumber': trackingNumber,
+      'deliveryType': deliveryType,
+      'vehicleRegistrationNumber': vehicleRegistrationNumber,
       'waybillPhotoUrl': waybillPhotoUrl,
       'pickedAt': pickedAt != null ? Timestamp.fromDate(pickedAt!) : null,
       'pickedBy': pickedBy,
       'pickedByName': pickedByName,
+      // Installation completion fields
+      'proofOfInstallationPhotoUrls': proofOfInstallationPhotoUrls,
+      'customerSignaturePhotoUrl': customerSignaturePhotoUrl,
+      // Payment confirmation fields
+      'paymentConfirmationToken': paymentConfirmationToken,
+      'paymentConfirmationStatus': paymentConfirmationStatus,
+      'paymentConfirmationSentAt': paymentConfirmationSentAt != null
+          ? Timestamp.fromDate(paymentConfirmationSentAt!)
+          : null,
+      'paymentConfirmationRespondedAt': paymentConfirmationRespondedAt != null
+          ? Timestamp.fromDate(paymentConfirmationRespondedAt!)
+          : null,
+      'invoicePdfUrl': invoicePdfUrl,
       'isPriorityOrder': isPriorityOrder,
+      // Order splitting fields
+      'splitFromOrderId': splitFromOrderId,
+      'shippedItemsFromParentOrder': shippedItemsFromParentOrder
+          .map((i) => i.toMap())
+          .toList(),
+      'remainingItemsFromParentOrder': remainingItemsFromParentOrder
+          .map((i) => i.toMap())
+          .toList(),
+      // Installation sign-off fields
+      'installationSignoffId': installationSignoffId,
+      'hasInstallationSignoff': hasInstallationSignoff,
+      'installationSignoffCreatedAt': installationSignoffCreatedAt != null
+          ? Timestamp.fromDate(installationSignoffCreatedAt!)
+          : null,
+      'installationSignedOffAt': installationSignedOffAt != null
+          ? Timestamp.fromDate(installationSignedOffAt!)
+          : null,
     };
   }
 
@@ -278,6 +412,7 @@ class Order {
     String? createdByName,
     String? convertedToTicketId,
     double? formScore,
+    Map<String, String>? optInQuestions,
     // Installation booking fields
     String? installBookingToken,
     List<DateTime>? customerSelectedDates,
@@ -291,12 +426,33 @@ class Order {
     // Inventory picking fields
     Map<String, bool>? pickedItems,
     String? trackingNumber,
+    String? deliveryType,
+    String? vehicleRegistrationNumber,
     String? waybillPhotoUrl,
     DateTime? pickedAt,
     String? pickedBy,
     String? pickedByName,
+    // Installation completion fields
+    List<String>? proofOfInstallationPhotoUrls,
+    String? customerSignaturePhotoUrl,
+    // Payment confirmation fields
+    String? paymentConfirmationToken,
+    String? paymentConfirmationStatus,
+    DateTime? paymentConfirmationSentAt,
+    DateTime? paymentConfirmationRespondedAt,
+    // Invoice PDF
+    String? invoicePdfUrl,
     // Priority order flag
     bool? isPriorityOrder,
+    // Order splitting fields
+    String? splitFromOrderId,
+    List<ShippedItemFromParent>? shippedItemsFromParentOrder,
+    List<OrderItem>? remainingItemsFromParentOrder,
+    // Installation sign-off fields
+    String? installationSignoffId,
+    bool? hasInstallationSignoff,
+    DateTime? installationSignoffCreatedAt,
+    DateTime? installationSignedOffAt,
   }) {
     return Order(
       id: id ?? this.id,
@@ -319,6 +475,7 @@ class Order {
       createdByName: createdByName ?? this.createdByName,
       convertedToTicketId: convertedToTicketId ?? this.convertedToTicketId,
       formScore: formScore ?? this.formScore,
+      optInQuestions: optInQuestions ?? this.optInQuestions,
       // Installation booking fields
       installBookingToken: installBookingToken ?? this.installBookingToken,
       customerSelectedDates:
@@ -337,20 +494,51 @@ class Order {
       // Inventory picking fields
       pickedItems: pickedItems ?? this.pickedItems,
       trackingNumber: trackingNumber ?? this.trackingNumber,
+      deliveryType: deliveryType ?? this.deliveryType,
+      vehicleRegistrationNumber:
+          vehicleRegistrationNumber ?? this.vehicleRegistrationNumber,
       waybillPhotoUrl: waybillPhotoUrl ?? this.waybillPhotoUrl,
       pickedAt: pickedAt ?? this.pickedAt,
       pickedBy: pickedBy ?? this.pickedBy,
       pickedByName: pickedByName ?? this.pickedByName,
+      // Installation completion fields
+      proofOfInstallationPhotoUrls:
+          proofOfInstallationPhotoUrls ?? this.proofOfInstallationPhotoUrls,
+      customerSignaturePhotoUrl:
+          customerSignaturePhotoUrl ?? this.customerSignaturePhotoUrl,
+      // Payment confirmation fields
+      paymentConfirmationToken:
+          paymentConfirmationToken ?? this.paymentConfirmationToken,
+      paymentConfirmationStatus:
+          paymentConfirmationStatus ?? this.paymentConfirmationStatus,
+      paymentConfirmationSentAt:
+          paymentConfirmationSentAt ?? this.paymentConfirmationSentAt,
+      paymentConfirmationRespondedAt:
+          paymentConfirmationRespondedAt ?? this.paymentConfirmationRespondedAt,
+      invoicePdfUrl: invoicePdfUrl ?? this.invoicePdfUrl,
       isPriorityOrder: isPriorityOrder ?? this.isPriorityOrder,
+      // Order splitting fields
+      splitFromOrderId: splitFromOrderId ?? this.splitFromOrderId,
+      shippedItemsFromParentOrder:
+          shippedItemsFromParentOrder ?? this.shippedItemsFromParentOrder,
+      remainingItemsFromParentOrder:
+          remainingItemsFromParentOrder ?? this.remainingItemsFromParentOrder,
+      // Installation sign-off fields
+      installationSignoffId:
+          installationSignoffId ?? this.installationSignoffId,
+      hasInstallationSignoff:
+          hasInstallationSignoff ?? this.hasInstallationSignoff,
+      installationSignoffCreatedAt:
+          installationSignoffCreatedAt ?? this.installationSignoffCreatedAt,
+      installationSignedOffAt:
+          installationSignedOffAt ?? this.installationSignedOffAt,
     );
   }
 
   /// Get the earliest customer selected date for sorting
   DateTime? get earliestSelectedDate {
     if (customerSelectedDates.isEmpty) return null;
-    return customerSelectedDates.reduce(
-      (a, b) => a.isBefore(b) ? a : b,
-    );
+    return customerSelectedDates.reduce((a, b) => a.isBefore(b) ? a : b);
   }
 
   /// Get count of picked items
@@ -438,6 +626,60 @@ class OrderStageHistoryEntry {
       'exitedAt': exitedAt != null ? Timestamp.fromDate(exitedAt!) : null,
       'note': note,
     };
+  }
+}
+
+/// Model for items shipped in parent order (for split orders)
+class ShippedItemFromParent {
+  final String itemName;
+  final int quantity;
+  final String? trackingNumber; // Tracking number from Order 1
+  final String?
+  waybillNumber; // Waybill number from Order 1 - MUST be prominently displayed
+  final String? waybillPhotoUrl; // Waybill photo URL from Order 1
+
+  ShippedItemFromParent({
+    required this.itemName,
+    required this.quantity,
+    this.trackingNumber,
+    this.waybillNumber,
+    this.waybillPhotoUrl,
+  });
+
+  factory ShippedItemFromParent.fromMap(Map<String, dynamic> map) {
+    return ShippedItemFromParent(
+      itemName: map['itemName']?.toString() ?? '',
+      quantity: (map['quantity'] as num?)?.toInt() ?? 1,
+      trackingNumber: map['trackingNumber']?.toString(),
+      waybillNumber: map['waybillNumber']?.toString(),
+      waybillPhotoUrl: map['waybillPhotoUrl']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'itemName': itemName,
+      'quantity': quantity,
+      'trackingNumber': trackingNumber,
+      'waybillNumber': waybillNumber,
+      'waybillPhotoUrl': waybillPhotoUrl,
+    };
+  }
+
+  ShippedItemFromParent copyWith({
+    String? itemName,
+    int? quantity,
+    String? trackingNumber,
+    String? waybillNumber,
+    String? waybillPhotoUrl,
+  }) {
+    return ShippedItemFromParent(
+      itemName: itemName ?? this.itemName,
+      quantity: quantity ?? this.quantity,
+      trackingNumber: trackingNumber ?? this.trackingNumber,
+      waybillNumber: waybillNumber ?? this.waybillNumber,
+      waybillPhotoUrl: waybillPhotoUrl ?? this.waybillPhotoUrl,
+    );
   }
 }
 

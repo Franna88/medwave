@@ -12,44 +12,68 @@ import 'pdf_styles.dart';
 class ContractPdfService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  /// Generate complete contract PDF document
+  /// Generate complete contract PDF document with cover page
   Future<pw.Document> generateContractPdf(Contract contract) async {
     // #region agent log
     final startTime = DateTime.now().millisecondsSinceEpoch;
     if (kDebugMode) {
       print(
-        '🔍 [PDF-START] contractId=${contract.id}, products=${contract.products.length}, time=$startTime (Hyp: All)',
-      );
-      // Check for trademark symbols in contract data
-      final plainText =
-          contract.contractContentData['plainText'] as String? ?? '';
-      final tmCount = '™'.allMatches(plainText).length;
-      final tmInProducts = contract.products
-          .where((p) => p.name.contains('™'))
-          .length;
-      print(
-        '🔍 [PDF-TM-CHECK] plainText_tm_count=$tmCount, products_with_tm=$tmInProducts, plainText_length=${plainText.length} (Hyp: A, B)',
+        '🔍 [PDF-START] contractId=${contract.id}, products=${contract.products.length}, time=$startTime',
       );
     }
     // #endregion
     final pdf = pw.Document();
 
-    // Load logo
+    // Load cover page image
+    // #region agent log
+    final coverStartTime = DateTime.now().millisecondsSinceEpoch;
+    // #endregion
+    final coverImageData = await rootBundle.load(
+      'images/contract_cover_page.png',
+    );
+    final coverImageBytes = coverImageData.buffer.asUint8List();
+    final coverImage = pw.MemoryImage(coverImageBytes);
+    // #region agent log
+    final coverEndTime = DateTime.now().millisecondsSinceEpoch;
+    if (kDebugMode) {
+      print(
+        '🔍 [PDF-COVER] loaded cover image, size=${coverImageBytes.length} bytes, time=${coverEndTime - coverStartTime}ms',
+      );
+    }
+    // #endregion
+
+    // Page 1: Cover Page (Full page image)
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.zero, // No margins for full-page image
+        build: (context) => pw.Container(
+          width: double.infinity,
+          height: double.infinity,
+          child: pw.Image(
+            coverImage,
+            fit: pw.BoxFit.cover, // Cover entire page
+          ),
+        ),
+      ),
+    );
+
+    // Load grey logo for Page 2
     // #region agent log
     final logoStartTime = DateTime.now().millisecondsSinceEpoch;
     // #endregion
-    final logoData = await rootBundle.load('images/medwave_logo_white.png');
-    final logoBytes = logoData.buffer.asUint8List();
-    final logo = pw.MemoryImage(logoBytes);
+    final greyLogoData = await rootBundle.load('images/medwave_logo_grey.png');
+    final greyLogoBytes = greyLogoData.buffer.asUint8List();
+    final greyLogo = pw.MemoryImage(greyLogoBytes);
     // #region agent log
     final logoEndTime = DateTime.now().millisecondsSinceEpoch;
     final logoDuration = logoEndTime - logoStartTime;
-    if (kDebugMode) print('🔍 [PDF-LOGO] load_time=${logoDuration}ms (Hyp: C)');
+    if (kDebugMode) print('🔍 [PDF-GREY-LOGO] load_time=${logoDuration}ms');
     // #endregion
 
-    // Page 1: Header + Customer Info + Quote
+    // Page 2: Invoice-style layout
     // #region agent log
-    final page1StartTime = DateTime.now().millisecondsSinceEpoch;
+    final page2StartTime = DateTime.now().millisecondsSinceEpoch;
     // #endregion
     pdf.addPage(
       pw.Page(
@@ -58,11 +82,57 @@ class ContractPdfService {
         build: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            _buildHeader(logo),
-            pw.SizedBox(height: PdfStyles.spacingLarge),
-            _buildCustomerInfo(contract),
-            pw.SizedBox(height: PdfStyles.spacingLarge),
-            _buildQuoteSection(contract),
+            // Header: Logo and Title both centered
+            pw.Column(
+              children: [
+                // Logo centered
+                pw.Center(child: pw.Image(greyLogo, width: 150, height: 50)),
+                pw.SizedBox(height: 16),
+                // Title centered
+                pw.Center(
+                  child: pw.RichText(
+                    text: pw.TextSpan(
+                      children: [
+                        pw.TextSpan(
+                          text: 'MedWave',
+                          style: pw.TextStyle(
+                            fontSize: 18,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.TextSpan(
+                          text: 'TM',
+                          style: pw.TextStyle(
+                            fontSize: 10,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        pw.TextSpan(
+                          text: ' Device Invoice',
+                          style: pw.TextStyle(
+                            fontSize: 18,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 24),
+
+            // Two-column: Company info | Customer info
+            _buildInvoiceInfoRow(contract),
+            pw.SizedBox(height: 24),
+
+            // Quote table
+            _buildInvoiceQuoteTable(contract),
+            pw.SizedBox(height: 24),
+
+            // Payment info + Bank details
+            _buildPaymentInfo(),
+
             pw.Spacer(),
             _buildFooter(),
           ],
@@ -70,14 +140,12 @@ class ContractPdfService {
       ),
     );
     // #region agent log
-    final page1EndTime = DateTime.now().millisecondsSinceEpoch;
+    final page2EndTime = DateTime.now().millisecondsSinceEpoch;
     if (kDebugMode)
-      print(
-        '🔍 [PDF-PAGE1] build_time=${page1EndTime - page1StartTime}ms (Hyp: A, D)',
-      );
+      print('🔍 [PDF-PAGE2] build_time=${page2EndTime - page2StartTime}ms');
     // #endregion
 
-    // Page 2+: Contract Content
+    // Page 3+: Contract Content
     final plainText =
         contract.contractContentData['plainText'] as String? ?? '';
     if (plainText.isNotEmpty) {
@@ -104,10 +172,17 @@ class ContractPdfService {
       final contentEndTime = DateTime.now().millisecondsSinceEpoch;
       if (kDebugMode)
         print(
-          '🔍 [PDF-CONTENT] build_time=${contentEndTime - contentStartTime}ms, text_length=${plainText.length} (Hyp: A, B, D)',
+          '🔍 [PDF-CONTENT] build_time=${contentEndTime - contentStartTime}ms, text_length=${plainText.length}',
         );
       // #endregion
     }
+
+    // Load signature font for PDF
+    final signatureFontData = await rootBundle.load(
+      'fonts/DancingScript-Bold.ttf',
+    );
+    final signatureFontBytes = signatureFontData.buffer.asUint8List();
+    final signatureFont = pw.Font.ttf(signatureFontBytes.buffer.asByteData());
 
     // Final Page: Signature Certificate
     // #region agent log
@@ -120,7 +195,7 @@ class ContractPdfService {
         build: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            _buildSignatureCertificate(contract),
+            _buildSignatureCertificate(contract, signatureFont),
             pw.Spacer(),
             _buildFooter(),
           ],
@@ -130,12 +205,12 @@ class ContractPdfService {
     // #region agent log
     final sigEndTime = DateTime.now().millisecondsSinceEpoch;
     if (kDebugMode)
-      print(
-        '🔍 [PDF-SIGNATURE] build_time=${sigEndTime - sigStartTime}ms (Hyp: A, D)',
-      );
+      print('🔍 [PDF-SIGNATURE] build_time=${sigEndTime - sigStartTime}ms');
     final totalTime = sigEndTime - startTime;
     if (kDebugMode)
-      print('🔍 [PDF-DOCUMENT-COMPLETE] total_time=${totalTime}ms (Hyp: All)');
+      print(
+        '🔍 [PDF-DOCUMENT-COMPLETE] total_time=${totalTime}ms with cover page',
+      );
     // #endregion
 
     return pdf;
@@ -270,6 +345,13 @@ class ContractPdfService {
 
   /// Build quote/invoice section
   pw.Widget _buildQuoteSection(Contract contract) {
+    // Calculate deposit percentage
+    final depositPercentage = contract.subtotal > 0
+        ? ((contract.depositAmount / contract.subtotal) * 100).toStringAsFixed(
+            0,
+          )
+        : '40';
+
     return pw.Container(
       padding: const pw.EdgeInsets.all(16),
       decoration: PdfStyles.cardDecoration,
@@ -278,22 +360,11 @@ class ContractPdfService {
         children: [
           pw.Text('Quote', style: PdfStyles.h3),
           pw.SizedBox(height: PdfStyles.spacingMedium),
-          // Products
+          // Products - without individual prices
           ...contract.products.map((product) {
             return pw.Padding(
               padding: const pw.EdgeInsets.only(bottom: 8),
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Expanded(
-                    child: pw.Text(product.name, style: PdfStyles.bodyText),
-                  ),
-                  pw.Text(
-                    'R ${product.price.toStringAsFixed(2)}',
-                    style: PdfStyles.bodyTextBold,
-                  ),
-                ],
-              ),
+              child: pw.Text(product.name, style: PdfStyles.bodyText),
             );
           }).toList(),
           PdfStyles.divider,
@@ -301,18 +372,15 @@ class ContractPdfService {
           pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
-              _buildPriceRow('Subtotal:', contract.subtotal),
-              pw.SizedBox(height: 8),
               _buildPriceRow(
-                'Initial Deposit (40%):',
-                contract.depositAmount,
+                'Total Amount:',
+                contract.subtotal,
                 isHighlighted: true,
               ),
-              pw.SizedBox(height: 8),
+              pw.SizedBox(height: 12),
               _buildPriceRow(
-                'Remaining Balance (60%):',
-                contract.remainingBalance,
-                isSubdued: true,
+                'Deposit Allocation ($depositPercentage%):',
+                contract.depositAmount,
               ),
             ],
           ),
@@ -322,7 +390,10 @@ class ContractPdfService {
   }
 
   /// Build signature certificate section
-  pw.Widget _buildSignatureCertificate(Contract contract) {
+  pw.Widget _buildSignatureCertificate(
+    Contract contract,
+    pw.Font signatureFont,
+  ) {
     final dateFormat = DateFormat('MMMM dd, yyyy \'at\' hh:mm a');
 
     return pw.Container(
@@ -354,14 +425,16 @@ class ContractPdfService {
             ),
           ),
           pw.SizedBox(height: PdfStyles.spacingMedium),
-          // Document Signed On
-          pw.Text('DOCUMENT SIGNED ON', style: PdfStyles.labelText),
-          pw.SizedBox(height: 4),
+          // Signature Display - Large and Prominent
+          pw.Text('SIGNATURE', style: PdfStyles.labelText),
+          pw.SizedBox(height: 8),
           pw.Text(
-            contract.signedAt != null
-                ? dateFormat.format(contract.signedAt!)
-                : 'N/A',
-            style: PdfStyles.bodyTextBold,
+            contract.digitalSignature ?? 'N/A',
+            style: pw.TextStyle(
+              font: signatureFont,
+              fontSize: 32,
+              color: PdfStyles.textColor,
+            ),
           ),
           pw.SizedBox(height: PdfStyles.spacingLarge),
           // Signer Details Box
@@ -386,8 +459,6 @@ class ContractPdfService {
                 _buildInfoRow('Name:', contract.customerName),
                 pw.SizedBox(height: 8),
                 _buildInfoRow('Email:', contract.email),
-                pw.SizedBox(height: 8),
-                _buildInfoRow('Signature:', contract.digitalSignature ?? 'N/A'),
                 pw.SizedBox(height: 8),
                 _buildInfoRow(
                   'Signature Token:',
@@ -422,8 +493,326 @@ class ContractPdfService {
     );
   }
 
+  /// Build invoice-style two-column info row
+  pw.Widget _buildInvoiceInfoRow(Contract contract) {
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        // Left column: Company info
+        pw.Expanded(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.RichText(
+                text: pw.TextSpan(
+                  children: [
+                    pw.TextSpan(
+                      text: 'MedWave',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    pw.TextSpan(
+                      text: 'TM',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 7,
+                      ),
+                    ),
+                    pw.TextSpan(
+                      text: ' RSA PTY LTD',
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                'Blaaukrans Office Park',
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+              ),
+              pw.Text(
+                'Jeffreys Bay, 6330',
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+              ),
+              pw.Text(
+                'Call: +27 79 427 2486',
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+              ),
+              pw.Text(
+                'info@medwavegroup.com',
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+              ),
+              pw.Text(
+                'www.medwavegroup.com',
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(width: 40),
+        // Right column: Customer info
+        pw.Expanded(
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildInfoLine(
+                'Date:',
+                DateFormat('yyyy-MM-dd').format(contract.createdAt),
+              ),
+              pw.SizedBox(height: 4),
+              _buildInfoLine('Customer Name:', contract.customerName),
+              pw.SizedBox(height: 4),
+              _buildInfoLine('Customer Phone:', contract.phone),
+              pw.SizedBox(height: 4),
+              _buildInfoLine('Customer Email:', contract.email),
+              if (contract.shippingAddress != null &&
+                  contract.shippingAddress!.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                _buildInfoLine('Shipping Address:', contract.shippingAddress!),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build info line for invoice
+  pw.Widget _buildInfoLine(String label, String value) {
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          '$label ',
+          style: pw.TextStyle(
+            fontSize: 12,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfStyles.grayColor,
+          ),
+        ),
+        pw.Expanded(
+          child: pw.Text(
+            value,
+            style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build invoice-style quote table
+  pw.Widget _buildInvoiceQuoteTable(Contract contract) {
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400),
+      ),
+      child: pw.Column(
+        children: [
+          // Table header
+          pw.Container(
+            color: PdfColors.grey300,
+            padding: const pw.EdgeInsets.all(8),
+            child: pw.Row(
+              children: [
+                pw.Expanded(
+                  flex: 4,
+                  child: pw.Text('Name', style: PdfStyles.bodyTextBold),
+                ),
+                pw.Expanded(
+                  flex: 1,
+                  child: pw.Text(
+                    'QTY',
+                    style: PdfStyles.bodyTextBold,
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Products
+          ...contract.products
+              .map(
+                (product) => pw.Container(
+                  padding: const pw.EdgeInsets.all(8),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border(
+                      bottom: pw.BorderSide(color: PdfColors.grey300),
+                    ),
+                  ),
+                  child: pw.Row(
+                    children: [
+                      pw.Expanded(
+                        flex: 4,
+                        child: pw.Text(product.name, style: PdfStyles.bodyText),
+                      ),
+                      pw.Expanded(
+                        flex: 1,
+                        child: pw.Text('1', textAlign: pw.TextAlign.center),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+          // Totals section
+          pw.Container(
+            padding: const pw.EdgeInsets.all(16),
+            child: pw.Column(
+              children: [
+                _buildTotalRow('Subtotal', contract.subtotal),
+                pw.SizedBox(height: 4),
+                _buildTotalRow(
+                  'Deposit Allocate',
+                  contract.depositAmount,
+                  isBold: true,
+                ),
+                pw.Divider(),
+                _buildTotalRow(
+                  'Total',
+                  contract.subtotal,
+                  isBold: true,
+                  isLarge: true,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build total row for invoice
+  pw.Widget _buildTotalRow(
+    String label,
+    double amount, {
+    bool isBold = false,
+    bool isLarge = false,
+  }) {
+    final style = isBold
+        ? pw.TextStyle(
+            fontWeight: pw.FontWeight.bold,
+            fontSize: isLarge ? 16 : 12,
+          )
+        : PdfStyles.bodyText;
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.end,
+      children: [
+        pw.Text('$label: ', style: style),
+        pw.SizedBox(width: 20),
+        pw.Text('R ${amount.toStringAsFixed(2)}', style: style),
+      ],
+    );
+  }
+
+  /// Build payment info with bank details
+  pw.Widget _buildPaymentInfo() {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.SizedBox(height: 24),
+        pw.Text(
+          'Please complete the deposit payment to proceed with your order. Payment instructions and confirmation will be sent via email.',
+          style: pw.TextStyle(fontSize: 14),
+        ),
+        pw.SizedBox(height: 24),
+        pw.Container(
+          padding: const pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: PdfColors.grey100),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Account holder and ID
+              _buildBankInfoLine('Account holder:', 'MEDWAVE RSA PTY LTD'),
+              pw.SizedBox(height: 4),
+              _buildBankInfoLine('ID/Reg Number:', '2024/700802/07'),
+              pw.SizedBox(height: 16),
+
+              // Three-column layout for bank details
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // Column 1
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'Standard Bank',
+                          style: pw.TextStyle(
+                            fontWeight: pw.FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        _buildBankInfoLine('Branch:', 'JEFFREY\'S BAY'),
+                      ],
+                    ),
+                  ),
+                  // Column 2
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _buildBankInfoLine('Account type:', 'CURRENT'),
+                        pw.SizedBox(height: 4),
+                        _buildBankInfoLine('Branch code:', '000315'),
+                      ],
+                    ),
+                  ),
+                  // Column 3
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _buildBankInfoLine(
+                          'Account number:',
+                          '10 23 582 938 0',
+                        ),
+                        pw.SizedBox(height: 4),
+                        _buildBankInfoLine('SWIFT code:', 'SBZAZAJJ'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build bank info line with small label and bold value
+  pw.Widget _buildBankInfoLine(String label, String value) {
+    return pw.RichText(
+      text: pw.TextSpan(
+        children: [
+          pw.TextSpan(
+            text: '$label ',
+            style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+          ),
+          pw.TextSpan(
+            text: value,
+            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Build info row with label and value
-  pw.Widget _buildInfoRow(String label, String value) {
+  pw.Widget _buildInfoRow(
+    String label,
+    String value, {
+    pw.Font? signatureFont,
+  }) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -431,7 +820,14 @@ class ContractPdfService {
           width: 120,
           child: pw.Text(label, style: PdfStyles.labelText),
         ),
-        pw.Expanded(child: pw.Text(value, style: PdfStyles.bodyText)),
+        pw.Expanded(
+          child: pw.Text(
+            value,
+            style: signatureFont != null
+                ? PdfStyles.signatureText(signatureFont)
+                : PdfStyles.bodyText,
+          ),
+        ),
       ],
     );
   }

@@ -25,6 +25,7 @@ class SalesAppointment {
   final String? assignedToName; // name of assigned Sales Admin
   final String? optInNote;
   final List<OptInProduct> optInProducts;
+  final Map<String, String>? optInQuestions;
   final String? depositConfirmationToken;
   final String? depositConfirmationStatus; // pending | confirmed | declined
   final DateTime? depositConfirmationSentAt;
@@ -57,6 +58,7 @@ class SalesAppointment {
     this.assignedToName,
     this.optInNote,
     this.optInProducts = const [],
+    this.optInQuestions,
     this.depositConfirmationToken,
     this.depositConfirmationStatus,
     this.depositConfirmationSentAt,
@@ -133,6 +135,9 @@ class SalesAppointment {
               )
               .toList() ??
           [],
+      optInQuestions: (map['optInQuestions'] as Map<String, dynamic>?)?.map(
+        (k, v) => MapEntry(k, v.toString()),
+      ),
       depositConfirmationToken: map['depositConfirmationToken']?.toString(),
       depositConfirmationStatus: map['depositConfirmationStatus']?.toString(),
       depositConfirmationSentAt:
@@ -170,6 +175,7 @@ class SalesAppointment {
       'assignedToName': assignedToName,
       'optInNote': optInNote,
       'optInProducts': optInProducts.map((p) => p.toMap()).toList(),
+      if (optInQuestions != null) 'optInQuestions': optInQuestions,
       'depositConfirmationToken': depositConfirmationToken,
       'depositConfirmationStatus': depositConfirmationStatus,
       'depositConfirmationSentAt': depositConfirmationSentAt != null
@@ -207,6 +213,7 @@ class SalesAppointment {
     String? assignedToName,
     String? optInNote,
     List<OptInProduct>? optInProducts,
+    Map<String, String>? optInQuestions,
     String? depositConfirmationToken,
     String? depositConfirmationStatus,
     DateTime? depositConfirmationSentAt,
@@ -238,6 +245,7 @@ class SalesAppointment {
       assignedToName: assignedToName ?? this.assignedToName,
       optInNote: optInNote ?? this.optInNote,
       optInProducts: optInProducts ?? this.optInProducts,
+      optInQuestions: optInQuestions ?? this.optInQuestions,
       depositConfirmationToken:
           depositConfirmationToken ?? this.depositConfirmationToken,
       depositConfirmationStatus:
@@ -301,12 +309,14 @@ class SalesAppointmentNote {
   final DateTime createdAt;
   final String createdBy;
   final String? createdByName;
+  final String? stageTransition; // e.g., "opt_in → deposit_requested"
 
   SalesAppointmentNote({
     required this.text,
     required this.createdAt,
     required this.createdBy,
     this.createdByName,
+    this.stageTransition,
   });
 
   factory SalesAppointmentNote.fromMap(Map<String, dynamic> map) {
@@ -315,6 +325,7 @@ class SalesAppointmentNote {
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdBy: map['createdBy']?.toString() ?? '',
       createdByName: map['createdByName']?.toString(),
+      stageTransition: map['stageTransition']?.toString(),
     );
   }
 
@@ -324,6 +335,7 @@ class SalesAppointmentNote {
       'createdAt': Timestamp.fromDate(createdAt),
       'createdBy': createdBy,
       'createdByName': createdByName,
+      'stageTransition': stageTransition,
     };
   }
 }
@@ -332,11 +344,13 @@ class OptInProduct {
   final String id;
   final String name;
   final double price;
+  final int quantity;
 
   const OptInProduct({
     required this.id,
     required this.name,
     required this.price,
+    this.quantity = 1,
   });
 
   factory OptInProduct.fromMap(Map<String, dynamic> map) {
@@ -344,10 +358,11 @@ class OptInProduct {
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
       price: (map['price'] is num) ? (map['price'] as num).toDouble() : 0.0,
+      quantity: (map['quantity'] is num) ? (map['quantity'] as num).toInt() : 1,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {'id': id, 'name': name, 'price': price};
+    return {'id': id, 'name': name, 'price': price, 'quantity': quantity};
   }
 }

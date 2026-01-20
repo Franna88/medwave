@@ -8,6 +8,7 @@ class ProductItem {
   final String country;
   final bool isActive;
   final double price;
+  final double? costAmount;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -18,6 +19,7 @@ class ProductItem {
     required this.country,
     required this.isActive,
     required this.price,
+    this.costAmount,
     this.createdAt,
     this.updatedAt,
   });
@@ -29,6 +31,7 @@ class ProductItem {
     String? country,
     bool? isActive,
     double? price,
+    double? costAmount,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -39,6 +42,7 @@ class ProductItem {
       country: country ?? this.country,
       isActive: isActive ?? this.isActive,
       price: price ?? this.price,
+      costAmount: costAmount ?? this.costAmount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -55,6 +59,9 @@ class ProductItem {
       country: (data['country'] ?? '').toString(),
       isActive: data['isActive'] == true,
       price: (data['price'] is num) ? (data['price'] as num).toDouble() : 0.0,
+      costAmount: (data['costAmount'] is num)
+          ? (data['costAmount'] as num).toDouble()
+          : null,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
     );
@@ -67,6 +74,7 @@ class ProductItem {
       'country': country,
       'isActive': isActive,
       'price': price,
+      if (costAmount != null) 'costAmount': costAmount,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
       'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
     };
