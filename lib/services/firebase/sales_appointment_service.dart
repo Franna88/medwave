@@ -420,8 +420,7 @@ class SalesAppointmentService {
           print('📤 Calling EmailJS.sendMarketingDepositNotification...');
           final sent = await EmailJSService.sendMarketingDepositNotification(
             appointment: appointment,
-            //marketingEmail: 'info@barefootbytes.com',
-            marketingEmail: 'tertiusva@gmail.com',
+            marketingEmail: 'info@barefootbytes.com',
             yesUrl: financeUrl,
             noUrl: financeUrl,
             yesLabel: 'Deposit received',

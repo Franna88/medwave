@@ -11,7 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/installation_signoff_provider.dart';
 import '../../utils/role_manager.dart';
 
-/// Dialog for completing installation by uploading proof and signature images
+/// Dialog for completing installation by uploading proof images
 class InstallationCompletionDialog extends StatefulWidget {
   final models.Order order;
   final Function(List<String> proofUrls, String signatureUrl, String? note)

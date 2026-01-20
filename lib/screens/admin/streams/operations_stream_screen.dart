@@ -126,6 +126,36 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
     final userId = authProvider.user?.uid ?? '';
     final userName = authProvider.userName;
 
+    // Check if trying to move to "payment" from "installed"
+    if (order.currentStage == 'installed' && newStageId == 'payment') {
+      // Validate both conditions must be met
+      final signoffSigned = order.hasInstallationSignoff == true;
+      final financeConfirmed = order.paymentConfirmationStatus == 'confirmed';
+
+      if (!signoffSigned || !financeConfirmed) {
+        final missingConditions = <String>[];
+        if (!signoffSigned) {
+          missingConditions.add('Installation signoff not signed');
+        }
+        if (!financeConfirmed) {
+          missingConditions.add('Payment not confirmed by finance');
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Cannot move to payment stage. Missing: ${missingConditions.join(', ')}',
+              ),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     // Check if moving from "out_for_delivery" to "installed" - requires image uploads
     if (order.currentStage == 'out_for_delivery' && newStageId == 'installed') {
       // Save ScaffoldMessenger reference before async operation

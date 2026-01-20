@@ -9,6 +9,7 @@ import '../emailjs_service.dart';
 import '../whatsapp_service.dart';
 import 'support_ticket_service.dart';
 import '../pdf/invoice_pdf_service.dart';
+import 'installation_signoff_service.dart';
 
 // Base URLs for installation booking links
 const String _installBookingLinkBaseProd = 'https://app.medwave.com';
@@ -230,6 +231,53 @@ class OrderService {
       );
 
       await updateOrder(updatedOrder);
+
+      // When moving to "installed", create signoff and send email
+      if (newStage == 'installed' && order.currentStage != 'installed') {
+        try {
+          final signoffService = InstallationSignoffService();
+
+          // Create installation signoff
+          final signoff = await signoffService.createSignoff(
+            order: updatedOrder,
+            createdBy: userId,
+            createdByName: userName ?? userId,
+          );
+
+          // Generate signoff link
+          final fullSignoffUrl = signoffService.getFullSignoffUrl(signoff);
+
+          // Send email to customer
+          final emailSent = await EmailJSService.sendInstallationSignoffEmail(
+            order: updatedOrder,
+            acknowledgementLink: fullSignoffUrl,
+          );
+
+          if (kDebugMode) {
+            if (emailSent) {
+              print(
+                '✅ Installation signoff email sent to ${updatedOrder.email}',
+              );
+              print('   Signoff ID: ${signoff.id}');
+            } else {
+              print('❌ Failed to send installation signoff email');
+            }
+          }
+
+          // Update order with signoff reference
+          final orderWithSignoff = updatedOrder.copyWith(
+            installationSignoffId: signoff.id,
+            hasInstallationSignoff: false, // Not signed yet
+            installationSignoffCreatedAt: DateTime.now(),
+          );
+          await updateOrder(orderWithSignoff);
+        } catch (e) {
+          if (kDebugMode) {
+            print('❌ Error creating signoff or sending email: $e');
+          }
+          // Don't throw - allow order to move to installed even if signoff creation fails
+        }
+      }
 
       // Send out for delivery email when moving to that stage
       // Skip for split orders (Order 2) - email was already sent with Order 1
@@ -1385,18 +1433,39 @@ class OrderService {
 
       print('✅ PAYMENT CONFIRMATION: $orderId -> $newStatus');
       print('📧 Customer: ${order.customerName} (${order.email})');
+      print('🔍 DEBUG: isConfirmed = $isConfirmed, newStatus = $newStatus');
 
       if (isConfirmed) {
         print('🔵 Customer said YES - Sending finance notification...');
+        print(
+          '🔍 DEBUG: Order ID: ${order.id}, Token: ${order.paymentConfirmationToken ?? token}',
+        );
+        print(
+          '🔍 DEBUG: Order stage: ${order.currentStage}, Order status: ${order.paymentConfirmationStatus}',
+        );
         try {
+          // Fetch fresh order data after update to ensure we have latest info
+          final updatedOrderDoc = await _firestore
+              .collection('orders')
+              .doc(orderId)
+              .get();
+          final updatedOrderForEmail = updatedOrderDoc.exists
+              ? models.Order.fromFirestore(updatedOrderDoc)
+              : order;
+
           final financeUrl = _buildFinancePaymentConfirmationLink(
-            orderId: order.id,
-            token: order.paymentConfirmationToken ?? token,
+            orderId: updatedOrderForEmail.id,
+            token: updatedOrderForEmail.paymentConfirmationToken ?? token,
           );
 
+          print('🔍 DEBUG: Finance URL: $financeUrl');
           print('📤 Calling EmailJS.sendFinancePaymentNotification...');
+          print(
+            '🔍 DEBUG: Order email: ${updatedOrderForEmail.email}, Order name: ${updatedOrderForEmail.customerName}',
+          );
+
           final sent = await EmailJSService.sendFinancePaymentNotification(
-            order: order,
+            order: updatedOrderForEmail,
             financeEmail: 'tertiusva@gmail.com',
             yesUrl: financeUrl,
             noUrl: financeUrl,
@@ -1414,8 +1483,9 @@ class OrderService {
               '❌ FAILED: Finance email was not sent (EmailJS returned false)',
             );
           }
-        } catch (e) {
+        } catch (e, stackTrace) {
           print('❌ ERROR sending finance notification: $e');
+          print('❌ Stack trace: $stackTrace');
         }
       } else {
         print('🔴 Customer said NO - Will follow up in 2 days');
@@ -1496,6 +1566,49 @@ class OrderService {
         'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
         'updatedAt': Timestamp.fromDate(now),
       });
+
+      // Check if both conditions are met (signoff signed AND finance confirmed payment)
+      // If so, automatically move order to payment stage
+      try {
+        final updatedOrderDoc = await _firestore
+            .collection('orders')
+            .doc(orderId)
+            .get();
+
+        if (updatedOrderDoc.exists) {
+          final updatedOrder = models.Order.fromFirestore(updatedOrderDoc);
+
+          // Check both conditions
+          final signoffSigned = updatedOrder.hasInstallationSignoff == true;
+          final financeConfirmed =
+              updatedOrder.paymentConfirmationStatus == 'confirmed';
+
+          if (signoffSigned &&
+              financeConfirmed &&
+              updatedOrder.currentStage == 'installed') {
+            // Both conditions met - auto-move to payment stage
+            await moveOrderToStage(
+              orderId: orderId,
+              newStage: 'payment',
+              note:
+                  'Installation signoff signed and payment confirmed by finance. Automatically moved to payment stage.',
+              userId: 'system',
+              userName: 'System (Auto-move)',
+            );
+
+            if (kDebugMode) {
+              print(
+                '✅ Auto-moved order $orderId to payment stage (both conditions met)',
+              );
+            }
+          }
+        }
+      } catch (autoMoveError) {
+        if (kDebugMode) {
+          print('❌ Error checking auto-move conditions: $autoMoveError');
+        }
+        // Don't throw - finance confirmation is still successful
+      }
 
       print('✅ FINANCE PAYMENT CONFIRMATION: $orderId');
       print('📧 Order: ${order.customerName} (${order.email})');

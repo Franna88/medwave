@@ -13,7 +13,8 @@ import '../models/streams/order.dart' as order_models;
 /// Uses EmailJS REST API to send emails directly from Flutter app without backend
 class EmailJSService {
   // EmailJS Configuration
-  static const String _serviceId = 'service_lg9tf22';
+  // static const String _serviceId = 'service_lg9tf22';
+  static const String _serviceId = 'service_itl4rns';
   static const String _userId = '0ZWNajCk0zcA8mXhu';
 
   // Template IDs
@@ -40,11 +41,12 @@ class EmailJSService {
   static const String _thankYouPaymentTemplateId = 'template_zih8yg9';
   // Internal lead notification template - sent to finance and sales team when contract is generated
   static const String _internalLeadNotificationTemplateId = 'template_xonvsxf';
+  // Installation signoff template - sent to customer to sign acknowledgment of receipt
+  static const String _installationSignoffTemplateId = 'template_vc3mf08';
 
   // Admin email for notifications
   static const String _adminEmail =
-      //'info@barefootbytes.com'; // TODO: Update with actual superadmin email
-      'tertiusva@gmail.com'; // TODO: Update with actual superadmin email
+      'info@barefootbytes.com'; // TODO: Update with actual superadmin email
 
   /// Send booking confirmation email
   static Future<bool> sendBookingConfirmation({
@@ -336,8 +338,7 @@ class EmailJSService {
     String? yesUrl,
     String? noUrl,
   }) async {
-    //final resolvedEmail = marketingEmail ?? 'info@barefootbytes.com';
-    final resolvedEmail = marketingEmail ?? 'tertiusva@gmail.com';
+    final resolvedEmail = marketingEmail ?? 'info@barefootbytes.com';
     final resolvedYesUrl = yesUrl ?? _defaultSalesBoardLink();
     final resolvedNoUrl = noUrl ?? _defaultSalesBoardLink();
 
@@ -872,6 +873,71 @@ class EmailJSService {
     }
   }
 
+  /// Send installation signoff email to customer
+  /// Customer clicks the link to sign acknowledgment of receipt
+  static Future<bool> sendInstallationSignoffEmail({
+    required order_models.Order order,
+    required String acknowledgementLink,
+  }) async {
+    try {
+      // Validate email address
+      if (order.email.isEmpty) {
+        debugPrint(
+          '❌ Cannot send installation signoff email: order email is empty',
+        );
+        return false;
+      }
+
+      debugPrint('📧 Sending installation signoff email to ${order.email}');
+
+      // Build full URL if needed
+      String fullUrl = acknowledgementLink;
+      if (!acknowledgementLink.startsWith('http')) {
+        // If relative path, make it full URL
+        if (kIsWeb) {
+          final baseUrl = Uri.base.origin;
+          fullUrl = '$baseUrl$acknowledgementLink';
+        } else {
+          // For mobile, use configurable base URL
+          fullUrl = 'https://yourdomain.com$acknowledgementLink';
+        }
+      }
+
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _installationSignoffTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            // EmailJS template recipient fields - include multiple to ensure compatibility
+            'email': order.email,
+            'customer_email': order.email,
+            'to_email': order.email,
+            'username': order.customerName,
+            'acknowledgement_link': fullUrl,
+            'website_link': 'https://www.medwavegroup.com', // Or from config
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ Installation signoff email sent successfully');
+        return true;
+      } else {
+        debugPrint(
+          '❌ Failed to send installation signoff email: ${response.body}',
+        );
+        return false;
+      }
+    } catch (error) {
+      debugPrint('❌ Error sending installation signoff email: $error');
+      return false;
+    }
+  }
+
   /// Send priority order notification to admin when a full payment order is created
   /// This notifies the admin that a priority order needs installation scheduling
   static Future<bool> sendPriorityOrderNotification({
@@ -1166,7 +1232,7 @@ class EmailJSService {
       final optInQuestions = _formatOptInQuestions(appointment);
 
       // Hardcoded recipient emails
-      const recipients = ['tertiusva@gmail.com', 'tertiustest13@gmail.com'];
+      const recipients = ['francois@medwavegroup.com', 'info@medwavegroup.com'];
 
       // Send to both recipients (EmailJS supports single recipient per call)
       bool atLeastOneSuccess = false;

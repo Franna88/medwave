@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/installation/installation_signoff.dart';
 import '../../models/streams/order.dart' as models;
+import 'order_service.dart';
 
 /// Service for managing installation sign-offs in Firebase
 class InstallationSignoffService {
@@ -227,6 +228,44 @@ class InstallationSignoffService {
 
           if (kDebugMode) {
             print('✅ InstallationSignoffService: Order updated with sign-off reference');
+          }
+
+          // Check if both conditions are met (signoff signed AND finance confirmed payment)
+          // If so, automatically move order to payment stage
+          try {
+            final orderDoc = await _firestore
+                .collection('orders')
+                .doc(signoff.orderId)
+                .get();
+
+            if (orderDoc.exists) {
+              final order = models.Order.fromFirestore(orderDoc);
+
+              // Check both conditions
+              final signoffSigned = order.hasInstallationSignoff == true;
+              final financeConfirmed = order.paymentConfirmationStatus == 'confirmed';
+
+              if (signoffSigned && financeConfirmed && order.currentStage == 'installed') {
+                // Both conditions met - auto-move to payment stage
+                final orderService = OrderService();
+                await orderService.moveOrderToStage(
+                  orderId: order.id,
+                  newStage: 'payment',
+                  note: 'Installation signoff signed and payment confirmed by finance. Automatically moved to payment stage.',
+                  userId: 'system',
+                  userName: 'System (Auto-move)',
+                );
+
+                if (kDebugMode) {
+                  print('✅ Auto-moved order ${order.id} to payment stage (both conditions met)');
+                }
+              }
+            }
+          } catch (autoMoveError) {
+            if (kDebugMode) {
+              print('❌ Error checking auto-move conditions: $autoMoveError');
+            }
+            // Don't throw - signoff is still signed successfully
           }
         }
       } catch (orderUpdateError) {
