@@ -108,7 +108,20 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
 
     if (_searchQuery.isNotEmpty) {
       currentFilteredAppointments = currentFilteredAppointments.where((apt) {
-        return apt.customerName.toLowerCase().contains(_searchQuery) ||
+        // Normalize both search query and customer name by removing extra spaces
+        final normalizedSearch = _searchQuery.trim().replaceAll(RegExp(r'\s+'), ' ');
+        final normalizedName = apt.customerName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+        
+        // Check if search query matches customer name (handles "first last" searches)
+        final nameMatches = normalizedName.contains(normalizedSearch);
+        
+        // Also check if all words in search query appear in customer name (for flexible matching)
+        final searchWords = normalizedSearch.split(' ').where((w) => w.isNotEmpty).toList();
+        final allWordsMatch = searchWords.isNotEmpty &&
+            searchWords.every((word) => normalizedName.contains(word));
+        
+        return nameMatches ||
+            allWordsMatch ||
             apt.email.toLowerCase().contains(_searchQuery) ||
             apt.phone.contains(_searchQuery);
       }).toList();

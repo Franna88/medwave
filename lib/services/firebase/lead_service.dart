@@ -401,10 +401,31 @@ class LeadService {
       final allLeads = await getAllLeads(channelId: channelId);
 
       // Filter by query
-      final lowerQuery = query.toLowerCase();
+      final lowerQuery = query.toLowerCase().trim();
+      
+      // Normalize search query by removing extra spaces
+      final normalizedSearch = lowerQuery.replaceAll(RegExp(r'\s+'), ' ');
+      
       return allLeads.where((lead) {
-        return lead.firstName.toLowerCase().contains(lowerQuery) ||
-            lead.lastName.toLowerCase().contains(lowerQuery) ||
+        // Use fullName for searching (combines firstName and lastName)
+        final fullName = lead.fullName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+        
+        // Check if search query matches full name (handles "first last" searches)
+        final nameMatches = fullName.contains(normalizedSearch);
+        
+        // Also check if all words in search query appear in full name (for flexible matching)
+        final searchWords = normalizedSearch.split(' ').where((w) => w.isNotEmpty).toList();
+        final allWordsMatch = searchWords.isNotEmpty &&
+            searchWords.every((word) => fullName.contains(word));
+        
+        // Also check individual firstName and lastName for backward compatibility
+        final firstNameMatch = lead.firstName.toLowerCase().contains(lowerQuery);
+        final lastNameMatch = lead.lastName.toLowerCase().contains(lowerQuery);
+        
+        return nameMatches ||
+            allWordsMatch ||
+            firstNameMatch ||
+            lastNameMatch ||
             lead.email.toLowerCase().contains(lowerQuery) ||
             lead.phone.contains(query);
       }).toList();
@@ -421,10 +442,31 @@ class LeadService {
     try {
       final allLeads = await getAllLeads();
 
-      final lowerQuery = query.toLowerCase();
+      final lowerQuery = query.toLowerCase().trim();
+      
+      // Normalize search query by removing extra spaces
+      final normalizedSearch = lowerQuery.replaceAll(RegExp(r'\s+'), ' ');
+      
       return allLeads.where((lead) {
-        return lead.firstName.toLowerCase().contains(lowerQuery) ||
-            lead.lastName.toLowerCase().contains(lowerQuery) ||
+        // Use fullName for searching (combines firstName and lastName)
+        final fullName = lead.fullName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+        
+        // Check if search query matches full name (handles "first last" searches)
+        final nameMatches = fullName.contains(normalizedSearch);
+        
+        // Also check if all words in search query appear in full name (for flexible matching)
+        final searchWords = normalizedSearch.split(' ').where((w) => w.isNotEmpty).toList();
+        final allWordsMatch = searchWords.isNotEmpty &&
+            searchWords.every((word) => fullName.contains(word));
+        
+        // Also check individual firstName and lastName for backward compatibility
+        final firstNameMatch = lead.firstName.toLowerCase().contains(lowerQuery);
+        final lastNameMatch = lead.lastName.toLowerCase().contains(lowerQuery);
+        
+        return nameMatches ||
+            allWordsMatch ||
+            firstNameMatch ||
+            lastNameMatch ||
             lead.email.toLowerCase().contains(lowerQuery) ||
             lead.phone.contains(query);
       }).toList();

@@ -432,7 +432,9 @@ class SalesAppointmentService {
           print('✉️ Finance email sent status: $sent');
           if (sent) {
             //print('✅ SUCCESS: Finance team notified at info@barefootbytes.com');
-            print('✅ SUCCESS: Finance team notified at tertiusva@gmail.com');
+            print(
+              '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
+            );
           } else {
             print(
               '❌ FAILED: Finance email was not sent (EmailJS returned false)',
@@ -859,9 +861,25 @@ class SalesAppointmentService {
       final allAppointments = await getAllAppointments();
 
       // Filter by query
-      final lowerQuery = query.toLowerCase();
+      final lowerQuery = query.toLowerCase().trim();
+      
+      // Normalize search query by removing extra spaces
+      final normalizedSearch = lowerQuery.replaceAll(RegExp(r'\s+'), ' ');
+      
       return allAppointments.where((appointment) {
-        return appointment.customerName.toLowerCase().contains(lowerQuery) ||
+        // Normalize customer name by removing extra spaces
+        final normalizedName = appointment.customerName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+        
+        // Check if search query matches customer name (handles "first last" searches)
+        final nameMatches = normalizedName.contains(normalizedSearch);
+        
+        // Also check if all words in search query appear in customer name (for flexible matching)
+        final searchWords = normalizedSearch.split(' ').where((w) => w.isNotEmpty).toList();
+        final allWordsMatch = searchWords.isNotEmpty &&
+            searchWords.every((word) => normalizedName.contains(word));
+        
+        return nameMatches ||
+            allWordsMatch ||
             appointment.email.toLowerCase().contains(lowerQuery) ||
             appointment.phone.contains(query);
       }).toList();

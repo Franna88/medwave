@@ -504,7 +504,7 @@ class EmailJSService {
     String? noUrl,
   }) async {
     // Reuse the same email as marketing team (finance department)
-    final resolvedEmail = financeEmail ?? 'tertiusva@gmail.com';
+    final resolvedEmail = financeEmail ?? 'rachel@medwavegroup.com';
     final resolvedYesUrl = yesUrl ?? _defaultOperationsBoardLink();
     final resolvedNoUrl = noUrl ?? _defaultOperationsBoardLink();
 
