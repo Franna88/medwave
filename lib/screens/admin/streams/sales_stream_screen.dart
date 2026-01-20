@@ -40,6 +40,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
   List<models.SalesAppointment> _filteredAppointments = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  bool _isSyncing = false;
 
   final List<StreamStage> _stages = StreamStage.getSalesStages();
 
@@ -2386,6 +2387,113 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                         Text(
                           'View Stock',
                           style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Sync GHL Leads button
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _isSyncing
+                      ? null
+                      : () async {
+                          setState(() => _isSyncing = true);
+                          try {
+                            final result =
+                                await LeadService.triggerGHLLeadsSync();
+                            if (mounted) {
+                              // Check if sync is running in background (202 status)
+                              if (result['status'] == 'running') {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '🔄 ${result['message'] ?? 'Sync started in background. Check Firebase logs for progress.'}',
+                                    ),
+                                    backgroundColor: Colors.blue,
+                                    duration: const Duration(seconds: 5),
+                                  ),
+                                );
+                              } else {
+                                // Sync completed immediately (unlikely but handle it)
+                                final stats =
+                                    result['stats'] as Map<String, dynamic>?;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '✅ Sync complete! ${stats?['newLeadsCreated'] ?? 0} new leads created',
+                                    ),
+                                    backgroundColor: Colors.green,
+                                    duration: const Duration(seconds: 4),
+                                  ),
+                                );
+                                // Refresh appointments after sync
+                                _loadAppointments();
+                              }
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '❌ Sync failed: ${e.toString()}',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  duration: const Duration(seconds: 4),
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isSyncing = false);
+                            }
+                          }
+                        },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _isSyncing
+                          ? Colors.grey[400]
+                          : AppTheme.secondaryColor,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        _isSyncing
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.sync,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _isSyncing ? 'Syncing...' : 'Sync GHL Leads',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
                           ),
