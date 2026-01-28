@@ -137,6 +137,122 @@ class ContractService {
     }
   }
 
+  /// Create a contract revision (edited version of existing contract)
+  Future<Contract> createContractRevision({
+    required Contract originalContract,
+    required SalesAppointment appointment,
+    required String createdBy,
+    required String createdByName,
+    String? editReason,
+    // Editable fields
+    List<ContractProduct>? products,
+    String? customerName,
+    String? email,
+    String? phone,
+    String? shippingAddress,
+    String? paymentType,
+    Map<String, dynamic>? editedContractContent, // Allow editing contract terms
+    double? subtotal, // Optional calculated subtotal (accounts for quantities)
+  }) async {
+    try {
+      // Get current contract content (use same version as original)
+      final contractContent = await _contractContentService
+          .getContractContent();
+
+      if (!contractContent.hasContent) {
+        throw Exception('Contract content is not configured.');
+      }
+
+      // Use provided values or fall back to original contract values
+      final finalProducts = products ?? originalContract.products;
+      final finalCustomerName = customerName ?? originalContract.customerName;
+      final finalEmail = email ?? originalContract.email;
+      final finalPhone = phone ?? originalContract.phone;
+      final finalShippingAddress =
+          shippingAddress ?? originalContract.shippingAddress;
+      final finalPaymentType = paymentType ?? originalContract.paymentType;
+
+      // Use provided subtotal if available, otherwise calculate from products
+      // Note: ContractProduct doesn't have quantity, so if subtotal is provided,
+      // it should already account for quantities. Otherwise, we calculate from unit prices.
+      double finalSubtotal;
+      if (subtotal != null) {
+        finalSubtotal = subtotal;
+      } else {
+        // Fallback: calculate from products (for backward compatibility)
+        finalSubtotal = 0;
+        for (final product in finalProducts) {
+          finalSubtotal += product.price;
+        }
+      }
+
+      final depositAmount = finalSubtotal * 0.40; // 40% deposit
+      final remainingBalance = finalSubtotal * 0.60; // 60% balance
+
+      // Get revision number (count existing revisions + 1)
+      final existingRevisions = await getContractsByAppointmentId(
+        appointment.id,
+      );
+      final revisionsOfThisContract = existingRevisions
+          .where((c) => c.parentContractId == originalContract.id)
+          .toList();
+      final revisionNumber = revisionsOfThisContract.length + 1;
+
+      // Create new contract document
+      final docRef = _firestore.collection(_collectionPath).doc();
+      final accessToken = generateAccessToken(docRef.id);
+
+      // Use edited contract content if provided, otherwise use original
+      final finalContractContentData =
+          editedContractContent ?? originalContract.contractContentData;
+
+      // Create revision contract
+      final revisionContract = Contract(
+        id: docRef.id,
+        accessToken: accessToken,
+        status: ContractStatus.pending,
+        appointmentId: appointment.id,
+        leadId: appointment.leadId,
+        customerName: finalCustomerName,
+        email: finalEmail,
+        phone: finalPhone,
+        shippingAddress: finalShippingAddress,
+        contractContentVersion: originalContract.contractContentVersion,
+        contractContentData:
+            finalContractContentData, // Use edited content if provided
+        products: finalProducts,
+        subtotal: finalSubtotal,
+        depositAmount: depositAmount,
+        remainingBalance: remainingBalance,
+        paymentType: finalPaymentType,
+        createdAt: DateTime.now(),
+        createdBy: createdBy,
+        createdByName: createdByName,
+        // Revision tracking
+        parentContractId: originalContract.id,
+        revisionNumber: revisionNumber,
+        editReason: editReason,
+        editedBy: createdBy,
+        editedAt: DateTime.now(),
+      );
+
+      await docRef.set(revisionContract.toMap());
+
+      if (kDebugMode) {
+        print(
+          '✅ ContractService: Contract revision created: ${revisionContract.id} (revision #$revisionNumber)',
+        );
+      }
+
+      return revisionContract;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ContractService: Error creating contract revision: $e');
+      }
+      rethrow;
+    }
+  }
+
   /// Get contract by ID and validate token
   Future<Contract?> getContractByIdAndToken(
     String contractId,
@@ -434,6 +550,41 @@ class ContractService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ ContractService: Error getting contracts: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Get contract revision history (original + all revisions)
+  Future<List<Contract>> getContractRevisionHistory(String contractId) async {
+    try {
+      // Get the contract (could be original or a revision)
+      final contract = await getContractById(contractId);
+      if (contract == null) return [];
+
+      // Find the original contract
+      final originalContractId = contract.parentContractId ?? contract.id;
+
+      // Get all contracts for this appointment
+      final allContracts = await getContractsByAppointmentId(
+        contract.appointmentId,
+      );
+
+      // Filter to get original + all its revisions
+      final revisionHistory = allContracts.where((c) {
+        return c.id == originalContractId ||
+            c.parentContractId == originalContractId;
+      }).toList();
+
+      // Sort by revision number (0 = original, then 1, 2, 3...)
+      revisionHistory.sort(
+        (a, b) => a.revisionNumber.compareTo(b.revisionNumber),
+      );
+
+      return revisionHistory;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ContractService: Error getting revision history: $e');
       }
       return [];
     }

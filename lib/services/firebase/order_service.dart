@@ -10,6 +10,7 @@ import '../whatsapp_service.dart';
 import 'support_ticket_service.dart';
 import '../pdf/invoice_pdf_service.dart';
 import 'installation_signoff_service.dart';
+import 'storage_service.dart';
 
 // Base URLs for installation booking links
 const String _installBookingLinkBaseProd = 'https://app.medwave.com';
@@ -86,6 +87,20 @@ class OrderService {
       }
       rethrow;
     }
+  }
+
+  /// Get real-time stream of a specific order
+  Stream<models.Order?> getOrderStream(String orderId) {
+    return _firestore
+        .collection('orders')
+        .doc(orderId)
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists) {
+        return null;
+      }
+      return models.Order.fromFirestore(doc);
+    });
   }
 
   /// Stream of all orders
@@ -1466,7 +1481,8 @@ class OrderService {
 
           final sent = await EmailJSService.sendFinancePaymentNotification(
             order: updatedOrderForEmail,
-            financeEmail: 'rachel@medwavegroup.com',
+            // financeEmail: 'rachel@medwavegroup.com',
+            financeEmail: 'tertiusva@gmail.com',
             yesUrl: financeUrl,
             noUrl: financeUrl,
             yesLabel: 'Payment received',
@@ -1478,7 +1494,8 @@ class OrderService {
           print('✉️ Finance email sent status: $sent');
           if (sent) {
             print(
-              '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
+              // '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
+              '✅ SUCCESS: Finance team notified at tertiusva@gmail.com',
             );
           } else {
             print(
@@ -1646,6 +1663,372 @@ class OrderService {
         success: false,
         message: 'Something went wrong. Please try again later.',
         status: PaymentResponseStatus.invalid,
+      );
+    }
+  }
+
+  /// Customer uploads final payment proof
+  Future<CustomerFinalPaymentProofUploadResult> uploadCustomerFinalPaymentProof({
+    required String orderId,
+    required Uint8List fileData,
+    required String fileName,
+  }) async {
+    try {
+      // 1. Upload to storage
+      final storageService = StorageService();
+      final proofUrl = await storageService.uploadCustomerFinalPaymentProof(
+        orderId: orderId,
+        fileData: fileData,
+        fileName: fileName,
+      );
+
+      if (kDebugMode) {
+        print('✅ Customer final payment proof uploaded: $proofUrl');
+      }
+
+      // 2. Get current order
+      final order = await getOrder(orderId);
+      if (order == null) {
+        return const CustomerFinalPaymentProofUploadResult(
+          success: false,
+          message: 'Order not found.',
+        );
+      }
+
+      // 3. Update order with proof but don't move stage
+      final now = DateTime.now();
+      
+      await _firestore.collection('orders').doc(orderId).update({
+        'customerUploadedFinalPaymentProofUrl': proofUrl,
+        'customerUploadedFinalPaymentProofAt': Timestamp.fromDate(now),
+        'customerFinalPaymentProofVerified': false,
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      // 4. Add note to stage history (without closing/opening stages)
+      final updatedHistory = [...order.stageHistory];
+      if (updatedHistory.isNotEmpty) {
+        final lastIndex = updatedHistory.length - 1;
+        final lastEntry = updatedHistory[lastIndex];
+        
+        // Update the current stage entry with a note
+        updatedHistory[lastIndex] = models.OrderStageHistoryEntry(
+          stage: lastEntry.stage,
+          enteredAt: lastEntry.enteredAt,
+          exitedAt: lastEntry.exitedAt,
+          note: (lastEntry.note ?? '') + 
+                '\nCustomer uploaded final payment proof on ${now.toString().split('.')[0]}, pending operations verification.',
+        );
+        
+        await _firestore.collection('orders').doc(orderId).update({
+          'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        });
+      }
+
+      if (kDebugMode) {
+        print(
+          '✅ Customer final payment proof stored for order $orderId, awaiting verification',
+        );
+      }
+
+      return CustomerFinalPaymentProofUploadResult(
+        success: true,
+        message: 'Proof of payment uploaded successfully. Our team will verify it shortly.',
+        proofUrl: proofUrl,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error uploading customer final payment proof: $e');
+      }
+      return CustomerFinalPaymentProofUploadResult(
+        success: false,
+        message: 'Failed to upload proof: $e',
+      );
+    }
+  }
+
+  /// Operations team uploads final payment proof
+  Future<CustomerFinalPaymentProofUploadResult> uploadFinalPaymentProof({
+    required String orderId,
+    required Uint8List fileData,
+    required String fileName,
+    required String uploadedBy,
+    required String uploadedByName,
+  }) async {
+    try {
+      // 1. Upload to storage
+      final storageService = StorageService();
+      final proofUrl = await storageService.uploadFinalPaymentProof(
+        orderId: orderId,
+        fileData: fileData,
+        fileName: fileName,
+      );
+
+      if (kDebugMode) {
+        print('✅ Final payment proof uploaded by operations: $proofUrl');
+      }
+
+      // 2. Get current order
+      final order = await getOrder(orderId);
+      if (order == null) {
+        return const CustomerFinalPaymentProofUploadResult(
+          success: false,
+          message: 'Order not found.',
+        );
+      }
+
+      // 3. Update stage history: close current stage if in installed, add payment stage
+      final now = DateTime.now();
+      final updatedHistory = [...order.stageHistory];
+      bool shouldMoveToPayment = false;
+
+      // Check if order is in installed stage - if so, auto-move to payment
+      if (order.currentStage == 'installed') {
+        shouldMoveToPayment = true;
+
+        // Close current stage (installed)
+        if (updatedHistory.isNotEmpty) {
+          final lastEntry = updatedHistory.last;
+          if (lastEntry.exitedAt == null) {
+            updatedHistory[updatedHistory.length - 1] =
+                models.OrderStageHistoryEntry(
+              stage: lastEntry.stage,
+              enteredAt: lastEntry.enteredAt,
+              exitedAt: now,
+              note: lastEntry.note,
+            );
+          }
+        }
+
+        // Add payment stage entry
+        updatedHistory.add(
+          models.OrderStageHistoryEntry(
+            stage: 'payment',
+            enteredAt: now,
+            note:
+                'Final payment proof uploaded by $uploadedByName. Automatically moved to Payment.',
+          ),
+        );
+      } else {
+        // Just add note to current stage history
+        if (updatedHistory.isNotEmpty) {
+          final lastIndex = updatedHistory.length - 1;
+          final lastEntry = updatedHistory[lastIndex];
+          
+          updatedHistory[lastIndex] = models.OrderStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: lastEntry.exitedAt,
+            note: (lastEntry.note ?? '') + 
+                  '\nFinal payment proof uploaded by $uploadedByName on ${now.toString().split('.')[0]}.',
+          );
+        }
+      }
+
+      // 4. Update order with proof and stage (if moving to payment)
+      final updateData = <String, dynamic>{
+        'finalPaymentProofUrl': proofUrl,
+        'finalPaymentProofUploadedAt': Timestamp.fromDate(now),
+        'finalPaymentProofUploadedBy': uploadedBy,
+        'finalPaymentProofUploadedByName': uploadedByName,
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      };
+
+      if (shouldMoveToPayment) {
+        updateData['currentStage'] = 'payment';
+        updateData['stageEnteredAt'] = Timestamp.fromDate(now);
+      }
+
+      await _firestore.collection('orders').doc(orderId).update(updateData);
+
+      if (kDebugMode) {
+        if (shouldMoveToPayment) {
+          print(
+            '✅ Final payment proof uploaded and order $orderId moved to payment stage by $uploadedByName',
+          );
+        } else {
+          print(
+            '✅ Final payment proof stored for order $orderId by $uploadedByName',
+          );
+        }
+      }
+
+      return CustomerFinalPaymentProofUploadResult(
+        success: true,
+        message: shouldMoveToPayment
+            ? 'Proof of payment uploaded and order moved to Payment stage.'
+            : 'Proof of payment uploaded successfully.',
+        proofUrl: proofUrl,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error uploading final payment proof: $e');
+      }
+      return CustomerFinalPaymentProofUploadResult(
+        success: false,
+        message: 'Failed to upload proof: $e',
+      );
+    }
+  }
+
+  /// Operations team verifies customer-uploaded final payment proof
+  Future<FinalPaymentProofVerificationResult> verifyCustomerFinalPaymentProof({
+    required String orderId,
+    required String verifiedBy,
+    required String verifiedByName,
+  }) async {
+    try {
+      // 1. Get order
+      final order = await getOrder(orderId);
+      if (order == null) {
+        return const FinalPaymentProofVerificationResult(
+          success: false,
+          message: 'Order not found.',
+        );
+      }
+
+      // 2. Verify customer proof exists
+      if (order.customerUploadedFinalPaymentProofUrl == null ||
+          order.customerUploadedFinalPaymentProofUrl!.isEmpty) {
+        return const FinalPaymentProofVerificationResult(
+          success: false,
+          message: 'No customer proof found to verify.',
+        );
+      }
+
+      // 3. Update stage history with verification note
+      final now = DateTime.now();
+      final updatedHistory = [...order.stageHistory];
+
+      // Add verification note to current stage
+      if (updatedHistory.isNotEmpty) {
+        final lastEntry = updatedHistory.last;
+        if (lastEntry.exitedAt == null) {
+          updatedHistory[updatedHistory.length - 1] =
+              models.OrderStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: null,
+            note: (lastEntry.note ?? '') +
+                '\nCustomer final payment proof verified by $verifiedByName on ${now.toString().split('.')[0]}.',
+          );
+        }
+      }
+
+      // 4. Update order with verification metadata
+      await _firestore.collection('orders').doc(orderId).update({
+        'customerFinalPaymentProofVerified': true,
+        'customerFinalPaymentProofVerifiedAt': Timestamp.fromDate(now),
+        'customerFinalPaymentProofVerifiedBy': verifiedBy,
+        'customerFinalPaymentProofVerifiedByName': verifiedByName,
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      if (kDebugMode) {
+        print(
+          '✅ Customer final payment proof verified by $verifiedByName for order $orderId',
+        );
+      }
+
+      return const FinalPaymentProofVerificationResult(
+        success: true,
+        message: 'Proof verified successfully.',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error verifying customer final payment proof: $e');
+      }
+      return FinalPaymentProofVerificationResult(
+        success: false,
+        message: 'Failed to verify proof: $e',
+      );
+    }
+  }
+
+  /// Operations team rejects customer-uploaded final payment proof
+  Future<FinalPaymentProofRejectionResult> rejectCustomerFinalPaymentProof({
+    required String orderId,
+    required String rejectedBy,
+    required String rejectedByName,
+    String? rejectionReason,
+  }) async {
+    try {
+      // 1. Get order
+      final order = await getOrder(orderId);
+      if (order == null) {
+        return const FinalPaymentProofRejectionResult(
+          success: false,
+          message: 'Order not found.',
+        );
+      }
+
+      // 2. Verify customer proof exists
+      if (order.customerUploadedFinalPaymentProofUrl == null ||
+          order.customerUploadedFinalPaymentProofUrl!.isEmpty) {
+        return const FinalPaymentProofRejectionResult(
+          success: false,
+          message: 'No customer proof found to reject.',
+        );
+      }
+
+      // 3. Update stage history with rejection note
+      final now = DateTime.now();
+      final updatedHistory = [...order.stageHistory];
+
+      // Add rejection note to current stage
+      if (updatedHistory.isNotEmpty) {
+        final lastEntry = updatedHistory.last;
+        if (lastEntry.exitedAt == null) {
+          final reasonText = rejectionReason != null && rejectionReason.isNotEmpty
+              ? ' Reason: $rejectionReason'
+              : '';
+          updatedHistory[updatedHistory.length - 1] =
+              models.OrderStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: null,
+            note: (lastEntry.note ?? '') +
+                '\nCustomer final payment proof rejected by $rejectedByName on ${now.toString().split('.')[0]}.$reasonText',
+          );
+        }
+      }
+
+      // 4. Update order - clear customer proof fields and set rejection metadata
+      await _firestore.collection('orders').doc(orderId).update({
+        'customerUploadedFinalPaymentProofUrl': null,
+        'customerUploadedFinalPaymentProofAt': null,
+        'customerFinalPaymentProofVerified': false,
+        'customerFinalPaymentProofVerifiedAt': null,
+        'customerFinalPaymentProofVerifiedBy': null,
+        'customerFinalPaymentProofVerifiedByName': null,
+        'customerFinalPaymentProofRejected': true,
+        'customerFinalPaymentProofRejectedAt': Timestamp.fromDate(now),
+        'customerFinalPaymentProofRejectedBy': rejectedBy,
+        'customerFinalPaymentProofRejectedByName': rejectedByName,
+        'customerFinalPaymentProofRejectionReason': rejectionReason,
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      if (kDebugMode) {
+        print(
+          '✅ Customer final payment proof rejected by $rejectedByName for order $orderId',
+        );
+      }
+
+      return const FinalPaymentProofRejectionResult(
+        success: true,
+        message: 'Proof rejected successfully. You can now upload a new proof.',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error rejecting customer final payment proof: $e');
+      }
+      return FinalPaymentProofRejectionResult(
+        success: false,
+        message: 'Failed to reject proof: $e',
       );
     }
   }
@@ -1990,6 +2373,41 @@ class PaymentConfirmationResult {
     required this.success,
     required this.message,
     required this.status,
+  });
+}
+
+/// Result class for customer final payment proof upload operations
+class CustomerFinalPaymentProofUploadResult {
+  final bool success;
+  final String message;
+  final String? proofUrl;
+
+  const CustomerFinalPaymentProofUploadResult({
+    required this.success,
+    required this.message,
+    this.proofUrl,
+  });
+}
+
+/// Result class for final payment proof verification operations
+class FinalPaymentProofVerificationResult {
+  final bool success;
+  final String message;
+
+  const FinalPaymentProofVerificationResult({
+    required this.success,
+    required this.message,
+  });
+}
+
+/// Result class for final payment proof rejection operations
+class FinalPaymentProofRejectionResult {
+  final bool success;
+  final String message;
+
+  const FinalPaymentProofRejectionResult({
+    required this.success,
+    required this.message,
   });
 }
 

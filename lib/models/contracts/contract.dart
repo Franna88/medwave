@@ -114,6 +114,13 @@ class Contract {
   // Payment type ('deposit' or 'full_payment')
   final String paymentType;
 
+  // Revision tracking
+  final String? parentContractId; // ID of original contract (null for original)
+  final int revisionNumber; // 0 for original, 1+ for revisions
+  final String? editReason; // Reason for editing this revision
+  final String? editedBy; // User who created this revision
+  final DateTime? editedAt; // When this revision was created
+
   Contract({
     required this.id,
     required this.accessToken,
@@ -145,6 +152,11 @@ class Contract {
     this.voidedAt,
     this.voidReason,
     this.paymentType = 'deposit',
+    this.parentContractId,
+    this.revisionNumber = 0,
+    this.editReason,
+    this.editedBy,
+    this.editedAt,
   });
 
   /// Check if this is a full payment contract
@@ -222,6 +234,11 @@ class Contract {
       voidedAt: (map['voidedAt'] as Timestamp?)?.toDate(),
       voidReason: map['voidReason']?.toString(),
       paymentType: map['paymentType']?.toString() ?? 'deposit',
+      parentContractId: map['parentContractId']?.toString(),
+      revisionNumber: (map['revisionNumber'] as num?)?.toInt() ?? 0,
+      editReason: map['editReason']?.toString(),
+      editedBy: map['editedBy']?.toString(),
+      editedAt: (map['editedAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -256,6 +273,11 @@ class Contract {
       'voidedAt': voidedAt != null ? Timestamp.fromDate(voidedAt!) : null,
       'voidReason': voidReason,
       'paymentType': paymentType,
+      'parentContractId': parentContractId,
+      'revisionNumber': revisionNumber,
+      'editReason': editReason,
+      'editedBy': editedBy,
+      'editedAt': editedAt != null ? Timestamp.fromDate(editedAt!) : null,
     };
   }
 
@@ -290,6 +312,11 @@ class Contract {
     DateTime? voidedAt,
     String? voidReason,
     String? paymentType,
+    String? parentContractId,
+    int? revisionNumber,
+    String? editReason,
+    String? editedBy,
+    DateTime? editedAt,
   }) {
     return Contract(
       id: id ?? this.id,
@@ -324,6 +351,11 @@ class Contract {
       voidedAt: voidedAt ?? this.voidedAt,
       voidReason: voidReason ?? this.voidReason,
       paymentType: paymentType ?? this.paymentType,
+      parentContractId: parentContractId ?? this.parentContractId,
+      revisionNumber: revisionNumber ?? this.revisionNumber,
+      editReason: editReason ?? this.editReason,
+      editedBy: editedBy ?? this.editedBy,
+      editedAt: editedAt ?? this.editedAt,
     );
   }
 
