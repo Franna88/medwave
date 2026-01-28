@@ -33,6 +33,21 @@ class SalesAppointment {
   final bool
   manuallyAdded; // Indicates if appointment was manually added to stream
   final String paymentType; // 'deposit' or 'full_payment'
+  final String? depositProofUrl; // URL of uploaded proof of payment
+  final DateTime? depositProofUploadedAt; // Timestamp of proof upload
+  final String? depositProofUploadedBy; // User ID who uploaded proof
+  final String? depositProofUploadedByName; // User name who uploaded proof
+  final String? customerUploadedProofUrl; // URL of proof uploaded by customer
+  final DateTime? customerUploadedProofAt; // When customer uploaded
+  final bool customerProofVerified; // Whether sales verified it
+  final DateTime? customerProofVerifiedAt; // When sales verified
+  final String? customerProofVerifiedBy; // Sales user ID who verified
+  final String? customerProofVerifiedByName; // Sales user name who verified
+  final bool customerProofRejected; // Whether sales rejected the proof
+  final DateTime? customerProofRejectedAt; // When it was rejected
+  final String? customerProofRejectedBy; // User ID who rejected
+  final String? customerProofRejectedByName; // User name who rejected
+  final String? customerProofRejectionReason; // Optional reason for rejection
 
   SalesAppointment({
     required this.id,
@@ -65,6 +80,21 @@ class SalesAppointment {
     this.depositConfirmationRespondedAt,
     this.manuallyAdded = false,
     this.paymentType = 'deposit',
+    this.depositProofUrl,
+    this.depositProofUploadedAt,
+    this.depositProofUploadedBy,
+    this.depositProofUploadedByName,
+    this.customerUploadedProofUrl,
+    this.customerUploadedProofAt,
+    this.customerProofVerified = false,
+    this.customerProofVerifiedAt,
+    this.customerProofVerifiedBy,
+    this.customerProofVerifiedByName,
+    this.customerProofRejected = false,
+    this.customerProofRejectedAt,
+    this.customerProofRejectedBy,
+    this.customerProofRejectedByName,
+    this.customerProofRejectionReason,
   });
 
   /// Get time in current stage
@@ -146,6 +176,28 @@ class SalesAppointment {
           (map['depositConfirmationRespondedAt'] as Timestamp?)?.toDate(),
       manuallyAdded: map['manuallyAdded'] == true,
       paymentType: map['paymentType']?.toString() ?? 'deposit',
+      depositProofUrl: map['depositProofUrl']?.toString(),
+      depositProofUploadedAt:
+          (map['depositProofUploadedAt'] as Timestamp?)?.toDate(),
+      depositProofUploadedBy: map['depositProofUploadedBy']?.toString(),
+      depositProofUploadedByName: map['depositProofUploadedByName']?.toString(),
+      customerUploadedProofUrl: map['customerUploadedProofUrl']?.toString(),
+      customerUploadedProofAt:
+          (map['customerUploadedProofAt'] as Timestamp?)?.toDate(),
+      customerProofVerified: map['customerProofVerified'] == true,
+      customerProofVerifiedAt:
+          (map['customerProofVerifiedAt'] as Timestamp?)?.toDate(),
+      customerProofVerifiedBy: map['customerProofVerifiedBy']?.toString(),
+      customerProofVerifiedByName:
+          map['customerProofVerifiedByName']?.toString(),
+      customerProofRejected: map['customerProofRejected'] == true,
+      customerProofRejectedAt:
+          (map['customerProofRejectedAt'] as Timestamp?)?.toDate(),
+      customerProofRejectedBy: map['customerProofRejectedBy']?.toString(),
+      customerProofRejectedByName:
+          map['customerProofRejectedByName']?.toString(),
+      customerProofRejectionReason:
+          map['customerProofRejectionReason']?.toString(),
     );
   }
 
@@ -186,6 +238,29 @@ class SalesAppointment {
           : null,
       'manuallyAdded': manuallyAdded,
       'paymentType': paymentType,
+      'depositProofUrl': depositProofUrl,
+      'depositProofUploadedAt': depositProofUploadedAt != null
+          ? Timestamp.fromDate(depositProofUploadedAt!)
+          : null,
+      'depositProofUploadedBy': depositProofUploadedBy,
+      'depositProofUploadedByName': depositProofUploadedByName,
+      'customerUploadedProofUrl': customerUploadedProofUrl,
+      'customerUploadedProofAt': customerUploadedProofAt != null
+          ? Timestamp.fromDate(customerUploadedProofAt!)
+          : null,
+      'customerProofVerified': customerProofVerified,
+      'customerProofVerifiedAt': customerProofVerifiedAt != null
+          ? Timestamp.fromDate(customerProofVerifiedAt!)
+          : null,
+      'customerProofVerifiedBy': customerProofVerifiedBy,
+      'customerProofVerifiedByName': customerProofVerifiedByName,
+      'customerProofRejected': customerProofRejected,
+      'customerProofRejectedAt': customerProofRejectedAt != null
+          ? Timestamp.fromDate(customerProofRejectedAt!)
+          : null,
+      'customerProofRejectedBy': customerProofRejectedBy,
+      'customerProofRejectedByName': customerProofRejectedByName,
+      'customerProofRejectionReason': customerProofRejectionReason,
     };
   }
 
@@ -220,6 +295,21 @@ class SalesAppointment {
     DateTime? depositConfirmationRespondedAt,
     bool? manuallyAdded,
     String? paymentType,
+    String? depositProofUrl,
+    DateTime? depositProofUploadedAt,
+    String? depositProofUploadedBy,
+    String? depositProofUploadedByName,
+    String? customerUploadedProofUrl,
+    DateTime? customerUploadedProofAt,
+    bool? customerProofVerified,
+    DateTime? customerProofVerifiedAt,
+    String? customerProofVerifiedBy,
+    String? customerProofVerifiedByName,
+    bool? customerProofRejected,
+    DateTime? customerProofRejectedAt,
+    String? customerProofRejectedBy,
+    String? customerProofRejectedByName,
+    String? customerProofRejectionReason,
   }) {
     return SalesAppointment(
       id: id ?? this.id,
@@ -256,6 +346,32 @@ class SalesAppointment {
           depositConfirmationRespondedAt ?? this.depositConfirmationRespondedAt,
       manuallyAdded: manuallyAdded ?? this.manuallyAdded,
       paymentType: paymentType ?? this.paymentType,
+      depositProofUrl: depositProofUrl ?? this.depositProofUrl,
+      depositProofUploadedAt:
+          depositProofUploadedAt ?? this.depositProofUploadedAt,
+      depositProofUploadedBy: depositProofUploadedBy ?? this.depositProofUploadedBy,
+      depositProofUploadedByName:
+          depositProofUploadedByName ?? this.depositProofUploadedByName,
+      customerUploadedProofUrl:
+          customerUploadedProofUrl ?? this.customerUploadedProofUrl,
+      customerUploadedProofAt:
+          customerUploadedProofAt ?? this.customerUploadedProofAt,
+      customerProofVerified: customerProofVerified ?? this.customerProofVerified,
+      customerProofVerifiedAt:
+          customerProofVerifiedAt ?? this.customerProofVerifiedAt,
+      customerProofVerifiedBy:
+          customerProofVerifiedBy ?? this.customerProofVerifiedBy,
+      customerProofVerifiedByName:
+          customerProofVerifiedByName ?? this.customerProofVerifiedByName,
+      customerProofRejected: customerProofRejected ?? this.customerProofRejected,
+      customerProofRejectedAt:
+          customerProofRejectedAt ?? this.customerProofRejectedAt,
+      customerProofRejectedBy:
+          customerProofRejectedBy ?? this.customerProofRejectedBy,
+      customerProofRejectedByName:
+          customerProofRejectedByName ?? this.customerProofRejectedByName,
+      customerProofRejectionReason:
+          customerProofRejectionReason ?? this.customerProofRejectionReason,
     );
   }
 

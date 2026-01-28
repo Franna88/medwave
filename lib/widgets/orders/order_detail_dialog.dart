@@ -1,6 +1,11 @@
+import 'dart:async';
+import 'dart:html' as html;
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../models/streams/order.dart' as models;
 import '../../models/admin/installer.dart';
@@ -39,12 +44,33 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   bool _isSplitting = false;
   String? _selectedInstallerId;
   Set<String> _selectedItemsForOverride = {}; // Items selected for override
+  StreamSubscription<models.Order?>? _orderSubscription; // For real-time updates
 
   @override
   void initState() {
     super.initState();
     _currentOrder = widget.order;
     _selectedInstallerId = widget.order.assignedInstallerId;
+    _setupRealtimeUpdates();
+  }
+
+  void _setupRealtimeUpdates() {
+    // Listen to real-time updates for this order
+    _orderSubscription = _orderService
+        .getOrderStream(_currentOrder.id)
+        .listen((order) {
+      if (mounted && order != null) {
+        setState(() {
+          _currentOrder = order;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _orderSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _sendBookingEmail() async {
@@ -581,6 +607,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     const SizedBox(height: 24),
                     _buildInstallerSection(),
                     const SizedBox(height: 24),
+                    // Final Payment Proof Section (show when in out_for_delivery stage)
+                    if (_currentOrder.currentStage == 'out_for_delivery')
+                      _buildFinalPaymentProofSection(),
+                    if (_currentOrder.currentStage == 'out_for_delivery')
+                      const SizedBox(height: 24),
                     // Show acknowledgement status for Installed stage
                     if (_currentOrder.currentStage == 'installed') ...[
                       Container(
@@ -1255,6 +1286,689 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         ],
       ],
     );
+  }
+
+  Widget _buildFinalPaymentProofSection() {
+    final children = <Widget>[];
+
+    // Show customer-uploaded proof if exists
+    if (_currentOrder.customerUploadedFinalPaymentProofUrl != null &&
+        _currentOrder.customerUploadedFinalPaymentProofUrl!.isNotEmpty) {
+      final isPdf = _currentOrder.customerUploadedFinalPaymentProofUrl!
+          .toLowerCase()
+          .contains('.pdf');
+
+      children.addAll([
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            const Text(
+              'Customer Uploaded Proof',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            const SizedBox(width: 8),
+            if (!_currentOrder.customerFinalPaymentProofVerified)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'NEEDS VERIFICATION',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'VERIFIED',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () => _showProofFile(
+            _currentOrder.customerUploadedFinalPaymentProofUrl!,
+            isPdf,
+          ),
+          child: Container(
+            height: 150,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: _currentOrder.customerFinalPaymentProofVerified
+                    ? Colors.green
+                    : Colors.orange,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: isPdf
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.picture_as_pdf,
+                          size: 64,
+                          color: Colors.red[700],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'PDF Document',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap to view',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Image.network(
+                    _currentOrder.customerUploadedFinalPaymentProofUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Failed to load image',
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+        if (_currentOrder.customerUploadedFinalPaymentProofAt != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Uploaded by customer on ${DateFormat('MMM dd, yyyy').format(_currentOrder.customerUploadedFinalPaymentProofAt!)}',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ],
+        if (!_currentOrder.customerFinalPaymentProofVerified) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _verifyCustomerFinalPaymentProof,
+                  icon: const Icon(Icons.verified),
+                  label: const Text('Verify'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _rejectCustomerFinalPaymentProof,
+                  icon: const Icon(Icons.cancel),
+                  label: const Text('Reject'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ] else if (_currentOrder.customerFinalPaymentProofVerifiedByName != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Verified by ${_currentOrder.customerFinalPaymentProofVerifiedByName}',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.green[700],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ]);
+    }
+
+    // Add operations-uploaded proof of payment display if uploaded
+    if (_currentOrder.finalPaymentProofUrl != null &&
+        _currentOrder.finalPaymentProofUrl!.isNotEmpty) {
+      final isPdf = _currentOrder.finalPaymentProofUrl!.toLowerCase().contains('.pdf');
+      
+      children.addAll([
+        const SizedBox(height: 16),
+        const Text(
+          'Proof of Payment',
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () => _showProofFile(_currentOrder.finalPaymentProofUrl!, isPdf),
+          child: Container(
+            height: 150,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: isPdf
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.picture_as_pdf,
+                          size: 64,
+                          color: Colors.red[700],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'PDF Document',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap to view',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Image.network(
+                    _currentOrder.finalPaymentProofUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Failed to load image',
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+        if (_currentOrder.finalPaymentProofUploadedByName != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Uploaded by ${_currentOrder.finalPaymentProofUploadedByName}',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ],
+      ]);
+    }
+
+    // Add operations upload section if no proof exists or customer proof was rejected
+    if ((_currentOrder.finalPaymentProofUrl == null ||
+            _currentOrder.finalPaymentProofUrl!.isEmpty) &&
+        (_currentOrder.customerUploadedFinalPaymentProofUrl == null ||
+            _currentOrder.customerUploadedFinalPaymentProofUrl!.isEmpty ||
+            _currentOrder.customerFinalPaymentProofRejected)) {
+      children.addAll([
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.teal.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.teal.withOpacity(0.2)),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.cloud_upload_outlined,
+                size: 48,
+                color: Colors.teal[700],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Upload Proof of Payment',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.teal[900],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Upload an image or PDF document of the final payment proof.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _uploadFinalPaymentProof,
+                icon: const Icon(Icons.upload_file),
+                label: const Text('Select File'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ]);
+    }
+
+    return _buildSection(
+      title: 'Final Payment Proof',
+      icon: Icons.payments,
+      children: children,
+    );
+  }
+
+  Future<void> _showProofFile(String url, bool isPdf) async {
+    if (isPdf) {
+      // Open PDF in new tab/window
+      // ignore: avoid_web_libraries_in_flutter
+      html.window.open(url, '_blank');
+    } else {
+      // Show image in dialog
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 800, maxHeight: 600),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppBar(
+                  title: const Text('Proof of Payment'),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: Image.network(url, fit: BoxFit.contain),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _uploadFinalPaymentProof() async {
+    try {
+      // Show options to pick image or document
+      final sourceType = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Select Proof of Payment'),
+          content: const Text('Choose how you want to upload the proof:'),
+          actions: [
+            TextButton.icon(
+              onPressed: () => Navigator.of(context).pop('image'),
+              icon: const Icon(Icons.image),
+              label: const Text('Image/Screenshot'),
+            ),
+            if (kIsWeb)
+              TextButton.icon(
+                onPressed: () => Navigator.of(context).pop('pdf'),
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('PDF Document'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+
+      if (sourceType == null) return;
+
+      Uint8List? fileData;
+      String? fileName;
+
+      if (sourceType == 'image') {
+        final ImagePicker picker = ImagePicker();
+        final XFile? image = await picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 85,
+        );
+        if (image != null) {
+          fileData = await image.readAsBytes();
+          fileName = image.name;
+        }
+      } else if (sourceType == 'pdf' && kIsWeb) {
+        final file = await _pickPdfWeb();
+        if (file != null) {
+          fileData = await file.readAsBytes();
+          fileName = file.name;
+        }
+      }
+
+      if (fileData == null || fileName == null) return;
+
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Uploading proof...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Get user info
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.user?.uid ?? '';
+      final userName = authProvider.userName ?? 'Unknown';
+
+      // Upload
+      final result = await _orderService.uploadFinalPaymentProof(
+        orderId: _currentOrder.id,
+        fileData: fileData,
+        fileName: fileName,
+        uploadedBy: userId,
+        uploadedByName: userName,
+      );
+
+      // Close loading
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Show result
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message),
+            backgroundColor: result.success ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading proof: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<XFile?> _pickPdfWeb() async {
+    if (!kIsWeb) return null;
+
+    final completer = Completer<XFile?>();
+    final uploadInput = html.FileUploadInputElement()
+      ..accept = 'application/pdf,.pdf';
+    uploadInput.click();
+
+    uploadInput.onChange.listen((e) async {
+      final files = uploadInput.files;
+      if (files != null && files.isNotEmpty) {
+        final file = files[0];
+        final reader = html.FileReader();
+        reader.readAsArrayBuffer(file);
+
+        reader.onLoadEnd.listen((e) {
+          final bytes = reader.result as List<int>;
+          final xFile = XFile.fromData(
+            Uint8List.fromList(bytes),
+            name: file.name,
+            mimeType: 'application/pdf',
+          );
+          completer.complete(xFile);
+        });
+      } else {
+        completer.complete(null);
+      }
+    });
+
+    Future.delayed(const Duration(seconds: 60), () {
+      if (!completer.isCompleted) {
+        completer.complete(null);
+      }
+    });
+
+    return completer.future;
+  }
+
+  Future<void> _verifyCustomerFinalPaymentProof() async {
+    // Confirm with dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Verify Proof of Payment'),
+        content: const Text(
+          'Have you reviewed the customer\'s proof of payment?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Verify'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Verifying proof...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Get user info
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.user?.uid ?? '';
+    final userName = authProvider.userName ?? 'Unknown';
+
+    // Call service
+    final result = await _orderService.verifyCustomerFinalPaymentProof(
+      orderId: _currentOrder.id,
+      verifiedBy: userId,
+      verifiedByName: userName,
+    );
+
+    // Close loading dialog
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+
+    // Show result
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: result.success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _rejectCustomerFinalPaymentProof() async {
+    // Show dialog to confirm rejection and get optional reason
+    final TextEditingController reasonController = TextEditingController();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject Proof of Payment'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Are you sure you want to reject this proof? '
+              'The customer will need to upload a valid proof, or you can upload it manually.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Reason (optional)',
+                hintText: 'e.g., Invalid document, not a proof of payment',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) {
+      reasonController.dispose();
+      return;
+    }
+
+    final reason = reasonController.text.trim();
+    reasonController.dispose();
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Rejecting proof...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Get user info
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.user?.uid ?? '';
+    final userName = authProvider.userName ?? 'Unknown';
+
+    // Call service
+    final result = await _orderService.rejectCustomerFinalPaymentProof(
+      orderId: _currentOrder.id,
+      rejectedBy: userId,
+      rejectedByName: userName,
+      rejectionReason: reason.isNotEmpty ? reason : null,
+    );
+
+    // Close loading dialog
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+
+    // Show result
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: result.success ? Colors.green : Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildOrderItemsSection() {

@@ -8,6 +8,7 @@ import '../../models/contracts/contract.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
+import 'contract_edit_dialog.dart';
 
 /// Widget showing contract status and actions for an appointment
 class ContractSectionWidget extends StatefulWidget {
@@ -135,6 +136,105 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
         ),
       );
     }
+  }
+
+  Future<void> _editContract() async {
+    if (_contract == null) return;
+
+    // Load appointment to get current data
+    final appointment = widget.appointment;
+    
+    // Show edit dialog
+    final revision = await showDialog<Contract>(
+      context: context,
+      builder: (context) => ContractEditDialog(
+        contract: _contract!,
+        appointment: appointment,
+      ),
+    );
+
+    if (revision != null && mounted) {
+      // Reload contract to show the new revision
+      await _loadContract();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Contract revision created successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  Future<void> _resendContractEmail() async {
+    if (_contract == null) return;
+
+    final provider = context.read<ContractProvider>();
+    final success = await provider.resendContractEmail(
+      contract: _contract!,
+      appointment: widget.appointment,
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success 
+            ? 'Contract email resent successfully'
+            : 'Failed to resend contract email'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showRevisionHistory() async {
+    if (_contract == null) return;
+
+    final provider = context.read<ContractProvider>();
+    final history = await provider.getContractRevisionHistory(_contract!.id);
+
+    if (!mounted) return;
+
+    final dateFormat = DateFormat('MMM dd, yyyy');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Contract Revision History'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: history.length,
+            itemBuilder: (context, index) {
+              final contract = history[index];
+              return ListTile(
+                leading: contract.revisionNumber == 0
+                  ? const Icon(Icons.description, color: Colors.blue)
+                  : const Icon(Icons.edit, color: Colors.orange),
+                title: Text(contract.revisionNumber == 0 
+                  ? 'Original Contract'
+                  : 'Revision #${contract.revisionNumber}'),
+                subtitle: Text(
+                  contract.editReason ?? 'No reason provided',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                trailing: Text(
+                  dateFormat.format(contract.createdAt),
+                  style: const TextStyle(fontSize: 12),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _voidContract() async {
@@ -390,6 +490,38 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
         ),
         const SizedBox(height: 12),
 
+        // Show revision info if this is a revision
+        if (_contract!.parentContractId != null) ...[
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.history, size: 14, color: Colors.blue[700]),
+                const SizedBox(width: 4),
+                Text(
+                  'Revision #${_contract!.revisionNumber}',
+                  style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                ),
+                if (_contract!.editReason != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '- ${_contract!.editReason}',
+                      style: TextStyle(fontSize: 11, color: Colors.blue[600]),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
         // Created date
         _buildInfoRow(
           Icons.calendar_today,
@@ -427,6 +559,23 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
               icon: const Icon(Icons.copy, size: 18),
               label: const Text('Copy Link'),
             ),
+            OutlinedButton.icon(
+              onPressed: _resendContractEmail,
+              icon: const Icon(Icons.send, size: 18),
+              label: const Text('Resend Email'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _editContract,
+              icon: const Icon(Icons.edit, size: 18),
+              label: const Text('Edit'),
+              style: OutlinedButton.styleFrom(foregroundColor: AppTheme.primaryColor),
+            ),
+            if (_contract!.parentContractId != null)
+              OutlinedButton.icon(
+                onPressed: _showRevisionHistory,
+                icon: const Icon(Icons.history, size: 18),
+                label: const Text('View History'),
+              ),
             OutlinedButton.icon(
               onPressed: _voidContract,
               icon: const Icon(Icons.block, size: 18),

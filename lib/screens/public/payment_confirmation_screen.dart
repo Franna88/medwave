@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:html' as html;
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-
+import 'package:image_picker/image_picker.dart';
 import '../../services/firebase/order_service.dart';
 
 class PaymentConfirmationScreen extends StatefulWidget {
@@ -27,6 +31,12 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
   bool _isError = false;
   bool _isLoaded = false;
   bool _isProcessing = false; // Prevent duplicate calls
+  
+  // Upload section state
+  bool _showUploadSection = false;
+  bool _isUploading = false;
+  String? _uploadedProofUrl;
+  PaymentResponseStatus? _responseStatus;
 
   // Static set to track processing orders across widget recreations
   static final Set<String> _processingOrders = {};
@@ -101,6 +111,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
     setState(() {
       _isLoaded = true;
       _isError = !result.success;
+      _responseStatus = result.status;
 
       switch (result.status) {
         case PaymentResponseStatus.confirmed:
@@ -134,6 +145,149 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
         break;
       }
     }
+  }
+
+  Future<void> _pickAndUploadFile() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+
+    if (image == null) return;
+
+    final bytes = await image.readAsBytes();
+    await _uploadProof(bytes, image.name);
+  }
+
+  Future<void> _pickAndUploadPdf() async {
+    if (!kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('PDF upload is only supported on web.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final file = await _pickPdfWeb();
+    if (file == null) return;
+
+    final bytes = await file.readAsBytes();
+    await _uploadProof(bytes, file.name);
+  }
+
+  Future<XFile?> _pickPdfWeb() async {
+    if (!kIsWeb) return null;
+
+    final completer = Completer<XFile?>();
+    final uploadInput = html.FileUploadInputElement()
+      ..accept = 'application/pdf,.pdf';
+    uploadInput.click();
+
+    uploadInput.onChange.listen((e) async {
+      final files = uploadInput.files;
+      if (files != null && files.isNotEmpty) {
+        final file = files[0];
+        final reader = html.FileReader();
+        reader.readAsArrayBuffer(file);
+
+        reader.onLoadEnd.listen((e) {
+          final bytes = reader.result as List<int>;
+          final xFile = XFile.fromData(
+            Uint8List.fromList(bytes),
+            name: file.name,
+            mimeType: 'application/pdf',
+          );
+          completer.complete(xFile);
+        });
+      } else {
+        completer.complete(null);
+      }
+    });
+
+    Future.delayed(const Duration(seconds: 60), () {
+      if (!completer.isCompleted) {
+        completer.complete(null);
+      }
+    });
+
+    return completer.future;
+  }
+
+  Future<void> _uploadProof(Uint8List bytes, String fileName) async {
+    setState(() => _isUploading = true);
+
+    final result = await _service.uploadCustomerFinalPaymentProof(
+      orderId: widget.orderId!,
+      fileData: bytes,
+      fileName: fileName,
+    );
+
+    if (mounted) {
+      setState(() {
+        _isUploading = false;
+        if (result.success) {
+          _uploadedProofUrl = result.proofUrl;
+          _showUploadSection = false;
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: result.success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildUploadSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.cloud_upload, size: 48, color: Colors.blue),
+          const SizedBox(height: 12),
+          const Text(
+            'Upload Proof of Payment',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Upload an image or PDF of your payment proof to help us process faster.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          if (_isUploading)
+            const CircularProgressIndicator()
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _pickAndUploadFile,
+                  icon: const Icon(Icons.image),
+                  label: const Text('Image'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: _pickAndUploadPdf,
+                  icon: const Icon(Icons.picture_as_pdf),
+                  label: const Text('PDF'),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -177,6 +331,59 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                     const SizedBox(height: 16),
                     const CircularProgressIndicator(),
                   ],
+                  // Show upload button only for confirmed status and if not error
+                  if (_isLoaded &&
+                      !_isError &&
+                      _responseStatus == PaymentResponseStatus.confirmed &&
+                      !_showUploadSection &&
+                      _uploadedProofUrl == null) ...[
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => setState(() => _showUploadSection = true),
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('Upload Proof of Payment'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                  // Show upload section
+                  if (_showUploadSection && _uploadedProofUrl == null) ...[
+                    const SizedBox(height: 24),
+                    _buildUploadSection(),
+                  ],
+                  // Show success message after upload
+                  if (_uploadedProofUrl != null) ...[
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green, size: 48),
+                          SizedBox(height: 8),
+                          Text(
+                            'Proof of payment uploaded successfully!',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Our team will verify your proof and process your order.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -186,4 +393,3 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
     );
   }
 }
-

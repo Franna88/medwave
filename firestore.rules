@@ -105,6 +105,17 @@ service cloud.firestore {
                        (request.resource.data.depositConfirmationStatus == 'confirmed' || 
                         request.resource.data.depositConfirmationStatus == 'declined');
 
+      // Allow unauthenticated updates for customer proof upload
+      // This allows customers to upload proof of payment after confirming deposit
+      // Stage must remain deposit_requested and only proof-related fields can be modified
+      allow update: if resource.data.currentStage == 'deposit_requested' && 
+                       request.resource.data.currentStage == 'deposit_requested' &&
+                       // Ensure only customer proof fields, stageHistory and updatedAt are being modified
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['customerUploadedProofUrl', 'customerUploadedProofAt', 'customerProofVerified', 'stageHistory', 'updatedAt']) &&
+                       // Ensure customerProofVerified is set to false (sales must verify)
+                       request.resource.data.customerProofVerified == false;
+
       // Allow finance to confirm deposit received (unauthenticated)
       // This allows moving appointments from deposit_requested to deposit_made
       allow update: if resource.data.currentStage == 'deposit_requested' && 
@@ -210,6 +221,14 @@ service cloud.firestore {
                        // Ensure only payment confirmation fields, stageHistory and updatedAt are being modified
                        request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['paymentConfirmationStatus', 'paymentConfirmationRespondedAt', 'stageHistory', 'updatedAt']);
+      
+      // Allow unauthenticated updates for customer final payment proof upload
+      // This allows customers to upload proof of payment after confirming final payment
+      // Stage can be any stage, but only proof-related fields can be modified
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['customerUploadedFinalPaymentProofUrl', 'customerUploadedFinalPaymentProofAt', 'customerFinalPaymentProofVerified', 'stageHistory', 'updatedAt']) &&
+                       // Ensure customerFinalPaymentProofVerified is set to false (operations must verify)
+                       request.resource.data.customerFinalPaymentProofVerified == false;
       
       // Allow finance to confirm payment received (unauthenticated)
       // This allows finance to update stage history when confirming payment

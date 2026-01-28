@@ -109,17 +109,27 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     if (_searchQuery.isNotEmpty) {
       currentFilteredAppointments = currentFilteredAppointments.where((apt) {
         // Normalize both search query and customer name by removing extra spaces
-        final normalizedSearch = _searchQuery.trim().replaceAll(RegExp(r'\s+'), ' ');
-        final normalizedName = apt.customerName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
-        
+        final normalizedSearch = _searchQuery.trim().replaceAll(
+          RegExp(r'\s+'),
+          ' ',
+        );
+        final normalizedName = apt.customerName.toLowerCase().trim().replaceAll(
+          RegExp(r'\s+'),
+          ' ',
+        );
+
         // Check if search query matches customer name (handles "first last" searches)
         final nameMatches = normalizedName.contains(normalizedSearch);
-        
+
         // Also check if all words in search query appear in customer name (for flexible matching)
-        final searchWords = normalizedSearch.split(' ').where((w) => w.isNotEmpty).toList();
-        final allWordsMatch = searchWords.isNotEmpty &&
+        final searchWords = normalizedSearch
+            .split(' ')
+            .where((w) => w.isNotEmpty)
+            .toList();
+        final allWordsMatch =
+            searchWords.isNotEmpty &&
             searchWords.every((word) => normalizedName.contains(word));
-        
+
         return nameMatches ||
             allWordsMatch ||
             apt.email.toLowerCase().contains(_searchQuery) ||
@@ -3279,6 +3289,35 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 ],
               ),
             ),
+            // Proof needs verification badge
+            if (appointment.customerUploadedProofUrl != null &&
+                appointment.customerUploadedProofUrl!.isNotEmpty &&
+                !appointment.customerProofVerified) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.pending_actions, size: 12, color: Colors.orange[700]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Proof Needs Verification',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             // Assigned to badge
             if (appointment.assignedToName != null &&
                 appointment.assignedToName!.isNotEmpty) ...[

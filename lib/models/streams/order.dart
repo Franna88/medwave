@@ -106,6 +106,27 @@ class Order {
   final DateTime? installationSignoffCreatedAt;
   final DateTime? installationSignedOffAt;
 
+  // Final payment proof fields (operations-uploaded)
+  final String? finalPaymentProofUrl; // URL of proof uploaded by operations
+  final DateTime? finalPaymentProofUploadedAt; // Timestamp of proof upload
+  final String? finalPaymentProofUploadedBy; // User ID who uploaded proof
+  final String? finalPaymentProofUploadedByName; // User name who uploaded proof
+
+  // Final payment proof fields (customer-uploaded)
+  final String? customerUploadedFinalPaymentProofUrl; // URL of proof uploaded by customer
+  final DateTime? customerUploadedFinalPaymentProofAt; // When customer uploaded
+  final bool customerFinalPaymentProofVerified; // Whether operations verified it
+  final DateTime? customerFinalPaymentProofVerifiedAt; // When operations verified
+  final String? customerFinalPaymentProofVerifiedBy; // User ID who verified
+  final String? customerFinalPaymentProofVerifiedByName; // User name who verified
+
+  // Final payment proof rejection fields
+  final bool customerFinalPaymentProofRejected; // Whether proof was rejected
+  final DateTime? customerFinalPaymentProofRejectedAt; // When rejected
+  final String? customerFinalPaymentProofRejectedBy; // User ID who rejected
+  final String? customerFinalPaymentProofRejectedByName; // User name who rejected
+  final String? customerFinalPaymentProofRejectionReason; // Reason for rejection
+
   Order({
     required this.id,
     required this.appointmentId,
@@ -168,6 +189,24 @@ class Order {
     this.hasInstallationSignoff = false,
     this.installationSignoffCreatedAt,
     this.installationSignedOffAt,
+    // Final payment proof fields (operations-uploaded)
+    this.finalPaymentProofUrl,
+    this.finalPaymentProofUploadedAt,
+    this.finalPaymentProofUploadedBy,
+    this.finalPaymentProofUploadedByName,
+    // Final payment proof fields (customer-uploaded)
+    this.customerUploadedFinalPaymentProofUrl,
+    this.customerUploadedFinalPaymentProofAt,
+    this.customerFinalPaymentProofVerified = false,
+    this.customerFinalPaymentProofVerifiedAt,
+    this.customerFinalPaymentProofVerifiedBy,
+    this.customerFinalPaymentProofVerifiedByName,
+    // Final payment proof rejection fields
+    this.customerFinalPaymentProofRejected = false,
+    this.customerFinalPaymentProofRejectedAt,
+    this.customerFinalPaymentProofRejectedBy,
+    this.customerFinalPaymentProofRejectedByName,
+    this.customerFinalPaymentProofRejectionReason,
   });
 
   /// Get time in current stage
@@ -301,8 +340,39 @@ class Order {
       hasInstallationSignoff: map['hasInstallationSignoff'] == true,
       installationSignoffCreatedAt:
           (map['installationSignoffCreatedAt'] as Timestamp?)?.toDate(),
-      installationSignedOffAt:
-          (map['installationSignedOffAt'] as Timestamp?)?.toDate(),
+      installationSignedOffAt: (map['installationSignedOffAt'] as Timestamp?)
+          ?.toDate(),
+      // Final payment proof fields (operations-uploaded)
+      finalPaymentProofUrl: map['finalPaymentProofUrl']?.toString(),
+      finalPaymentProofUploadedAt:
+          (map['finalPaymentProofUploadedAt'] as Timestamp?)?.toDate(),
+      finalPaymentProofUploadedBy: map['finalPaymentProofUploadedBy']?.toString(),
+      finalPaymentProofUploadedByName:
+          map['finalPaymentProofUploadedByName']?.toString(),
+      // Final payment proof fields (customer-uploaded)
+      customerUploadedFinalPaymentProofUrl:
+          map['customerUploadedFinalPaymentProofUrl']?.toString(),
+      customerUploadedFinalPaymentProofAt:
+          (map['customerUploadedFinalPaymentProofAt'] as Timestamp?)?.toDate(),
+      customerFinalPaymentProofVerified:
+          map['customerFinalPaymentProofVerified'] == true,
+      customerFinalPaymentProofVerifiedAt:
+          (map['customerFinalPaymentProofVerifiedAt'] as Timestamp?)?.toDate(),
+      customerFinalPaymentProofVerifiedBy:
+          map['customerFinalPaymentProofVerifiedBy']?.toString(),
+      customerFinalPaymentProofVerifiedByName:
+          map['customerFinalPaymentProofVerifiedByName']?.toString(),
+      // Final payment proof rejection fields
+      customerFinalPaymentProofRejected:
+          map['customerFinalPaymentProofRejected'] == true,
+      customerFinalPaymentProofRejectedAt:
+          (map['customerFinalPaymentProofRejectedAt'] as Timestamp?)?.toDate(),
+      customerFinalPaymentProofRejectedBy:
+          map['customerFinalPaymentProofRejectedBy']?.toString(),
+      customerFinalPaymentProofRejectedByName:
+          map['customerFinalPaymentProofRejectedByName']?.toString(),
+      customerFinalPaymentProofRejectionReason:
+          map['customerFinalPaymentProofRejectionReason']?.toString(),
     );
   }
 
@@ -388,6 +458,32 @@ class Order {
       'installationSignedOffAt': installationSignedOffAt != null
           ? Timestamp.fromDate(installationSignedOffAt!)
           : null,
+      // Final payment proof fields (operations-uploaded)
+      'finalPaymentProofUrl': finalPaymentProofUrl,
+      'finalPaymentProofUploadedAt': finalPaymentProofUploadedAt != null
+          ? Timestamp.fromDate(finalPaymentProofUploadedAt!)
+          : null,
+      'finalPaymentProofUploadedBy': finalPaymentProofUploadedBy,
+      'finalPaymentProofUploadedByName': finalPaymentProofUploadedByName,
+      // Final payment proof fields (customer-uploaded)
+      'customerUploadedFinalPaymentProofUrl': customerUploadedFinalPaymentProofUrl,
+      'customerUploadedFinalPaymentProofAt': customerUploadedFinalPaymentProofAt != null
+          ? Timestamp.fromDate(customerUploadedFinalPaymentProofAt!)
+          : null,
+      'customerFinalPaymentProofVerified': customerFinalPaymentProofVerified,
+      'customerFinalPaymentProofVerifiedAt': customerFinalPaymentProofVerifiedAt != null
+          ? Timestamp.fromDate(customerFinalPaymentProofVerifiedAt!)
+          : null,
+      'customerFinalPaymentProofVerifiedBy': customerFinalPaymentProofVerifiedBy,
+      'customerFinalPaymentProofVerifiedByName': customerFinalPaymentProofVerifiedByName,
+      // Final payment proof rejection fields
+      'customerFinalPaymentProofRejected': customerFinalPaymentProofRejected,
+      'customerFinalPaymentProofRejectedAt': customerFinalPaymentProofRejectedAt != null
+          ? Timestamp.fromDate(customerFinalPaymentProofRejectedAt!)
+          : null,
+      'customerFinalPaymentProofRejectedBy': customerFinalPaymentProofRejectedBy,
+      'customerFinalPaymentProofRejectedByName': customerFinalPaymentProofRejectedByName,
+      'customerFinalPaymentProofRejectionReason': customerFinalPaymentProofRejectionReason,
     };
   }
 
@@ -453,6 +549,24 @@ class Order {
     bool? hasInstallationSignoff,
     DateTime? installationSignoffCreatedAt,
     DateTime? installationSignedOffAt,
+    // Final payment proof fields (operations-uploaded)
+    String? finalPaymentProofUrl,
+    DateTime? finalPaymentProofUploadedAt,
+    String? finalPaymentProofUploadedBy,
+    String? finalPaymentProofUploadedByName,
+    // Final payment proof fields (customer-uploaded)
+    String? customerUploadedFinalPaymentProofUrl,
+    DateTime? customerUploadedFinalPaymentProofAt,
+    bool? customerFinalPaymentProofVerified,
+    DateTime? customerFinalPaymentProofVerifiedAt,
+    String? customerFinalPaymentProofVerifiedBy,
+    String? customerFinalPaymentProofVerifiedByName,
+    // Final payment proof rejection fields
+    bool? customerFinalPaymentProofRejected,
+    DateTime? customerFinalPaymentProofRejectedAt,
+    String? customerFinalPaymentProofRejectedBy,
+    String? customerFinalPaymentProofRejectedByName,
+    String? customerFinalPaymentProofRejectionReason,
   }) {
     return Order(
       id: id ?? this.id,
@@ -532,6 +646,38 @@ class Order {
           installationSignoffCreatedAt ?? this.installationSignoffCreatedAt,
       installationSignedOffAt:
           installationSignedOffAt ?? this.installationSignedOffAt,
+      // Final payment proof fields (operations-uploaded)
+      finalPaymentProofUrl: finalPaymentProofUrl ?? this.finalPaymentProofUrl,
+      finalPaymentProofUploadedAt:
+          finalPaymentProofUploadedAt ?? this.finalPaymentProofUploadedAt,
+      finalPaymentProofUploadedBy:
+          finalPaymentProofUploadedBy ?? this.finalPaymentProofUploadedBy,
+      finalPaymentProofUploadedByName:
+          finalPaymentProofUploadedByName ?? this.finalPaymentProofUploadedByName,
+      // Final payment proof fields (customer-uploaded)
+      customerUploadedFinalPaymentProofUrl:
+          customerUploadedFinalPaymentProofUrl ?? this.customerUploadedFinalPaymentProofUrl,
+      customerUploadedFinalPaymentProofAt:
+          customerUploadedFinalPaymentProofAt ?? this.customerUploadedFinalPaymentProofAt,
+      customerFinalPaymentProofVerified:
+          customerFinalPaymentProofVerified ?? this.customerFinalPaymentProofVerified,
+      customerFinalPaymentProofVerifiedAt:
+          customerFinalPaymentProofVerifiedAt ?? this.customerFinalPaymentProofVerifiedAt,
+      customerFinalPaymentProofVerifiedBy:
+          customerFinalPaymentProofVerifiedBy ?? this.customerFinalPaymentProofVerifiedBy,
+      customerFinalPaymentProofVerifiedByName:
+          customerFinalPaymentProofVerifiedByName ?? this.customerFinalPaymentProofVerifiedByName,
+      // Final payment proof rejection fields
+      customerFinalPaymentProofRejected:
+          customerFinalPaymentProofRejected ?? this.customerFinalPaymentProofRejected,
+      customerFinalPaymentProofRejectedAt:
+          customerFinalPaymentProofRejectedAt ?? this.customerFinalPaymentProofRejectedAt,
+      customerFinalPaymentProofRejectedBy:
+          customerFinalPaymentProofRejectedBy ?? this.customerFinalPaymentProofRejectedBy,
+      customerFinalPaymentProofRejectedByName:
+          customerFinalPaymentProofRejectedByName ?? this.customerFinalPaymentProofRejectedByName,
+      customerFinalPaymentProofRejectionReason:
+          customerFinalPaymentProofRejectionReason ?? this.customerFinalPaymentProofRejectionReason,
     );
   }
 
