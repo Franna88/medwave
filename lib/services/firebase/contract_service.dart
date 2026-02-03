@@ -87,8 +87,9 @@ class ContractService {
         subtotal += pkg.price * pkg.quantity;
       }
 
-      final depositAmount = subtotal * 0.10; // 10% deposit
-      final remainingBalance = subtotal * 0.60; // 60% balance
+      final totalInclVat = subtotal * 1.15; // 15% VAT
+      final depositAmount = totalInclVat * 0.10; // 10% deposit
+      final remainingBalance = totalInclVat - depositAmount; // 90% balance
 
       // Create contract document reference
       final docRef = _firestore.collection(_collectionPath).doc();
@@ -202,8 +203,9 @@ class ContractService {
         }
       }
 
-      final depositAmount = finalSubtotal * 0.10; // 10% deposit
-      final remainingBalance = finalSubtotal * 0.60; // 60% balance
+      final totalInclVat = finalSubtotal * 1.15; // 15% VAT
+      final depositAmount = totalInclVat * 0.10; // 10% deposit
+      final remainingBalance = totalInclVat - depositAmount; // 90% balance
 
       // Get revision number: always chain to root contract so numbers increment (1, 2, 3...)
       final rootId = originalContract.parentContractId ?? originalContract.id;
@@ -382,6 +384,7 @@ class ContractService {
             .get();
         if (doc.exists) {
           final contract = Contract.fromFirestore(doc);
+          final contractViewUrl = getFullContractUrl(contract);
           // Move appointment to Deposit Requested stage with email notification
           await _appointmentService.moveAppointmentToStage(
             appointmentId: contract.appointmentId,
@@ -391,6 +394,7 @@ class ContractService {
             userId: 'system',
             userName: 'System (Contract Signing)',
             shouldSendDepositEmail: true, // Triggers deposit confirmation email
+            contractViewUrl: contractViewUrl,
           );
           if (kDebugMode) {
             print(

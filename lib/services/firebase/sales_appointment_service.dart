@@ -224,6 +224,7 @@ class SalesAppointmentService {
     DateTime? depositConfirmationRespondedAt,
     bool shouldSendDepositEmail = true,
     String? paymentType,
+    String? contractViewUrl,
   }) async {
     try {
       final appointment = await getAppointment(appointmentId);
@@ -263,6 +264,7 @@ class SalesAppointmentService {
           appointment: appointment,
           yesUrl: yesUrl,
           noUrl: noUrl,
+          contractViewUrl: contractViewUrl,
         );
       }
 

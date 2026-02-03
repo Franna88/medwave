@@ -5,7 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
-import '../../models/contracts/contract.dart';
+import '../../models/contracts/contract.dart' show Contract, ContractProduct;
 import 'pdf_styles.dart';
 
 /// Service for generating contract PDFs
@@ -71,72 +71,61 @@ class ContractPdfService {
     if (kDebugMode) print('🔍 [PDF-GREY-LOGO] load_time=${logoDuration}ms');
     // #endregion
 
-    // Page 2: Invoice-style layout
+    // Page 2+: Invoice-style layout (MultiPage so long quote tables can flow)
     // #region agent log
     final page2StartTime = DateTime.now().millisecondsSinceEpoch;
     // #endregion
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
-        build: (context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            // Header: Logo and Title both centered
-            pw.Column(
-              children: [
-                // Logo centered
-                pw.Center(child: pw.Image(greyLogo, width: 150, height: 50)),
-                pw.SizedBox(height: 16),
-                // Title centered
-                pw.Center(
-                  child: pw.RichText(
-                    text: pw.TextSpan(
-                      children: [
-                        pw.TextSpan(
-                          text: 'MedWave',
-                          style: pw.TextStyle(
-                            fontSize: 18,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
+        build: (context) => [
+          // Header: Logo and Title both centered
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Center(child: pw.Image(greyLogo, width: 150, height: 50)),
+              pw.SizedBox(height: 16),
+              pw.Center(
+                child: pw.RichText(
+                  text: pw.TextSpan(
+                    children: [
+                      pw.TextSpan(
+                        text: 'MedWave',
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
                         ),
-                        pw.TextSpan(
-                          text: 'TM',
-                          style: pw.TextStyle(
-                            fontSize: 10,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
+                      ),
+                      pw.TextSpan(
+                        text: 'TM',
+                        style: pw.TextStyle(
+                          fontSize: 10,
+                          fontWeight: pw.FontWeight.bold,
                         ),
-                        pw.TextSpan(
-                          text: ' Device Invoice',
-                          style: pw.TextStyle(
-                            fontSize: 18,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
+                      ),
+                      pw.TextSpan(
+                        text: ' Device Invoice',
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-            pw.SizedBox(height: 24),
-
-            // Two-column: Company info | Customer info
-            _buildInvoiceInfoRow(contract),
-            pw.SizedBox(height: 24),
-
-            // Quote table
-            _buildInvoiceQuoteTable(contract),
-            pw.SizedBox(height: 24),
-
-            // Payment info + Bank details
-            _buildPaymentInfo(),
-
-            pw.Spacer(),
-            _buildFooter(),
-          ],
-        ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 24),
+          _buildInvoiceInfoRow(contract),
+          pw.SizedBox(height: 24),
+          // Quote table as separate widgets so MultiPage can flow across pages
+          ..._buildInvoiceQuoteTableWidgets(contract),
+          pw.SizedBox(height: 24),
+          _buildPaymentInfo(),
+          _buildFooter(),
+        ],
       ),
     );
     // #region agent log
@@ -159,8 +148,9 @@ class ContractPdfService {
           build: (context) => [
             pw.Text('Agreement Terms', style: PdfStyles.h2),
             PdfStyles.thickDivider,
-            pw.Text(
-              plainText,
+            // Paragraph can span pages; pw.Text cannot, so long contract text would overflow
+            pw.Paragraph(
+              text: plainText,
               style: PdfStyles.bodyText,
               textAlign: pw.TextAlign.justify,
             ),
@@ -605,101 +595,134 @@ class ContractPdfService {
     );
   }
 
-  /// Build invoice-style quote table
-  pw.Widget _buildInvoiceQuoteTable(Contract contract) {
-    return pw.Container(
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey400),
+  /// Build invoice quote table as list of widgets for MultiPage (avoids overflow when many products).
+  List<pw.Widget> _buildInvoiceQuoteTableWidgets(Contract contract) {
+    return [
+      pw.Container(
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey400),
+        ),
+        child: _buildInvoiceQuoteTableHeader(),
       ),
-      child: pw.Column(
-        children: [
-          // Table header
-          pw.Container(
-            color: PdfColors.grey300,
-            padding: const pw.EdgeInsets.all(8),
-            child: pw.Row(
-              children: [
-                pw.Expanded(
-                  flex: 4,
-                  child: pw.Text('Name', style: PdfStyles.bodyTextBold),
-                ),
-                pw.Expanded(
-                  flex: 1,
-                  child: pw.Text(
-                    'QTY',
-                    style: PdfStyles.bodyTextBold,
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-              ],
+      ...contract.products.map(
+        (product) => pw.Container(
+          decoration: pw.BoxDecoration(
+            border: pw.Border(
+              left: const pw.BorderSide(color: PdfColors.grey400),
+              right: const pw.BorderSide(color: PdfColors.grey400),
+              bottom: const pw.BorderSide(color: PdfColors.grey300),
             ),
           ),
-          // Products (sub-items indented)
-          ...contract.products
-              .map(
-                (product) {
-                  final isSubItem = product.isSubItem;
-                  return pw.Container(
-                    padding: pw.EdgeInsets.only(
-                      left: isSubItem ? 20 : 8,
-                      right: 8,
-                      top: 8,
-                      bottom: 8,
-                    ),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border(
-                        bottom: pw.BorderSide(color: PdfColors.grey300),
-                      ),
-                    ),
-                    child: pw.Row(
-                      children: [
-                        pw.Expanded(
-                          flex: 4,
-                          child: pw.Text(
-                            product.name,
-                            style: isSubItem
-                                ? pw.TextStyle(
-                                    fontSize: 10,
-                                    color: PdfStyles.grayColor,
-                                  )
-                                : PdfStyles.bodyText,
-                          ),
-                        ),
-                        pw.Expanded(
-                          flex: 1,
-                          child: pw.Text(
-                            isSubItem ? '' : product.quantity.toString(),
-                            textAlign: pw.TextAlign.center,
-                            style: PdfStyles.bodyText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              )
-              .toList(),
-          // Totals section (Subtotal excludes discount; Discount row if any; Total = contract.subtotal)
-          pw.Container(
-            padding: const pw.EdgeInsets.all(16),
-            child: pw.Column(
-              children: [
-                _buildSubtotalDiscountTotalRows(contract),
-                pw.SizedBox(height: 4),
-                _buildTotalRow(
-                  'Deposit Allocate',
-                  contract.depositAmount,
-                  isBold: true,
-                ),
-                pw.Divider(),
-                _buildTotalRow(
-                  'Total',
-                  contract.subtotal,
-                  isBold: true,
-                  isLarge: true,
-                ),
-              ],
+          child: _buildInvoiceQuoteRow(product),
+        ),
+      ),
+      pw.Container(
+        decoration: pw.BoxDecoration(
+          border: pw.Border(
+            left: const pw.BorderSide(color: PdfColors.grey400),
+            right: const pw.BorderSide(color: PdfColors.grey400),
+            bottom: const pw.BorderSide(color: PdfColors.grey400),
+          ),
+        ),
+        child: _buildInvoiceQuoteTotals(contract),
+      ),
+    ];
+  }
+
+  pw.Widget _buildInvoiceQuoteTableHeader() {
+    return pw.Container(
+      color: PdfColors.grey300,
+      padding: const pw.EdgeInsets.all(8),
+      child: pw.Row(
+        children: [
+          pw.Expanded(
+            flex: 4,
+            child: pw.Text('Name', style: PdfStyles.bodyTextBold),
+          ),
+          pw.Expanded(
+            flex: 1,
+            child: pw.Text(
+              'QTY',
+              style: PdfStyles.bodyTextBold,
+              textAlign: pw.TextAlign.center,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildInvoiceQuoteRow(ContractProduct product) {
+    final isSubItem = product.isSubItem;
+    return pw.Container(
+      padding: pw.EdgeInsets.only(
+        left: isSubItem ? 20 : 8,
+        right: 8,
+        top: 8,
+        bottom: 8,
+      ),
+      child: pw.Row(
+        children: [
+          pw.Expanded(
+            flex: 4,
+            child: pw.Text(
+              product.name,
+              style: isSubItem
+                  ? pw.TextStyle(
+                      fontSize: 10,
+                      color: PdfStyles.grayColor,
+                    )
+                  : PdfStyles.bodyText,
+            ),
+          ),
+          pw.Expanded(
+            flex: 1,
+            child: pw.Text(
+              isSubItem ? '' : product.quantity.toString(),
+              textAlign: pw.TextAlign.center,
+              style: PdfStyles.bodyText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildInvoiceQuoteTotals(Contract contract) {
+    // Net subtotal ex VAT (from products; discount lines are typically negative)
+    double subtotalBeforeDiscount = 0;
+    double discountTotal = 0;
+    for (final p in contract.products) {
+      if (p.lineType == 'discount') {
+        discountTotal += p.lineTotal;
+      } else {
+        subtotalBeforeDiscount += p.lineTotal;
+      }
+    }
+    final netSubtotalExVat = subtotalBeforeDiscount + discountTotal;
+    final vatAmount = netSubtotalExVat * 0.15;
+    final totalInclVat = netSubtotalExVat + vatAmount;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      child: pw.Column(
+        children: [
+          _buildSubtotalDiscountTotalRows(contract),
+          pw.SizedBox(height: 4),
+          _buildTotalRow('VAT (15%)', vatAmount),
+          pw.SizedBox(height: 4),
+          _buildTotalRow('Total (incl. VAT)', totalInclVat, isBold: true),
+          pw.SizedBox(height: 4),
+          _buildTotalRow(
+            'Deposit Allocate',
+            contract.depositAmount,
+            isBold: true,
+          ),
+          pw.SizedBox(height: 4),
+          _buildTotalRow(
+            'Balance due',
+            contract.remainingBalance,
+            isBold: true,
           ),
         ],
       ),

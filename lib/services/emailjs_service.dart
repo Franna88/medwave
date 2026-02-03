@@ -240,6 +240,7 @@ class EmailJSService {
     String? description,
     String? yesLabel,
     String? noLabel,
+    String? contractViewUrl,
   }) async {
     final amountText = appointment.depositAmount != null
         ? appointment.depositAmount!.toStringAsFixed(2)
@@ -259,6 +260,7 @@ class EmailJSService {
         description: resolvedDescription,
         yesLabel: yesLabel ?? 'Yes, I made the deposit',
         noLabel: noLabel ?? 'No, not yet',
+        contractViewUrl: contractViewUrl,
       ),
     );
   }
@@ -381,6 +383,7 @@ class EmailJSService {
     required String description,
     required String yesLabel,
     required String noLabel,
+    String? contractViewUrl,
   }) {
     // Calculate deposit amount: use stored depositAmount, or calculate 10% of total if not set
     double calculatedAmount = 0;
@@ -409,6 +412,8 @@ class EmailJSService {
       'no_label': noLabel,
       'yes_url': yesUrl,
       'no_url': noUrl,
+      if (contractViewUrl != null && contractViewUrl.isNotEmpty)
+        'contract_view_url': contractViewUrl,
     };
   }
 

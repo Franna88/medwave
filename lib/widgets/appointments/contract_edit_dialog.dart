@@ -28,8 +28,10 @@ class _InvoiceLineItem {
   int quantity;
   double price;
   final bool isCustom;
+
   /// For sub-rows under a package (packageItem, addedService).
   final String? parentId;
+
   /// One of: standalone, packageHeader, packageItem, addedService.
   final String lineType;
 
@@ -94,47 +96,62 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
   }
 
   /// Builds header + package items + included services for a package (same as "Add package" in preview).
-  List<_InvoiceLineItem> _expandPackageToLines(ProductPackage pkg, List<ProductItem> products) {
+  List<_InvoiceLineItem> _expandPackageToLines(
+    ProductPackage pkg,
+    List<ProductItem> products,
+  ) {
     final lines = <_InvoiceLineItem>[];
-    lines.add(_InvoiceLineItem(
-      id: pkg.id,
-      name: pkg.name,
-      quantity: 1,
-      price: pkg.price,
-      isCustom: false,
-      parentId: null,
-      lineType: _kLineTypePackageHeader,
-    ));
-    for (final entry in pkg.packageItems) {
-      final productMatch = products.where((p) => p.id == entry.productId).toList();
-      final resolvedName = productMatch.isEmpty ? 'Product ${entry.productId}' : productMatch.first.name;
-      lines.add(_InvoiceLineItem(
-        id: '${pkg.id}-item-${entry.productId}',
-        name: '${entry.quantity}x $resolvedName',
-        quantity: entry.quantity,
-        price: 0,
+    lines.add(
+      _InvoiceLineItem(
+        id: pkg.id,
+        name: pkg.name,
+        quantity: 1,
+        price: pkg.price,
         isCustom: false,
-        parentId: pkg.id,
-        lineType: _kLineTypePackageItem,
-      ));
+        parentId: null,
+        lineType: _kLineTypePackageHeader,
+      ),
+    );
+    for (final entry in pkg.packageItems) {
+      final productMatch = products
+          .where((p) => p.id == entry.productId)
+          .toList();
+      final resolvedName = productMatch.isEmpty
+          ? 'Product ${entry.productId}'
+          : productMatch.first.name;
+      lines.add(
+        _InvoiceLineItem(
+          id: '${pkg.id}-item-${entry.productId}',
+          name: '${entry.quantity}x $resolvedName',
+          quantity: entry.quantity,
+          price: 0,
+          isCustom: false,
+          parentId: pkg.id,
+          lineType: _kLineTypePackageItem,
+        ),
+      );
     }
     final labels = pkg.includedServiceLabels ?? [];
     for (var i = 0; i < labels.length; i++) {
-      lines.add(_InvoiceLineItem(
-        id: '${pkg.id}-svc-$i',
-        name: labels[i],
-        quantity: 1,
-        price: 0,
-        isCustom: false,
-        parentId: pkg.id,
-        lineType: _kLineTypeAddedService,
-      ));
+      lines.add(
+        _InvoiceLineItem(
+          id: '${pkg.id}-svc-$i',
+          name: labels[i],
+          quantity: 1,
+          price: 0,
+          isCustom: false,
+          parentId: pkg.id,
+          lineType: _kLineTypeAddedService,
+        ),
+      );
     }
     return lines;
   }
 
   /// Replaces any package header line (id in packages) with full expansion: header + items + services.
-  List<_InvoiceLineItem> _expandPackageLinesInList(List<_InvoiceLineItem> items) {
+  List<_InvoiceLineItem> _expandPackageLinesInList(
+    List<_InvoiceLineItem> items,
+  ) {
     final packageProvider = context.read<ProductPackagesProvider>();
     final productProvider = context.read<ProductItemsProvider>();
     final packages = packageProvider.packages;
@@ -143,7 +160,8 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
     for (final line in items) {
       final matching = packages.where((p) => p.id == line.id).toList();
       if (matching.isNotEmpty &&
-          (line.lineType == _kLineTypePackageHeader || line.lineType == _kLineTypeStandalone)) {
+          (line.lineType == _kLineTypePackageHeader ||
+              line.lineType == _kLineTypeStandalone)) {
         result.addAll(_expandPackageToLines(matching.first, products));
       } else {
         result.add(line);
@@ -163,15 +181,19 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
     // Invoice line items: from contract, or seed from appointment when contract has no products
     if (widget.contract.products.isNotEmpty) {
       _invoiceLineItems = widget.contract.products
-          .map((p) => _InvoiceLineItem(
-                id: p.id,
-                name: p.name,
-                quantity: p.quantity,
-                price: p.price,
-                isCustom: false,
-                parentId: p.parentId,
-                lineType: p.lineType ?? (p.isSubItem ? _kLineTypePackageItem : _kLineTypeStandalone),
-              ))
+          .map(
+            (p) => _InvoiceLineItem(
+              id: p.id,
+              name: p.name,
+              quantity: p.quantity,
+              price: p.price,
+              isCustom: false,
+              parentId: p.parentId,
+              lineType:
+                  p.lineType ??
+                  (p.isSubItem ? _kLineTypePackageItem : _kLineTypeStandalone),
+            ),
+          )
           .toList();
       _invoiceLineItems = _expandPackageLinesInList(_invoiceLineItems);
     } else if (widget.appointment.optInProducts.isNotEmpty ||
@@ -182,40 +204,48 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
       final products = productProvider.items.where((p) => p.isActive).toList();
       final seedList = <_InvoiceLineItem>[];
       for (final p in widget.appointment.optInProducts) {
-        seedList.add(_InvoiceLineItem(
-          id: p.id,
-          name: p.name,
-          quantity: p.quantity,
-          price: p.price,
-          lineType: _kLineTypeStandalone,
-        ));
+        seedList.add(
+          _InvoiceLineItem(
+            id: p.id,
+            name: p.name,
+            quantity: p.quantity,
+            price: p.price,
+            lineType: _kLineTypeStandalone,
+          ),
+        );
       }
       for (final p in widget.appointment.optInPackages) {
         final pkg = packages.where((x) => x.id == p.id).toList();
         if (pkg.isNotEmpty) {
           seedList.addAll(_expandPackageToLines(pkg.first, products));
         } else {
-          seedList.add(_InvoiceLineItem(
-            id: p.id,
-            name: p.name,
-            quantity: p.quantity,
-            price: p.price,
-            lineType: _kLineTypePackageHeader,
-          ));
+          seedList.add(
+            _InvoiceLineItem(
+              id: p.id,
+              name: p.name,
+              quantity: p.quantity,
+              price: p.price,
+              lineType: _kLineTypePackageHeader,
+            ),
+          );
         }
       }
       _invoiceLineItems = seedList;
     } else {
       _invoiceLineItems = widget.contract.products
-          .map((p) => _InvoiceLineItem(
-                id: p.id,
-                name: p.name,
-                quantity: p.quantity,
-                price: p.price,
-                isCustom: false,
-                parentId: p.parentId,
-                lineType: p.lineType ?? (p.isSubItem ? _kLineTypePackageItem : _kLineTypeStandalone),
-              ))
+          .map(
+            (p) => _InvoiceLineItem(
+              id: p.id,
+              name: p.name,
+              quantity: p.quantity,
+              price: p.price,
+              isCustom: false,
+              parentId: p.parentId,
+              lineType:
+                  p.lineType ??
+                  (p.isSubItem ? _kLineTypePackageItem : _kLineTypeStandalone),
+            ),
+          )
           .toList();
     }
   }
@@ -254,42 +284,54 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
     try {
       final productProvider = context.read<ProductItemsProvider>();
       final packageProvider = context.read<ProductPackagesProvider>();
-      final productIds =
-          productProvider.items.where((p) => p.isActive).map((p) => p.id).toSet();
-      final packageIds =
-          packageProvider.packages.where((p) => p.isActive).map((p) => p.id).toSet();
+      final productIds = productProvider.items
+          .where((p) => p.isActive)
+          .map((p) => p.id)
+          .toSet();
+      final packageIds = packageProvider.packages
+          .where((p) => p.isActive)
+          .map((p) => p.id)
+          .toSet();
 
       // Build contract products from invoice line items (source of truth)
       final contractProducts = _invoiceLineItems
-          .map((l) => ContractProduct(
-                id: l.id,
-                name: l.name,
-                price: l.price,
-                quantity: l.quantity,
-                isSubItem: l.lineType == _kLineTypePackageItem || l.lineType == _kLineTypeAddedService,
-                parentId: l.parentId,
-                lineType: l.lineType,
-              ))
+          .map(
+            (l) => ContractProduct(
+              id: l.id,
+              name: l.name,
+              price: l.price,
+              quantity: l.quantity,
+              isSubItem:
+                  l.lineType == _kLineTypePackageItem ||
+                  l.lineType == _kLineTypeAddedService,
+              parentId: l.parentId,
+              lineType: l.lineType,
+            ),
+          )
           .toList();
 
       // Derive optInProducts and optInPackages from invoice lines for downstream flows
       final updatedOptInProducts = _invoiceLineItems
           .where((l) => productIds.contains(l.id))
-          .map((l) => OptInProduct(
-                id: l.id,
-                name: l.name,
-                price: l.price,
-                quantity: l.quantity,
-              ))
+          .map(
+            (l) => OptInProduct(
+              id: l.id,
+              name: l.name,
+              price: l.price,
+              quantity: l.quantity,
+            ),
+          )
           .toList();
       final updatedOptInPackages = _invoiceLineItems
           .where((l) => packageIds.contains(l.id))
-          .map((l) => OptInProduct(
-                id: l.id,
-                name: l.name,
-                price: l.price,
-                quantity: l.quantity,
-              ))
+          .map(
+            (l) => OptInProduct(
+              id: l.id,
+              name: l.name,
+              price: l.price,
+              quantity: l.quantity,
+            ),
+          )
           .toList();
 
       final salesAppointmentService = SalesAppointmentService();
@@ -533,7 +575,9 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
                       label: const Text('Preview & edit invoice'),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -541,10 +585,7 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
                       _invoiceLineItems.isEmpty
                           ? 'No line items yet. Open the preview to add and edit lines.'
                           : '${_invoiceLineItems.length} line item${_invoiceLineItems.length == 1 ? '' : 's'} · Subtotal R ${_calculateSubtotalFromInvoiceLines().toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                     ),
                     const SizedBox(height: 16),
 
@@ -558,7 +599,10 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
                         ),
                         child: Column(
                           children: [
-                            _buildTotalRow('Subtotal', _calculateSubtotalFromInvoiceLines()),
+                            _buildTotalRow(
+                              'Subtotal',
+                              _calculateSubtotalFromInvoiceLines(),
+                            ),
                             const SizedBox(height: 8),
                             _buildTotalRow(
                               'Deposit (10%)',
@@ -836,28 +880,32 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
     );
     if (amount != null && amount > 0 && mounted) {
       final id = 'discount-${DateTime.now().millisecondsSinceEpoch}';
-      widget.lineItems.add(_InvoiceLineItem(
-        id: id,
-        name: 'Discount',
-        quantity: 1,
-        price: -amount,
-        isCustom: true,
-        lineType: _kLineTypeDiscount,
-      ));
+      widget.lineItems.add(
+        _InvoiceLineItem(
+          id: id,
+          name: 'Discount',
+          quantity: 1,
+          price: -amount,
+          isCustom: true,
+          lineType: _kLineTypeDiscount,
+        ),
+      );
       setState(() {});
     }
   }
 
   void _addLine() {
     final id = 'custom-${DateTime.now().millisecondsSinceEpoch}';
-    widget.lineItems.add(_InvoiceLineItem(
-      id: id,
-      name: '',
-      quantity: 1,
-      price: 0,
-      isCustom: true,
-      lineType: _kLineTypeStandalone,
-    ));
+    widget.lineItems.add(
+      _InvoiceLineItem(
+        id: id,
+        name: '',
+        quantity: 1,
+        price: 0,
+        isCustom: true,
+        lineType: _kLineTypeStandalone,
+      ),
+    );
     setState(() {});
   }
 
@@ -866,9 +914,9 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
     final products = productProvider.items.where((p) => p.isActive).toList();
     if (products.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No products available')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No products available')));
       }
       return;
     }
@@ -900,27 +948,28 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
       ),
     );
     if (selected == null || !mounted) return;
-    widget.lineItems.add(_InvoiceLineItem(
-      id: selected.id,
-      name: selected.name,
-      quantity: 1,
-      price: selected.price,
-      isCustom: false,
-      lineType: _kLineTypeStandalone,
-    ));
+    widget.lineItems.add(
+      _InvoiceLineItem(
+        id: selected.id,
+        name: selected.name,
+        quantity: 1,
+        price: selected.price,
+        isCustom: false,
+        lineType: _kLineTypeStandalone,
+      ),
+    );
     setState(() {});
   }
 
   void _addPackage() async {
     final packageProvider = context.read<ProductPackagesProvider>();
     final productProvider = context.read<ProductItemsProvider>();
-    final packages =
-        packageProvider.packages.where((p) => p.isActive).toList();
+    final packages = packageProvider.packages.where((p) => p.isActive).toList();
     if (packages.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No packages available')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No packages available')));
       }
       return;
     }
@@ -954,41 +1003,51 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
     if (selected == null || !mounted) return;
     final products = productProvider.items.where((p) => p.isActive).toList();
     // Package header
-    widget.lineItems.add(_InvoiceLineItem(
-      id: selected.id,
-      name: selected.name,
-      quantity: 1,
-      price: selected.price,
-      isCustom: false,
-      parentId: null,
-      lineType: _kLineTypePackageHeader,
-    ));
+    widget.lineItems.add(
+      _InvoiceLineItem(
+        id: selected.id,
+        name: selected.name,
+        quantity: 1,
+        price: selected.price,
+        isCustom: false,
+        parentId: null,
+        lineType: _kLineTypePackageHeader,
+      ),
+    );
     // Package item lines (resolve productId to name; price 0 so only package header counts toward total)
     for (final entry in selected.packageItems) {
-      final productMatch = products.where((p) => p.id == entry.productId).toList();
-      final resolvedName = productMatch.isEmpty ? 'Product ${entry.productId}' : productMatch.first.name;
-      widget.lineItems.add(_InvoiceLineItem(
-        id: '${selected.id}-item-${entry.productId}',
-        name: '${entry.quantity}x $resolvedName',
-        quantity: entry.quantity,
-        price: 0, // descriptive only; package price is on the header line
-        isCustom: false,
-        parentId: selected.id,
-        lineType: _kLineTypePackageItem,
-      ));
+      final productMatch = products
+          .where((p) => p.id == entry.productId)
+          .toList();
+      final resolvedName = productMatch.isEmpty
+          ? 'Product ${entry.productId}'
+          : productMatch.first.name;
+      widget.lineItems.add(
+        _InvoiceLineItem(
+          id: '${selected.id}-item-${entry.productId}',
+          name: '${entry.quantity}x $resolvedName',
+          quantity: entry.quantity,
+          price: 0, // descriptive only; package price is on the header line
+          isCustom: false,
+          parentId: selected.id,
+          lineType: _kLineTypePackageItem,
+        ),
+      );
     }
     // Added service lines
     final labels = selected.includedServiceLabels ?? [];
     for (var i = 0; i < labels.length; i++) {
-      widget.lineItems.add(_InvoiceLineItem(
-        id: '${selected.id}-svc-$i',
-        name: labels[i],
-        quantity: 1,
-        price: 0,
-        isCustom: false,
-        parentId: selected.id,
-        lineType: _kLineTypeAddedService,
-      ));
+      widget.lineItems.add(
+        _InvoiceLineItem(
+          id: '${selected.id}-svc-$i',
+          name: labels[i],
+          quantity: 1,
+          price: 0,
+          isCustom: false,
+          parentId: selected.id,
+          lineType: _kLineTypeAddedService,
+        ),
+      );
     }
     setState(() {});
   }
@@ -1026,7 +1085,11 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white, size: 22),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                     onPressed: () {
                       widget.onClose?.call();
                       Navigator.of(context).pop();
@@ -1049,8 +1112,8 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                         width: 150,
                         height: 50,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const SizedBox(
-                            width: 150, height: 50),
+                        errorBuilder: (_, __, ___) =>
+                            const SizedBox(width: 150, height: 50),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -1101,26 +1164,41 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Text('Blaaukrans Office Park',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[800])),
-                              Text('Jeffreys Bay, 6330',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[800])),
-                              Text('Call: +27 79 427 2486',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[800])),
-                              Text('info@medwavegroup.com',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[800])),
-                              Text('www.medwavegroup.com',
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[800])),
+                              Text(
+                                'Blaaukrans Office Park',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              Text(
+                                'Jeffreys Bay, 6330',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              Text(
+                                'Call: +27 79 427 2486',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              Text(
+                                'info@medwavegroup.com',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              Text(
+                                'www.medwavegroup.com',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1129,21 +1207,25 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildInfoLine('Date:',
-                                  DateFormat('yyyy-MM-dd').format(widget.date)),
+                              _buildInfoLine(
+                                'Date:',
+                                DateFormat('yyyy-MM-dd').format(widget.date),
+                              ),
                               const SizedBox(height: 4),
                               _buildInfoLine(
-                                  'Customer Name:', widget.customerName),
+                                'Customer Name:',
+                                widget.customerName,
+                              ),
                               const SizedBox(height: 4),
-                              _buildInfoLine(
-                                  'Customer Phone:', widget.phone),
+                              _buildInfoLine('Customer Phone:', widget.phone),
                               const SizedBox(height: 4),
-                              _buildInfoLine(
-                                  'Customer Email:', widget.email),
+                              _buildInfoLine('Customer Email:', widget.email),
                               if (widget.shippingAddress.isNotEmpty) ...[
                                 const SizedBox(height: 4),
-                                _buildInfoLine('Shipping Address:',
-                                    widget.shippingAddress),
+                                _buildInfoLine(
+                                  'Shipping Address:',
+                                  widget.shippingAddress,
+                                ),
                               ],
                             ],
                           ),
@@ -1161,37 +1243,54 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                           Container(
                             color: Colors.grey[300],
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             child: Row(
                               children: [
                                 const Expanded(
                                   flex: 4,
-                                  child: Text('Name',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12)),
+                                  child: Text(
+                                    'Name',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
                                 SizedBox(
-                                    width: 56,
-                                    child: Text('QTY',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12))),
+                                  width: 56,
+                                  child: Text(
+                                    'QTY',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
                                 SizedBox(
-                                    width: 72,
-                                    child: Text('Price',
-                                        textAlign: TextAlign.right,
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12))),
+                                  width: 72,
+                                  child: Text(
+                                    'Price',
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
                                 SizedBox(
-                                    width: 72,
-                                    child: Text('Total',
-                                        textAlign: TextAlign.right,
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12))),
+                                  width: 72,
+                                  child: Text(
+                                    'Total',
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
                                 const SizedBox(width: 44),
                               ],
                             ),
@@ -1200,15 +1299,19 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                             final line = widget.lineItems[index];
                             List<TextEditingController> controllers =
                                 _controllers[line.id] ??= [
-                              TextEditingController(text: line.name),
-                              TextEditingController(
-                                  text: line.quantity.toString()),
-                              TextEditingController(
-                                  text: line.price.toStringAsFixed(2)),
-                            ];
-                            final isSubItem = line.lineType == _kLineTypePackageItem ||
+                                  TextEditingController(text: line.name),
+                                  TextEditingController(
+                                    text: line.quantity.toString(),
+                                  ),
+                                  TextEditingController(
+                                    text: line.price.toStringAsFixed(2),
+                                  ),
+                                ];
+                            final isSubItem =
+                                line.lineType == _kLineTypePackageItem ||
                                 line.lineType == _kLineTypeAddedService;
-                            final isHeader = line.lineType == _kLineTypePackageHeader;
+                            final isHeader =
+                                line.lineType == _kLineTypePackageHeader;
                             return Container(
                               padding: EdgeInsets.only(
                                 left: 8 + (isSubItem ? 20.0 : 0),
@@ -1219,7 +1322,9 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                               decoration: BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(
-                                      color: Colors.grey[300]!, width: 1),
+                                    color: Colors.grey[300]!,
+                                    width: 1,
+                                  ),
                                 ),
                                 color: isHeader ? Colors.grey[100] : null,
                               ),
@@ -1230,13 +1335,17 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                     child: TextField(
                                       controller: controllers[0],
                                       style: TextStyle(
-                                        fontWeight: isHeader ? FontWeight.bold : null,
+                                        fontWeight: isHeader
+                                            ? FontWeight.bold
+                                            : null,
                                       ),
                                       decoration: const InputDecoration(
                                         border: OutlineInputBorder(),
                                         isDense: true,
                                         contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 8),
+                                          horizontal: 8,
+                                          vertical: 8,
+                                        ),
                                       ),
                                       onChanged: (value) {
                                         line.name = value;
@@ -1255,7 +1364,9 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                         border: OutlineInputBorder(),
                                         isDense: true,
                                         contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 4, vertical: 8),
+                                          horizontal: 4,
+                                          vertical: 8,
+                                        ),
                                       ),
                                       onChanged: (value) {
                                         final qty = int.tryParse(value) ?? 1;
@@ -1277,7 +1388,9 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                         border: OutlineInputBorder(),
                                         isDense: true,
                                         contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 6, vertical: 8),
+                                          horizontal: 6,
+                                          vertical: 8,
+                                        ),
                                       ),
                                       onChanged: (value) {
                                         final price =
@@ -1294,14 +1407,18 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                       'R ${(line.quantity * line.price).toStringAsFixed(2)}',
                                       textAlign: TextAlign.right,
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 12),
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline,
-                                        color: Colors.red, size: 20),
+                                    icon: const Icon(
+                                      Icons.remove_circle_outline,
+                                      color: Colors.red,
+                                      size: 20,
+                                    ),
                                     onPressed: () {
                                       _disposeControllers(line.id);
                                       widget.lineItems.removeAt(index);
@@ -1317,20 +1434,31 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                             padding: const EdgeInsets.all(16),
                             child: Column(
                               children: [
-                                _buildTotalRow('Subtotal', _subtotalBeforeDiscount()),
+                                _buildTotalRow(
+                                  'Subtotal',
+                                  _subtotalBeforeDiscount(),
+                                ),
                                 if (_discountAmount() > 0) ...[
                                   const SizedBox(height: 4),
                                   _buildTotalRow(
-                                      'Discount', -_discountAmount(),
-                                      isBold: true),
+                                    'Discount',
+                                    -_discountAmount(),
+                                    isBold: true,
+                                  ),
                                 ],
                                 const SizedBox(height: 4),
                                 _buildTotalRow(
-                                    'Deposit Allocate', _subtotal() * 0.10,
-                                    isBold: true),
+                                  'Deposit Allocate',
+                                  _subtotal() * 0.10,
+                                  isBold: true,
+                                ),
                                 const Divider(),
-                                _buildTotalRow('Total', _subtotal(),
-                                    isBold: true, isLarge: true),
+                                _buildTotalRow(
+                                  'Total',
+                                  _subtotal(),
+                                  isBold: true,
+                                  isLarge: true,
+                                ),
                               ],
                             ),
                           ),
@@ -1381,7 +1509,10 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildBankLine('Account holder:', 'MEDWAVE RSA PTY LTD'),
+                          _buildBankLine(
+                            'Account holder:',
+                            'MEDWAVE RSA PTY LTD',
+                          ),
                           const SizedBox(height: 4),
                           _buildBankLine('ID/Reg Number:', '2024/700802/07'),
                           const SizedBox(height: 16),
@@ -1392,10 +1523,13 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Standard Bank',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14)),
+                                    const Text(
+                                      'Standard Bank',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
                                     const SizedBox(height: 4),
                                     _buildBankLine('Branch:', 'JEFFREY\'S BAY'),
                                   ],
@@ -1416,7 +1550,9 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _buildBankLine(
-                                        'Account number:', '10 23 582 938 0'),
+                                      'Account number:',
+                                      '10 23 582 938 0',
+                                    ),
                                     const SizedBox(height: 4),
                                     _buildBankLine('SWIFT code:', 'SBZAZAJJ'),
                                   ],
@@ -1438,14 +1574,20 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('MedWave RSA PTY LTD',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey[600])),
-                              Text('www.medwavegroup.com',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.grey[600])),
+                              Text(
+                                'MedWave RSA PTY LTD',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              Text(
+                                'www.medwavegroup.com',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -1499,9 +1641,7 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
             ),
           ),
         ),
-        Expanded(
-          child: Text(value, style: TextStyle(fontSize: 12)),
-        ),
+        Expanded(child: Text(value, style: TextStyle(fontSize: 12))),
       ],
     );
   }
@@ -1511,16 +1651,25 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
       text: TextSpan(
         style: TextStyle(fontSize: 10, color: Colors.grey[800]),
         children: [
-          TextSpan(text: '$label ', style: TextStyle(color: Colors.grey[700])),
           TextSpan(
-              text: value, style: TextStyle(fontWeight: FontWeight.bold)),
+            text: '$label ',
+            style: TextStyle(color: Colors.grey[700]),
+          ),
+          TextSpan(
+            text: value,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTotalRow(String label, double amount,
-      {bool isBold = false, bool isLarge = false}) {
+  Widget _buildTotalRow(
+    String label,
+    double amount, {
+    bool isBold = false,
+    bool isLarge = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
