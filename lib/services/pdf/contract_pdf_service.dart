@@ -706,23 +706,22 @@ class ContractPdfService {
     return pw.Container(
       padding: const pw.EdgeInsets.all(16),
       child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
           _buildSubtotalDiscountTotalRows(contract),
           pw.SizedBox(height: 4),
           _buildTotalRow('VAT (15%)', vatAmount),
           pw.SizedBox(height: 4),
-          _buildTotalRow('Total (incl. VAT)', totalInclVat, isBold: true),
+          _buildTotalRow('Deposit Allocate', contract.depositAmount),
+          pw.SizedBox(height: 4),
+          _buildTotalRow('Balance due', contract.remainingBalance),
+          pw.Divider(),
           pw.SizedBox(height: 4),
           _buildTotalRow(
-            'Deposit Allocate',
-            contract.depositAmount,
+            'Total (incl. VAT)',
+            totalInclVat,
             isBold: true,
-          ),
-          pw.SizedBox(height: 4),
-          _buildTotalRow(
-            'Balance due',
-            contract.remainingBalance,
-            isBold: true,
+            isLarge: true,
           ),
         ],
       ),

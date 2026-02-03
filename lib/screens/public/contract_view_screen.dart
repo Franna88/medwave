@@ -689,7 +689,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
 
           const Divider(height: 32),
 
-          // Pricing summary - right aligned like standard invoices
+          // Pricing summary - breakdown first, final total at bottom
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -698,17 +698,17 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
               _buildPriceRow('VAT (15%)', vatAmount),
               const SizedBox(height: 8),
               _buildPriceRow(
-                'Total (incl. VAT)',
-                totalInclVat,
-                isHighlighted: true,
-              ),
-              const SizedBox(height: 12),
-              _buildPriceRow(
                 'Deposit ($depositPercentage%)',
                 contract.depositAmount,
               ),
               const SizedBox(height: 8),
               _buildPriceRow('Balance due', contract.remainingBalance),
+              const Divider(height: 24),
+              _buildPriceRow(
+                'Total (incl. VAT)',
+                totalInclVat,
+                isHighlighted: true,
+              ),
             ],
           ),
         ],
