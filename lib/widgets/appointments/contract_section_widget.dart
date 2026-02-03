@@ -7,6 +7,7 @@ import '../../models/streams/appointment.dart';
 import '../../models/contracts/contract.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/firebase/sales_appointment_service.dart';
 import '../../theme/app_theme.dart';
 import 'contract_edit_dialog.dart';
 
@@ -143,20 +144,18 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
 
     // Load appointment to get current data
     final appointment = widget.appointment;
-    
+
     // Show edit dialog
     final revision = await showDialog<Contract>(
       context: context,
-      builder: (context) => ContractEditDialog(
-        contract: _contract!,
-        appointment: appointment,
-      ),
+      builder: (context) =>
+          ContractEditDialog(contract: _contract!, appointment: appointment),
     );
 
     if (revision != null && mounted) {
       // Reload contract to show the new revision
       await _loadContract();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Contract revision created successfully'),
@@ -175,13 +174,40 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
       appointment: widget.appointment,
     );
 
-    if (mounted) {
+    if (mounted && success) {
+      final appointmentService = SalesAppointmentService();
+      try {
+        await appointmentService.updateContractEmailSent(widget.appointment.id);
+      } catch (_) {
+        // Non-fatal: email was sent, tag update failed
+      }
+      try {
+        final authProvider = context.read<AuthProvider>();
+        final uid = authProvider.user?.uid;
+        if (uid != null && mounted) {
+          await appointmentService.addNote(
+            appointmentId: widget.appointment.id,
+            noteText: 'Contract email sent to customer.',
+            userId: uid,
+            userName: authProvider.userName,
+          );
+        }
+      } catch (_) {
+        // Non-fatal: note add failed
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contract email sent successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success 
-            ? 'Contract email resent successfully'
-            : 'Failed to resend contract email'),
-          backgroundColor: success ? Colors.green : Colors.red,
+        const SnackBar(
+          content: Text('Failed to send contract email'),
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -199,41 +225,47 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Contract Revision History'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: history.length,
-            itemBuilder: (context, index) {
-              final contract = history[index];
-              return ListTile(
-                leading: contract.revisionNumber == 0
-                  ? const Icon(Icons.description, color: Colors.blue)
-                  : const Icon(Icons.edit, color: Colors.orange),
-                title: Text(contract.revisionNumber == 0 
-                  ? 'Original Contract'
-                  : 'Revision #${contract.revisionNumber}'),
-                subtitle: Text(
-                  contract.editReason ?? 'No reason provided',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                trailing: Text(
-                  dateFormat.format(contract.createdAt),
-                  style: const TextStyle(fontSize: 12),
-                ),
-              );
-            },
+      builder: (context) {
+        final screenHeight = MediaQuery.of(context).size.height;
+        final contentHeight = (screenHeight * 0.5).clamp(200.0, 400.0);
+        return AlertDialog(
+          title: const Text('Contract Revision History'),
+          content: SizedBox(
+            width: 400,
+            height: contentHeight,
+            child: ListView.builder(
+              itemCount: history.length,
+              itemBuilder: (context, index) {
+                final contract = history[index];
+                return ListTile(
+                  leading: contract.revisionNumber == 0
+                      ? const Icon(Icons.description, color: Colors.blue)
+                      : const Icon(Icons.edit, color: Colors.orange),
+                  title: Text(
+                    contract.revisionNumber == 0
+                        ? 'Original Contract'
+                        : 'Revision #${contract.revisionNumber}',
+                  ),
+                  subtitle: Text(
+                    contract.editReason ?? 'No reason provided',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: Text(
+                    dateFormat.format(contract.createdAt),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -562,13 +594,15 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
             OutlinedButton.icon(
               onPressed: _resendContractEmail,
               icon: const Icon(Icons.send, size: 18),
-              label: const Text('Resend Email'),
+              label: const Text('Send Contract'),
             ),
             OutlinedButton.icon(
               onPressed: _editContract,
               icon: const Icon(Icons.edit, size: 18),
               label: const Text('Edit'),
-              style: OutlinedButton.styleFrom(foregroundColor: AppTheme.primaryColor),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.primaryColor,
+              ),
             ),
             if (_contract!.parentContractId != null)
               OutlinedButton.icon(

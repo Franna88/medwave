@@ -91,11 +91,7 @@ class OrderService {
 
   /// Get real-time stream of a specific order
   Stream<models.Order?> getOrderStream(String orderId) {
-    return _firestore
-        .collection('orders')
-        .doc(orderId)
-        .snapshots()
-        .map((doc) {
+    return _firestore.collection('orders').doc(orderId).snapshots().map((doc) {
       if (!doc.exists) {
         return null;
       }
@@ -339,7 +335,7 @@ class OrderService {
                   if (storedDeposit != null) {
                     depositAmount = (storedDeposit as num).toDouble();
                   } else {
-                    // Calculate 40% of total from optInProducts if deposit not stored
+                    // Calculate 10% of total from optInProducts if deposit not stored
                     final optInProducts =
                         appointmentData['optInProducts'] as List<dynamic>?;
                     if (optInProducts != null && optInProducts.isNotEmpty) {
@@ -355,7 +351,7 @@ class OrderService {
                           }
                         }
                       }
-                      depositAmount = total * 0.40; // 40% deposit
+                      depositAmount = total * 0.10; // 10% deposit
                     }
                   }
 
@@ -420,6 +416,8 @@ class OrderService {
                           name: item.name,
                           quantity: correctQty,
                           price: item.price,
+                          productId: item.productId,
+                          packageId: item.packageId,
                         );
                       }
                       return item;
@@ -1668,7 +1666,8 @@ class OrderService {
   }
 
   /// Customer uploads final payment proof
-  Future<CustomerFinalPaymentProofUploadResult> uploadCustomerFinalPaymentProof({
+  Future<CustomerFinalPaymentProofUploadResult>
+  uploadCustomerFinalPaymentProof({
     required String orderId,
     required Uint8List fileData,
     required String fileName,
@@ -1697,7 +1696,7 @@ class OrderService {
 
       // 3. Update order with proof but don't move stage
       final now = DateTime.now();
-      
+
       await _firestore.collection('orders').doc(orderId).update({
         'customerUploadedFinalPaymentProofUrl': proofUrl,
         'customerUploadedFinalPaymentProofAt': Timestamp.fromDate(now),
@@ -1710,16 +1709,17 @@ class OrderService {
       if (updatedHistory.isNotEmpty) {
         final lastIndex = updatedHistory.length - 1;
         final lastEntry = updatedHistory[lastIndex];
-        
+
         // Update the current stage entry with a note
         updatedHistory[lastIndex] = models.OrderStageHistoryEntry(
           stage: lastEntry.stage,
           enteredAt: lastEntry.enteredAt,
           exitedAt: lastEntry.exitedAt,
-          note: (lastEntry.note ?? '') + 
-                '\nCustomer uploaded final payment proof on ${now.toString().split('.')[0]}, pending operations verification.',
+          note:
+              (lastEntry.note ?? '') +
+              '\nCustomer uploaded final payment proof on ${now.toString().split('.')[0]}, pending operations verification.',
         );
-        
+
         await _firestore.collection('orders').doc(orderId).update({
           'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
         });
@@ -1733,7 +1733,8 @@ class OrderService {
 
       return CustomerFinalPaymentProofUploadResult(
         success: true,
-        message: 'Proof of payment uploaded successfully. Our team will verify it shortly.',
+        message:
+            'Proof of payment uploaded successfully. Our team will verify it shortly.',
         proofUrl: proofUrl,
       );
     } catch (e) {
@@ -1790,8 +1791,8 @@ class OrderService {
         if (updatedHistory.isNotEmpty) {
           final lastEntry = updatedHistory.last;
           if (lastEntry.exitedAt == null) {
-            updatedHistory[updatedHistory.length - 1] =
-                models.OrderStageHistoryEntry(
+            updatedHistory[updatedHistory.length -
+                1] = models.OrderStageHistoryEntry(
               stage: lastEntry.stage,
               enteredAt: lastEntry.enteredAt,
               exitedAt: now,
@@ -1814,13 +1815,14 @@ class OrderService {
         if (updatedHistory.isNotEmpty) {
           final lastIndex = updatedHistory.length - 1;
           final lastEntry = updatedHistory[lastIndex];
-          
+
           updatedHistory[lastIndex] = models.OrderStageHistoryEntry(
             stage: lastEntry.stage,
             enteredAt: lastEntry.enteredAt,
             exitedAt: lastEntry.exitedAt,
-            note: (lastEntry.note ?? '') + 
-                  '\nFinal payment proof uploaded by $uploadedByName on ${now.toString().split('.')[0]}.',
+            note:
+                (lastEntry.note ?? '') +
+                '\nFinal payment proof uploaded by $uploadedByName on ${now.toString().split('.')[0]}.',
           );
         }
       }
@@ -1905,12 +1907,13 @@ class OrderService {
       if (updatedHistory.isNotEmpty) {
         final lastEntry = updatedHistory.last;
         if (lastEntry.exitedAt == null) {
-          updatedHistory[updatedHistory.length - 1] =
-              models.OrderStageHistoryEntry(
+          updatedHistory[updatedHistory.length -
+              1] = models.OrderStageHistoryEntry(
             stage: lastEntry.stage,
             enteredAt: lastEntry.enteredAt,
             exitedAt: null,
-            note: (lastEntry.note ?? '') +
+            note:
+                (lastEntry.note ?? '') +
                 '\nCustomer final payment proof verified by $verifiedByName on ${now.toString().split('.')[0]}.',
           );
         }
@@ -1981,21 +1984,35 @@ class OrderService {
       if (updatedHistory.isNotEmpty) {
         final lastEntry = updatedHistory.last;
         if (lastEntry.exitedAt == null) {
-          final reasonText = rejectionReason != null && rejectionReason.isNotEmpty
+          final reasonText =
+              rejectionReason != null && rejectionReason.isNotEmpty
               ? ' Reason: $rejectionReason'
               : '';
-          updatedHistory[updatedHistory.length - 1] =
-              models.OrderStageHistoryEntry(
+          updatedHistory[updatedHistory.length -
+              1] = models.OrderStageHistoryEntry(
             stage: lastEntry.stage,
             enteredAt: lastEntry.enteredAt,
             exitedAt: null,
-            note: (lastEntry.note ?? '') +
+            note:
+                (lastEntry.note ?? '') +
                 '\nCustomer final payment proof rejected by $rejectedByName on ${now.toString().split('.')[0]}.$reasonText',
           );
         }
       }
 
-      // 4. Update order - clear customer proof fields and set rejection metadata
+      // Add a note to order history (notes list) for rejecting POP
+      final reasonSuffix = rejectionReason != null && rejectionReason.isNotEmpty
+          ? ' Reason: $rejectionReason'
+          : '';
+      final rejectionNote = models.OrderNote(
+        text: 'Final payment proof rejected by $rejectedByName.$reasonSuffix',
+        createdAt: now,
+        createdBy: rejectedBy,
+        createdByName: rejectedByName,
+      );
+      final updatedNotes = [...order.notes, rejectionNote];
+
+      // 4. Update order - clear customer proof fields, set rejection metadata, add note
       await _firestore.collection('orders').doc(orderId).update({
         'customerUploadedFinalPaymentProofUrl': null,
         'customerUploadedFinalPaymentProofAt': null,
@@ -2009,6 +2026,7 @@ class OrderService {
         'customerFinalPaymentProofRejectedByName': rejectedByName,
         'customerFinalPaymentProofRejectionReason': rejectionReason,
         'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'notes': updatedNotes.map((n) => n.toMap()).toList(),
         'updatedAt': Timestamp.fromDate(now),
       });
 
@@ -2106,7 +2124,7 @@ class OrderService {
               if (storedDeposit != null) {
                 depositAmount = (storedDeposit as num).toDouble();
               } else {
-                // Calculate 40% of total from optInProducts
+                // Calculate 10% of total from optInProducts
                 final optInProducts =
                     appointmentData['optInProducts'] as List<dynamic>?;
                 if (optInProducts != null && optInProducts.isNotEmpty) {
@@ -2121,7 +2139,7 @@ class OrderService {
                       }
                     }
                   }
-                  depositAmount = total * 0.40; // 40% deposit
+                  depositAmount = total * 0.10; // 10% deposit
                 }
               }
             }

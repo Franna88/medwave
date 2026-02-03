@@ -236,9 +236,11 @@ class InventoryService {
   }
 
   /// Deduct stock for multiple items (used when order items are picked)
-  /// Returns a map of item names to success status
+  /// Items may include optional productId: [{name, quantity, productId?}].
+  /// When productId is set, find stock by productId; otherwise by product name.
+  /// Returns a map of item names (or product names) to success status.
   Future<Map<String, bool>> deductStockForOrderItems({
-    required List<Map<String, dynamic>> items, // [{name, quantity}]
+    required List<Map<String, dynamic>> items,
     required String orderId,
     required String updatedBy,
   }) async {
@@ -247,15 +249,24 @@ class InventoryService {
     for (final item in items) {
       final itemName = item['name'] as String;
       final quantity = item['quantity'] as int;
+      final productId = item['productId']?.toString();
 
       try {
-        // Find stock by product name
-        final stockQuery = await _stockCollection
-            .where('productName', isEqualTo: itemName)
-            .limit(1)
-            .get();
+        InventoryStock? stock;
+        if (productId != null && productId.isNotEmpty) {
+          stock = await getStockByProductId(productId);
+        }
+        if (stock == null) {
+          final stockQuery = await _stockCollection
+              .where('productName', isEqualTo: itemName)
+              .limit(1)
+              .get();
+          if (stockQuery.docs.isNotEmpty) {
+            stock = InventoryStock.fromFirestore(stockQuery.docs.first);
+          }
+        }
 
-        if (stockQuery.docs.isEmpty) {
+        if (stock == null) {
           if (kDebugMode) {
             debugPrint('No stock record found for product: $itemName');
           }
@@ -263,11 +274,8 @@ class InventoryService {
           continue;
         }
 
-        final stockDoc = stockQuery.docs.first;
-        final stock = InventoryStock.fromFirestore(stockDoc);
         final newQty = stock.currentQty - quantity;
 
-        // Update stock (allow negative for tracking purposes)
         await updateStockQuantity(
           stockId: stock.id,
           newQty: newQty < 0 ? 0 : newQty,

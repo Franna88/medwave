@@ -39,10 +39,12 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
   String _searchQuery = '';
 
   final List<StreamStage> _stages = StreamStage.getMarketingStages();
+  late final ScrollController _horizontalScrollController;
 
   @override
   void initState() {
     super.initState();
+    _horizontalScrollController = ScrollController();
     _initializeChannel();
     _searchController.addListener(_onSearchChanged);
     // Load admin users for assignment feature (Super Admin only)
@@ -57,6 +59,7 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _horizontalScrollController.dispose();
     super.dispose();
   }
 
@@ -477,15 +480,20 @@ class _MarketingStreamScreenState extends State<MarketingStreamScreen> {
   }
 
   Widget _buildKanbanBoard() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _stages.map((stage) {
-          final leads = _getLeadsForStage(stage.id);
-          return _buildStageColumn(stage, leads);
-        }).toList(),
+    return Scrollbar(
+      controller: _horizontalScrollController,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        controller: _horizontalScrollController,
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: _stages.map((stage) {
+            final leads = _getLeadsForStage(stage.id);
+            return _buildStageColumn(stage, leads);
+          }).toList(),
+        ),
       ),
     );
   }

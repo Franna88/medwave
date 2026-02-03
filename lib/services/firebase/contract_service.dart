@@ -78,13 +78,16 @@ class ContractService {
         );
       }
 
-      // Calculate totals (multiply price by quantity for each product)
+      // Calculate totals (products and packages)
       double subtotal = 0;
       for (final product in appointment.optInProducts) {
         subtotal += product.price * product.quantity;
       }
+      for (final pkg in appointment.optInPackages) {
+        subtotal += pkg.price * pkg.quantity;
+      }
 
-      final depositAmount = subtotal * 0.40; // 40% deposit
+      final depositAmount = subtotal * 0.10; // 10% deposit
       final remainingBalance = subtotal * 0.60; // 60% balance
 
       // Create contract document reference
@@ -92,6 +95,21 @@ class ContractService {
 
       // Generate access token
       final accessToken = generateAccessToken(docRef.id);
+
+      // Build products from opt-in products and packages
+      final productsFromProducts = appointment.optInProducts
+          .map((p) => ContractProduct(
+              id: p.id, name: p.name, price: p.price, quantity: p.quantity))
+          .toList();
+      final productsFromPackages = appointment.optInPackages
+          .map((p) => ContractProduct(
+              id: p.id,
+              name: p.name,
+              price: p.price,
+              quantity: p.quantity,
+              lineType: 'packageHeader'))
+          .toList();
+      final allProducts = [...productsFromProducts, ...productsFromPackages];
 
       // Create contract object
       final contract = Contract(
@@ -109,9 +127,7 @@ class ContractService {
           'content': contractContent.content,
           'plainText': contractContent.plainText,
         },
-        products: appointment.optInProducts
-            .map((p) => ContractProduct(id: p.id, name: p.name, price: p.price))
-            .toList(),
+        products: allProducts,
         subtotal: subtotal,
         depositAmount: depositAmount,
         remainingBalance: remainingBalance,
@@ -186,17 +202,18 @@ class ContractService {
         }
       }
 
-      final depositAmount = finalSubtotal * 0.40; // 40% deposit
+      final depositAmount = finalSubtotal * 0.10; // 10% deposit
       final remainingBalance = finalSubtotal * 0.60; // 60% balance
 
-      // Get revision number (count existing revisions + 1)
+      // Get revision number: always chain to root contract so numbers increment (1, 2, 3...)
+      final rootId = originalContract.parentContractId ?? originalContract.id;
       final existingRevisions = await getContractsByAppointmentId(
         appointment.id,
       );
-      final revisionsOfThisContract = existingRevisions
-          .where((c) => c.parentContractId == originalContract.id)
+      final revisionsOfRoot = existingRevisions
+          .where((c) => c.id == rootId || c.parentContractId == rootId)
           .toList();
-      final revisionNumber = revisionsOfThisContract.length + 1;
+      final revisionNumber = revisionsOfRoot.length + 1;
 
       // Create new contract document
       final docRef = _firestore.collection(_collectionPath).doc();
@@ -228,8 +245,8 @@ class ContractService {
         createdAt: DateTime.now(),
         createdBy: createdBy,
         createdByName: createdByName,
-        // Revision tracking
-        parentContractId: originalContract.id,
+        // Revision tracking (always point to root so history is one chain)
+        parentContractId: rootId,
         revisionNumber: revisionNumber,
         editReason: editReason,
         editedBy: createdBy,

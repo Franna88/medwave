@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../models/inventory/inventory_stock.dart';
 import '../../models/streams/order.dart' as models;
 import '../../providers/auth_provider.dart';
 import '../../providers/inventory_provider.dart';
+import '../../providers/product_items_provider.dart';
+import '../../providers/product_packages_provider.dart';
 import '../../services/firebase/order_service.dart';
 import '../../theme/app_theme.dart';
 import 'shipping_details_screen.dart';
@@ -44,9 +47,11 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
       _moveToPackingList();
     }
 
-    // Load inventory for stock validation
+    // Load inventory and packages for stock validation
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<InventoryProvider>().listenToInventory();
+      context.read<ProductPackagesProvider>().listenToPackages();
+      context.read<ProductItemsProvider>().listenToProducts();
     });
   }
 
@@ -88,82 +93,136 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     if (picked) {
       final inventoryProvider = context.read<InventoryProvider>();
 
-      // Find the order item to get required quantity
       final orderItem = _currentOrder.items.firstWhere(
         (item) => item.name == itemName,
         orElse: () => models.OrderItem(name: itemName, quantity: 1, price: 0),
       );
-      final requiredQty = orderItem.quantity;
 
-      // Check if item exists in inventory
-      final hasStock = inventoryProvider.allStockItems.any(
-        (s) => s.productName.toLowerCase() == itemName.toLowerCase(),
-      );
-
-      if (hasStock) {
-        final stockItem = inventoryProvider.allStockItems.firstWhere(
-          (s) => s.productName.toLowerCase() == itemName.toLowerCase(),
-        );
-
-        // Block picking if insufficient stock (check quantity requirement)
-        if (stockItem.currentQty < requiredQty) {
+      // Package: validate all constituent products have sufficient stock
+      if (orderItem.packageId != null) {
+        final packageProvider = context.read<ProductPackagesProvider>();
+        final pkg = packageProvider.packages
+            .where((p) => p.id == orderItem.packageId)
+            .toList();
+        if (pkg.isEmpty) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Cannot pick "$itemName": Only ${stockItem.currentQty} in stock, but $requiredQty needed. Please contact admin to override.',
+                  'Cannot pick "$itemName": Package not found.',
                 ),
                 backgroundColor: Colors.red,
-                duration: const Duration(seconds: 4),
-                action: SnackBarAction(
-                  label: 'OK',
-                  textColor: Colors.white,
-                  onPressed: () {},
-                ),
               ),
             );
           }
-          return; // Don't proceed with picking
+          return;
         }
-
-        // Block picking if item is out of stock (no stock at all)
-        if (stockItem.isOutOfStock) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Cannot pick "$itemName": Item is out of stock. Please contact admin to override.',
+        final package = pkg.first;
+        for (final entry in package.packageItems) {
+          final requiredQty = entry.quantity * orderItem.quantity;
+          final stockMatch = inventoryProvider.allStockItems
+              .where((s) => s.productId == entry.productId)
+              .toList();
+          if (stockMatch.isEmpty) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Cannot pick "$itemName": Product in package (${entry.productId}) has no inventory record.',
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 4),
                 ),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 4),
-                action: SnackBarAction(
-                  label: 'OK',
-                  textColor: Colors.white,
-                  onPressed: () {},
-                ),
-              ),
-            );
+              );
+            }
+            return;
           }
-          return; // Don't proceed with picking
+          final stockItem = stockMatch.first;
+          if (stockItem.currentQty < requiredQty) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Cannot pick "$itemName": ${stockItem.productName} only ${stockItem.currentQty} in stock, need $requiredQty.',
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+            return;
+          }
         }
+        // All package items have stock; allow pick
+      } else {
+        // Product or legacy: match by productId or name
+        final requiredQty = orderItem.quantity;
+        InventoryStock? stockItem;
+        if (orderItem.productId != null) {
+          final byId = inventoryProvider.allStockItems
+              .where((s) => s.productId == orderItem.productId)
+              .toList();
+          stockItem = byId.isEmpty ? null : byId.first;
+        }
+        final stockByName = inventoryProvider.allStockItems
+            .where(
+              (s) => s.productName.toLowerCase() == itemName.toLowerCase(),
+            )
+            .toList();
+        final hasStock = stockItem != null || stockByName.isNotEmpty;
+        final stock = stockItem ?? (stockByName.isNotEmpty ? stockByName.first : null);
 
-        // Warn if item is low stock
-        if (stockItem.isLowStock) {
-          if (mounted) {
+        if (hasStock && stock != null) {
+          if (stock.currentQty < requiredQty) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Cannot pick "$itemName": Only ${stock.currentQty} in stock, but $requiredQty needed. Please contact admin to override.',
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 4),
+                  action: SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  ),
+                ),
+              );
+            }
+            return;
+          }
+          if (stock.isOutOfStock) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Cannot pick "$itemName": Item is out of stock. Please contact admin to override.',
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 4),
+                  action: SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  ),
+                ),
+              );
+            }
+            return;
+          }
+          if (stock.isLowStock && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Warning: "$itemName" is low stock (${stockItem.currentQty} remaining)',
+                  'Warning: "$itemName" is low stock (${stock.currentQty} remaining)',
                 ),
                 backgroundColor: Colors.orange,
                 duration: const Duration(seconds: 3),
               ),
             );
           }
-        }
-      } else {
-        // Item not found in inventory - allow picking but warn
-        if (mounted) {
+        } else if (!hasStock && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -535,30 +594,62 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
   }
 
   Widget _buildItemCard(models.OrderItem item, bool isPicked, int index) {
-    return Consumer<InventoryProvider>(
-      builder: (context, inventoryProvider, child) {
-        // Check stock status for this item
-        final hasStock = inventoryProvider.allStockItems.any(
-          (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
-        );
-
+    return Consumer3<InventoryProvider, ProductPackagesProvider, ProductItemsProvider>(
+      builder: (context, inventoryProvider, packageProvider, productProvider, child) {
         bool isOutOfStock = false;
         bool isLowStock = false;
         bool hasInsufficientStock = false;
         int? stockQty;
+        List<String>? packageItemLines;
 
-        if (hasStock) {
-          final stockItem = inventoryProvider.allStockItems.firstWhere(
-            (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
-          );
-          stockQty = stockItem.currentQty;
-
-          // Check if there's enough stock for the required quantity
-          hasInsufficientStock = stockQty < item.quantity;
-
-          // Item is out of stock if no stock at all, or insufficient stock for required quantity
-          isOutOfStock = stockItem.isOutOfStock || hasInsufficientStock;
-          isLowStock = stockItem.isLowStock;
+        if (item.packageId != null) {
+          // Package: resolve package and check stock for each constituent product
+          final pkg = packageProvider.packages
+              .where((p) => p.id == item.packageId)
+              .toList();
+          if (pkg.isNotEmpty) {
+            final package = pkg.first;
+            packageItemLines = package.packageItems.map((entry) {
+              final product = productProvider.items
+                  .where((p) => p.id == entry.productId)
+                  .toList();
+              final name = product.isEmpty ? 'Product ${entry.productId}' : product.first.name;
+              return '${entry.quantity * item.quantity}× $name';
+            }).toList();
+            for (final entry in package.packageItems) {
+              final requiredQty = entry.quantity * item.quantity;
+              final stockMatch = inventoryProvider.allStockItems
+                  .where((s) => s.productId == entry.productId)
+                  .toList();
+              if (stockMatch.isEmpty || stockMatch.first.currentQty < requiredQty) {
+                isOutOfStock = true;
+                hasInsufficientStock = true;
+                break;
+              }
+            }
+          } else {
+            isOutOfStock = true;
+          }
+        } else {
+          // Product or legacy: match by productId or name
+          final byId = item.productId != null
+              ? inventoryProvider.allStockItems
+                  .where((s) => s.productId == item.productId)
+                  .toList()
+              : <InventoryStock>[];
+          final byName = inventoryProvider.allStockItems
+              .where(
+                (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
+              )
+              .toList();
+          final hasStock = byId.isNotEmpty || byName.isNotEmpty;
+          final stock = (byId.isNotEmpty ? byId.first : (byName.isNotEmpty ? byName.first : null));
+          if (hasStock && stock != null) {
+            stockQty = stock.currentQty;
+            hasInsufficientStock = stockQty < item.quantity;
+            isOutOfStock = stock.isOutOfStock || hasInsufficientStock;
+            isLowStock = stock.isLowStock;
+          }
         }
 
         // Block picking if out of stock or insufficient stock (unless already picked)
@@ -663,7 +754,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                                   ),
                                 ),
                                 // Stock status badge
-                                if (hasStock && !isPicked)
+                                if ((stockQty != null || item.packageId != null) && !isPicked)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
@@ -685,7 +776,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                                       ),
                                     ),
                                     child: Text(
-                                      hasInsufficientStock
+                                      item.packageId != null
+                                          ? (isOutOfStock ? 'Out of Stock' : 'In Stock')
+                                          : hasInsufficientStock
                                           ? 'Low ($stockQty) - Need ${item.quantity}'
                                           : isOutOfStock
                                           ? 'Out of Stock'
@@ -714,6 +807,22 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                                 color: AppTheme.secondaryColor.withOpacity(0.6),
                               ),
                             ),
+                            // Package contents
+                            if (packageItemLines != null && packageItemLines.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              ...packageItemLines.map(
+                                (line) => Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: Text(
+                                    line,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.secondaryColor.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                             // Warning message for out of stock
                             if (isOutOfStock && !isPicked) ...[
                               const SizedBox(height: 6),

@@ -25,11 +25,14 @@ class SalesAppointment {
   final String? assignedToName; // name of assigned Sales Admin
   final String? optInNote;
   final List<OptInProduct> optInProducts;
+  final List<OptInProduct> optInPackages;
   final Map<String, String>? optInQuestions;
   final String? depositConfirmationToken;
   final String? depositConfirmationStatus; // pending | confirmed | declined
   final DateTime? depositConfirmationSentAt;
   final DateTime? depositConfirmationRespondedAt;
+  final DateTime?
+  contractEmailSentAt; // When contract link email was sent to customer
   final bool
   manuallyAdded; // Indicates if appointment was manually added to stream
   final String paymentType; // 'deposit' or 'full_payment'
@@ -73,11 +76,13 @@ class SalesAppointment {
     this.assignedToName,
     this.optInNote,
     this.optInProducts = const [],
+    this.optInPackages = const [],
     this.optInQuestions,
     this.depositConfirmationToken,
     this.depositConfirmationStatus,
     this.depositConfirmationSentAt,
     this.depositConfirmationRespondedAt,
+    this.contractEmailSentAt,
     this.manuallyAdded = false,
     this.paymentType = 'deposit',
     this.depositProofUrl,
@@ -165,6 +170,13 @@ class SalesAppointment {
               )
               .toList() ??
           [],
+      optInPackages:
+          (map['optInPackages'] as List<dynamic>?)
+              ?.map(
+                (item) => OptInProduct.fromMap(item as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
       optInQuestions: (map['optInQuestions'] as Map<String, dynamic>?)?.map(
         (k, v) => MapEntry(k, v.toString()),
       ),
@@ -174,30 +186,31 @@ class SalesAppointment {
           (map['depositConfirmationSentAt'] as Timestamp?)?.toDate(),
       depositConfirmationRespondedAt:
           (map['depositConfirmationRespondedAt'] as Timestamp?)?.toDate(),
+      contractEmailSentAt: (map['contractEmailSentAt'] as Timestamp?)?.toDate(),
       manuallyAdded: map['manuallyAdded'] == true,
       paymentType: map['paymentType']?.toString() ?? 'deposit',
       depositProofUrl: map['depositProofUrl']?.toString(),
-      depositProofUploadedAt:
-          (map['depositProofUploadedAt'] as Timestamp?)?.toDate(),
+      depositProofUploadedAt: (map['depositProofUploadedAt'] as Timestamp?)
+          ?.toDate(),
       depositProofUploadedBy: map['depositProofUploadedBy']?.toString(),
       depositProofUploadedByName: map['depositProofUploadedByName']?.toString(),
       customerUploadedProofUrl: map['customerUploadedProofUrl']?.toString(),
-      customerUploadedProofAt:
-          (map['customerUploadedProofAt'] as Timestamp?)?.toDate(),
+      customerUploadedProofAt: (map['customerUploadedProofAt'] as Timestamp?)
+          ?.toDate(),
       customerProofVerified: map['customerProofVerified'] == true,
-      customerProofVerifiedAt:
-          (map['customerProofVerifiedAt'] as Timestamp?)?.toDate(),
+      customerProofVerifiedAt: (map['customerProofVerifiedAt'] as Timestamp?)
+          ?.toDate(),
       customerProofVerifiedBy: map['customerProofVerifiedBy']?.toString(),
-      customerProofVerifiedByName:
-          map['customerProofVerifiedByName']?.toString(),
+      customerProofVerifiedByName: map['customerProofVerifiedByName']
+          ?.toString(),
       customerProofRejected: map['customerProofRejected'] == true,
-      customerProofRejectedAt:
-          (map['customerProofRejectedAt'] as Timestamp?)?.toDate(),
+      customerProofRejectedAt: (map['customerProofRejectedAt'] as Timestamp?)
+          ?.toDate(),
       customerProofRejectedBy: map['customerProofRejectedBy']?.toString(),
-      customerProofRejectedByName:
-          map['customerProofRejectedByName']?.toString(),
-      customerProofRejectionReason:
-          map['customerProofRejectionReason']?.toString(),
+      customerProofRejectedByName: map['customerProofRejectedByName']
+          ?.toString(),
+      customerProofRejectionReason: map['customerProofRejectionReason']
+          ?.toString(),
     );
   }
 
@@ -227,6 +240,7 @@ class SalesAppointment {
       'assignedToName': assignedToName,
       'optInNote': optInNote,
       'optInProducts': optInProducts.map((p) => p.toMap()).toList(),
+      'optInPackages': optInPackages.map((p) => p.toMap()).toList(),
       if (optInQuestions != null) 'optInQuestions': optInQuestions,
       'depositConfirmationToken': depositConfirmationToken,
       'depositConfirmationStatus': depositConfirmationStatus,
@@ -235,6 +249,9 @@ class SalesAppointment {
           : null,
       'depositConfirmationRespondedAt': depositConfirmationRespondedAt != null
           ? Timestamp.fromDate(depositConfirmationRespondedAt!)
+          : null,
+      'contractEmailSentAt': contractEmailSentAt != null
+          ? Timestamp.fromDate(contractEmailSentAt!)
           : null,
       'manuallyAdded': manuallyAdded,
       'paymentType': paymentType,
@@ -288,11 +305,13 @@ class SalesAppointment {
     String? assignedToName,
     String? optInNote,
     List<OptInProduct>? optInProducts,
+    List<OptInProduct>? optInPackages,
     Map<String, String>? optInQuestions,
     String? depositConfirmationToken,
     String? depositConfirmationStatus,
     DateTime? depositConfirmationSentAt,
     DateTime? depositConfirmationRespondedAt,
+    DateTime? contractEmailSentAt,
     bool? manuallyAdded,
     String? paymentType,
     String? depositProofUrl,
@@ -335,6 +354,7 @@ class SalesAppointment {
       assignedToName: assignedToName ?? this.assignedToName,
       optInNote: optInNote ?? this.optInNote,
       optInProducts: optInProducts ?? this.optInProducts,
+      optInPackages: optInPackages ?? this.optInPackages,
       optInQuestions: optInQuestions ?? this.optInQuestions,
       depositConfirmationToken:
           depositConfirmationToken ?? this.depositConfirmationToken,
@@ -344,26 +364,30 @@ class SalesAppointment {
           depositConfirmationSentAt ?? this.depositConfirmationSentAt,
       depositConfirmationRespondedAt:
           depositConfirmationRespondedAt ?? this.depositConfirmationRespondedAt,
+      contractEmailSentAt: contractEmailSentAt ?? this.contractEmailSentAt,
       manuallyAdded: manuallyAdded ?? this.manuallyAdded,
       paymentType: paymentType ?? this.paymentType,
       depositProofUrl: depositProofUrl ?? this.depositProofUrl,
       depositProofUploadedAt:
           depositProofUploadedAt ?? this.depositProofUploadedAt,
-      depositProofUploadedBy: depositProofUploadedBy ?? this.depositProofUploadedBy,
+      depositProofUploadedBy:
+          depositProofUploadedBy ?? this.depositProofUploadedBy,
       depositProofUploadedByName:
           depositProofUploadedByName ?? this.depositProofUploadedByName,
       customerUploadedProofUrl:
           customerUploadedProofUrl ?? this.customerUploadedProofUrl,
       customerUploadedProofAt:
           customerUploadedProofAt ?? this.customerUploadedProofAt,
-      customerProofVerified: customerProofVerified ?? this.customerProofVerified,
+      customerProofVerified:
+          customerProofVerified ?? this.customerProofVerified,
       customerProofVerifiedAt:
           customerProofVerifiedAt ?? this.customerProofVerifiedAt,
       customerProofVerifiedBy:
           customerProofVerifiedBy ?? this.customerProofVerifiedBy,
       customerProofVerifiedByName:
           customerProofVerifiedByName ?? this.customerProofVerifiedByName,
-      customerProofRejected: customerProofRejected ?? this.customerProofRejected,
+      customerProofRejected:
+          customerProofRejected ?? this.customerProofRejected,
       customerProofRejectedAt:
           customerProofRejectedAt ?? this.customerProofRejectedAt,
       customerProofRejectedBy:

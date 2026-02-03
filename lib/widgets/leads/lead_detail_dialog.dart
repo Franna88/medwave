@@ -636,8 +636,8 @@ class _LeadDetailDialogState extends State<LeadDetailDialog> {
                 note.stageTransition != null
                     ? '| Moved by ${note.createdByName ?? 'Unknown'}'
                     : (note.createdBy == 'system'
-                        ? '| Added by System'
-                        : '| Added by ${note.createdByName ?? 'Unknown'}'),
+                          ? '| Added by System'
+                          : '| Added by ${note.createdByName ?? 'Unknown'}'),
                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
             ),

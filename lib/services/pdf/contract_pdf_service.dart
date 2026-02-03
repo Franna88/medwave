@@ -634,37 +634,57 @@ class ContractPdfService {
               ],
             ),
           ),
-          // Products
+          // Products (sub-items indented)
           ...contract.products
               .map(
-                (product) => pw.Container(
-                  padding: const pw.EdgeInsets.all(8),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border(
-                      bottom: pw.BorderSide(color: PdfColors.grey300),
+                (product) {
+                  final isSubItem = product.isSubItem;
+                  return pw.Container(
+                    padding: pw.EdgeInsets.only(
+                      left: isSubItem ? 20 : 8,
+                      right: 8,
+                      top: 8,
+                      bottom: 8,
                     ),
-                  ),
-                  child: pw.Row(
-                    children: [
-                      pw.Expanded(
-                        flex: 4,
-                        child: pw.Text(product.name, style: PdfStyles.bodyText),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border(
+                        bottom: pw.BorderSide(color: PdfColors.grey300),
                       ),
-                      pw.Expanded(
-                        flex: 1,
-                        child: pw.Text('1', textAlign: pw.TextAlign.center),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                    child: pw.Row(
+                      children: [
+                        pw.Expanded(
+                          flex: 4,
+                          child: pw.Text(
+                            product.name,
+                            style: isSubItem
+                                ? pw.TextStyle(
+                                    fontSize: 10,
+                                    color: PdfStyles.grayColor,
+                                  )
+                                : PdfStyles.bodyText,
+                          ),
+                        ),
+                        pw.Expanded(
+                          flex: 1,
+                          child: pw.Text(
+                            isSubItem ? '' : product.quantity.toString(),
+                            textAlign: pw.TextAlign.center,
+                            style: PdfStyles.bodyText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               )
               .toList(),
-          // Totals section
+          // Totals section (Subtotal excludes discount; Discount row if any; Total = contract.subtotal)
           pw.Container(
             padding: const pw.EdgeInsets.all(16),
             child: pw.Column(
               children: [
-                _buildTotalRow('Subtotal', contract.subtotal),
+                _buildSubtotalDiscountTotalRows(contract),
                 pw.SizedBox(height: 4),
                 _buildTotalRow(
                   'Deposit Allocate',
@@ -683,6 +703,29 @@ class ContractPdfService {
           ),
         ],
       ),
+    );
+  }
+
+  /// Build Subtotal and optional Discount rows from contract.products.
+  pw.Widget _buildSubtotalDiscountTotalRows(Contract contract) {
+    double subtotalBeforeDiscount = 0;
+    double discountTotal = 0;
+    for (final p in contract.products) {
+      if (p.lineType == 'discount') {
+        discountTotal += p.lineTotal;
+      } else {
+        subtotalBeforeDiscount += p.lineTotal;
+      }
+    }
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        _buildTotalRow('Subtotal', subtotalBeforeDiscount),
+        if (discountTotal != 0) ...[
+          pw.SizedBox(height: 4),
+          _buildTotalRow('Discount', discountTotal, isBold: true),
+        ],
+      ],
     );
   }
 

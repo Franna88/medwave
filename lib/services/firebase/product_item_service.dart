@@ -11,8 +11,9 @@ class ProductItemService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-          (snapshot) =>
-              snapshot.docs.map(ProductItem.fromFirestore).toList(growable: false),
+          (snapshot) => snapshot.docs
+              .map(ProductItem.fromFirestore)
+              .toList(growable: false),
         );
   }
 

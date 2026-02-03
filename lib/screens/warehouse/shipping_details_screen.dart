@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../models/streams/order.dart' as models;
 import '../../providers/auth_provider.dart';
+import '../../providers/product_items_provider.dart';
+import '../../providers/product_packages_provider.dart';
 import '../../services/firebase/inventory_service.dart';
 import '../../services/firebase/order_service.dart';
 import '../../services/firebase/storage_service.dart';
@@ -65,11 +67,42 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
     try {
       final authProvider = context.read<AuthProvider>();
       final userId = authProvider.user?.uid ?? 'system';
+      final packageProvider = context.read<ProductPackagesProvider>();
+      final productProvider = context.read<ProductItemsProvider>();
 
-      // Prepare items for deduction
-      final items = widget.order.items
-          .map((item) => {'name': item.name, 'quantity': item.quantity})
-          .toList();
+      // Build deduction list: expand packages to product-level lines
+      final List<Map<String, dynamic>> items = [];
+      for (final item in widget.order.items) {
+        if (item.packageId != null) {
+          final pkg = packageProvider.packages
+              .where((p) => p.id == item.packageId)
+              .toList();
+          if (pkg.isEmpty) {
+            items.add({'name': item.name, 'quantity': item.quantity});
+            continue;
+          }
+          final package = pkg.first;
+          for (final entry in package.packageItems) {
+            final product = productProvider.items
+                .where((p) => p.id == entry.productId)
+                .toList();
+            final productName = product.isEmpty
+                ? 'Product ${entry.productId}'
+                : product.first.name;
+            items.add({
+              'name': productName,
+              'quantity': entry.quantity * item.quantity,
+              'productId': entry.productId,
+            });
+          }
+        } else {
+          items.add({
+            'name': item.name,
+            'quantity': item.quantity,
+            if (item.productId != null) 'productId': item.productId,
+          });
+        }
+      }
 
       // Deduct stock
       final results = await _inventoryService.deductStockForOrderItems(
