@@ -44,6 +44,7 @@ class Lead {
   final double? formScore;
   final String? optInNote;
   final List<OptInProduct> optInProducts;
+  final List<OptInProduct> optInPackages;
 
   Lead({
     required this.id,
@@ -85,6 +86,7 @@ class Lead {
     this.formScore,
     this.optInNote,
     this.optInProducts = const [],
+    this.optInPackages = const [],
   });
 
   /// Get full name
@@ -216,6 +218,13 @@ class Lead {
               )
               .toList() ??
           [],
+      optInPackages:
+          (map['optInPackages'] as List<dynamic>?)
+              ?.map(
+                (item) => OptInProduct.fromMap(item as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
     );
   }
 
@@ -261,6 +270,7 @@ class Lead {
       'formScore': formScore,
       'optInNote': optInNote,
       'optInProducts': optInProducts.map((p) => p.toMap()).toList(),
+      'optInPackages': optInPackages.map((p) => p.toMap()).toList(),
     };
   }
 
@@ -304,6 +314,7 @@ class Lead {
     double? formScore,
     String? optInNote,
     List<OptInProduct>? optInProducts,
+    List<OptInProduct>? optInPackages,
   }) {
     return Lead(
       id: id ?? this.id,
@@ -347,6 +358,7 @@ class Lead {
       formScore: formScore ?? this.formScore,
       optInNote: optInNote ?? this.optInNote,
       optInProducts: optInProducts ?? this.optInProducts,
+      optInPackages: optInPackages ?? this.optInPackages,
     );
   }
 }

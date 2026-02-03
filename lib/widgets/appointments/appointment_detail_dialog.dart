@@ -6,12 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../models/contracts/contract.dart';
 import '../../models/streams/appointment.dart';
 import '../../models/streams/stream_stage.dart';
 import '../../models/admin/admin_user.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/admin_provider.dart';
+import '../../services/firebase/contract_service.dart';
 import '../../services/firebase/sales_appointment_service.dart';
 import '../../utils/role_manager.dart';
 import 'contract_section_widget.dart';
@@ -40,6 +42,7 @@ class AppointmentDetailDialog extends StatefulWidget {
 class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
   late SalesAppointment _currentAppointment;
   final SalesAppointmentService _appointmentService = SalesAppointmentService();
+  final ContractService _contractService = ContractService();
   String? _selectedAssignedTo;
   bool _isSavingAssignment = false;
   bool _isDeleting = false;
@@ -60,12 +63,12 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
     _appointmentSubscription = _appointmentService
         .getAppointmentStream(_currentAppointment.id)
         .listen((appointment) {
-      if (mounted && appointment != null) {
-        setState(() {
-          _currentAppointment = appointment;
+          if (mounted && appointment != null) {
+            setState(() {
+              _currentAppointment = appointment;
+            });
+          }
         });
-      }
-    });
   }
 
   @override
@@ -240,6 +243,31 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Stage checklist (Opt In and onwards) – collapsible dropdown
+                    if (_currentAppointment.currentStage == 'opt_in' ||
+                        _currentAppointment.currentStage ==
+                            'deposit_requested' ||
+                        _currentAppointment.currentStage == 'deposit_made') ...[
+                      if (_currentAppointment.currentStage == 'opt_in')
+                        StreamBuilder<List<Contract>>(
+                          stream: _contractService
+                              .watchContractsByAppointmentId(
+                                _currentAppointment.id,
+                              ),
+                          builder: (context, snapshot) {
+                            return _buildStageChecklistExpansion(
+                              child: _buildStageChecklist(
+                                contracts: snapshot.data,
+                              ),
+                            );
+                          },
+                        )
+                      else
+                        _buildStageChecklistExpansion(
+                          child: _buildStageChecklist(contracts: null),
+                        ),
+                      const SizedBox(height: 24),
+                    ],
                     // Contact Information
                     _buildSection('Contact Information', Icons.contact_mail, [
                       _buildInfoRow(
@@ -305,14 +333,18 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                     if (_currentAppointment.depositAmount != null ||
                         _currentAppointment.depositPaid ||
                         (_currentAppointment.customerUploadedProofUrl != null &&
-                            _currentAppointment.customerUploadedProofUrl!.isNotEmpty) ||
+                            _currentAppointment
+                                .customerUploadedProofUrl!
+                                .isNotEmpty) ||
                         (_currentAppointment.depositProofUrl != null &&
                             _currentAppointment.depositProofUrl!.isNotEmpty))
                       _buildDepositSection(),
                     if (_currentAppointment.depositAmount != null ||
                         _currentAppointment.depositPaid ||
                         (_currentAppointment.customerUploadedProofUrl != null &&
-                            _currentAppointment.customerUploadedProofUrl!.isNotEmpty) ||
+                            _currentAppointment
+                                .customerUploadedProofUrl!
+                                .isNotEmpty) ||
                         (_currentAppointment.depositProofUrl != null &&
                             _currentAppointment.depositProofUrl!.isNotEmpty))
                       const SizedBox(height: 24),
@@ -352,6 +384,14 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                             ),
                           ),
                       ]),
+                      if (_currentAppointment.optInPackages.isNotEmpty) ...[
+                        const SizedBox(height: 24),
+                        _buildSection('Opt In Packages', Icons.inventory, [
+                          _buildOptInProductsList(
+                            _currentAppointment.optInPackages,
+                          ),
+                        ]),
+                      ],
                       const SizedBox(height: 24),
 
                       // Opt In Questionnaire (always show for opt-in stage and beyond)
@@ -481,6 +521,12 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
               foregroundColor: Colors.white,
             ),
           ),
+          const SizedBox(width: 12),
+          OutlinedButton.icon(
+            onPressed: _isDeleting ? null : _showAddNoteDialog,
+            icon: const Icon(Icons.note_add, size: 18),
+            label: const Text('Add Note'),
+          ),
           const Spacer(),
           // Close button (right side)
           TextButton(
@@ -490,6 +536,86 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
         ],
       ),
     );
+  }
+
+  Future<void> _showAddNoteDialog() async {
+    final controller = TextEditingController();
+    try {
+      final saved = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Add Note'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: 'Enter note...',
+              border: OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
+            maxLines: 4,
+            minLines: 3,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (controller.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a note.'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+                Navigator.of(context).pop(true);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+              ),
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      );
+      if (saved == true && mounted) {
+        final text = controller.text.trim();
+        if (text.isEmpty) return;
+        final authProvider = context.read<AuthProvider>();
+        final userId = authProvider.user?.uid;
+        if (userId == null) return;
+        try {
+          await _appointmentService.addNote(
+            appointmentId: _currentAppointment.id,
+            noteText: text,
+            userId: userId,
+            userName: authProvider.userName,
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Note added'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to add note: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+    } finally {
+      controller.dispose();
+    }
   }
 
   Future<void> _showDeleteConfirmation() async {
@@ -816,11 +942,17 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                          Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             'Failed to load image',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -883,8 +1015,10 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
     // Add sales-uploaded proof of payment display if uploaded
     if (_currentAppointment.depositProofUrl != null &&
         _currentAppointment.depositProofUrl!.isNotEmpty) {
-      final isPdf = _currentAppointment.depositProofUrl!.toLowerCase().contains('.pdf');
-      
+      final isPdf = _currentAppointment.depositProofUrl!.toLowerCase().contains(
+        '.pdf',
+      );
+
       children.addAll([
         const SizedBox(height: 16),
         const Text(
@@ -893,7 +1027,8 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
         ),
         const SizedBox(height: 8),
         InkWell(
-          onTap: () => _showProofFile(_currentAppointment.depositProofUrl!, isPdf),
+          onTap: () =>
+              _showProofFile(_currentAppointment.depositProofUrl!, isPdf),
           child: Container(
             height: 150,
             decoration: BoxDecoration(
@@ -938,11 +1073,17 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                          Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             'Failed to load image',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -975,62 +1116,55 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
       return const SizedBox.shrink();
     }
 
-    return _buildSection(
-      'Proof of Payment',
-      Icons.upload_file,
-      [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.teal.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.teal.withOpacity(0.2)),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.cloud_upload_outlined,
-                size: 48,
-                color: Colors.teal[700],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Upload Proof of Payment',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.teal[900],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Upload an image or PDF document of the deposit proof to automatically move this appointment to Deposit Made.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _uploadDepositProof,
-                icon: const Icon(Icons.upload_file),
-                label: const Text('Select File'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal[700],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
+    return _buildSection('Proof of Payment', Icons.upload_file, [
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.teal.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.teal.withOpacity(0.2)),
         ),
-      ],
-    );
+        child: Column(
+          children: [
+            Icon(
+              Icons.cloud_upload_outlined,
+              size: 48,
+              color: Colors.teal[700],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Upload Proof of Payment',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.teal[900],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Upload an image or PDF document of the deposit proof to automatically move this appointment to Deposit Made.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _uploadDepositProof,
+              icon: const Icon(Icons.upload_file),
+              label: const Text('Select File'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal[700],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ]);
   }
 
   Future<void> _uploadDepositProof() async {
@@ -1067,7 +1201,7 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
 
       // 2. Pick file based on selection
       XFile? file;
-      
+
       if (sourceType == 'image') {
         final ImagePicker picker = ImagePicker();
         file = await picker.pickImage(
@@ -1362,7 +1496,8 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
     if (!kIsWeb) return null;
 
     final completer = Completer<XFile?>();
-    final uploadInput = html.FileUploadInputElement()..accept = 'application/pdf,.pdf';
+    final uploadInput = html.FileUploadInputElement()
+      ..accept = 'application/pdf,.pdf';
     uploadInput.click();
 
     uploadInput.onChange.listen((e) async {
@@ -1371,7 +1506,7 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
         final file = files[0];
         final reader = html.FileReader();
         reader.readAsArrayBuffer(file);
-        
+
         reader.onLoadEnd.listen((e) {
           final bytes = reader.result as List<int>;
           final xFile = XFile.fromData(
@@ -1435,46 +1570,167 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
         );
       }
     } else {
-      // For images, show in dialog with zoom
-      showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppBar(
-                title: const Text('Proof of Payment'),
-                automaticallyImplyLeading: false,
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              Flexible(
-                child: InteractiveViewer(
-                  child: Image.network(
-                    fileUrl,
-                    errorBuilder: (context, error, stackTrace) => const Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.error, size: 48, color: Colors.red),
-                          SizedBox(height: 16),
-                          Text('Failed to load image'),
-                        ],
-                      ),
+      // For images, open in new tab on web (like PDF) for full screen; dialog on mobile
+      if (kIsWeb) {
+        // ignore: avoid_web_libraries_in_flutter
+        html.window.open(fileUrl, '_blank');
+      } else {
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppBar(
+                  title: const Text('Proof of Payment'),
+                  automaticallyImplyLeading: false,
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                Flexible(
+                  child: InteractiveViewer(
+                    child: Image.network(
+                      fileUrl,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Padding(
+                            padding: EdgeInsets.all(32.0),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.error, size: 48, color: Colors.red),
+                                SizedBox(height: 16),
+                                Text('Failed to load image'),
+                              ],
+                            ),
+                          ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
+  }
+
+  Widget _buildStageChecklistExpansion({required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ExpansionTile(
+        title: Row(
+          children: [
+            Icon(Icons.checklist, size: 20, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              'Next steps',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStageChecklist({List<Contract>? contracts}) {
+    final stage = _currentAppointment.currentStage;
+    String title;
+    List<({String label, bool done})> items;
+
+    if (stage == 'opt_in') {
+      final hasContract = contracts != null && contracts.isNotEmpty;
+      final contractSent = _currentAppointment.contractEmailSentAt != null;
+      final contractSigned =
+          contracts != null &&
+          contracts.any((c) => c.status == ContractStatus.signed);
+
+      title = 'To move to Deposit Requested';
+      items = [
+        (label: 'Generate contract', done: hasContract),
+        (label: 'Send contract', done: contractSent),
+        (label: 'Customer signs contract', done: contractSigned),
+      ];
+    } else if (stage == 'deposit_requested') {
+      final sent = _currentAppointment.depositConfirmationSentAt != null;
+      final customerConfirmed =
+          _currentAppointment.depositConfirmationStatus == 'confirmed';
+      final proofVerified =
+          _currentAppointment.customerProofVerified ||
+          (_currentAppointment.depositProofUrl != null &&
+              _currentAppointment.depositProofUrl!.isNotEmpty);
+
+      title = 'To move to Deposit Made';
+      items = [
+        (label: 'Send deposit request', done: sent),
+        (
+          label: 'Customer confirms they have made the deposit',
+          done: customerConfirmed,
+        ),
+        (label: 'Verify proof of payment', done: proofVerified),
+      ];
+    } else if (stage == 'deposit_made') {
+      final depositConfirmed =
+          _currentAppointment.customerProofVerified ||
+          (_currentAppointment.depositProofUrl != null &&
+              _currentAppointment.depositProofUrl!.isNotEmpty);
+
+      title = 'To Send to Operations';
+      items = [
+        (label: 'Deposit confirmed', done: depositConfirmed),
+        (label: 'Manually drag to Send to Operations', done: false),
+      ];
+    } else {
+      return const SizedBox.shrink();
+    }
+
+    return _buildSection(
+      title,
+      Icons.checklist,
+      items.map((item) => _buildChecklistRow(item.label, item.done)).toList(),
+    );
+  }
+
+  Widget _buildChecklistRow(String label, bool done) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            done ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 20,
+            color: done ? Colors.green : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: done ? Colors.grey[700] : Colors.grey[600],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSection(String title, IconData icon, List<Widget> children) {

@@ -140,6 +140,24 @@ class SalesAppointmentService {
     }
   }
 
+  /// Mark that the contract link email was sent to the customer
+  Future<void> updateContractEmailSent(String appointmentId) async {
+    try {
+      final appointment = await getAppointment(appointmentId);
+      if (appointment == null) return;
+      final updated = appointment.copyWith(
+        contractEmailSentAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await updateAppointment(updated);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating contract email sent: $e');
+      }
+      rethrow;
+    }
+  }
+
   Future<void> updateAppointmentAssignment({
     required String appointmentId,
     String? assignedTo,
@@ -206,6 +224,7 @@ class SalesAppointmentService {
     DateTime? depositConfirmationRespondedAt,
     bool shouldSendDepositEmail = true,
     String? paymentType,
+    String? contractViewUrl,
   }) async {
     try {
       final appointment = await getAppointment(appointmentId);
@@ -245,6 +264,7 @@ class SalesAppointmentService {
           appointment: appointment,
           yesUrl: yesUrl,
           noUrl: noUrl,
+          contractViewUrl: contractViewUrl,
         );
       }
 
@@ -447,7 +467,7 @@ class SalesAppointmentService {
 
           print('✉️ Finance email sent status: $sent');
           if (sent) {
-            //print('✅ SUCCESS: Finance team notified at info@barefootbytes.com');
+            print('✅ SUCCESS: Finance team notified at tertiusva@gmail.com');
             print(
               // '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
               '✅ SUCCESS: Finance team notified at tertiusva@gmail.com',
@@ -885,7 +905,20 @@ class SalesAppointmentService {
         }
       }
 
-      // 4. Update appointment - clear customer proof fields and set rejection metadata
+      // Add a note to lead history (notes list) for rejecting POP
+      final reasonSuffix = rejectionReason != null && rejectionReason.isNotEmpty
+          ? ' Reason: $rejectionReason'
+          : '';
+      final rejectionNote = models.SalesAppointmentNote(
+        text:
+            'Deposit proof of payment rejected by $rejectedByName.$reasonSuffix',
+        createdAt: now,
+        createdBy: rejectedBy,
+        createdByName: rejectedByName,
+      );
+      final updatedNotes = [...appointment.notes, rejectionNote];
+
+      // 4. Update appointment - clear customer proof fields, set rejection metadata, add note
       await _firestore.collection('appointments').doc(appointmentId).update({
         'customerUploadedProofUrl': null,
         'customerUploadedProofAt': null,
@@ -899,6 +932,7 @@ class SalesAppointmentService {
         'customerProofRejectedByName': rejectedByName,
         'customerProofRejectionReason': rejectionReason,
         'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'notes': updatedNotes.map((n) => n.toMap()).toList(),
         'updatedAt': Timestamp.fromDate(now),
       });
 
@@ -1066,16 +1100,28 @@ class SalesAppointmentService {
       // Generate install booking token for email link
       final installBookingToken = const Uuid().v4();
 
-      // Convert appointment optInProducts to OrderItems
-      final orderItems = appointment.optInProducts
+      // Convert appointment optInProducts and optInPackages to OrderItems
+      final productItems = appointment.optInProducts
           .map(
             (product) => models.OrderItem(
               name: product.name,
               quantity: product.quantity,
               price: product.price,
+              productId: product.id,
             ),
           )
           .toList();
+      final packageItems = appointment.optInPackages
+          .map(
+            (pkg) => models.OrderItem(
+              name: pkg.name,
+              quantity: pkg.quantity,
+              price: pkg.price,
+              packageId: pkg.id,
+            ),
+          )
+          .toList();
+      final orderItems = [...productItems, ...packageItems];
 
       // Determine if this is a priority order (full payment)
       final isPriorityOrder = appointment.isFullPayment;

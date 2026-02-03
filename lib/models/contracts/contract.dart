@@ -41,23 +41,48 @@ class ContractProduct {
   final String id;
   final String name;
   final double price;
+  final int quantity;
+  /// True for package-item and added-service lines that render under a package header.
+  final bool isSubItem;
+  /// Package (header) line id when this line is a sub-item.
+  final String? parentId;
+  /// Optional: standalone, packageHeader, packageItem, addedService (for round-trip).
+  final String? lineType;
 
   const ContractProduct({
     required this.id,
     required this.name,
     required this.price,
+    this.quantity = 1,
+    this.isSubItem = false,
+    this.parentId,
+    this.lineType,
   });
+
+  double get lineTotal => price * quantity;
 
   factory ContractProduct.fromMap(Map<String, dynamic> map) {
     return ContractProduct(
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
       price: (map['price'] is num) ? (map['price'] as num).toDouble() : 0.0,
+      quantity: (map['quantity'] is num) ? (map['quantity'] as num).toInt() : 1,
+      isSubItem: map['isSubItem'] == true,
+      parentId: map['parentId']?.toString(),
+      lineType: map['lineType']?.toString(),
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {'id': id, 'name': name, 'price': price};
+    return {
+      'id': id,
+      'name': name,
+      'price': price,
+      'quantity': quantity,
+      if (isSubItem) 'isSubItem': true,
+      if (parentId != null) 'parentId': parentId,
+      if (lineType != null) 'lineType': lineType,
+    };
   }
 }
 

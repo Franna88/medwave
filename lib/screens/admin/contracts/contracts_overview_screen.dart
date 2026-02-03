@@ -873,7 +873,7 @@ class _ContractDetailsDialog extends StatelessWidget {
                         'R ${contract.subtotal.toStringAsFixed(2)}',
                       ),
                       _buildInfoRow(
-                        'Deposit (40%)',
+                        'Deposit (10%)',
                         'R ${contract.depositAmount.toStringAsFixed(2)}',
                         isBold: true,
                       ),

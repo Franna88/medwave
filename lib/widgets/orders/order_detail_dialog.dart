@@ -44,7 +44,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   bool _isSplitting = false;
   String? _selectedInstallerId;
   Set<String> _selectedItemsForOverride = {}; // Items selected for override
-  StreamSubscription<models.Order?>? _orderSubscription; // For real-time updates
+  StreamSubscription<models.Order?>?
+  _orderSubscription; // For real-time updates
 
   @override
   void initState() {
@@ -56,9 +57,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
   void _setupRealtimeUpdates() {
     // Listen to real-time updates for this order
-    _orderSubscription = _orderService
-        .getOrderStream(_currentOrder.id)
-        .listen((order) {
+    _orderSubscription = _orderService.getOrderStream(_currentOrder.id).listen((
+      order,
+    ) {
       if (mounted && order != null) {
         setState(() {
           _currentOrder = order;
@@ -213,13 +214,19 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
 
     if (!hasInstaller && !isNoInstallationRequired) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Please assign an installer or select "No Installation Required" before confirming installation date',
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Assign installer first'),
+            content: const Text(
+              'Please assign an installer or select "No Installation Required" before confirming installation date.',
             ),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 3),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
           ),
         );
       }
@@ -577,6 +584,17 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Operations stage checklist (dropdown)
+                    if (_currentOrder.currentStage == 'orders_placed' ||
+                        _currentOrder.currentStage == 'priority_shipment' ||
+                        _currentOrder.currentStage ==
+                            'inventory_packing_list' ||
+                        _currentOrder.currentStage == 'items_picked' ||
+                        _currentOrder.currentStage == 'out_for_delivery' ||
+                        _currentOrder.currentStage == 'installed') ...[
+                      _buildOperationsStageChecklistExpansion(),
+                      const SizedBox(height: 24),
+                    ],
                     _buildCustomerInfo(),
                     const SizedBox(height: 24),
                     // Show delivery info section when order has tracking/waybill
@@ -1396,11 +1414,17 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                          Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             'Failed to load image',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -1446,7 +1470,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               ),
             ],
           ),
-        ] else if (_currentOrder.customerFinalPaymentProofVerifiedByName != null) ...[
+        ] else if (_currentOrder.customerFinalPaymentProofVerifiedByName !=
+            null) ...[
           const SizedBox(height: 4),
           Text(
             'Verified by ${_currentOrder.customerFinalPaymentProofVerifiedByName}',
@@ -1463,8 +1488,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     // Add operations-uploaded proof of payment display if uploaded
     if (_currentOrder.finalPaymentProofUrl != null &&
         _currentOrder.finalPaymentProofUrl!.isNotEmpty) {
-      final isPdf = _currentOrder.finalPaymentProofUrl!.toLowerCase().contains('.pdf');
-      
+      final isPdf = _currentOrder.finalPaymentProofUrl!.toLowerCase().contains(
+        '.pdf',
+      );
+
       children.addAll([
         const SizedBox(height: 16),
         const Text(
@@ -1473,7 +1500,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         ),
         const SizedBox(height: 8),
         InkWell(
-          onTap: () => _showProofFile(_currentOrder.finalPaymentProofUrl!, isPdf),
+          onTap: () =>
+              _showProofFile(_currentOrder.finalPaymentProofUrl!, isPdf),
           child: Container(
             height: 150,
             decoration: BoxDecoration(
@@ -1518,11 +1546,17 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.image_not_supported, color: Colors.grey[400]),
+                          Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey[400],
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             'Failed to load image',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -1576,10 +1610,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               Text(
                 'Upload an image or PDF document of the final payment proof.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -1614,32 +1645,35 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       // ignore: avoid_web_libraries_in_flutter
       html.window.open(url, '_blank');
     } else {
-      // Show image in dialog
-      showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 800, maxHeight: 600),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppBar(
-                  title: const Text('Proof of Payment'),
-                  actions: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                Expanded(
-                  child: Image.network(url, fit: BoxFit.contain),
-                ),
-              ],
+      // Open image in new tab on web (full screen like PDF); dialog on mobile
+      if (kIsWeb) {
+        // ignore: avoid_web_libraries_in_flutter
+        html.window.open(url, '_blank');
+      } else {
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 800, maxHeight: 600),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppBar(
+                    title: const Text('Proof of Payment'),
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  Expanded(child: Image.network(url, fit: BoxFit.contain)),
+                ],
+              ),
             ),
           ),
-        ),
-      );
+        );
+      }
     }
   }
 
@@ -2481,6 +2515,166 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
+  Widget _buildOperationsStageChecklistExpansion() {
+    final content = _buildOperationsStageChecklist();
+    if (content == null) return const SizedBox.shrink();
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ExpansionTile(
+        title: Row(
+          children: [
+            Icon(Icons.checklist, size: 20, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              'Next steps',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: content,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget? _buildOperationsStageChecklist() {
+    final stage = _currentOrder.currentStage;
+    String title;
+    List<({String label, bool done})> items;
+
+    switch (stage) {
+      case 'orders_placed':
+        final customerSelectedDate =
+            _currentOrder.customerSelectedDates.isNotEmpty;
+        title = 'To move to Priority Shipment';
+        items = [
+          (
+            label: 'Customer needs to select installation date',
+            done: customerSelectedDate,
+          ),
+        ];
+        break;
+      case 'priority_shipment':
+        final hasInstallDate = _currentOrder.confirmedInstallDate != null;
+        final warehousePicked =
+            _currentOrder.pickedAt != null ||
+            _currentOrder.pickedItems.values.any((v) => v);
+        title = 'To move to Inventory Packing List';
+        items = [
+          (label: 'Confirm installation date', done: hasInstallDate),
+          (label: 'Warehouse needs to pick items', done: warehousePicked),
+        ];
+        break;
+      case 'inventory_packing_list':
+        final hasPicked =
+            _currentOrder.pickedAt != null ||
+            _currentOrder.pickedItems.values.any((v) => v);
+        title = 'To move to Items Picked';
+        items = [(label: 'Proceed to shipping', done: hasPicked)];
+        break;
+      case 'items_picked':
+        final hasTracking =
+            _currentOrder.trackingNumber != null &&
+            _currentOrder.trackingNumber!.isNotEmpty;
+        final hasWaybill =
+            _currentOrder.waybillPhotoUrl != null &&
+            _currentOrder.waybillPhotoUrl!.isNotEmpty;
+        title = 'To move to Out for Delivery';
+        items = [
+          (
+            label: 'Add tracking number and waybill photo and send shipping',
+            done: hasTracking && hasWaybill,
+          ),
+        ];
+        break;
+      case 'out_for_delivery':
+        title = 'To move to Installed';
+        items = [(label: 'Manually move to Installed', done: false)];
+        break;
+      case 'installed':
+        final hasSignoff = _currentOrder.hasInstallationSignoff;
+        final paymentVerified = _currentOrder.customerFinalPaymentProofVerified;
+        title = 'To move to Payment';
+        items = [
+          (label: 'Acknowledgement form signed', done: hasSignoff),
+          (
+            label:
+                'Proof of final payment verified (can be done in Out for Delivery)',
+            done: paymentVerified,
+          ),
+        ];
+        break;
+      default:
+        return null;
+    }
+
+    return _buildOrderChecklistSection(title, items);
+  }
+
+  Widget _buildOrderChecklistSection(
+    String title,
+    List<({String label, bool done})> items,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.checklist, size: 20, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...items.map((item) => _buildOrderChecklistRow(item.label, item.done)),
+      ],
+    );
+  }
+
+  Widget _buildOrderChecklistRow(String label, bool done) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            done ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 20,
+            color: done ? Colors.green : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: done ? Colors.grey[700] : Colors.grey[600],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBusinessInformationSection() {
     return _buildSection(
       title: 'Business Information',
@@ -2496,6 +2690,12 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   Widget _buildInstallationBookingSection() {
     final hasSelectedDates = _currentOrder.customerSelectedDates.isNotEmpty;
     final hasConfirmedDate = _currentOrder.confirmedInstallDate != null;
+    final hasInstaller =
+        _currentOrder.assignedInstallerId != null &&
+        _currentOrder.assignedInstallerId!.isNotEmpty;
+    final isNoInstallationRequired =
+        _currentOrder.assignedInstallerId == _noInstallationRequiredId;
+    final needsInstallerWarning = !hasInstaller && !isNoInstallationRequired;
 
     return _buildSection(
       title: 'Installation Booking',
@@ -2547,6 +2747,29 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 Expanded(
                   child: Text(
                     'Customer has not selected installation dates yet.',
+                    style: TextStyle(color: Colors.orange[800]),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        if (needsInstallerWarning) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange[700]),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Please assign an installer or select "No Installation Required" before confirming installation date.',
                     style: TextStyle(color: Colors.orange[800]),
                   ),
                 ),

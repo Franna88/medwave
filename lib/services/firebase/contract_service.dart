@@ -78,20 +78,39 @@ class ContractService {
         );
       }
 
-      // Calculate totals (multiply price by quantity for each product)
+      // Calculate totals (products and packages)
       double subtotal = 0;
       for (final product in appointment.optInProducts) {
         subtotal += product.price * product.quantity;
       }
+      for (final pkg in appointment.optInPackages) {
+        subtotal += pkg.price * pkg.quantity;
+      }
 
-      final depositAmount = subtotal * 0.40; // 40% deposit
-      final remainingBalance = subtotal * 0.60; // 60% balance
+      final totalInclVat = subtotal * 1.15; // 15% VAT
+      final depositAmount = totalInclVat * 0.10; // 10% deposit
+      final remainingBalance = totalInclVat - depositAmount; // 90% balance
 
       // Create contract document reference
       final docRef = _firestore.collection(_collectionPath).doc();
 
       // Generate access token
       final accessToken = generateAccessToken(docRef.id);
+
+      // Build products from opt-in products and packages
+      final productsFromProducts = appointment.optInProducts
+          .map((p) => ContractProduct(
+              id: p.id, name: p.name, price: p.price, quantity: p.quantity))
+          .toList();
+      final productsFromPackages = appointment.optInPackages
+          .map((p) => ContractProduct(
+              id: p.id,
+              name: p.name,
+              price: p.price,
+              quantity: p.quantity,
+              lineType: 'packageHeader'))
+          .toList();
+      final allProducts = [...productsFromProducts, ...productsFromPackages];
 
       // Create contract object
       final contract = Contract(
@@ -109,9 +128,7 @@ class ContractService {
           'content': contractContent.content,
           'plainText': contractContent.plainText,
         },
-        products: appointment.optInProducts
-            .map((p) => ContractProduct(id: p.id, name: p.name, price: p.price))
-            .toList(),
+        products: allProducts,
         subtotal: subtotal,
         depositAmount: depositAmount,
         remainingBalance: remainingBalance,
@@ -186,17 +203,19 @@ class ContractService {
         }
       }
 
-      final depositAmount = finalSubtotal * 0.40; // 40% deposit
-      final remainingBalance = finalSubtotal * 0.60; // 60% balance
+      final totalInclVat = finalSubtotal * 1.15; // 15% VAT
+      final depositAmount = totalInclVat * 0.10; // 10% deposit
+      final remainingBalance = totalInclVat - depositAmount; // 90% balance
 
-      // Get revision number (count existing revisions + 1)
+      // Get revision number: always chain to root contract so numbers increment (1, 2, 3...)
+      final rootId = originalContract.parentContractId ?? originalContract.id;
       final existingRevisions = await getContractsByAppointmentId(
         appointment.id,
       );
-      final revisionsOfThisContract = existingRevisions
-          .where((c) => c.parentContractId == originalContract.id)
+      final revisionsOfRoot = existingRevisions
+          .where((c) => c.id == rootId || c.parentContractId == rootId)
           .toList();
-      final revisionNumber = revisionsOfThisContract.length + 1;
+      final revisionNumber = revisionsOfRoot.length + 1;
 
       // Create new contract document
       final docRef = _firestore.collection(_collectionPath).doc();
@@ -228,8 +247,8 @@ class ContractService {
         createdAt: DateTime.now(),
         createdBy: createdBy,
         createdByName: createdByName,
-        // Revision tracking
-        parentContractId: originalContract.id,
+        // Revision tracking (always point to root so history is one chain)
+        parentContractId: rootId,
         revisionNumber: revisionNumber,
         editReason: editReason,
         editedBy: createdBy,
@@ -365,6 +384,7 @@ class ContractService {
             .get();
         if (doc.exists) {
           final contract = Contract.fromFirestore(doc);
+          final contractViewUrl = getFullContractUrl(contract);
           // Move appointment to Deposit Requested stage with email notification
           await _appointmentService.moveAppointmentToStage(
             appointmentId: contract.appointmentId,
@@ -374,6 +394,7 @@ class ContractService {
             userId: 'system',
             userName: 'System (Contract Signing)',
             shouldSendDepositEmail: true, // Triggers deposit confirmation email
+            contractViewUrl: contractViewUrl,
           );
           if (kDebugMode) {
             print(

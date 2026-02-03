@@ -81,6 +81,7 @@ import 'providers/user_profile_provider.dart';
 import 'providers/admin_provider.dart';
 import 'providers/gohighlevel_provider.dart';
 import 'providers/product_items_provider.dart';
+import 'providers/product_packages_provider.dart';
 import 'providers/contract_content_provider.dart';
 import 'providers/contract_provider.dart';
 import 'providers/installation_signoff_provider.dart';
@@ -150,6 +151,8 @@ class MedWaveApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AdminProvider()),
         // Product items provider for admin product management
         ChangeNotifierProvider(create: (_) => ProductItemsProvider()),
+        // Product packages provider for admin product management
+        ChangeNotifierProvider(create: (_) => ProductPackagesProvider()),
         // Inventory provider for warehouse stock management
         ChangeNotifierProvider(create: (_) => InventoryProvider()),
         // Installer provider for operations installer management

@@ -10,6 +10,7 @@ import '../../../models/leads/lead.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/product_items_provider.dart';
+import '../../../providers/product_packages_provider.dart';
 import '../../../providers/inventory_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/role_manager.dart';
@@ -43,10 +44,12 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
   bool _isSyncing = false;
 
   final List<StreamStage> _stages = StreamStage.getSalesStages();
+  late final ScrollController _horizontalScrollController;
 
   @override
   void initState() {
     super.initState();
+    _horizontalScrollController = ScrollController();
     _loadAppointments();
     _searchController.addListener(_onSearchChanged);
     // Load admin users for assignment feature (Super Admin only)
@@ -57,6 +60,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       }
       // Load product items for Opt In stage selections
       context.read<ProductItemsProvider>().listenToProducts();
+      // Load packages for Opt In stage selections
+      context.read<ProductPackagesProvider>().listenToPackages();
       // Load inventory stock for View Stock feature
       context.read<InventoryProvider>().listenToInventory();
     });
@@ -66,6 +71,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
   void dispose() {
     _appointmentsSubscription?.cancel();
     _searchController.dispose();
+    _horizontalScrollController.dispose();
     super.dispose();
   }
 
@@ -1737,6 +1743,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           .where((p) => p.isActive)
           .toList(growable: false);
       final selectedProductQuantities = <String, int>{};
+      final selectedPackageQuantities = <String, int>{};
+      int optInSegmentIndex = 0; // 0 = Products, 1 = Packages
       final noteController = TextEditingController(
         text: 'Manually added to Opt In',
       );
@@ -1759,6 +1767,10 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         builder: (context) {
           final authProvider = context.read<AuthProvider>();
           final isSuperAdmin = authProvider.userRole == UserRole.superAdmin;
+          final packageProvider = context.read<ProductPackagesProvider>();
+          final packages = packageProvider.packages
+              .where((p) => p.isActive)
+              .toList(growable: false);
           return StatefulBuilder(
             builder: (context, setState) {
               return AlertDialog(
@@ -1859,16 +1871,40 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                         ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Select product(s)',
+                        'Select product(s) or package(s)',
                         style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<int>(
+                        segments: const [
+                          ButtonSegment<int>(
+                            value: 0,
+                            label: Text('Products'),
+                            icon: Icon(Icons.inventory_2, size: 18),
+                          ),
+                          ButtonSegment<int>(
+                            value: 1,
+                            label: Text('Packages'),
+                            icon: Icon(Icons.inventory, size: 18),
+                          ),
+                        ],
+                        selected: {optInSegmentIndex},
+                        onSelectionChanged: (Set<int> selected) {
+                          setState(() {
+                            optInSegmentIndex = selected.first;
+                          });
+                        },
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
                         height: 260,
                         width: 720,
-                        child: products.isEmpty
-                            ? const Text('No products available')
-                            : Column(
+                        child: Builder(
+                          builder: (context) {
+                            if (optInSegmentIndex == 0) {
+                              return products.isEmpty
+                                  ? const Text('No products available')
+                                  : Column(
                                 children: [
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -2048,7 +2084,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                                                           .id] =
                                                                       currentQty -
                                                                       1;
-                                                                  quantityController
+                                                                quantityController
                                                                           .text =
                                                                       (currentQty -
                                                                               1)
@@ -2071,7 +2107,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                                                 final qty =
                                                                     int.tryParse(
                                                                       value,
-                                                                    ) ??
+                                                                ) ??
                                                                     1;
                                                                 if (qty >= 1) {
                                                                   setState(() {
@@ -2090,7 +2126,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                                                           4,
                                                                       vertical:
                                                                           4,
-                                                                    ),
+                                                                ),
                                                                 isDense: true,
                                                               ),
                                                             ),
@@ -2128,7 +2164,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                                         ],
                                                       )
                                                     : const SizedBox.shrink(),
-                                              ),
+                                                ),
                                               if (isSuperAdmin) ...[
                                                 const SizedBox(width: 12),
                                                 SizedBox(
@@ -2151,7 +2187,293 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                     ),
                                   ),
                                 ],
-                              ),
+                              );
+                            }
+                            return packages.isEmpty
+                                ? const Text('No packages available')
+                                : Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(width: 24),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Package',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Description',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            'Country',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        SizedBox(
+                                          width: 100,
+                                          child: Text(
+                                            'Quantity',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        if (isSuperAdmin) ...[
+                                          SizedBox(width: 12),
+                                          SizedBox(
+                                            width: 120,
+                                            child: Text(
+                                              'Price',
+                                              textAlign: TextAlign.right,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      primary: false,
+                                      shrinkWrap: false,
+                                      itemCount: packages.length,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, index) {
+                                        final package = packages[index];
+                                        final isSelected =
+                                            selectedPackageQuantities
+                                                .containsKey(package.id);
+                                        final quantityController =
+                                            TextEditingController(
+                                              text:
+                                                  selectedPackageQuantities[
+                                                                  package.id]
+                                                              ?.toString() ??
+                                                          '1',
+                                            );
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Checkbox(
+                                                value: isSelected,
+                                                onChanged: (checked) {
+                                                  setState(() {
+                                                    if (checked == true) {
+                                                      selectedPackageQuantities[
+                                                                  package.id] =
+                                                              1;
+                                                      quantityController.text =
+                                                              '1';
+                                                    } else {
+                                                      selectedPackageQuantities
+                                                          .remove(package.id);
+                                                    }
+                                                  });
+                                                },
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  package.name,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  package.description,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700],
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: Text(
+                                                  package.country,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: 12),
+                                              SizedBox(
+                                                width: 100,
+                                                child: isSelected
+                                                    ? Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.remove,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedPackageQuantities[
+                                                                              package.id] ??
+                                                                          1;
+                                                              if (currentQty >
+                                                                  1) {
+                                                                setState(() {
+                                                                  selectedPackageQuantities[
+                                                                          package.id] =
+                                                                      currentQty -
+                                                                          1;
+                                                                quantityController
+                                                                        .text =
+                                                                    (currentQty -
+                                                                            1)
+                                                                        .toString();
+                                                                });
+                                                              }
+                                                            },
+                                                          ),
+                                                          Expanded(
+                                                            child: TextField(
+                                                              controller:
+                                                                  quantityController,
+                                                              keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              onChanged: (value) {
+                                                                final qty =
+                                                                    int.tryParse(
+                                                                          value) ??
+                                                                      1;
+                                                                if (qty >= 1) {
+                                                                  setState(() {
+                                                                    selectedPackageQuantities[
+                                                                            package.id] =
+                                                                        qty;
+                                                                  });
+                                                                }
+                                                              },
+                                                              decoration: const InputDecoration(
+                                                                border:
+                                                                    OutlineInputBorder(),
+                                                                contentPadding:
+                                                                    EdgeInsets.symmetric(
+                                                                      horizontal: 4,
+                                                                      vertical: 4,
+                                                                    ),
+                                                                isDense: true,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.add,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedPackageQuantities[
+                                                                              package.id] ??
+                                                                          1;
+                                                              setState(() {
+                                                                selectedPackageQuantities[
+                                                                        package.id] =
+                                                                    currentQty +
+                                                                        1;
+                                                                quantityController
+                                                                        .text =
+                                                                    (currentQty +
+                                                                            1)
+                                                                        .toString();
+                                                              });
+                                                            },
+                                                          ),
+                                                        ],
+                                                      )
+                                                    : const SizedBox.shrink(),
+                                                ),
+                                              if (isSuperAdmin) ...[
+                                                const SizedBox(width: 12),
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Text(
+                                                    'R ${package.price.toStringAsFixed(2)}',
+                                                    textAlign: TextAlign.right,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                          },
+                        ),
                       ),
                       // Opt-In Questionnaire
                       const SizedBox(height: 16),
@@ -2221,6 +2543,24 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         }).toList();
       }
 
+      // Create list of opt-in packages
+      final packageProvider = context.read<ProductPackagesProvider>();
+      final packagesForSubmit = packageProvider.packages
+          .where((p) => p.isActive)
+          .toList(growable: false);
+      List<models.OptInProduct> optInPackageSelections = [];
+      if (selectedPackageQuantities.isNotEmpty) {
+        optInPackageSelections = selectedPackageQuantities.entries.map((entry) {
+          final package = packagesForSubmit.firstWhere((p) => p.id == entry.key);
+          return models.OptInProduct(
+            id: package.id,
+            name: package.name,
+            price: package.price,
+            quantity: entry.value,
+          );
+        }).toList();
+      }
+
       // Build opt-in questions map
       final answers = <String, String>{};
       questionControllers.forEach((question, controller) {
@@ -2274,6 +2614,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         manuallyAdded: true,
         optInNote: noteText,
         optInProducts: optInSelections ?? [],
+        optInPackages: optInPackageSelections,
         optInQuestions: optInQuestions,
         paymentType: selectedPaymentType,
       );
@@ -2286,11 +2627,12 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         appointment,
       );
 
-      // Update lead with appointment reference and opt-in products
+      // Update lead with appointment reference and opt-in products/packages
       final updatedLead = lead.copyWith(
         convertedToAppointmentId: appointmentId,
         optInNote: noteText,
         optInProducts: optInSelections ?? [],
+        optInPackages: optInPackageSelections,
         updatedAt: now,
       );
       await _leadService.updateLead(updatedLead);
@@ -2927,15 +3269,20 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
   }
 
   Widget _buildKanbanBoard() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _stages.map((stage) {
-          final appointments = _getAppointmentsForStage(stage.id);
-          return _buildStageColumn(stage, appointments);
-        }).toList(),
+    return Scrollbar(
+      controller: _horizontalScrollController,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        controller: _horizontalScrollController,
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: _stages.map((stage) {
+            final appointments = _getAppointmentsForStage(stage.id);
+            return _buildStageColumn(stage, appointments);
+          }).toList(),
+        ),
       ),
     );
   }
@@ -3248,46 +3595,86 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 ),
               ],
             ],
-            // Payment type badge
+            // Payment type badge and Contract sent tag
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: appointment.isFullPayment
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: appointment.isFullPayment
-                      ? Colors.green.withOpacity(0.3)
-                      : Colors.orange.withOpacity(0.3),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    appointment.isFullPayment
-                        ? Icons.star
-                        : Icons.payments_outlined,
-                    size: 12,
-                    color: appointment.isFullPayment
-                        ? Colors.green[700]
-                        : Colors.orange[700],
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    appointment.isFullPayment ? 'Full Payment' : 'Deposit',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                  decoration: BoxDecoration(
+                    color: appointment.isFullPayment
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
                       color: appointment.isFullPayment
-                          ? Colors.green[700]
-                          : Colors.orange[700],
+                          ? Colors.green.withOpacity(0.3)
+                          : Colors.orange.withOpacity(0.3),
                     ),
                   ),
-                ],
-              ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        appointment.isFullPayment
+                            ? Icons.star
+                            : Icons.payments_outlined,
+                        size: 12,
+                        color: appointment.isFullPayment
+                            ? Colors.green[700]
+                            : Colors.orange[700],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        appointment.isFullPayment ? 'Full Payment' : 'Deposit',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: appointment.isFullPayment
+                              ? Colors.green[700]
+                              : Colors.orange[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (appointment.contractEmailSentAt != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.mark_email_read_outlined,
+                          size: 12,
+                          color: Colors.blue[700],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Contract sent',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
             // Proof needs verification badge
             if (appointment.customerUploadedProofUrl != null &&
@@ -3304,7 +3691,11 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.pending_actions, size: 12, color: Colors.orange[700]),
+                    Icon(
+                      Icons.pending_actions,
+                      size: 12,
+                      color: Colors.orange[700],
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Proof Needs Verification',

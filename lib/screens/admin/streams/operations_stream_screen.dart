@@ -32,10 +32,12 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
   String _searchQuery = '';
 
   final List<StreamStage> _stages = StreamStage.getOperationsStages();
+  late final ScrollController _horizontalScrollController;
 
   @override
   void initState() {
     super.initState();
+    _horizontalScrollController = ScrollController();
     _loadOrders();
     _searchController.addListener(_onSearchChanged);
     // Load installers and inventory for order details
@@ -49,6 +51,7 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
   void dispose() {
     _ordersSubscription?.cancel();
     _searchController.dispose();
+    _horizontalScrollController.dispose();
     super.dispose();
   }
 
@@ -396,15 +399,20 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
   }
 
   Widget _buildKanbanBoard() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _stages.map((stage) {
-          final orders = _getOrdersForStage(stage.id);
-          return _buildStageColumn(stage, orders);
-        }).toList(),
+    return Scrollbar(
+      controller: _horizontalScrollController,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        controller: _horizontalScrollController,
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: _stages.map((stage) {
+            final orders = _getOrdersForStage(stage.id);
+            return _buildStageColumn(stage, orders);
+          }).toList(),
+        ),
       ),
     );
   }
@@ -669,7 +677,8 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                         ? Icons.block
                         : Icons.engineering,
                     size: 14,
-                    color: order.assignedInstallerId == 'NO_INSTALLATION_REQUIRED'
+                    color:
+                        order.assignedInstallerId == 'NO_INSTALLATION_REQUIRED'
                         ? Colors.grey[600]
                         : Colors.blue[600],
                   ),
@@ -680,7 +689,9 @@ class _OperationsStreamScreenState extends State<OperationsStreamScreen> {
                         : order.assignedInstallerName!,
                     style: TextStyle(
                       fontSize: 12,
-                      color: order.assignedInstallerId == 'NO_INSTALLATION_REQUIRED'
+                      color:
+                          order.assignedInstallerId ==
+                              'NO_INSTALLATION_REQUIRED'
                           ? Colors.grey[600]
                           : Colors.blue[600],
                     ),

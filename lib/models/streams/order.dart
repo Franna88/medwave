@@ -113,19 +113,25 @@ class Order {
   final String? finalPaymentProofUploadedByName; // User name who uploaded proof
 
   // Final payment proof fields (customer-uploaded)
-  final String? customerUploadedFinalPaymentProofUrl; // URL of proof uploaded by customer
+  final String?
+  customerUploadedFinalPaymentProofUrl; // URL of proof uploaded by customer
   final DateTime? customerUploadedFinalPaymentProofAt; // When customer uploaded
-  final bool customerFinalPaymentProofVerified; // Whether operations verified it
-  final DateTime? customerFinalPaymentProofVerifiedAt; // When operations verified
+  final bool
+  customerFinalPaymentProofVerified; // Whether operations verified it
+  final DateTime?
+  customerFinalPaymentProofVerifiedAt; // When operations verified
   final String? customerFinalPaymentProofVerifiedBy; // User ID who verified
-  final String? customerFinalPaymentProofVerifiedByName; // User name who verified
+  final String?
+  customerFinalPaymentProofVerifiedByName; // User name who verified
 
   // Final payment proof rejection fields
   final bool customerFinalPaymentProofRejected; // Whether proof was rejected
   final DateTime? customerFinalPaymentProofRejectedAt; // When rejected
   final String? customerFinalPaymentProofRejectedBy; // User ID who rejected
-  final String? customerFinalPaymentProofRejectedByName; // User name who rejected
-  final String? customerFinalPaymentProofRejectionReason; // Reason for rejection
+  final String?
+  customerFinalPaymentProofRejectedByName; // User name who rejected
+  final String?
+  customerFinalPaymentProofRejectionReason; // Reason for rejection
 
   Order({
     required this.id,
@@ -346,9 +352,10 @@ class Order {
       finalPaymentProofUrl: map['finalPaymentProofUrl']?.toString(),
       finalPaymentProofUploadedAt:
           (map['finalPaymentProofUploadedAt'] as Timestamp?)?.toDate(),
-      finalPaymentProofUploadedBy: map['finalPaymentProofUploadedBy']?.toString(),
-      finalPaymentProofUploadedByName:
-          map['finalPaymentProofUploadedByName']?.toString(),
+      finalPaymentProofUploadedBy: map['finalPaymentProofUploadedBy']
+          ?.toString(),
+      finalPaymentProofUploadedByName: map['finalPaymentProofUploadedByName']
+          ?.toString(),
       // Final payment proof fields (customer-uploaded)
       customerUploadedFinalPaymentProofUrl:
           map['customerUploadedFinalPaymentProofUrl']?.toString(),
@@ -466,24 +473,33 @@ class Order {
       'finalPaymentProofUploadedBy': finalPaymentProofUploadedBy,
       'finalPaymentProofUploadedByName': finalPaymentProofUploadedByName,
       // Final payment proof fields (customer-uploaded)
-      'customerUploadedFinalPaymentProofUrl': customerUploadedFinalPaymentProofUrl,
-      'customerUploadedFinalPaymentProofAt': customerUploadedFinalPaymentProofAt != null
+      'customerUploadedFinalPaymentProofUrl':
+          customerUploadedFinalPaymentProofUrl,
+      'customerUploadedFinalPaymentProofAt':
+          customerUploadedFinalPaymentProofAt != null
           ? Timestamp.fromDate(customerUploadedFinalPaymentProofAt!)
           : null,
       'customerFinalPaymentProofVerified': customerFinalPaymentProofVerified,
-      'customerFinalPaymentProofVerifiedAt': customerFinalPaymentProofVerifiedAt != null
+      'customerFinalPaymentProofVerifiedAt':
+          customerFinalPaymentProofVerifiedAt != null
           ? Timestamp.fromDate(customerFinalPaymentProofVerifiedAt!)
           : null,
-      'customerFinalPaymentProofVerifiedBy': customerFinalPaymentProofVerifiedBy,
-      'customerFinalPaymentProofVerifiedByName': customerFinalPaymentProofVerifiedByName,
+      'customerFinalPaymentProofVerifiedBy':
+          customerFinalPaymentProofVerifiedBy,
+      'customerFinalPaymentProofVerifiedByName':
+          customerFinalPaymentProofVerifiedByName,
       // Final payment proof rejection fields
       'customerFinalPaymentProofRejected': customerFinalPaymentProofRejected,
-      'customerFinalPaymentProofRejectedAt': customerFinalPaymentProofRejectedAt != null
+      'customerFinalPaymentProofRejectedAt':
+          customerFinalPaymentProofRejectedAt != null
           ? Timestamp.fromDate(customerFinalPaymentProofRejectedAt!)
           : null,
-      'customerFinalPaymentProofRejectedBy': customerFinalPaymentProofRejectedBy,
-      'customerFinalPaymentProofRejectedByName': customerFinalPaymentProofRejectedByName,
-      'customerFinalPaymentProofRejectionReason': customerFinalPaymentProofRejectionReason,
+      'customerFinalPaymentProofRejectedBy':
+          customerFinalPaymentProofRejectedBy,
+      'customerFinalPaymentProofRejectedByName':
+          customerFinalPaymentProofRejectedByName,
+      'customerFinalPaymentProofRejectionReason':
+          customerFinalPaymentProofRejectionReason,
     };
   }
 
@@ -653,31 +669,43 @@ class Order {
       finalPaymentProofUploadedBy:
           finalPaymentProofUploadedBy ?? this.finalPaymentProofUploadedBy,
       finalPaymentProofUploadedByName:
-          finalPaymentProofUploadedByName ?? this.finalPaymentProofUploadedByName,
+          finalPaymentProofUploadedByName ??
+          this.finalPaymentProofUploadedByName,
       // Final payment proof fields (customer-uploaded)
       customerUploadedFinalPaymentProofUrl:
-          customerUploadedFinalPaymentProofUrl ?? this.customerUploadedFinalPaymentProofUrl,
+          customerUploadedFinalPaymentProofUrl ??
+          this.customerUploadedFinalPaymentProofUrl,
       customerUploadedFinalPaymentProofAt:
-          customerUploadedFinalPaymentProofAt ?? this.customerUploadedFinalPaymentProofAt,
+          customerUploadedFinalPaymentProofAt ??
+          this.customerUploadedFinalPaymentProofAt,
       customerFinalPaymentProofVerified:
-          customerFinalPaymentProofVerified ?? this.customerFinalPaymentProofVerified,
+          customerFinalPaymentProofVerified ??
+          this.customerFinalPaymentProofVerified,
       customerFinalPaymentProofVerifiedAt:
-          customerFinalPaymentProofVerifiedAt ?? this.customerFinalPaymentProofVerifiedAt,
+          customerFinalPaymentProofVerifiedAt ??
+          this.customerFinalPaymentProofVerifiedAt,
       customerFinalPaymentProofVerifiedBy:
-          customerFinalPaymentProofVerifiedBy ?? this.customerFinalPaymentProofVerifiedBy,
+          customerFinalPaymentProofVerifiedBy ??
+          this.customerFinalPaymentProofVerifiedBy,
       customerFinalPaymentProofVerifiedByName:
-          customerFinalPaymentProofVerifiedByName ?? this.customerFinalPaymentProofVerifiedByName,
+          customerFinalPaymentProofVerifiedByName ??
+          this.customerFinalPaymentProofVerifiedByName,
       // Final payment proof rejection fields
       customerFinalPaymentProofRejected:
-          customerFinalPaymentProofRejected ?? this.customerFinalPaymentProofRejected,
+          customerFinalPaymentProofRejected ??
+          this.customerFinalPaymentProofRejected,
       customerFinalPaymentProofRejectedAt:
-          customerFinalPaymentProofRejectedAt ?? this.customerFinalPaymentProofRejectedAt,
+          customerFinalPaymentProofRejectedAt ??
+          this.customerFinalPaymentProofRejectedAt,
       customerFinalPaymentProofRejectedBy:
-          customerFinalPaymentProofRejectedBy ?? this.customerFinalPaymentProofRejectedBy,
+          customerFinalPaymentProofRejectedBy ??
+          this.customerFinalPaymentProofRejectedBy,
       customerFinalPaymentProofRejectedByName:
-          customerFinalPaymentProofRejectedByName ?? this.customerFinalPaymentProofRejectedByName,
+          customerFinalPaymentProofRejectedByName ??
+          this.customerFinalPaymentProofRejectedByName,
       customerFinalPaymentProofRejectionReason:
-          customerFinalPaymentProofRejectionReason ?? this.customerFinalPaymentProofRejectionReason,
+          customerFinalPaymentProofRejectionReason ??
+          this.customerFinalPaymentProofRejectionReason,
     );
   }
 
@@ -726,19 +754,37 @@ class OrderItem {
   final String name;
   final int quantity;
   final double? price;
+  /// Product id when this line is a product (for inventory match).
+  final String? productId;
+  /// Package id when this line is a package (expand to package items for stock).
+  final String? packageId;
 
-  OrderItem({required this.name, required this.quantity, this.price});
+  OrderItem({
+    required this.name,
+    required this.quantity,
+    this.price,
+    this.productId,
+    this.packageId,
+  });
 
   factory OrderItem.fromMap(Map<String, dynamic> map) {
     return OrderItem(
       name: map['name']?.toString() ?? '',
       quantity: map['quantity']?.toInt() ?? 1,
       price: map['price']?.toDouble(),
+      productId: map['productId']?.toString(),
+      packageId: map['packageId']?.toString(),
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {'name': name, 'quantity': quantity, 'price': price};
+    return {
+      'name': name,
+      'quantity': quantity,
+      'price': price,
+      if (productId != null) 'productId': productId,
+      if (packageId != null) 'packageId': packageId,
+    };
   }
 }
 

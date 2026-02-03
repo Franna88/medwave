@@ -240,6 +240,7 @@ class EmailJSService {
     String? description,
     String? yesLabel,
     String? noLabel,
+    String? contractViewUrl,
   }) async {
     final amountText = appointment.depositAmount != null
         ? appointment.depositAmount!.toStringAsFixed(2)
@@ -259,6 +260,7 @@ class EmailJSService {
         description: resolvedDescription,
         yesLabel: yesLabel ?? 'Yes, I made the deposit',
         noLabel: noLabel ?? 'No, not yet',
+        contractViewUrl: contractViewUrl,
       ),
     );
   }
@@ -338,7 +340,7 @@ class EmailJSService {
     String? yesUrl,
     String? noUrl,
   }) async {
-    final resolvedEmail = marketingEmail ?? 'info@barefootbytes.com';
+    final resolvedEmail = marketingEmail ?? 'tertiusva@gmail';
     final resolvedYesUrl = yesUrl ?? _defaultSalesBoardLink();
     final resolvedNoUrl = noUrl ?? _defaultSalesBoardLink();
 
@@ -381,18 +383,19 @@ class EmailJSService {
     required String description,
     required String yesLabel,
     required String noLabel,
+    String? contractViewUrl,
   }) {
-    // Calculate deposit amount: use stored depositAmount, or calculate 40% of total if not set
+    // Calculate deposit amount: use stored depositAmount, or calculate 10% of total if not set
     double calculatedAmount = 0;
     if (appointment.depositAmount != null) {
       calculatedAmount = appointment.depositAmount!;
     } else if (appointment.optInProducts.isNotEmpty) {
-      // Calculate 40% deposit from optInProducts total (multiply price by quantity)
+      // Calculate 10% deposit from optInProducts total (multiply price by quantity)
       final total = appointment.optInProducts.fold<double>(
         0,
         (sum, p) => sum + (p.price * p.quantity),
       );
-      calculatedAmount = total * 0.40; // 40% deposit
+      calculatedAmount = total * 0.10; // 10% deposit
     }
 
     return {
@@ -409,6 +412,8 @@ class EmailJSService {
       'no_label': noLabel,
       'yes_url': yesUrl,
       'no_url': noUrl,
+      if (contractViewUrl != null && contractViewUrl.isNotEmpty)
+        'contract_view_url': contractViewUrl,
     };
   }
 
@@ -538,7 +543,7 @@ class EmailJSService {
             if (storedDeposit != null) {
               depositAmount = (storedDeposit as num).toDouble();
             } else {
-              // Calculate 40% of total from optInProducts if deposit not stored
+              // Calculate 10% of total from optInProducts if deposit not stored
               final optInProducts =
                   appointmentData['optInProducts'] as List<dynamic>?;
               if (optInProducts != null && optInProducts.isNotEmpty) {
@@ -553,7 +558,7 @@ class EmailJSService {
                     }
                   }
                 }
-                depositAmount = total * 0.40; // 40% deposit
+                depositAmount = total * 0.10; // 10% deposit
               }
             }
           }
@@ -564,7 +569,7 @@ class EmailJSService {
         debugPrint('Error fetching appointment for deposit amount: $e');
       }
       // Fallback: calculate from order items if appointment fetch fails
-      depositAmount = totalInvoice * 0.40; // 40% deposit as fallback
+      depositAmount = totalInvoice * 0.10; // 10% deposit as fallback
     }
 
     // Calculate remaining balance (what customer needs to pay for final payment)
