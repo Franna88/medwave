@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -58,6 +59,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
   late Map<String, bool> _pickedItems;
   bool _isLoading = false;
   bool _isMovingToPickList = false;
+
+  /// Flattened row count; used when persisting so order card shows correct progress.
+  int? _lastFlattenedCount;
 
   @override
   void initState() {
@@ -315,6 +319,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
       await _orderService.updatePickedItems(
         orderId: _currentOrder.id,
         pickedItems: _pickedItems,
+        totalFlattenedItemCount: _lastFlattenedCount,
       );
     } catch (e) {
       setState(() {
@@ -328,24 +333,29 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     }
   }
 
-  /// Number of order lines where every constituent row is picked (uses flattened rows; supports composite keys and legacy).
-  int _computePickedOrderLineCount(List<_PickListRow> rows) {
-    if (_currentOrder.items.isEmpty) return 0;
-    final orderLineNames = _currentOrder.items.map((i) => i.name).toSet();
-    int count = 0;
-    for (final name in orderLineNames) {
-      final lineRows = rows.where((r) => r.orderItem.name == name).toList();
-      if (lineRows.isEmpty) continue;
-      final allPicked = lineRows.every((r) {
-        final key = r.pickKey;
-        final v = _pickedItems[key];
-        if (v == true) return true;
-        if (r.productId != null && _pickedItems[name] == true) return true;
-        return false;
+  /// Ensures every flattened row has a key in _pickedItems (post-frame). Optionally persists to sync order card.
+  void _ensurePickedItemsKeys(List<_PickListRow> rows) {
+    final missing = rows.where((r) => !_pickedItems.containsKey(r.pickKey));
+    if (missing.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        for (final r in rows) {
+          _pickedItems.putIfAbsent(r.pickKey, () => false);
+        }
       });
-      if (allPicked) count++;
-    }
-    return count;
+      _orderService
+          .updatePickedItems(
+            orderId: _currentOrder.id,
+            pickedItems: _pickedItems,
+            totalFlattenedItemCount: rows.length,
+          )
+          .catchError((e) {
+            if (kDebugMode) {
+              debugPrint('Order processing: sync flattened count failed: $e');
+            }
+          });
+    });
   }
 
   Future<void> _proceedToShipping() async {
@@ -366,8 +376,11 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
       packageProvider,
       productProvider,
     );
-    final pickedCount = _computePickedOrderLineCount(rows);
-    final allItemsPicked = pickedCount == _currentOrder.items.length;
+    final totalCount = rows.length;
+    final pickedCount = totalCount == 0
+        ? 0
+        : rows.where((r) => _pickedItems[r.pickKey] == true).length;
+    final allItemsPicked = totalCount > 0 && pickedCount == totalCount;
     if (!allItemsPicked) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -409,6 +422,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
               order: _currentOrder.copyWith(
                 currentStage: 'items_picked',
                 pickedItems: _pickedItems,
+                totalFlattenedItemCount: _lastFlattenedCount,
               ),
             ),
           ),
@@ -447,8 +461,14 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                     packageProvider,
                     productProvider,
                   );
-                  final pickedCount = _computePickedOrderLineCount(rows);
-                  final totalCount = _currentOrder.items.length;
+                  _lastFlattenedCount = rows.length;
+                  _ensurePickedItemsKeys(rows);
+                  final totalCount = rows.length;
+                  final pickedCount = totalCount == 0
+                      ? 0
+                      : rows
+                            .where((r) => _pickedItems[r.pickKey] == true)
+                            .length;
                   final allItemsPicked =
                       totalCount > 0 && pickedCount == totalCount;
                   final progress = totalCount > 0
@@ -840,7 +860,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     final isPicked =
         _pickedItems[row.pickKey] ??
         (row.productId != null && _pickedItems[row.orderItem.name] == true);
-    final canPick = !row.orderLineIsOutOfStock || isPicked;
+    // Use this row's own stock state so in-stock items can be picked even if another row in the same order line is OOS.
+    final thisRowUnpickable = row.isOutOfStock || row.hasInsufficientStock;
+    final canPick = !thisRowUnpickable || isPicked;
     final isOut = row.isOutOfStock || row.hasInsufficientStock;
 
     String badgeText;
@@ -859,23 +881,23 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
       decoration: BoxDecoration(
         color: isPicked
             ? Colors.white
-            : row.orderLineIsOutOfStock
+            : isOut
             ? Colors.red.shade50
             : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isPicked
               ? AppTheme.successColor.withOpacity(0.5)
-              : row.orderLineIsOutOfStock
+              : isOut
               ? Colors.red.shade300
               : AppTheme.borderColor,
-          width: isPicked || row.orderLineIsOutOfStock ? 2 : 1,
+          width: isPicked || isOut ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: isPicked
                 ? AppTheme.successColor.withOpacity(0.1)
-                : row.orderLineIsOutOfStock
+                : isOut
                 ? Colors.red.withOpacity(0.1)
                 : Colors.black.withOpacity(0.03),
             blurRadius: 8,
@@ -902,7 +924,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                     decoration: BoxDecoration(
                       color: isPicked
                           ? AppTheme.successColor.withOpacity(0.1)
-                          : row.orderLineIsOutOfStock
+                          : isOut
                           ? Colors.red.shade100
                           : AppTheme.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
@@ -915,7 +937,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                           fontWeight: FontWeight.bold,
                           color: isPicked
                               ? AppTheme.successColor
-                              : row.orderLineIsOutOfStock
+                              : isOut
                               ? Colors.red[700]
                               : AppTheme.primaryColor,
                         ),
@@ -937,7 +959,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                                   fontWeight: FontWeight.w600,
                                   color: isPicked
                                       ? AppTheme.secondaryColor.withOpacity(0.6)
-                                      : row.orderLineIsOutOfStock
+                                      : isOut
                                       ? Colors.red[800]
                                       : AppTheme.textColor,
                                   decoration: isPicked
@@ -990,7 +1012,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                             color: AppTheme.secondaryColor.withOpacity(0.6),
                           ),
                         ),
-                        if (row.orderLineIsOutOfStock && !isPicked) ...[
+                        if (isOut && !isPicked) ...[
                           const SizedBox(height: 6),
                           Row(
                             children: [
@@ -1023,14 +1045,14 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                     decoration: BoxDecoration(
                       color: isPicked
                           ? AppTheme.successColor
-                          : row.orderLineIsOutOfStock
+                          : isOut
                           ? Colors.red.shade200
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: isPicked
                             ? AppTheme.successColor
-                            : row.orderLineIsOutOfStock
+                            : isOut
                             ? Colors.red.shade400
                             : AppTheme.borderColor,
                         width: 2,
@@ -1038,7 +1060,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                     ),
                     child: isPicked
                         ? const Icon(Icons.check, color: Colors.white, size: 20)
-                        : row.orderLineIsOutOfStock
+                        : isOut
                         ? Icon(Icons.block, color: Colors.red[700], size: 18)
                         : null,
                   ),

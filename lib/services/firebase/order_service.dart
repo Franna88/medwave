@@ -1083,12 +1083,17 @@ class OrderService {
   Future<void> updatePickedItems({
     required String orderId,
     required Map<String, bool> pickedItems,
+    int? totalFlattenedItemCount,
   }) async {
     try {
-      await _firestore.collection('orders').doc(orderId).update({
+      final data = <String, dynamic>{
         'pickedItems': pickedItems,
         'updatedAt': Timestamp.fromDate(DateTime.now()),
-      });
+      };
+      if (totalFlattenedItemCount != null) {
+        data['totalFlattenedItemCount'] = totalFlattenedItemCount;
+      }
+      await _firestore.collection('orders').doc(orderId).update(data);
 
       if (kDebugMode) {
         print('Updated picked items for order $orderId');
