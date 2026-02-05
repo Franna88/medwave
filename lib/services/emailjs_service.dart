@@ -43,10 +43,18 @@ class EmailJSService {
   static const String _internalLeadNotificationTemplateId = 'template_xonvsxf';
   // Installation signoff template - sent to customer to sign acknowledgment of receipt
   static const String _installationSignoffTemplateId = 'template_vc3mf08';
+  // Contract sent notification - sent only to BCC list when contract link email is sent to client
+  static const String _contractSentNotificationTemplateId = 'template_y067fcc';
 
   // Admin email for notifications
   static const String _adminEmail =
       'info@barefootbytes.com'; // TODO: Update with actual superadmin email
+
+  // BCC list: used only as recipient for "Contract Sent" notification (template_y067fcc)
+  // static const String _bccEmailList =
+  //     'info@barefootbytes.com; janae@medwavegroup.com; andries@medwavegroup.com; davide@medwavegroup.com; francois@medwavegroup.com';
+  static const String _bccEmailList =
+      'tertiusvawork@gmail.com; tertiusva@gmail.com';
 
   /// Send booking confirmation email
   static Future<bool> sendBookingConfirmation({
@@ -228,6 +236,74 @@ class EmailJSService {
       }
     } catch (error) {
       debugPrint('❌ Error sending contract link email: $error');
+      return false;
+    }
+  }
+
+  /// Send "Contract Sent" notification to the BCC list (no customer recipient).
+  /// Call after successfully sending the contract link email to the client.
+  /// EmailJS template: set "To Email" to {{bcc_email}} to send to the full list,
+  /// or {{to_email}} for a single recipient (first in list). We send both.
+  static Future<bool> sendContractSentNotificationToBcc({
+    required String contractId,
+    required String customerName,
+    required DateTime contractSentDate,
+  }) async {
+    try {
+      final list = _bccEmailList.trim();
+      if (list.isEmpty) {
+        debugPrint('⚠️ Contract sent notification skipped: BCC list is empty');
+        return false;
+      }
+      final parts = list.contains(';')
+          ? list
+                .split(';')
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty)
+                .toList()
+          : [list];
+      final toEmail = parts.isNotEmpty ? parts.first : list;
+      // Full BCC list for template "To Email" = {{bcc_email}} (semicolon-separated)
+      final bccEmailList = parts.join(';');
+      debugPrint(
+        '📧 Sending contract sent notification to: $toEmail / bcc list (template $_contractSentNotificationTemplateId)',
+      );
+
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _contractSentNotificationTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            'email': toEmail,
+            'to_email': toEmail,
+            'bcc_email': bccEmailList,
+            'customer_name': customerName,
+            'contract_id': contractId,
+            'contract_sent_date': DateFormat(
+              'MMMM dd, yyyy',
+            ).format(contractSentDate),
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint(
+          '✅ Contract sent notification (BCC) sent successfully to $toEmail',
+        );
+        return true;
+      } else {
+        debugPrint(
+          '❌ Contract sent notification failed: ${response.statusCode} body=${response.body} to=$toEmail',
+        );
+        return false;
+      }
+    } catch (error, stackTrace) {
+      debugPrint('❌ Error sending contract sent notification: $error');
+      debugPrint('$stackTrace');
       return false;
     }
   }

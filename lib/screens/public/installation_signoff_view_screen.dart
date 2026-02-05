@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/installation/installation_signoff.dart';
 import '../../providers/installation_signoff_provider.dart';
+import '../../services/pdf/installation_signoff_pdf_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/pdf_download.dart';
 
 /// Public installation sign-off viewing and signing screen (unauthenticated)
 class InstallationSignoffViewScreen extends StatefulWidget {
@@ -28,6 +31,7 @@ class _InstallationSignoffViewScreenState
   final ScrollController _scrollController = ScrollController();
   bool _hasAgreed = false;
   bool _isSubmitting = false;
+  bool _isDownloadingPdf = false;
 
   @override
   void initState() {
@@ -111,6 +115,42 @@ class _InstallationSignoffViewScreenState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
+  }
+
+  Future<void> _downloadSignedReceipt(InstallationSignoff signoff) async {
+    if (_isDownloadingPdf) return;
+    setState(() => _isDownloadingPdf = true);
+    try {
+      final service = InstallationSignoffPdfService();
+      final bytes = await service.generatePdfBytes(signoff);
+      final fileName = 'installation_receipt_${signoff.id}.pdf';
+      await downloadPdfBytes(bytes, fileName);
+      if (mounted) {
+        if (kIsWeb) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Download started'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Download is available when you open this page in a browser.',
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError('Could not generate PDF: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloadingPdf = false);
+    }
   }
 
   @override
@@ -230,6 +270,35 @@ class _InstallationSignoffViewScreenState
                       textAlign: TextAlign.center,
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Download copy button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isDownloadingPdf
+                      ? null
+                      : () => _downloadSignedReceipt(signoff),
+                  icon: _isDownloadingPdf
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.download),
+                  label: Text(
+                    _isDownloadingPdf ? 'Preparing...' : 'Download copy',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -703,7 +772,9 @@ class _InstallationSignoffViewScreenState
         Expanded(
           child: Text(
             value,
-            style: valueStyle ?? const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            style:
+                valueStyle ??
+                const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
         ),
       ],

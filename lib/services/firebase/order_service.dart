@@ -12,11 +12,7 @@ import '../pdf/invoice_pdf_service.dart';
 import 'installation_signoff_service.dart';
 import 'storage_service.dart';
 
-// Base URLs for installation booking links
-const String _installBookingLinkBaseProd = 'https://app.medwave.com';
-const String _installBookingLinkBaseLocal = 'http://localhost:52961';
-
-// Base URLs for payment confirmation links
+// Base URLs for order-related links (invoice, payment confirmation, install booking)
 const String _paymentLinkBaseProd = 'https://app.medwave.com';
 const String _paymentLinkBaseLocal = 'http://localhost:52961';
 
@@ -735,18 +731,22 @@ class OrderService {
     return List.generate(32, (_) => chars[random.nextInt(chars.length)]).join();
   }
 
+  /// Base origin for order-related email links. Uses explicit prod/local when
+  /// current origin is empty or localhost so links in emails point to live in production.
+  String _linkBaseOrigin() {
+    final o = Uri.base.origin;
+    if (o.isEmpty || o.contains('localhost') || o.contains('127.0.0.1')) {
+      return kReleaseMode ? _paymentLinkBaseProd : _paymentLinkBaseLocal;
+    }
+    return o;
+  }
+
   /// Build the installation booking link URL
   String _buildInstallBookingLink({
     required String orderId,
     required String token,
   }) {
-    final runtimeOrigin = Uri.base.origin;
-    final baseOrigin = runtimeOrigin.isNotEmpty
-        ? runtimeOrigin
-        : (kReleaseMode
-              ? _installBookingLinkBaseProd
-              : _installBookingLinkBaseLocal);
-
+    final baseOrigin = _linkBaseOrigin();
     final uri = Uri.parse(baseOrigin).replace(
       path: '/installation-booking',
       queryParameters: {'orderId': orderId, 'token': token},
@@ -1316,11 +1316,7 @@ class OrderService {
     required String decision,
     required String token,
   }) {
-    final runtimeOrigin = Uri.base.origin;
-    final baseOrigin = runtimeOrigin.isNotEmpty
-        ? runtimeOrigin
-        : (kReleaseMode ? _paymentLinkBaseProd : _paymentLinkBaseLocal);
-
+    final baseOrigin = _linkBaseOrigin();
     final uri = Uri.parse(baseOrigin).replace(
       path: '/payment-confirmation',
       queryParameters: {
@@ -1337,11 +1333,7 @@ class OrderService {
     required String orderId,
     required String token,
   }) {
-    final runtimeOrigin = Uri.base.origin;
-    final baseOrigin = runtimeOrigin.isNotEmpty
-        ? runtimeOrigin
-        : (kReleaseMode ? _paymentLinkBaseProd : _paymentLinkBaseLocal);
-
+    final baseOrigin = _linkBaseOrigin();
     final uri = Uri.parse(baseOrigin).replace(
       path: '/finance-payment-confirmation',
       queryParameters: {'orderId': orderId, 'token': token},
@@ -1351,11 +1343,7 @@ class OrderService {
   }
 
   String _buildInvoiceLink({required String orderId, required String token}) {
-    final runtimeOrigin = Uri.base.origin;
-    final baseOrigin = runtimeOrigin.isNotEmpty
-        ? runtimeOrigin
-        : (kReleaseMode ? _paymentLinkBaseProd : _paymentLinkBaseLocal);
-
+    final baseOrigin = _linkBaseOrigin();
     final uri = Uri.parse(baseOrigin).replace(
       path: '/invoice-view',
       queryParameters: {'orderId': orderId, 'token': token},

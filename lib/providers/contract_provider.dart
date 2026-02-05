@@ -15,6 +15,7 @@ class ContractProvider extends ChangeNotifier {
   bool _isSaving = false;
   String? _error;
   StreamSubscription<List<Contract>>? _subscription;
+  bool _lastContractBccSent = true;
 
   // Getters
   Contract? get currentContract => _currentContract;
@@ -22,6 +23,7 @@ class ContractProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
   String? get error => _error;
+  bool get lastContractBccSent => _lastContractBccSent;
 
   /// Generate contract for an appointment
   Future<Contract?> generateContractForAppointment({
@@ -126,10 +128,24 @@ class ContractProvider extends ChangeNotifier {
   }) async {
     try {
       final contractUrl = getFullContractUrl(contract);
-      return await EmailJSService.sendContractLinkEmail(
+      final success = await EmailJSService.sendContractLinkEmail(
         appointment: appointment,
         contractUrl: contractUrl,
       );
+      if (success) {
+        _lastContractBccSent =
+            await EmailJSService.sendContractSentNotificationToBcc(
+              contractId: contract.id,
+              customerName: appointment.customerName,
+              contractSentDate: DateTime.now(),
+            );
+        if (!_lastContractBccSent && kDebugMode) {
+          print(
+            'ContractProvider: Contract sent to client but BCC notification failed. In EmailJS set "To Email" to {{bcc_email}} or {{to_email}} (we send both).',
+          );
+        }
+      }
+      return success;
     } catch (e) {
       _error = e.toString();
       notifyListeners();
