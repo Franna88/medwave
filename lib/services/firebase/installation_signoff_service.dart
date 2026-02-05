@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:crypto/crypto.dart';
 import 'package:uuid/uuid.dart';
+import '../../models/admin/product_package.dart';
 import '../../models/installation/installation_signoff.dart';
 import '../../models/streams/order.dart' as models;
 import 'order_service.dart';
@@ -62,10 +63,65 @@ class InstallationSignoffService {
       // Generate access token
       final accessToken = generateAccessToken(docRef.id);
 
-      // Convert order items to signoff items
-      final signoffItems = order.items
-          .map((item) => SignoffItem(name: item.name, quantity: item.quantity))
-          .toList();
+      // Convert order items to signoff items; expand packages to product-level and add includedServiceLabels
+      final signoffItems = <SignoffItem>[];
+      for (final item in order.items) {
+        if (item.packageId == null) {
+          signoffItems.add(
+            SignoffItem(name: item.name, quantity: item.quantity),
+          );
+          continue;
+        }
+        try {
+          final packageDoc = await _firestore
+              .collection('product_packages')
+              .doc(item.packageId)
+              .get();
+          if (!packageDoc.exists || packageDoc.data() == null) {
+            signoffItems.add(
+              SignoffItem(name: item.name, quantity: item.quantity),
+            );
+            continue;
+          }
+          final package = ProductPackage.fromFirestore(packageDoc);
+          if (package.packageItems.isEmpty) {
+            signoffItems.add(
+              SignoffItem(name: item.name, quantity: item.quantity),
+            );
+            continue;
+          }
+          for (final entry in package.packageItems) {
+            String productName = 'Product ${entry.productId}';
+            try {
+              final productDoc = await _firestore
+                  .collection('product_items')
+                  .doc(entry.productId)
+                  .get();
+              if (productDoc.exists && productDoc.data() != null) {
+                productName =
+                    (productDoc.data()!['name'] as String?) ?? productName;
+              }
+            } catch (_) {}
+            signoffItems.add(
+              SignoffItem(
+                name: productName,
+                quantity: entry.quantity * item.quantity,
+              ),
+            );
+          }
+          if (package.includedServiceLabels != null) {
+            for (final label in package.includedServiceLabels!) {
+              if (label.isNotEmpty) {
+                signoffItems.add(SignoffItem(name: label, quantity: 1));
+              }
+            }
+          }
+        } catch (_) {
+          signoffItems.add(
+            SignoffItem(name: item.name, quantity: item.quantity),
+          );
+        }
+      }
 
       // Create sign-off object
       final signoff = InstallationSignoff(
@@ -116,7 +172,9 @@ class InstallationSignoffService {
       // Validate token
       if (!validateToken(signoffId, token)) {
         if (kDebugMode) {
-          print('❌ InstallationSignoffService: Invalid token for sign-off $signoffId');
+          print(
+            '❌ InstallationSignoffService: Invalid token for sign-off $signoffId',
+          );
         }
         return null;
       }
@@ -161,13 +219,17 @@ class InstallationSignoffService {
           });
 
           if (kDebugMode) {
-            print('✅ InstallationSignoffService: Sign-off marked as viewed: $signoffId');
+            print(
+              '✅ InstallationSignoffService: Sign-off marked as viewed: $signoffId',
+            );
           }
         }
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ InstallationSignoffService: Error marking sign-off as viewed: $e');
+        print(
+          '❌ InstallationSignoffService: Error marking sign-off as viewed: $e',
+        );
       }
     }
   }
@@ -212,22 +274,21 @@ class InstallationSignoffService {
             .collection(_collectionPath)
             .doc(signoffId)
             .get();
-        
+
         if (signoffDoc.exists) {
           final signoff = InstallationSignoff.fromFirestore(signoffDoc);
-          
+
           // Update order with sign-off reference
-          await _firestore
-              .collection('orders')
-              .doc(signoff.orderId)
-              .update({
+          await _firestore.collection('orders').doc(signoff.orderId).update({
             'installationSignoffId': signoffId,
             'hasInstallationSignoff': true,
             'installationSignedOffAt': Timestamp.fromDate(DateTime.now()),
           });
 
           if (kDebugMode) {
-            print('✅ InstallationSignoffService: Order updated with sign-off reference');
+            print(
+              '✅ InstallationSignoffService: Order updated with sign-off reference',
+            );
           }
 
           // Check if both conditions are met (signoff signed AND finance confirmed payment)
@@ -243,21 +304,27 @@ class InstallationSignoffService {
 
               // Check both conditions
               final signoffSigned = order.hasInstallationSignoff == true;
-              final financeConfirmed = order.paymentConfirmationStatus == 'confirmed';
+              final financeConfirmed =
+                  order.paymentConfirmationStatus == 'confirmed';
 
-              if (signoffSigned && financeConfirmed && order.currentStage == 'installed') {
+              if (signoffSigned &&
+                  financeConfirmed &&
+                  order.currentStage == 'installed') {
                 // Both conditions met - auto-move to payment stage
                 final orderService = OrderService();
                 await orderService.moveOrderToStage(
                   orderId: order.id,
                   newStage: 'payment',
-                  note: 'Installation signoff signed and payment confirmed by finance. Automatically moved to payment stage.',
+                  note:
+                      'Installation signoff signed and payment confirmed by finance. Automatically moved to payment stage.',
                   userId: 'system',
                   userName: 'System (Auto-move)',
                 );
 
                 if (kDebugMode) {
-                  print('✅ Auto-moved order ${order.id} to payment stage (both conditions met)');
+                  print(
+                    '✅ Auto-moved order ${order.id} to payment stage (both conditions met)',
+                  );
                 }
               }
             }
@@ -271,7 +338,9 @@ class InstallationSignoffService {
       } catch (orderUpdateError) {
         // Log but don't throw - sign-off is still signed successfully
         if (kDebugMode) {
-          print('⚠️ Sign-off signed but order update failed: $orderUpdateError');
+          print(
+            '⚠️ Sign-off signed but order update failed: $orderUpdateError',
+          );
         }
       }
     } catch (e) {
@@ -283,9 +352,7 @@ class InstallationSignoffService {
   }
 
   /// Get sign-offs by order ID
-  Future<List<InstallationSignoff>> getSignoffsByOrderId(
-    String orderId,
-  ) async {
+  Future<List<InstallationSignoff>> getSignoffsByOrderId(String orderId) async {
     try {
       final snapshot = await _firestore
           .collection(_collectionPath)
@@ -293,7 +360,9 @@ class InstallationSignoffService {
           .get();
 
       final signoffs =
-          snapshot.docs.map((doc) => InstallationSignoff.fromFirestore(doc)).toList()
+          snapshot.docs
+              .map((doc) => InstallationSignoff.fromFirestore(doc))
+              .toList()
             ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       return signoffs;

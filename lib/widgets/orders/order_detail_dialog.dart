@@ -12,6 +12,8 @@ import '../../models/admin/installer.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/installer_provider.dart';
 import '../../providers/inventory_provider.dart';
+import '../../providers/product_items_provider.dart';
+import '../../providers/product_packages_provider.dart';
 import '../../services/firebase/order_service.dart';
 import '../../theme/app_theme.dart';
 import 'installation_signoff_section_widget.dart';
@@ -2097,8 +2099,12 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           const SizedBox(height: 12),
 
           // Override button (only show if order is in inventory_packing_list stage AND there are out-of-stock items selected)
-          Consumer<InventoryProvider>(
-            builder: (context, inventoryProvider, child) {
+          Consumer3<
+            InventoryProvider,
+            ProductPackagesProvider,
+            ProductItemsProvider
+          >(
+            builder: (context, inventoryProvider, packageProvider, productProvider, child) {
               // Show override functionality in inventory_packing_list OR items_picked stage
               // Allow override in items_picked stage for items that weren't picked yet
               final isInValidStage =
@@ -2109,23 +2115,45 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 return const SizedBox.shrink();
               }
 
-              // Check if there are any out-of-stock items (that haven't been picked)
-              // Allow override for out-of-stock items even if other items have been picked
-              final hasOutOfStockItems = items.any((item) {
+              // Check if there are any out-of-stock items (that haven't been picked), including package constituent items
+              bool isItemOutOfStock(models.OrderItem orderItem) {
+                final itemPicked = pickedItems[orderItem.name] ?? false;
+                if (itemPicked) return false;
+                if (orderItem.packageId != null) {
+                  final pkg = packageProvider.packages
+                      .where((p) => p.id == orderItem.packageId)
+                      .toList();
+                  if (pkg.isEmpty) return true;
+                  for (final entry in pkg.first.packageItems) {
+                    final requiredQty = entry.quantity * orderItem.quantity;
+                    final stockMatch = inventoryProvider.allStockItems
+                        .where((s) => s.productId == entry.productId)
+                        .toList();
+                    final hasStock = stockMatch.isNotEmpty;
+                    final currentQty = hasStock
+                        ? stockMatch.first.currentQty
+                        : 0;
+                    if (!hasStock || currentQty < requiredQty) return true;
+                  }
+                  return false;
+                }
                 final hasStock = inventoryProvider.allStockItems.any(
-                  (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
+                  (s) =>
+                      s.productName.toLowerCase() ==
+                      orderItem.name.toLowerCase(),
                 );
-                if (!hasStock) return false;
+                if (!hasStock) return true;
                 final stockItem = inventoryProvider.allStockItems.firstWhere(
-                  (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
+                  (s) =>
+                      s.productName.toLowerCase() ==
+                      orderItem.name.toLowerCase(),
                 );
-                final itemPicked = pickedItems[item.name] ?? false;
-                // Item must be out of stock OR have insufficient stock AND not already picked to be eligible for override
                 final isInsufficientStock =
-                    stockItem.currentQty < item.quantity;
-                return (stockItem.isOutOfStock || isInsufficientStock) &&
-                    !itemPicked;
-              });
+                    stockItem.currentQty < orderItem.quantity;
+                return stockItem.isOutOfStock || isInsufficientStock;
+              }
+
+              final hasOutOfStockItems = items.any(isItemOutOfStock);
 
               if (hasOutOfStockItems && _selectedItemsForOverride.isNotEmpty) {
                 return Container(
@@ -2168,30 +2196,89 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             final item = entry.value;
             final isPicked = pickedItems[item.name] ?? false;
 
-            return Consumer<InventoryProvider>(
-              builder: (context, inventoryProvider, child) {
-                // Find stock for this item
-                final stockItem = inventoryProvider.allStockItems.firstWhere(
-                  (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
-                  orElse: () => inventoryProvider.allStockItems.isNotEmpty
-                      ? inventoryProvider.allStockItems.first
-                      : throw Exception('No stock'),
-                );
+            return Consumer3<
+              InventoryProvider,
+              ProductPackagesProvider,
+              ProductItemsProvider
+            >(
+              builder: (context, inventoryProvider, packageProvider, productProvider, child) {
+                // Package: expand to package items and show stock per product
+                List<Map<String, dynamic>>? packageItemRows;
+                if (item.packageId != null) {
+                  final pkg = packageProvider.packages
+                      .where((p) => p.id == item.packageId)
+                      .toList();
+                  if (pkg.isNotEmpty) {
+                    final package = pkg.first;
+                    packageItemRows = [];
+                    for (final entry in package.packageItems) {
+                      final product = productProvider.items
+                          .where((p) => p.id == entry.productId)
+                          .toList();
+                      final name = product.isEmpty
+                          ? 'Product ${entry.productId}'
+                          : product.first.name;
+                      final requiredQty = entry.quantity * item.quantity;
+                      final stockMatch = inventoryProvider.allStockItems
+                          .where((s) => s.productId == entry.productId)
+                          .toList();
+                      final hasStock = stockMatch.isNotEmpty;
+                      final currentQty = hasStock
+                          ? stockMatch.first.currentQty
+                          : 0;
+                      final itemOutOfStock =
+                          !hasStock || currentQty < requiredQty;
+                      final itemLowStock =
+                          hasStock &&
+                          stockMatch.first.isLowStock &&
+                          currentQty >= requiredQty;
+                      packageItemRows.add({
+                        'name': name,
+                        'qty': requiredQty,
+                        'stockQty': hasStock ? currentQty : null,
+                        'isOutOfStock': itemOutOfStock,
+                        'isLowStock': itemLowStock,
+                        'hasInsufficientStock': currentQty < requiredQty,
+                      });
+                    }
+                  }
+                }
 
-                final hasStock = inventoryProvider.allStockItems.any(
-                  (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
-                );
-
-                final isOutOfStock = hasStock && stockItem.isOutOfStock;
+                // Non-package: single product stock lookup
+                final hasStock =
+                    item.packageId == null &&
+                    inventoryProvider.allStockItems.any(
+                      (s) =>
+                          s.productName.toLowerCase() ==
+                          item.name.toLowerCase(),
+                    );
+                final stockItem = hasStock
+                    ? inventoryProvider.allStockItems.firstWhere(
+                        (s) =>
+                            s.productName.toLowerCase() ==
+                            item.name.toLowerCase(),
+                      )
+                    : null;
+                final isOutOfStock =
+                    hasStock && stockItem != null && stockItem.isOutOfStock;
                 final isInsufficientStock =
-                    hasStock && stockItem.currentQty < item.quantity;
-                // Allow override in inventory_packing_list OR items_picked stage
-                // (for items that haven't been picked yet)
+                    hasStock &&
+                    stockItem != null &&
+                    stockItem.currentQty < item.quantity;
                 final isInValidStage =
                     _currentOrder.currentStage == 'inventory_packing_list' ||
                     _currentOrder.currentStage == 'items_picked';
+                final packageOutOfStock =
+                    packageItemRows != null &&
+                    packageItemRows.any(
+                      (r) =>
+                          r['isOutOfStock'] as bool ||
+                          r['hasInsufficientStock'] as bool,
+                    );
                 final canOverride =
-                    (isOutOfStock || isInsufficientStock) &&
+                    (item.packageId != null
+                        ? packageOutOfStock
+                        : (isOutOfStock || isInsufficientStock)) &&
                     !isPicked &&
                     isInValidStage;
                 final isSelectedForOverride = _selectedItemsForOverride
@@ -2218,154 +2305,265 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       width: isPicked || isSelectedForOverride ? 2 : 1,
                     ),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Checkbox for override (only for out-of-stock, not picked items)
-                      if (canOverride)
-                        Checkbox(
-                          value: isSelectedForOverride,
-                          onChanged: (value) {
-                            setState(() {
-                              if (value == true) {
-                                _selectedItemsForOverride.add(item.name);
-                              } else {
-                                _selectedItemsForOverride.remove(item.name);
-                              }
-                            });
-                          },
-                          activeColor: Colors.orange,
-                        )
-                      else
-                        const SizedBox(width: 40),
-                      // Index number
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: isPicked
-                              ? Colors.green.shade100
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
+                      Row(
+                        children: [
+                          if (canOverride)
+                            Checkbox(
+                              value: isSelectedForOverride,
+                              onChanged: (value) {
+                                setState(() {
+                                  if (value == true) {
+                                    _selectedItemsForOverride.add(item.name);
+                                  } else {
+                                    _selectedItemsForOverride.remove(item.name);
+                                  }
+                                });
+                              },
+                              activeColor: Colors.orange,
+                            )
+                          else
+                            const SizedBox(width: 40),
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
                               color: isPicked
-                                  ? Colors.green[700]
-                                  : Colors.grey[600],
+                                  ? Colors.green.shade100
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(6),
                             ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Item details
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.name,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: isPicked
-                                    ? Colors.grey[600]
-                                    : Colors.black87,
-                                decoration: isPicked
-                                    ? TextDecoration.lineThrough
-                                    : null,
+                            child: Center(
+                              child: Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isPicked
+                                      ? Colors.green[700]
+                                      : Colors.grey[600],
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Qty: ${item.quantity}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Stock status badge
-                      if (hasStock)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
                           ),
-                          decoration: BoxDecoration(
-                            color: stockItem.isOutOfStock
-                                ? Colors.red.shade100
-                                : stockItem.isLowStock
-                                ? Colors.orange.shade100
-                                : Colors.green.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            stockItem.isOutOfStock
-                                ? 'Out of Stock'
-                                : stockItem.isLowStock
-                                ? 'Low (${stockItem.currentQty})'
-                                : 'In Stock (${stockItem.currentQty})',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: stockItem.isOutOfStock
-                                  ? Colors.red[700]
-                                  : stockItem.isLowStock
-                                  ? Colors.orange[700]
-                                  : Colors.green[700],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: isPicked
+                                        ? Colors.grey[600]
+                                        : Colors.black87,
+                                    decoration: isPicked
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Qty: ${item.quantity}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        )
-                      else
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'No stock info',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ),
-
-                      const SizedBox(width: 8),
-
-                      // Picked status indicator (view only)
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: isPicked ? Colors.green : Colors.transparent,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: isPicked
-                                ? Colors.green
-                                : Colors.grey.shade400,
-                            width: 2,
-                          ),
-                        ),
-                        child: isPicked
-                            ? const Icon(
-                                Icons.check,
-                                color: Colors.white,
-                                size: 16,
+                          // Stock badge for non-package; for package we show per-item below
+                          if (item.packageId == null) ...[
+                            if (hasStock && stockItem != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: stockItem.isOutOfStock
+                                      ? Colors.red.shade100
+                                      : stockItem.isLowStock
+                                      ? Colors.orange.shade100
+                                      : Colors.green.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  stockItem.isOutOfStock
+                                      ? 'Out of Stock'
+                                      : stockItem.isLowStock
+                                      ? 'Low (${stockItem.currentQty})'
+                                      : 'In Stock (${stockItem.currentQty})',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: stockItem.isOutOfStock
+                                        ? Colors.red[700]
+                                        : stockItem.isLowStock
+                                        ? Colors.orange[700]
+                                        : Colors.green[700],
+                                  ),
+                                ),
                               )
-                            : null,
+                            else
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'No stock info',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ),
+                          ] else if (packageItemRows != null &&
+                              packageItemRows.isNotEmpty)
+                            // Package summary badge (optional; items listed below)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: packageOutOfStock
+                                    ? Colors.red.shade100
+                                    : Colors.green.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                packageOutOfStock
+                                    ? 'See items below'
+                                    : 'In Stock',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: packageOutOfStock
+                                      ? Colors.red[700]
+                                      : Colors.green[700],
+                                ),
+                              ),
+                            ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: isPicked
+                                  ? Colors.green
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isPicked
+                                    ? Colors.green
+                                    : Colors.grey.shade400,
+                                width: 2,
+                              ),
+                            ),
+                            child: isPicked
+                                ? const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 16,
+                                  )
+                                : null,
+                          ),
+                        ],
                       ),
+                      // Package contents: list each item with name, qty, stock (like normal items)
+                      if (packageItemRows != null &&
+                          packageItemRows.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        ...packageItemRows.map((row) {
+                          final rowName = row['name'] as String;
+                          final rowQty = row['qty'] as int;
+                          final rowStockQty = row['stockQty'] as int?;
+                          final rowOut = row['isOutOfStock'] as bool;
+                          final rowLow = row['isLowStock'] as bool;
+                          final rowInsufficient =
+                              row['hasInsufficientStock'] as bool;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6, left: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        rowName,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Qty: $rowQty',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: rowOut || rowInsufficient
+                                        ? Colors.red.shade100
+                                        : rowLow
+                                        ? Colors.orange.shade100
+                                        : Colors.green.shade100,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: rowOut || rowInsufficient
+                                          ? Colors.red.shade300
+                                          : rowLow
+                                          ? Colors.orange.shade300
+                                          : Colors.green.shade300,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    rowInsufficient || rowOut
+                                        ? (rowStockQty != null
+                                              ? 'Low ($rowStockQty) - Need $rowQty'
+                                              : 'Out of Stock')
+                                        : rowLow
+                                        ? 'Low ($rowStockQty)'
+                                        : 'In Stock ($rowStockQty)',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: rowOut || rowInsufficient
+                                          ? Colors.red[700]
+                                          : rowLow
+                                          ? Colors.orange[700]
+                                          : Colors.green[700],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
                     ],
                   ),
                 );

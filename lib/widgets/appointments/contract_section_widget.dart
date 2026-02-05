@@ -196,10 +196,15 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
         // Non-fatal: note add failed
       }
       if (mounted) {
+        final bccSent = provider.lastContractBccSent;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Contract email sent successfully'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text(
+              bccSent
+                  ? 'Contract email sent successfully'
+                  : 'Contract sent to client. Team notification could not be sent.',
+            ),
+            backgroundColor: bccSent ? Colors.green : Colors.orange,
           ),
         );
       }
