@@ -26,6 +26,30 @@ enum UserRole {
 }
 
 class RoleManager {
+  /// Human-readable display label for the role (e.g. "Sales", "Super Admin")
+  static String roleDisplayName(UserRole role) {
+    switch (role) {
+      case UserRole.practitioner:
+        return 'Healthcare Professional';
+      case UserRole.warehouse:
+        return 'Warehouse';
+      case UserRole.installer:
+        return 'Installer';
+      case UserRole.countryAdmin:
+        return 'Country Admin';
+      case UserRole.superAdmin:
+        return 'Super Admin';
+      case UserRole.marketingAdmin:
+        return 'Marketing';
+      case UserRole.salesAdmin:
+        return 'Sales';
+      case UserRole.operationsAdmin:
+        return 'Operations';
+      case UserRole.supportAdmin:
+        return 'Support';
+    }
+  }
+
   /// Check if user can access admin panel features
   static bool canAccessAdminPanel(UserRole role) {
     return role == UserRole.countryAdmin ||

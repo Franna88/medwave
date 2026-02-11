@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_profile_provider.dart';
@@ -18,9 +17,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
   final _phoneController = TextEditingController();
   final _specializationController = TextEditingController();
   final _yearsExpController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _postalCodeController = TextEditingController();
+  final _practiceLocationController = TextEditingController();
 
   bool _isSaving = false;
 
@@ -35,12 +32,10 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     final profile = userProfileProvider.userProfile;
 
     if (profile != null) {
-      _phoneController.text = profile.phoneNumber;
+      _phoneController.text = profile.phoneNumber ?? '';
       _specializationController.text = profile.specialization;
       _yearsExpController.text = profile.yearsOfExperience.toString();
-      _addressController.text = profile.address ?? '';
-      _cityController.text = profile.city ?? '';
-      _postalCodeController.text = profile.postalCode ?? '';
+      _practiceLocationController.text = profile.practiceLocation;
     }
   }
 
@@ -49,9 +44,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
     _phoneController.dispose();
     _specializationController.dispose();
     _yearsExpController.dispose();
-    _addressController.dispose();
-    _cityController.dispose();
-    _postalCodeController.dispose();
+    _practiceLocationController.dispose();
     super.dispose();
   }
 
@@ -72,16 +65,13 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
         throw Exception('User not logged in');
       }
 
-      // Update Firestore
-      await FirebaseFirestore.instance.collection('users').doc(userId).update({
-        'phoneNumber': _phoneController.text.trim(),
-        'specialization': _specializationController.text.trim(),
-        'yearsOfExperience': int.tryParse(_yearsExpController.text.trim()) ?? 0,
-        'address': _addressController.text.trim(),
-        'city': _cityController.text.trim(),
-        'postalCode': _postalCodeController.text.trim(),
-        'lastUpdated': FieldValue.serverTimestamp(),
-      });
+      // Update profile via provider (uses set/merge so doc is created if missing)
+      await userProfileProvider.updateProfile(
+        phoneNumber: _phoneController.text.trim(),
+        specialization: _specializationController.text.trim(),
+        yearsOfExperience: int.tryParse(_yearsExpController.text.trim()) ?? 0,
+        practiceLocation: _practiceLocationController.text.trim(),
+      );
 
       // Log audit event
       final auditService = AuditService();
@@ -96,6 +86,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
           'specialization': _specializationController.text.trim(),
           'yearsOfExperience':
               int.tryParse(_yearsExpController.text.trim()) ?? 0,
+          'practiceLocation': _practiceLocationController.text.trim(),
         },
       );
 
@@ -253,11 +244,11 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
 
                 const SizedBox(height: 20),
 
-                // Address
+                // Practice Location
                 TextFormField(
-                  controller: _addressController,
+                  controller: _practiceLocationController,
                   decoration: InputDecoration(
-                    labelText: 'Practice Address',
+                    labelText: 'Practice Location',
                     prefixIcon: const Icon(Icons.location_on),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -265,47 +256,7 @@ class _EditProfileDialogState extends State<EditProfileDialog> {
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your practice address';
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // City
-                TextFormField(
-                  controller: _cityController,
-                  decoration: InputDecoration(
-                    labelText: 'City',
-                    prefixIcon: const Icon(Icons.location_city),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your city';
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Postal Code
-                TextFormField(
-                  controller: _postalCodeController,
-                  decoration: InputDecoration(
-                    labelText: 'Postal Code',
-                    prefixIcon: const Icon(Icons.markunread_mailbox),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter your postal code';
+                      return 'Please enter your practice location';
                     }
                     return null;
                   },
