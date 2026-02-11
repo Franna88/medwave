@@ -276,6 +276,22 @@ class ContractProvider extends ChangeNotifier {
       // Reload contract to get updated fields (digitalSignatureToken, pdfUrl, etc.)
       await loadContractById(contractId);
 
+      // Notify BCC list that contract was signed (non-blocking)
+      if (_currentContract != null && _currentContract!.signedAt != null) {
+        try {
+          await EmailJSService.sendContractSignedNotificationToBcc(
+            contractId: _currentContract!.id,
+            customerName: _currentContract!.customerName,
+            contractSignedDate: _currentContract!.signedAt!,
+          );
+        } catch (e) {
+          if (kDebugMode) {
+            print(
+                '⚠️ ContractProvider: Contract signed but BCC notification failed: $e');
+          }
+        }
+      }
+
       _isSaving = false;
       notifyListeners();
 

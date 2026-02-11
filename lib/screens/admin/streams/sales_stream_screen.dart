@@ -602,6 +602,35 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                       ),
                       const SizedBox(height: 12),
                       ...questionControllers.entries.map((entry) {
+                        if (entry.key == 'Method of payment') {
+                          final value = _paymentMethodOptions
+                                  .contains(entry.value.text.trim())
+                              ? entry.value.text.trim()
+                              : null;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: DropdownButtonFormField<String>(
+                              value: value,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                              ),
+                              hint: Text(_getQuestionHint(entry.key)),
+                              items: _paymentMethodOptions
+                                  .map((String v) => DropdownMenuItem<String>(
+                                        value: v,
+                                        child: Text(v),
+                                      ))
+                                  .toList(),
+                              onChanged: (String? v) {
+                                setState(() => entry.value.text = v ?? '');
+                              },
+                            ),
+                          );
+                        }
                         final isMultiline = entry.key == 'Shipping address';
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
@@ -1610,6 +1639,35 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                       ),
                       const SizedBox(height: 12),
                       ...questionControllers.entries.map((entry) {
+                        if (entry.key == 'Method of payment') {
+                          final value = _paymentMethodOptions
+                                  .contains(entry.value.text.trim())
+                              ? entry.value.text.trim()
+                              : null;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: DropdownButtonFormField<String>(
+                              value: value,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                              ),
+                              hint: Text(_getQuestionHint(entry.key)),
+                              items: _paymentMethodOptions
+                                  .map((String v) => DropdownMenuItem<String>(
+                                        value: v,
+                                        child: Text(v),
+                                      ))
+                                  .toList(),
+                              onChanged: (String? v) {
+                                setState(() => entry.value.text = v ?? '');
+                              },
+                            ),
+                          );
+                        }
                         final isMultiline = entry.key == 'Shipping address';
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
@@ -2488,6 +2546,35 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                       ),
                       const SizedBox(height: 12),
                       ...questionControllers.entries.map((entry) {
+                        if (entry.key == 'Method of payment') {
+                          final value = _paymentMethodOptions
+                                  .contains(entry.value.text.trim())
+                              ? entry.value.text.trim()
+                              : null;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: DropdownButtonFormField<String>(
+                              value: value,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                              ),
+                              hint: Text(_getQuestionHint(entry.key)),
+                              items: _paymentMethodOptions
+                                  .map((String v) => DropdownMenuItem<String>(
+                                        value: v,
+                                        child: Text(v),
+                                      ))
+                                  .toList(),
+                              onChanged: (String? v) {
+                                setState(() => entry.value.text = v ?? '');
+                              },
+                            ),
+                          );
+                        }
                         final isMultiline = entry.key == 'Shipping address';
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
@@ -3291,6 +3378,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     StreamStage stage,
     List<models.SalesAppointment> appointments,
   ) {
+    final isGreyedOut =
+        stage.id == 'appointments' || stage.id == 'rescheduled';
     final sortedAppointments = StreamUtils.sortByFormScore(
       appointments,
       (apt) => apt.formScore,
@@ -3299,6 +3388,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       sortedAppointments,
       (apt) => apt.formScore,
     );
+    final headerColor = isGreyedOut
+        ? Colors.grey[500]!
+        : Color(int.parse(stage.color.replaceFirst('#', '0xff')));
 
     return Container(
       width: 320,
@@ -3310,7 +3402,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Color(int.parse(stage.color.replaceFirst('#', '0xff'))),
+              color: headerColor,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(12),
               ),
@@ -3370,22 +3462,28 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
               onAcceptWithDetails: (details) =>
                   _moveAppointmentToStage(details.data, stage.id),
               builder: (context, candidateData, rejectedData) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: candidateData.isNotEmpty
+                final listBgColor = isGreyedOut
+                    ? Colors.grey.shade200
+                    : (candidateData.isNotEmpty
                         ? Color(
                             int.parse(stage.color.replaceFirst('#', '0xff')),
                           ).withOpacity(0.1)
-                        : Colors.white,
+                        : Colors.white);
+                final listBorderColor = isGreyedOut
+                    ? Colors.grey.shade400
+                    : (candidateData.isNotEmpty
+                        ? Color(
+                            int.parse(stage.color.replaceFirst('#', '0xff')),
+                          )
+                        : Colors.grey.shade200);
+                return Container(
+                  decoration: BoxDecoration(
+                    color: listBgColor,
                     borderRadius: const BorderRadius.vertical(
                       bottom: Radius.circular(12),
                     ),
                     border: Border.all(
-                      color: candidateData.isNotEmpty
-                          ? Color(
-                              int.parse(stage.color.replaceFirst('#', '0xff')),
-                            )
-                          : Colors.grey.shade200,
+                      color: listBorderColor,
                       width: candidateData.isNotEmpty ? 2 : 1,
                     ),
                     boxShadow: [
@@ -3793,6 +3891,13 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     );
   }
 
+  static const List<String> _paymentMethodOptions = [
+    'Cash',
+    'Financing',
+    'In-House Finance',
+    'Rental',
+  ];
+
   String _getQuestionHint(String question) {
     switch (question) {
       case 'Best phone number':
@@ -3806,7 +3911,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       case 'Shipping address':
         return 'Full shipping address including postal code';
       case 'Method of payment':
-        return 'e.g., Cash, Credit Card, EFT';
+        return 'Select method of payment';
       case 'Interested package':
         return 'Package or product bundle of interest';
       default:

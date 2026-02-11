@@ -9,6 +9,10 @@ class PdfStyles {
   static const PdfColor grayColor = PdfColor.fromInt(0xFF666666);
   static const PdfColor lightGrayColor = PdfColor.fromInt(0xFFEEEEEE);
   static const PdfColor borderColor = PdfColor.fromInt(0xFFDDDDDD);
+  /// Brand red for cover slogan and accents (e.g. MedWave branding)
+  static const PdfColor brandRed = PdfColor.fromInt(0xFF162694);
+  /// Red for cover slogan "HEALING THE WORLD, TOGETHER."
+  static const PdfColor sloganRed = PdfColor.fromInt(0xFFD32F2F);
 
   // Text Styles
   static pw.TextStyle get h1 => pw.TextStyle(

@@ -45,12 +45,21 @@ class EmailJSService {
   static const String _installationSignoffTemplateId = 'template_vc3mf08';
   // Contract sent notification - sent only to BCC list when contract link email is sent to client
   static const String _contractSentNotificationTemplateId = 'template_y067fcc';
+  // Contract signed notification - sent only to BCC list when client signs the contract
+  static const String _contractSignedNotificationTemplateId = 'template_vbo4xef';
+  // Deposit confirmed notification - sent only to BCC list when ticket reaches deposit_made
+  static const String _contractDepositConfirmedNotificationTemplateId =
+      'template_2ngaebm';
+  // Deposit confirmed welcome email - sent to customer when deposit is confirmed (finance/sales)
+  static const String _depositConfirmedWelcomeTemplateId = 'template_kxndxus';
+  // Lead transitioned to operations - sent to operations team when appointment is converted to order (recipient hardcoded in EmailJS template)
+  static const String _leadTransitionedToOperationsTemplateId = 'template_6bij9vg';
 
   // Admin email for notifications
   static const String _adminEmail =
       'info@barefootbytes.com'; // TODO: Update with actual superadmin email
 
-  // BCC list: used only as recipient for "Contract Sent" notification (template_y067fcc)
+  // BCC list: used for Contract Sent, Contract Signed, and Deposit Confirmed notifications
   // static const String _bccEmailList =
   //     'info@barefootbytes.com; janae@medwavegroup.com; andries@medwavegroup.com; davide@medwavegroup.com; francois@medwavegroup.com';
   static const String _bccEmailList =
@@ -303,6 +312,185 @@ class EmailJSService {
       }
     } catch (error, stackTrace) {
       debugPrint('❌ Error sending contract sent notification: $error');
+      debugPrint('$stackTrace');
+      return false;
+    }
+  }
+
+  /// Send "Contract Signed" notification to the BCC list (no customer recipient).
+  /// Call after the client signs the contract. Uses same BCC list as contract sent.
+  /// EmailJS template: set "To Email" to {{bcc_email}} or {{to_email}}.
+  static Future<bool> sendContractSignedNotificationToBcc({
+    required String contractId,
+    required String customerName,
+    required DateTime contractSignedDate,
+  }) async {
+    try {
+      final list = _bccEmailList.trim();
+      if (list.isEmpty) {
+        debugPrint(
+            '⚠️ Contract signed notification skipped: BCC list is empty');
+        return false;
+      }
+      final parts = list.contains(';')
+          ? list
+                .split(';')
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty)
+                .toList()
+          : [list];
+      final toEmail = parts.isNotEmpty ? parts.first : list;
+      final bccEmailList = parts.join(';');
+      debugPrint(
+        '📧 Sending contract signed notification to: $toEmail / bcc list (template $_contractSignedNotificationTemplateId)',
+      );
+
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _contractSignedNotificationTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            'email': toEmail,
+            'to_email': toEmail,
+            'bcc_email': bccEmailList,
+            'customer_name': customerName,
+            'contract_id': contractId,
+            'contract_signed_date': DateFormat(
+              'MMMM dd, yyyy',
+            ).format(contractSignedDate),
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint(
+          '✅ Contract signed notification (BCC) sent successfully to $toEmail',
+        );
+        return true;
+      } else {
+        debugPrint(
+          '❌ Contract signed notification failed: ${response.statusCode} body=${response.body} to=$toEmail',
+        );
+        return false;
+      }
+    } catch (error, stackTrace) {
+      debugPrint('❌ Error sending contract signed notification: $error');
+      debugPrint('$stackTrace');
+      return false;
+    }
+  }
+
+  /// Send "Deposit Confirmed" notification to the BCC list when ticket reaches deposit_made.
+  /// Uses same BCC list as contract sent/signed. EmailJS template: set "To Email" to {{bcc_email}} or {{to_email}}.
+  static Future<bool> sendDepositConfirmedNotificationToBcc({
+    required String contractId,
+    required String customerName,
+    required DateTime depositConfirmedDate,
+  }) async {
+    try {
+      final list = _bccEmailList.trim();
+      if (list.isEmpty) {
+        debugPrint(
+            '⚠️ Deposit confirmed notification skipped: BCC list is empty');
+        return false;
+      }
+      final parts = list.contains(';')
+          ? list
+                .split(';')
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty)
+                .toList()
+          : [list];
+      final toEmail = parts.isNotEmpty ? parts.first : list;
+      final bccEmailList = parts.join(';');
+      debugPrint(
+        '📧 Sending deposit confirmed notification to: $toEmail / bcc list (template $_contractDepositConfirmedNotificationTemplateId)',
+      );
+
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _contractDepositConfirmedNotificationTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            'email': toEmail,
+            'to_email': toEmail,
+            'bcc_email': bccEmailList,
+            'customer_name': customerName,
+            'contract_id': contractId,
+            'deposit_confirmed_date': DateFormat(
+              'MMMM dd, yyyy',
+            ).format(depositConfirmedDate),
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint(
+          '✅ Deposit confirmed notification (BCC) sent successfully to $toEmail',
+        );
+        return true;
+      } else {
+        debugPrint(
+          '❌ Deposit confirmed notification failed: ${response.statusCode} body=${response.body} to=$toEmail',
+        );
+        return false;
+      }
+    } catch (error, stackTrace) {
+      debugPrint('❌ Error sending deposit confirmed notification: $error');
+      debugPrint('$stackTrace');
+      return false;
+    }
+  }
+
+  /// Send deposit-confirmed welcome email to the customer (template_kxndxus).
+  /// Called when deposit is confirmed via finance approval or sales upload/verification.
+  static Future<bool> sendDepositConfirmedWelcomeToCustomer({
+    required String toEmail,
+    required String clientName,
+  }) async {
+    try {
+      debugPrint(
+        '📧 Sending deposit confirmed welcome email to $toEmail (template $_depositConfirmedWelcomeTemplateId)',
+      );
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _depositConfirmedWelcomeTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            'client_name': clientName,
+            'email': toEmail,
+            'to_email': toEmail,
+            'to_name': clientName,
+          },
+        }),
+      );
+      if (response.statusCode == 200) {
+        debugPrint(
+          '✅ Deposit confirmed welcome email sent successfully to $toEmail',
+        );
+        return true;
+      } else {
+        debugPrint(
+          '❌ Deposit confirmed welcome email failed: ${response.statusCode} body=${response.body} to=$toEmail',
+        );
+        return false;
+      }
+    } catch (error, stackTrace) {
+      debugPrint(
+        '❌ Error sending deposit confirmed welcome email: $error',
+      );
       debugPrint('$stackTrace');
       return false;
     }
@@ -1127,6 +1315,8 @@ class EmailJSService {
             'invoice_link': invoiceLink,
             'invoice_pdf_url': invoicePdfUrl ?? '',
             'website_link': resolvedWebsiteLink,
+            // Waybill photo from warehouse app (empty if not set) – template can show when present
+            'waybill_photo_url': order.waybillPhotoUrl ?? '',
           },
         }),
       );
@@ -1360,6 +1550,62 @@ class EmailJSService {
       return atLeastOneSuccess;
     } catch (error) {
       debugPrint('❌ Error in sendInternalLeadNotification: $error');
+      return false;
+    }
+  }
+
+  /// Send lead transitioned to operations notification to the operations team.
+  /// This email is sent when an appointment is moved to Send to Operations (converted to order).
+  /// Recipient is hardcoded in the EmailJS template (template_6bij9vg) send-to-mail config.
+  static Future<bool> sendLeadTransitionedToOperationsNotification({
+    required sales_models.SalesAppointment appointment,
+  }) async {
+    try {
+      final leadCustomerDetails = _formatLeadCustomerDetails(appointment);
+      final dateContactDetails = _formatDateContactDetails(appointment);
+      final salesAgent =
+          appointment.assignedToName ??
+          appointment.createdByName ??
+          'Not assigned';
+      final selectedItems = _formatSelectedItems(appointment);
+      final optInQuestions = _formatOptInQuestions(appointment);
+
+      debugPrint(
+        '📧 Sending lead transitioned to operations notification (template $_leadTransitionedToOperationsTemplateId)',
+      );
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _leadTransitionedToOperationsTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            'lead_customer_details': leadCustomerDetails,
+            'date_contact_details': dateContactDetails,
+            'sales_agent': salesAgent,
+            'selected_items': selectedItems,
+            'opt_in_questions': optInQuestions,
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint(
+          '✅ Lead transitioned to operations notification sent successfully',
+        );
+        return true;
+      } else {
+        debugPrint(
+          '❌ Lead transitioned to operations notification failed: ${response.statusCode} body=${response.body}',
+        );
+        return false;
+      }
+    } catch (error) {
+      debugPrint(
+        '❌ Error in sendLeadTransitionedToOperationsNotification: $error',
+      );
       return false;
     }
   }

@@ -60,7 +60,34 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
     }
   }
 
+  bool get _isUnassigned =>
+      widget.appointment.assignedTo?.trim().isEmpty ?? true;
+
+  void _showAssignFirstMessage() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Assignment required'),
+        content: const Text(
+          'Please assign a sales agent to this appointment before generating a contract.\n\n'
+          'Use the Assignment section above to assign a Sales Admin.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _generateContract() async {
+    if (_isUnassigned) {
+      _showAssignFirstMessage();
+      return;
+    }
+
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.user?.uid ?? '';
     final userName = authProvider.userName;
@@ -476,6 +503,7 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
   }
 
   Widget _buildNoContract() {
+    final unassigned = _isUnassigned;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -485,7 +513,7 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
         ),
         const SizedBox(height: 12),
         ElevatedButton.icon(
-          onPressed: _generateContract,
+          onPressed: unassigned ? null : _generateContract,
           icon: const Icon(Icons.add),
           label: const Text('Generate Contract'),
           style: ElevatedButton.styleFrom(
@@ -493,6 +521,13 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
             foregroundColor: Colors.white,
           ),
         ),
+        if (unassigned) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Assign a sales agent above to generate a contract.',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ],
       ],
     );
   }
@@ -773,7 +808,7 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
 
         // Generate new contract button
         ElevatedButton.icon(
-          onPressed: _generateContract,
+          onPressed: _isUnassigned ? null : _generateContract,
           icon: const Icon(Icons.refresh),
           label: const Text('Generate New Contract'),
           style: ElevatedButton.styleFrom(
@@ -781,6 +816,13 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
             foregroundColor: Colors.white,
           ),
         ),
+        if (_isUnassigned) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Assign a sales agent above to generate a new contract.',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ],
       ],
     );
   }
