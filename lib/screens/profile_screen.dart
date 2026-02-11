@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/role_manager.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -25,6 +26,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _licenseNumberController = TextEditingController();
+  final TextEditingController _specializationController = TextEditingController();
+  final TextEditingController _yearsOfExperienceController = TextEditingController();
+  final TextEditingController _practiceLocationController = TextEditingController();
   
   // Settings
   bool _notificationsEnabled = true;
@@ -60,6 +64,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _licenseNumberController.dispose();
+    _specializationController.dispose();
+    _yearsOfExperienceController.dispose();
+    _practiceLocationController.dispose();
     super.dispose();
   }
 
@@ -73,11 +80,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await userProfileProvider.loadProfileFromFirebase(userId);
     }
     
-    // Fallback: Initialize profile if still null
-    if (userProfileProvider.userProfile == null) {
+    // Fallback: Initialize profile if still null (use Firebase UID so first save creates the doc)
+    if (userProfileProvider.userProfile == null && userId != null) {
       final userName = authProvider.userName ?? '';
       final userEmail = authProvider.userEmail ?? '';
-      userProfileProvider.initializeProfile(userEmail, userName);
+      userProfileProvider.initializeProfile(userId, userEmail, userName);
     }
     
     // Load profile data
@@ -91,6 +98,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _emailController.text = profile.email;
         _phoneController.text = profile.phoneNumber ?? '';
         _licenseNumberController.text = profile.licenseNumber ?? '';
+        _specializationController.text = profile.specialization;
+        _yearsOfExperienceController.text = profile.yearsOfExperience.toString();
+        _practiceLocationController.text = profile.practiceLocation;
       }
       
       // Load settings
@@ -326,40 +336,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 16),
             
             // Role Badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppTheme.successColor.withOpacity(0.15),
-                    AppTheme.successColor.withOpacity(0.08),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppTheme.successColor.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.medical_services,
-                    size: 16,
-                    color: AppTheme.successColor,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Healthcare Professional',
-                    style: TextStyle(
-                      color: AppTheme.successColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+            Builder(
+              builder: (context) {
+                final role = context.read<AuthProvider>().userRole;
+                final roleLabel = RoleManager.roleDisplayName(role);
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.successColor.withOpacity(0.15),
+                        AppTheme.successColor.withOpacity(0.08),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppTheme.successColor.withOpacity(0.3),
+                      width: 1,
                     ),
                   ),
-                ],
-              ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.badge_outlined,
+                        size: 16,
+                        color: AppTheme.successColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        roleLabel,
+                        style: TextStyle(
+                          color: AppTheme.successColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -506,28 +522,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 16),
             
-                         // Specialization
-             _buildInfoRow(
-               label: 'Specialization',
-               value: profile.specialization,
-               icon: Icons.medical_services_outlined,
-             ),
-             const SizedBox(height: 16),
-             
-             // Experience
-             _buildInfoRow(
-               label: 'Years of Experience',
-               value: '${profile.yearsOfExperience} years',
-               icon: Icons.timeline_outlined,
-             ),
-             const SizedBox(height: 16),
-             
-             // Practice Location
-             _buildInfoRow(
-               label: 'Practice Location',
-               value: profile.practiceLocation,
-               icon: Icons.location_on_outlined,
-             ),
+            // Specialization
+            _buildEditableField(
+              label: 'Specialization',
+              controller: _specializationController,
+              icon: Icons.medical_services_outlined,
+              enabled: _isEditing,
+            ),
+            const SizedBox(height: 16),
+            
+            // Years of Experience
+            _buildEditableField(
+              label: 'Years of Experience',
+              controller: _yearsOfExperienceController,
+              icon: Icons.timeline_outlined,
+              enabled: _isEditing,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            
+            // Practice Location
+            _buildEditableField(
+              label: 'Practice Location',
+              controller: _practiceLocationController,
+              icon: Icons.location_on_outlined,
+              enabled: _isEditing,
+            ),
           ],
         ),
       ),
@@ -1092,6 +1112,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       email: _emailController.text,
       phoneNumber: _phoneController.text,
       licenseNumber: _licenseNumberController.text,
+      specialization: _specializationController.text.trim(),
+      yearsOfExperience: int.tryParse(_yearsOfExperienceController.text.trim()) ?? 0,
+      practiceLocation: _practiceLocationController.text.trim(),
     );
     
     // Update settings (including payment settings)

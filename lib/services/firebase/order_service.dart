@@ -1472,8 +1472,8 @@ class OrderService {
 
           final sent = await EmailJSService.sendFinancePaymentNotification(
             order: updatedOrderForEmail,
-            // financeEmail: 'rachel@medwavegroup.com',
-            financeEmail: 'tertiusva@gmail.com',
+            financeEmail: 'rachel@medwavegroup.com',
+            // financeEmail: 'tertiusva@gmail.com',
             yesUrl: financeUrl,
             noUrl: financeUrl,
             yesLabel: 'Payment received',
@@ -1485,8 +1485,8 @@ class OrderService {
           print('✉️ Finance email sent status: $sent');
           if (sent) {
             print(
-              // '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
-              '✅ SUCCESS: Finance team notified at tertiusva@gmail.com',
+              '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
+              // '✅ SUCCESS: Finance team notified at tertiusva@gmail.com',
             );
           } else {
             print(
