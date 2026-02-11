@@ -570,6 +570,13 @@ class SalesAppointmentService {
         'updatedAt': Timestamp.fromDate(now),
       });
 
+      _sendDepositConfirmedBccNotification(
+        appointmentId: appointmentId,
+        customerName: appointment.customerName,
+        confirmedDate: now,
+      );
+      _sendDepositConfirmedWelcomeToCustomer(appointment);
+
       if (kDebugMode) {
         print('Finance marked deposit received for $appointmentId');
       }
@@ -659,6 +666,13 @@ class SalesAppointmentService {
         'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
         'updatedAt': Timestamp.fromDate(now),
       });
+
+      _sendDepositConfirmedBccNotification(
+        appointmentId: appointmentId,
+        customerName: appointment.customerName,
+        confirmedDate: now,
+      );
+      _sendDepositConfirmedWelcomeToCustomer(appointment);
 
       if (kDebugMode) {
         print(
@@ -833,6 +847,13 @@ class SalesAppointmentService {
         'updatedAt': Timestamp.fromDate(now),
       });
 
+      _sendDepositConfirmedBccNotification(
+        appointmentId: appointmentId,
+        customerName: appointment.customerName,
+        confirmedDate: now,
+      );
+      _sendDepositConfirmedWelcomeToCustomer(appointment);
+
       if (kDebugMode) {
         print(
           '✅ Customer proof verified by $verifiedByName for appointment $appointmentId, moved to deposit_made',
@@ -853,6 +874,58 @@ class SalesAppointmentService {
         message: 'Failed to verify proof: $e',
       );
     }
+  }
+
+  /// Sends "Deposit Confirmed" BCC notification when ticket reaches deposit_made.
+  /// Resolves contract ID via Firestore; on failure logs only and does not throw.
+  Future<void> _sendDepositConfirmedBccNotification({
+    required String appointmentId,
+    required String customerName,
+    required DateTime confirmedDate,
+  }) async {
+    try {
+      final contractSnap = await _firestore
+          .collection('contracts')
+          .where('appointmentId', isEqualTo: appointmentId)
+          .get();
+      final docs = contractSnap.docs;
+      String contractId = 'N/A';
+      if (docs.isNotEmpty) {
+        docs.sort((a, b) {
+          final aAt = a.data()['createdAt'] as Timestamp?;
+          final bAt = b.data()['createdAt'] as Timestamp?;
+          final aMs = aAt?.millisecondsSinceEpoch ?? 0;
+          final bMs = bAt?.millisecondsSinceEpoch ?? 0;
+          return bMs.compareTo(aMs);
+        });
+        contractId = docs.first.id;
+      }
+      await EmailJSService.sendDepositConfirmedNotificationToBcc(
+        contractId: contractId,
+        customerName: customerName,
+        depositConfirmedDate: confirmedDate,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+            '⚠️ Deposit confirmed BCC notification failed for $appointmentId: $e');
+      }
+    }
+  }
+
+  /// Sends deposit-confirmed welcome email to the customer (template_kxndxus).
+  /// Fire-and-forget so deposit confirmation result is not affected by email failure.
+  void _sendDepositConfirmedWelcomeToCustomer(models.SalesAppointment appointment) {
+    EmailJSService.sendDepositConfirmedWelcomeToCustomer(
+      toEmail: appointment.email,
+      clientName: appointment.customerName,
+    ).then((sent) {
+      if (kDebugMode && !sent) {
+        print(
+          '⚠️ Deposit confirmed welcome email failed for ${appointment.id} (${appointment.email})',
+        );
+      }
+    });
   }
 
   /// Sales agent rejects customer-uploaded proof and clears it
@@ -1223,6 +1296,24 @@ class SalesAppointmentService {
               'Warning: Failed to send priority order notification: $emailError',
             );
           }
+        }
+      }
+
+      // Send lead transitioned to operations notification to operations team
+      try {
+        await EmailJSService.sendLeadTransitionedToOperationsNotification(
+          appointment: appointment,
+        );
+        if (kDebugMode) {
+          print(
+            'Lead transitioned to operations notification sent for order $orderId',
+          );
+        }
+      } catch (emailError) {
+        if (kDebugMode) {
+          print(
+            'Warning: Failed to send lead transitioned to operations notification: $emailError',
+          );
         }
       }
 

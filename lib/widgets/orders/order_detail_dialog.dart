@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../models/streams/order.dart' as models;
 import '../../models/admin/installer.dart';
+import '../../models/inventory/inventory_stock.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/installer_provider.dart';
 import '../../providers/inventory_provider.dart';
@@ -2978,49 +2979,64 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         ],
 
         // Confirmed install date
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Confirmed Install Date:',
-                    style: TextStyle(fontWeight: FontWeight.w500),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Confirmed Install Date:',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        hasConfirmedDate
+                            ? DateFormat(
+                                'EEEE, MMMM d, yyyy',
+                              ).format(_currentOrder.confirmedInstallDate!)
+                            : 'Not set',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color:
+                              hasConfirmedDate ? Colors.blue[700] : Colors.grey,
+                          fontWeight: hasConfirmedDate
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    hasConfirmedDate
-                        ? DateFormat(
-                            'EEEE, MMMM d, yyyy',
-                          ).format(_currentOrder.confirmedInstallDate!)
-                        : 'Not set',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: hasConfirmedDate ? Colors.blue[700] : Colors.grey,
-                      fontWeight: hasConfirmedDate
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: (_isSavingDate || needsInstallerWarning)
+                      ? null
+                      : _setInstallDate,
+                  icon: _isSavingDate
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.edit_calendar, size: 18),
+                  label: Text(hasConfirmedDate ? 'Change' : 'Set Date'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            ElevatedButton.icon(
-              onPressed: _isSavingDate ? null : _setInstallDate,
-              icon: _isSavingDate
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.edit_calendar, size: 18),
-              label: Text(hasConfirmedDate ? 'Change' : 'Set Date'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
+            if (needsInstallerWarning) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Please add installer before setting a date.',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
-            ),
+            ],
           ],
         ),
       ],
@@ -3561,8 +3577,76 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 }
 
-/// Dialog to show available stock
-class _StockViewDialog extends StatelessWidget {
+/// Dialog to show available stock; Edit mode adds +/- and Save per row (single dialog, no nested pop).
+class _StockViewDialog extends StatefulWidget {
+  @override
+  State<_StockViewDialog> createState() => _StockViewDialogState();
+}
+
+class _StockViewDialogState extends State<_StockViewDialog> {
+  bool _editMode = false;
+  Map<String, int> _pendingQty = {};
+  String? _savingStockId;
+
+  void _enterEditMode(List<InventoryStock> stockItems) {
+    setState(() {
+      _editMode = true;
+      _pendingQty = {for (final s in stockItems) s.id: s.currentQty};
+    });
+  }
+
+  void _exitEditMode() {
+    setState(() {
+      _editMode = false;
+      _pendingQty = {};
+    });
+  }
+
+  int _getEditingQty(InventoryStock stock) =>
+      _pendingQty[stock.id] ?? stock.currentQty;
+
+  void _adjustQty(InventoryStock stock, int delta) {
+    setState(() {
+      final current = _pendingQty[stock.id] ?? stock.currentQty;
+      _pendingQty[stock.id] = (current + delta).clamp(0, 999999);
+    });
+  }
+
+  Future<void> _saveRow(
+    BuildContext context,
+    InventoryProvider inventoryProvider,
+    InventoryStock stock,
+  ) async {
+    final newQty = _pendingQty[stock.id] ?? stock.currentQty;
+    setState(() => _savingStockId = stock.id);
+    try {
+      final userId = context.read<AuthProvider>().user?.uid ?? 'unknown';
+      await inventoryProvider.updateStockQuantity(
+        stockId: stock.id,
+        newQty: newQty,
+        updatedBy: userId,
+        notes: 'Adjusted from order detail',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Stock updated'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update stock: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _savingStockId = null);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -3573,33 +3657,58 @@ class _StockViewDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.inventory_2, color: Colors.white),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Available Stock',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            Consumer<InventoryProvider>(
+              builder: (context, inventoryProvider, child) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
                     ),
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.inventory_2, color: Colors.white),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Available Stock',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      if (!_editMode)
+                        TextButton(
+                          onPressed: inventoryProvider.allStockItems.isEmpty
+                              ? null
+                              : () => _enterEditMode(
+                                  inventoryProvider.allStockItems,
+                                ),
+                          child: const Text(
+                            'Edit',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        )
+                      else
+                        TextButton(
+                          onPressed: _exitEditMode,
+                          child: const Text(
+                            'Done',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
             Flexible(
               child: Consumer<InventoryProvider>(
@@ -3624,6 +3733,7 @@ class _StockViewDialog extends StatelessWidget {
                     itemCount: stockItems.length,
                     itemBuilder: (context, index) {
                       final stock = stockItems[index];
+                      final isSaving = _savingStockId == stock.id;
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.all(12),
@@ -3664,34 +3774,90 @@ class _StockViewDialog extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '${stock.currentQty}',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: stock.isOutOfStock
-                                        ? Colors.red[700]
-                                        : stock.isLowStock
-                                        ? Colors.orange[700]
-                                        : Colors.green[700],
+                            if (!_editMode) ...[
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '${stock.currentQty}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: stock.isOutOfStock
+                                          ? Colors.red[700]
+                                          : stock.isLowStock
+                                          ? Colors.orange[700]
+                                          : Colors.green[700],
+                                    ),
+                                  ),
+                                  Text(
+                                    stock.stockStatus,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: stock.isOutOfStock
+                                          ? Colors.red[700]
+                                          : stock.isLowStock
+                                          ? Colors.orange[700]
+                                          : Colors.green[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ] else ...[
+                              IconButton(
+                                icon: const Icon(Icons.remove, size: 18),
+                                onPressed: isSaving
+                                    ? null
+                                    : () => _adjustQty(stock, -1),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  padding: const EdgeInsets.all(4),
+                                  minimumSize: const Size(28, 28),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                child: SizedBox(
+                                  width: 40,
+                                  child: Text(
+                                    '${_getEditingQty(stock)}',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                                Text(
-                                  stock.stockStatus,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: stock.isOutOfStock
-                                        ? Colors.red[700]
-                                        : stock.isLowStock
-                                        ? Colors.orange[700]
-                                        : Colors.green[700],
-                                  ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add, size: 18),
+                                onPressed: isSaving
+                                    ? null
+                                    : () => _adjustQty(stock, 1),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  padding: const EdgeInsets.all(4),
+                                  minimumSize: const Size(28, 28),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: isSaving
+                                    ? null
+                                    : () => _saveRow(
+                                        context,
+                                        inventoryProvider,
+                                        stock,
+                                      ),
+                                child: Text(isSaving ? 'Saving...' : 'Save'),
+                              ),
+                            ],
                           ],
                         ),
                       );

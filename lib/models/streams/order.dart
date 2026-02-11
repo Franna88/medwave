@@ -74,6 +74,9 @@ class Order {
   final String? pickedBy;
   final String? pickedByName;
 
+  /// Total number of flattened pick rows (individual items including package constituents). Used for progress when set.
+  final int? totalFlattenedItemCount;
+
   // Installation completion fields
   final List<String>
   proofOfInstallationPhotoUrls; // Multiple images for multiple installations
@@ -174,6 +177,7 @@ class Order {
     this.pickedAt,
     this.pickedBy,
     this.pickedByName,
+    this.totalFlattenedItemCount,
     // Installation completion fields
     this.proofOfInstallationPhotoUrls = const [],
     this.customerSignaturePhotoUrl,
@@ -309,6 +313,8 @@ class Order {
       pickedAt: (map['pickedAt'] as Timestamp?)?.toDate(),
       pickedBy: map['pickedBy']?.toString(),
       pickedByName: map['pickedByName']?.toString(),
+      totalFlattenedItemCount: (map['totalFlattenedItemCount'] as num?)
+          ?.toInt(),
       // Installation completion fields
       proofOfInstallationPhotoUrls:
           (map['proofOfInstallationPhotoUrls'] as List<dynamic>?)
@@ -434,6 +440,8 @@ class Order {
       'pickedAt': pickedAt != null ? Timestamp.fromDate(pickedAt!) : null,
       'pickedBy': pickedBy,
       'pickedByName': pickedByName,
+      if (totalFlattenedItemCount != null)
+        'totalFlattenedItemCount': totalFlattenedItemCount,
       // Installation completion fields
       'proofOfInstallationPhotoUrls': proofOfInstallationPhotoUrls,
       'customerSignaturePhotoUrl': customerSignaturePhotoUrl,
@@ -544,6 +552,7 @@ class Order {
     DateTime? pickedAt,
     String? pickedBy,
     String? pickedByName,
+    int? totalFlattenedItemCount,
     // Installation completion fields
     List<String>? proofOfInstallationPhotoUrls,
     String? customerSignaturePhotoUrl,
@@ -631,6 +640,8 @@ class Order {
       pickedAt: pickedAt ?? this.pickedAt,
       pickedBy: pickedBy ?? this.pickedBy,
       pickedByName: pickedByName ?? this.pickedByName,
+      totalFlattenedItemCount:
+          totalFlattenedItemCount ?? this.totalFlattenedItemCount,
       // Installation completion fields
       proofOfInstallationPhotoUrls:
           proofOfInstallationPhotoUrls ?? this.proofOfInstallationPhotoUrls,
@@ -723,6 +734,9 @@ class Order {
 
   /// Check if all items are picked
   bool get allItemsPicked {
+    if (totalFlattenedItemCount != null) {
+      return pickedItemCount >= totalFlattenedItemCount!;
+    }
     if (items.isEmpty) return false;
     for (final item in items) {
       // Check each item by name - if quantity > 1, we still just need one tick
@@ -733,9 +747,15 @@ class Order {
 
   /// Get picking progress as percentage (0.0 to 1.0)
   double get pickingProgress {
+    if (totalFlattenedItemCount != null && totalFlattenedItemCount! > 0) {
+      return (pickedItemCount / totalFlattenedItemCount!).clamp(0.0, 1.0);
+    }
     if (items.isEmpty) return 0.0;
     return pickedItemCount / items.length;
   }
+
+  /// Display item count for warehouse card (flattened when available).
+  int get displayItemCount => totalFlattenedItemCount ?? items.length;
 
   /// Check if picking has started but not completed
   bool get isPartiallyPicked => pickedItemCount > 0 && !allItemsPicked;
@@ -754,8 +774,10 @@ class OrderItem {
   final String name;
   final int quantity;
   final double? price;
+
   /// Product id when this line is a product (for inventory match).
   final String? productId;
+
   /// Package id when this line is a package (expand to package items for stock).
   final String? packageId;
 

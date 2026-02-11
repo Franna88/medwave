@@ -88,8 +88,8 @@ class ContractService {
       }
 
       final totalInclVat = subtotal * 1.15; // 15% VAT
-      final depositAmount = totalInclVat * 0.10; // 10% deposit
-      final remainingBalance = totalInclVat - depositAmount; // 90% balance
+      final depositAmount = subtotal * 0.10; // 10% deposit (ex VAT)
+      final remainingBalance = totalInclVat - depositAmount;
 
       // Create contract document reference
       final docRef = _firestore.collection(_collectionPath).doc();
@@ -204,8 +204,8 @@ class ContractService {
       }
 
       final totalInclVat = finalSubtotal * 1.15; // 15% VAT
-      final depositAmount = totalInclVat * 0.10; // 10% deposit
-      final remainingBalance = totalInclVat - depositAmount; // 90% balance
+      final depositAmount = finalSubtotal * 0.10; // 10% deposit (ex VAT)
+      final remainingBalance = totalInclVat - depositAmount;
 
       // Get revision number: always chain to root contract so numbers increment (1, 2, 3...)
       final rootId = originalContract.parentContractId ?? originalContract.id;
@@ -395,6 +395,7 @@ class ContractService {
             userName: 'System (Contract Signing)',
             shouldSendDepositEmail: true, // Triggers deposit confirmation email
             contractViewUrl: contractViewUrl,
+            depositAmount: contract.depositAmount,
           );
           if (kDebugMode) {
             print(

@@ -617,7 +617,7 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
         const SizedBox(width: 12),
         _buildInfoChip(
           Icons.inventory_2_outlined,
-          '${order.items.length} items',
+          '${order.displayItemCount} items',
           AppTheme.secondaryColor,
         ),
         if (tabType == OrderTabType.needsWaybill) ...[
@@ -665,7 +665,7 @@ class _WarehouseOrdersScreenState extends State<WarehouseOrdersScreen>
               ),
             ),
             Text(
-              '${order.pickedItemCount}/${order.items.length}',
+              '${order.pickedItemCount}/${order.displayItemCount}',
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

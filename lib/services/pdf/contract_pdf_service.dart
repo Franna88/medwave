@@ -24,52 +24,29 @@ class ContractPdfService {
     // #endregion
     final pdf = pw.Document();
 
-    // Load cover page image
-    // #region agent log
-    final coverStartTime = DateTime.now().millisecondsSinceEpoch;
-    // #endregion
-    final coverImageData = await rootBundle.load(
-      'images/contract_cover_page.png',
-    );
-    final coverImageBytes = coverImageData.buffer.asUint8List();
-    final coverImage = pw.MemoryImage(coverImageBytes);
-    // #region agent log
-    final coverEndTime = DateTime.now().millisecondsSinceEpoch;
-    if (kDebugMode) {
-      print(
-        '🔍 [PDF-COVER] loaded cover image, size=${coverImageBytes.length} bytes, time=${coverEndTime - coverStartTime}ms',
-      );
-    }
-    // #endregion
-
-    // Page 1: Cover Page (Full page image)
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        margin: pw.EdgeInsets.zero, // No margins for full-page image
-        build: (context) => pw.Container(
-          width: double.infinity,
-          height: double.infinity,
-          child: pw.Image(
-            coverImage,
-            fit: pw.BoxFit.cover, // Cover entire page
-          ),
-        ),
-      ),
-    );
-
-    // Load grey logo for Page 2
+    // Load logo once: same image for cover (page 1) and invoice (page 2+)
     // #region agent log
     final logoStartTime = DateTime.now().millisecondsSinceEpoch;
     // #endregion
     final greyLogoData = await rootBundle.load('images/medwave_logo_grey.png');
-    final greyLogoBytes = greyLogoData.buffer.asUint8List();
-    final greyLogo = pw.MemoryImage(greyLogoBytes);
+    final greyLogo = pw.MemoryImage(greyLogoData.buffer.asUint8List());
     // #region agent log
     final logoEndTime = DateTime.now().millisecondsSinceEpoch;
-    final logoDuration = logoEndTime - logoStartTime;
-    if (kDebugMode) print('🔍 [PDF-GREY-LOGO] load_time=${logoDuration}ms');
+    if (kDebugMode) {
+      print(
+        '🔍 [PDF-LOGO] loaded medwave_logo_grey.png, time=${logoEndTime - logoStartTime}ms',
+      );
+    }
     // #endregion
+
+    // Page 1: Programmatic cover page (same logo as page 2)
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(40),
+        build: (context) => _buildCoverPage(contract, greyLogo),
+      ),
+    );
 
     // Page 2+: Invoice-style layout (MultiPage so long quote tables can flow)
     // #region agent log
@@ -922,6 +899,170 @@ class ContractPdfService {
                   color: PdfStyles.primaryColor,
                 )
               : (isSubdued ? PdfStyles.smallText : PdfStyles.bodyTextBold),
+        ),
+      ],
+    );
+  }
+
+  /// Format contract id as document ref (e.g. ERUSG-9ISTU-XG5QS-JERKU)
+  String _formatDocumentRef(String id) {
+    if (id.isEmpty) return id;
+    final buf = StringBuffer();
+    for (var i = 0; i < id.length; i++) {
+      if (i > 0 && i % 5 == 0) buf.write('-');
+      buf.write(id[i]);
+    }
+    return buf.toString();
+  }
+
+  /// Build cover page (page 1): logo, title, slogan, Created by / Prepared for, footer
+  pw.Widget _buildCoverPage(Contract contract, pw.ImageProvider coverLogo) {
+    const title = 'Photobiomodulation\nSystem Agreement';
+    const slogan = 'HEALING THE WORLD, TOGETHER.';
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+      mainAxisSize: pw.MainAxisSize.max,
+      children: [
+        // Header: centered logo, same size as second page (150×50)
+        pw.Center(
+          child: pw.Image(coverLogo, width: 150, height: 50),
+        ),
+        pw.SizedBox(height: 48),
+        // Center: title + slogan
+        pw.Expanded(
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+            children: [
+              pw.Center(
+                child: pw.Text(
+                  title,
+                  style: pw.TextStyle(
+                    fontSize: 30,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfStyles.textColor,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.SizedBox(height: 32),
+              pw.Center(
+                child: pw.Text(
+                  slogan,
+                  style: pw.TextStyle(
+                    fontSize: 16,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfStyles.sloganRed,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Bottom: Created by / Prepared for (table so labels and values align)
+        pw.Center(
+          child: pw.Table(
+            columnWidths: {
+              0: const pw.FixedColumnWidth(90),
+              1: const pw.FixedColumnWidth(220),
+            },
+            children: [
+              pw.TableRow(
+                verticalAlignment: pw.TableCellVerticalAlignment.top,
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 8),
+                    child: pw.Text(
+                      'Created by:',
+                      style: pw.TextStyle(
+                        fontSize: 11,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfStyles.textColor,
+                      ),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 8),
+                    child: pw.RichText(
+                      text: pw.TextSpan(
+                        children: [
+                          pw.TextSpan(
+                            text: 'Davide Duranti MedWave',
+                            style: pw.TextStyle(
+                              fontSize: 11,
+                              color: PdfStyles.textColor,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            text: ' TM ',
+                            style: pw.TextStyle(
+                              fontSize: 9,
+                              color: PdfStyles.textColor,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            text: 'RSA PTY LTD',
+                            style: pw.TextStyle(
+                              fontSize: 11,
+                              color: PdfStyles.textColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              pw.TableRow(
+                verticalAlignment: pw.TableCellVerticalAlignment.top,
+                children: [
+                  pw.Text(
+                    'Prepared for:',
+                    style: pw.TextStyle(
+                      fontSize: 11,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfStyles.textColor,
+                    ),
+                  ),
+                  pw.Text(
+                    contract.customerName,
+                    style: pw.TextStyle(
+                      fontSize: 11,
+                      color: PdfStyles.textColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 32),
+        // Footer bar: Document Ref (left), Page 1 (right)
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          decoration: pw.BoxDecoration(
+            color: PdfStyles.lightGrayColor,
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Document Ref: ${_formatDocumentRef(contract.id)}',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  color: PdfStyles.grayColor,
+                ),
+              ),
+              pw.Text(
+                'Page 1',
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  color: PdfStyles.grayColor,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
