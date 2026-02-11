@@ -189,22 +189,23 @@ class UserProfileProvider extends ChangeNotifier {
     }
   }
 
-  // Initialize with default data (fallback if no Firebase profile)
-  void initializeProfile(String email, String userName) {
+  // Initialize with default data (fallback if no Firebase profile).
+  // [userId] must be the Firebase Auth UID so Firestore doc exists or can be created on first save.
+  void initializeProfile(String userId, String email, String userName) {
     final nameParts = userName.split(' ');
     final firstName = nameParts.isNotEmpty ? nameParts.first : '';
     final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
     
     _userProfile = UserProfile(
-      id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+      id: userId,
       firstName: firstName,
       lastName: lastName,
       email: email,
-      phoneNumber: '+27 82 123 4567',
-      licenseNumber: 'HPCSA-123456',
-      specialization: 'Wound Care Specialist',
-      yearsOfExperience: 8,
-      practiceLocation: 'Johannesburg, South Africa',
+      phoneNumber: null,
+      licenseNumber: null,
+      specialization: '',
+      yearsOfExperience: 0,
+      practiceLocation: '',
       createdAt: DateTime.now(),
       lastUpdated: DateTime.now(),
     );
@@ -266,11 +267,11 @@ class UserProfileProvider extends ChangeNotifier {
       if (subaccountCreatedAt != null) updates['subaccountCreatedAt'] = Timestamp.fromDate(subaccountCreatedAt);
       updates['lastUpdated'] = FieldValue.serverTimestamp();
       
-      // Update Firestore
+      // Set or update Firestore (merge so we create the doc on first save if it doesn't exist)
       await FirebaseFirestore.instance
           .collection('users')
           .doc(_userProfile!.id)
-          .update(updates);
+          .set(updates, SetOptions(merge: true));
       
       notifyListeners();
       return true;
@@ -329,11 +330,11 @@ class UserProfileProvider extends ChangeNotifier {
         firstName: 'John',
         lastName: 'Doe',
         email: 'john.doe@medwave.com',
-        phoneNumber: '+27 82 123 4567',
-        licenseNumber: 'HPCSA-123456',
-        specialization: 'Wound Care Specialist',
-        yearsOfExperience: 8,
-        practiceLocation: 'Johannesburg, South Africa',
+        phoneNumber: null,
+        licenseNumber: null,
+        specialization: '',
+        yearsOfExperience: 0,
+        practiceLocation: '',
         createdAt: DateTime.now().subtract(const Duration(days: 365)),
         lastUpdated: DateTime.now(),
       );

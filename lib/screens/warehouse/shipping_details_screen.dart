@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../models/streams/order.dart' as models;
 import '../../providers/auth_provider.dart';
+import '../../providers/product_items_provider.dart';
+import '../../providers/product_packages_provider.dart';
 import '../../services/firebase/inventory_service.dart';
 import '../../services/firebase/order_service.dart';
 import '../../services/firebase/storage_service.dart';
@@ -25,6 +27,7 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
   final InventoryService _inventoryService = InventoryService();
   final StorageService _storageService = StorageService();
   final TextEditingController _trackingController = TextEditingController();
+  final TextEditingController _vehicleRegController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
 
   XFile? _waybillImage;
@@ -32,13 +35,18 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
   bool _isDeductingStock = false;
   bool _stockDeducted = false;
   String? _errorMessage;
+  String _deliveryType = 'courier'; // 'courier' or 'manual'
 
   @override
   void initState() {
     super.initState();
-    // Pre-fill tracking number if exists
-    if (widget.order.trackingNumber != null) {
+    // Pre-fill delivery type and appropriate field
+    _deliveryType = widget.order.deliveryType ?? 'courier';
+    if (_deliveryType == 'courier' && widget.order.trackingNumber != null) {
       _trackingController.text = widget.order.trackingNumber!;
+    } else if (_deliveryType == 'manual' &&
+        widget.order.vehicleRegistrationNumber != null) {
+      _vehicleRegController.text = widget.order.vehicleRegistrationNumber!;
     }
     // Deduct stock when screen opens
     _deductInventoryStock();
@@ -47,6 +55,7 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
   @override
   void dispose() {
     _trackingController.dispose();
+    _vehicleRegController.dispose();
     super.dispose();
   }
 
@@ -58,12 +67,42 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
     try {
       final authProvider = context.read<AuthProvider>();
       final userId = authProvider.user?.uid ?? 'system';
+      final packageProvider = context.read<ProductPackagesProvider>();
+      final productProvider = context.read<ProductItemsProvider>();
 
-      // Prepare items for deduction
-      final items = widget.order.items.map((item) => {
-        'name': item.name,
-        'quantity': item.quantity,
-      }).toList();
+      // Build deduction list: expand packages to product-level lines
+      final List<Map<String, dynamic>> items = [];
+      for (final item in widget.order.items) {
+        if (item.packageId != null) {
+          final pkg = packageProvider.packages
+              .where((p) => p.id == item.packageId)
+              .toList();
+          if (pkg.isEmpty) {
+            items.add({'name': item.name, 'quantity': item.quantity});
+            continue;
+          }
+          final package = pkg.first;
+          for (final entry in package.packageItems) {
+            final product = productProvider.items
+                .where((p) => p.id == entry.productId)
+                .toList();
+            final productName = product.isEmpty
+                ? 'Product ${entry.productId}'
+                : product.first.name;
+            items.add({
+              'name': productName,
+              'quantity': entry.quantity * item.quantity,
+              'productId': entry.productId,
+            });
+          }
+        } else {
+          items.add({
+            'name': item.name,
+            'quantity': item.quantity,
+            if (item.productId != null) 'productId': item.productId,
+          });
+        }
+      }
 
       // Deduct stock
       final results = await _inventoryService.deductStockForOrderItems(
@@ -74,7 +113,7 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
 
       // Check if all succeeded
       final allSuccess = results.values.every((v) => v);
-      
+
       setState(() {
         _stockDeducted = true;
         _isDeductingStock = false;
@@ -218,13 +257,18 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
   }
 
   bool get _canSubmit {
-    return _trackingController.text.trim().isNotEmpty && _waybillImage != null;
+    final hasIdentifier = _deliveryType == 'courier'
+        ? _trackingController.text.trim().isNotEmpty
+        : _vehicleRegController.text.trim().isNotEmpty;
+    return hasIdentifier && _waybillImage != null;
   }
 
   Future<void> _submitShippingDetails() async {
     if (!_canSubmit) {
       setState(() {
-        _errorMessage = 'Please enter tracking number and add waybill photo';
+        _errorMessage = _deliveryType == 'courier'
+            ? 'Please enter tracking number and add waybill photo'
+            : 'Please enter vehicle registration number and add waybill photo';
       });
       return;
     }
@@ -251,17 +295,27 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
       // Add shipping details to order
       await _orderService.addShippingDetails(
         orderId: widget.order.id,
-        trackingNumber: _trackingController.text.trim(),
+        trackingNumber: _deliveryType == 'courier'
+            ? _trackingController.text.trim()
+            : null,
+        deliveryType: _deliveryType,
+        vehicleRegistrationNumber: _deliveryType == 'manual'
+            ? _vehicleRegController.text.trim()
+            : null,
         waybillPhotoUrl: waybillUrl,
         userId: userId,
         userName: userName,
       );
 
       // Move to out_for_delivery stage
+      final identifier = _deliveryType == 'courier'
+          ? 'tracking: ${_trackingController.text.trim()}'
+          : 'vehicle registration: ${_vehicleRegController.text.trim()}';
       await _orderService.moveOrderToStage(
         orderId: widget.order.id,
         newStage: 'out_for_delivery',
-        note: 'Shipped with tracking: ${_trackingController.text.trim()}',
+        note:
+            'Shipped via ${_deliveryType == 'courier' ? 'courier' : 'manual delivery'} with $identifier',
         userId: userId,
         userName: userName,
       );
@@ -304,7 +358,9 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
                   const SizedBox(height: 24),
                   _buildStockStatus(),
                   const SizedBox(height: 24),
-                  _buildTrackingInput(),
+                  _buildDeliveryTypeSelector(),
+                  const SizedBox(height: 24),
+                  _buildDeliveryInfoInput(),
                   const SizedBox(height: 24),
                   _buildWaybillSection(),
                   if (_errorMessage != null) ...[
@@ -328,10 +384,7 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            AppTheme.headerGradientStart,
-            AppTheme.headerGradientEnd,
-          ],
+          colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
         ),
       ),
       child: SafeArea(
@@ -359,10 +412,7 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
                   ),
                   Text(
                     'Add tracking and waybill',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
               ),
@@ -457,28 +507,30 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          ...widget.order.items.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  size: 16,
-                  color: AppTheme.successColor,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${item.name} x${item.quantity}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.secondaryColor.withOpacity(0.8),
+          ...widget.order.items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    size: 16,
+                    color: AppTheme.successColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${item.name} x${item.quantity}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.secondaryColor.withOpacity(0.8),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          )),
+          ),
         ],
       ),
     );
@@ -502,7 +554,9 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
         children: [
           Icon(
             _stockDeducted ? Icons.inventory : Icons.hourglass_empty,
-            color: _stockDeducted ? AppTheme.successColor : AppTheme.warningColor,
+            color: _stockDeducted
+                ? AppTheme.successColor
+                : AppTheme.warningColor,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -525,10 +579,11 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
                       : 'Please wait...',
                   style: TextStyle(
                     fontSize: 12,
-                    color: (_stockDeducted
-                            ? AppTheme.successColor
-                            : AppTheme.warningColor)
-                        .withOpacity(0.8),
+                    color:
+                        (_stockDeducted
+                                ? AppTheme.successColor
+                                : AppTheme.warningColor)
+                            .withOpacity(0.8),
                   ),
                 ),
               ],
@@ -545,12 +600,12 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
     );
   }
 
-  Widget _buildTrackingInput() {
+  Widget _buildDeliveryTypeSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Tracking Number',
+          'Delivery Type',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -558,11 +613,77 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
           ),
         ),
         const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.borderColor),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: RadioListTile<String>(
+                  title: const Text('Courier'),
+                  value: 'courier',
+                  groupValue: _deliveryType,
+                  onChanged: (value) {
+                    setState(() {
+                      _deliveryType = value!;
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+              Expanded(
+                child: RadioListTile<String>(
+                  title: const Text('Manual Delivery'),
+                  value: 'manual',
+                  groupValue: _deliveryType,
+                  onChanged: (value) {
+                    setState(() {
+                      _deliveryType = value!;
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeliveryInfoInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _deliveryType == 'courier'
+              ? 'Tracking Number'
+              : 'Vehicle Registration Number',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textColor,
+          ),
+        ),
+        const SizedBox(height: 8),
         TextField(
-          controller: _trackingController,
+          controller: _deliveryType == 'courier'
+              ? _trackingController
+              : _vehicleRegController,
           decoration: InputDecoration(
-            hintText: 'Enter tracking number...',
-            prefixIcon: const Icon(Icons.local_shipping_outlined),
+            hintText: _deliveryType == 'courier'
+                ? 'Enter tracking number...'
+                : 'Enter vehicle registration number...',
+            prefixIcon: Icon(
+              _deliveryType == 'courier'
+                  ? Icons.local_shipping_outlined
+                  : Icons.directions_car_outlined,
+            ),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
@@ -671,14 +792,8 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: kIsWeb
-                ? Image.network(
-                    _waybillImage!.path,
-                    fit: BoxFit.cover,
-                  )
-                : Image.file(
-                    File(_waybillImage!.path),
-                    fit: BoxFit.cover,
-                  ),
+                ? Image.network(_waybillImage!.path, fit: BoxFit.cover)
+                : Image.file(File(_waybillImage!.path), fit: BoxFit.cover),
           ),
         ),
         Positioned(
@@ -743,10 +858,7 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
           color: Colors.white,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-            ),
+            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4),
           ],
         ),
         child: Icon(icon, size: 20, color: color),
@@ -769,10 +881,7 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
           Expanded(
             child: Text(
               _errorMessage!,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.errorColor,
-              ),
+              style: TextStyle(fontSize: 13, color: AppTheme.errorColor),
             ),
           ),
         ],
@@ -798,7 +907,9 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: _isLoading || !_canSubmit ? null : _submitShippingDetails,
+            onPressed: _isLoading || !_canSubmit
+                ? null
+                : _submitShippingDetails,
             icon: _isLoading
                 ? const SizedBox(
                     width: 20,
@@ -809,9 +920,7 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
                     ),
                   )
                 : const Icon(Icons.send),
-            label: Text(
-              _isLoading ? 'Shipping...' : 'Ship Order',
-            ),
+            label: Text(_isLoading ? 'Shipping...' : 'Ship Order'),
             style: ElevatedButton.styleFrom(
               backgroundColor: _canSubmit
                   ? AppTheme.successColor
@@ -832,4 +941,3 @@ class _ShippingDetailsScreenState extends State<ShippingDetailsScreen> {
     );
   }
 }
-

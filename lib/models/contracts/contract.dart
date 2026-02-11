@@ -41,23 +41,48 @@ class ContractProduct {
   final String id;
   final String name;
   final double price;
+  final int quantity;
+  /// True for package-item and added-service lines that render under a package header.
+  final bool isSubItem;
+  /// Package (header) line id when this line is a sub-item.
+  final String? parentId;
+  /// Optional: standalone, packageHeader, packageItem, addedService (for round-trip).
+  final String? lineType;
 
   const ContractProduct({
     required this.id,
     required this.name,
     required this.price,
+    this.quantity = 1,
+    this.isSubItem = false,
+    this.parentId,
+    this.lineType,
   });
+
+  double get lineTotal => price * quantity;
 
   factory ContractProduct.fromMap(Map<String, dynamic> map) {
     return ContractProduct(
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
       price: (map['price'] is num) ? (map['price'] as num).toDouble() : 0.0,
+      quantity: (map['quantity'] is num) ? (map['quantity'] as num).toInt() : 1,
+      isSubItem: map['isSubItem'] == true,
+      parentId: map['parentId']?.toString(),
+      lineType: map['lineType']?.toString(),
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {'id': id, 'name': name, 'price': price};
+    return {
+      'id': id,
+      'name': name,
+      'price': price,
+      'quantity': quantity,
+      if (isSubItem) 'isSubItem': true,
+      if (parentId != null) 'parentId': parentId,
+      if (lineType != null) 'lineType': lineType,
+    };
   }
 }
 
@@ -77,6 +102,7 @@ class Contract {
   final String customerName;
   final String email;
   final String phone;
+  final String? shippingAddress;
 
   // Contract Content
   final int contractContentVersion;
@@ -113,6 +139,13 @@ class Contract {
   // Payment type ('deposit' or 'full_payment')
   final String paymentType;
 
+  // Revision tracking
+  final String? parentContractId; // ID of original contract (null for original)
+  final int revisionNumber; // 0 for original, 1+ for revisions
+  final String? editReason; // Reason for editing this revision
+  final String? editedBy; // User who created this revision
+  final DateTime? editedAt; // When this revision was created
+
   Contract({
     required this.id,
     required this.accessToken,
@@ -122,6 +155,7 @@ class Contract {
     required this.customerName,
     required this.email,
     required this.phone,
+    this.shippingAddress,
     required this.contractContentVersion,
     required this.contractContentData,
     required this.products,
@@ -143,6 +177,11 @@ class Contract {
     this.voidedAt,
     this.voidReason,
     this.paymentType = 'deposit',
+    this.parentContractId,
+    this.revisionNumber = 0,
+    this.editReason,
+    this.editedBy,
+    this.editedAt,
   });
 
   /// Check if this is a full payment contract
@@ -185,6 +224,7 @@ class Contract {
       customerName: map['customerName']?.toString() ?? '',
       email: map['email']?.toString() ?? '',
       phone: map['phone']?.toString() ?? '',
+      shippingAddress: map['shippingAddress']?.toString(),
       contractContentVersion: map['contractContentVersion'] as int? ?? 0,
       contractContentData:
           map['contractContentData'] as Map<String, dynamic>? ?? {},
@@ -219,6 +259,11 @@ class Contract {
       voidedAt: (map['voidedAt'] as Timestamp?)?.toDate(),
       voidReason: map['voidReason']?.toString(),
       paymentType: map['paymentType']?.toString() ?? 'deposit',
+      parentContractId: map['parentContractId']?.toString(),
+      revisionNumber: (map['revisionNumber'] as num?)?.toInt() ?? 0,
+      editReason: map['editReason']?.toString(),
+      editedBy: map['editedBy']?.toString(),
+      editedAt: (map['editedAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -231,6 +276,7 @@ class Contract {
       'customerName': customerName,
       'email': email,
       'phone': phone,
+      'shippingAddress': shippingAddress,
       'contractContentVersion': contractContentVersion,
       'contractContentData': contractContentData,
       'products': products.map((p) => p.toMap()).toList(),
@@ -252,6 +298,11 @@ class Contract {
       'voidedAt': voidedAt != null ? Timestamp.fromDate(voidedAt!) : null,
       'voidReason': voidReason,
       'paymentType': paymentType,
+      'parentContractId': parentContractId,
+      'revisionNumber': revisionNumber,
+      'editReason': editReason,
+      'editedBy': editedBy,
+      'editedAt': editedAt != null ? Timestamp.fromDate(editedAt!) : null,
     };
   }
 
@@ -264,6 +315,7 @@ class Contract {
     String? customerName,
     String? email,
     String? phone,
+    String? shippingAddress,
     int? contractContentVersion,
     Map<String, dynamic>? contractContentData,
     List<ContractProduct>? products,
@@ -285,6 +337,11 @@ class Contract {
     DateTime? voidedAt,
     String? voidReason,
     String? paymentType,
+    String? parentContractId,
+    int? revisionNumber,
+    String? editReason,
+    String? editedBy,
+    DateTime? editedAt,
   }) {
     return Contract(
       id: id ?? this.id,
@@ -295,6 +352,7 @@ class Contract {
       customerName: customerName ?? this.customerName,
       email: email ?? this.email,
       phone: phone ?? this.phone,
+      shippingAddress: shippingAddress ?? this.shippingAddress,
       contractContentVersion:
           contractContentVersion ?? this.contractContentVersion,
       contractContentData: contractContentData ?? this.contractContentData,
@@ -318,6 +376,11 @@ class Contract {
       voidedAt: voidedAt ?? this.voidedAt,
       voidReason: voidReason ?? this.voidReason,
       paymentType: paymentType ?? this.paymentType,
+      parentContractId: parentContractId ?? this.parentContractId,
+      revisionNumber: revisionNumber ?? this.revisionNumber,
+      editReason: editReason ?? this.editReason,
+      editedBy: editedBy ?? this.editedBy,
+      editedAt: editedAt ?? this.editedAt,
     );
   }
 

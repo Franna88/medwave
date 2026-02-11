@@ -25,13 +25,32 @@ class SalesAppointment {
   final String? assignedToName; // name of assigned Sales Admin
   final String? optInNote;
   final List<OptInProduct> optInProducts;
+  final List<OptInProduct> optInPackages;
+  final Map<String, String>? optInQuestions;
   final String? depositConfirmationToken;
   final String? depositConfirmationStatus; // pending | confirmed | declined
   final DateTime? depositConfirmationSentAt;
   final DateTime? depositConfirmationRespondedAt;
+  final DateTime?
+  contractEmailSentAt; // When contract link email was sent to customer
   final bool
   manuallyAdded; // Indicates if appointment was manually added to stream
   final String paymentType; // 'deposit' or 'full_payment'
+  final String? depositProofUrl; // URL of uploaded proof of payment
+  final DateTime? depositProofUploadedAt; // Timestamp of proof upload
+  final String? depositProofUploadedBy; // User ID who uploaded proof
+  final String? depositProofUploadedByName; // User name who uploaded proof
+  final String? customerUploadedProofUrl; // URL of proof uploaded by customer
+  final DateTime? customerUploadedProofAt; // When customer uploaded
+  final bool customerProofVerified; // Whether sales verified it
+  final DateTime? customerProofVerifiedAt; // When sales verified
+  final String? customerProofVerifiedBy; // Sales user ID who verified
+  final String? customerProofVerifiedByName; // Sales user name who verified
+  final bool customerProofRejected; // Whether sales rejected the proof
+  final DateTime? customerProofRejectedAt; // When it was rejected
+  final String? customerProofRejectedBy; // User ID who rejected
+  final String? customerProofRejectedByName; // User name who rejected
+  final String? customerProofRejectionReason; // Optional reason for rejection
 
   SalesAppointment({
     required this.id,
@@ -57,12 +76,30 @@ class SalesAppointment {
     this.assignedToName,
     this.optInNote,
     this.optInProducts = const [],
+    this.optInPackages = const [],
+    this.optInQuestions,
     this.depositConfirmationToken,
     this.depositConfirmationStatus,
     this.depositConfirmationSentAt,
     this.depositConfirmationRespondedAt,
+    this.contractEmailSentAt,
     this.manuallyAdded = false,
     this.paymentType = 'deposit',
+    this.depositProofUrl,
+    this.depositProofUploadedAt,
+    this.depositProofUploadedBy,
+    this.depositProofUploadedByName,
+    this.customerUploadedProofUrl,
+    this.customerUploadedProofAt,
+    this.customerProofVerified = false,
+    this.customerProofVerifiedAt,
+    this.customerProofVerifiedBy,
+    this.customerProofVerifiedByName,
+    this.customerProofRejected = false,
+    this.customerProofRejectedAt,
+    this.customerProofRejectedBy,
+    this.customerProofRejectedByName,
+    this.customerProofRejectionReason,
   });
 
   /// Get time in current stage
@@ -133,14 +170,47 @@ class SalesAppointment {
               )
               .toList() ??
           [],
+      optInPackages:
+          (map['optInPackages'] as List<dynamic>?)
+              ?.map(
+                (item) => OptInProduct.fromMap(item as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
+      optInQuestions: (map['optInQuestions'] as Map<String, dynamic>?)?.map(
+        (k, v) => MapEntry(k, v.toString()),
+      ),
       depositConfirmationToken: map['depositConfirmationToken']?.toString(),
       depositConfirmationStatus: map['depositConfirmationStatus']?.toString(),
       depositConfirmationSentAt:
           (map['depositConfirmationSentAt'] as Timestamp?)?.toDate(),
       depositConfirmationRespondedAt:
           (map['depositConfirmationRespondedAt'] as Timestamp?)?.toDate(),
+      contractEmailSentAt: (map['contractEmailSentAt'] as Timestamp?)?.toDate(),
       manuallyAdded: map['manuallyAdded'] == true,
       paymentType: map['paymentType']?.toString() ?? 'deposit',
+      depositProofUrl: map['depositProofUrl']?.toString(),
+      depositProofUploadedAt: (map['depositProofUploadedAt'] as Timestamp?)
+          ?.toDate(),
+      depositProofUploadedBy: map['depositProofUploadedBy']?.toString(),
+      depositProofUploadedByName: map['depositProofUploadedByName']?.toString(),
+      customerUploadedProofUrl: map['customerUploadedProofUrl']?.toString(),
+      customerUploadedProofAt: (map['customerUploadedProofAt'] as Timestamp?)
+          ?.toDate(),
+      customerProofVerified: map['customerProofVerified'] == true,
+      customerProofVerifiedAt: (map['customerProofVerifiedAt'] as Timestamp?)
+          ?.toDate(),
+      customerProofVerifiedBy: map['customerProofVerifiedBy']?.toString(),
+      customerProofVerifiedByName: map['customerProofVerifiedByName']
+          ?.toString(),
+      customerProofRejected: map['customerProofRejected'] == true,
+      customerProofRejectedAt: (map['customerProofRejectedAt'] as Timestamp?)
+          ?.toDate(),
+      customerProofRejectedBy: map['customerProofRejectedBy']?.toString(),
+      customerProofRejectedByName: map['customerProofRejectedByName']
+          ?.toString(),
+      customerProofRejectionReason: map['customerProofRejectionReason']
+          ?.toString(),
     );
   }
 
@@ -170,6 +240,8 @@ class SalesAppointment {
       'assignedToName': assignedToName,
       'optInNote': optInNote,
       'optInProducts': optInProducts.map((p) => p.toMap()).toList(),
+      'optInPackages': optInPackages.map((p) => p.toMap()).toList(),
+      if (optInQuestions != null) 'optInQuestions': optInQuestions,
       'depositConfirmationToken': depositConfirmationToken,
       'depositConfirmationStatus': depositConfirmationStatus,
       'depositConfirmationSentAt': depositConfirmationSentAt != null
@@ -178,8 +250,34 @@ class SalesAppointment {
       'depositConfirmationRespondedAt': depositConfirmationRespondedAt != null
           ? Timestamp.fromDate(depositConfirmationRespondedAt!)
           : null,
+      'contractEmailSentAt': contractEmailSentAt != null
+          ? Timestamp.fromDate(contractEmailSentAt!)
+          : null,
       'manuallyAdded': manuallyAdded,
       'paymentType': paymentType,
+      'depositProofUrl': depositProofUrl,
+      'depositProofUploadedAt': depositProofUploadedAt != null
+          ? Timestamp.fromDate(depositProofUploadedAt!)
+          : null,
+      'depositProofUploadedBy': depositProofUploadedBy,
+      'depositProofUploadedByName': depositProofUploadedByName,
+      'customerUploadedProofUrl': customerUploadedProofUrl,
+      'customerUploadedProofAt': customerUploadedProofAt != null
+          ? Timestamp.fromDate(customerUploadedProofAt!)
+          : null,
+      'customerProofVerified': customerProofVerified,
+      'customerProofVerifiedAt': customerProofVerifiedAt != null
+          ? Timestamp.fromDate(customerProofVerifiedAt!)
+          : null,
+      'customerProofVerifiedBy': customerProofVerifiedBy,
+      'customerProofVerifiedByName': customerProofVerifiedByName,
+      'customerProofRejected': customerProofRejected,
+      'customerProofRejectedAt': customerProofRejectedAt != null
+          ? Timestamp.fromDate(customerProofRejectedAt!)
+          : null,
+      'customerProofRejectedBy': customerProofRejectedBy,
+      'customerProofRejectedByName': customerProofRejectedByName,
+      'customerProofRejectionReason': customerProofRejectionReason,
     };
   }
 
@@ -207,12 +305,30 @@ class SalesAppointment {
     String? assignedToName,
     String? optInNote,
     List<OptInProduct>? optInProducts,
+    List<OptInProduct>? optInPackages,
+    Map<String, String>? optInQuestions,
     String? depositConfirmationToken,
     String? depositConfirmationStatus,
     DateTime? depositConfirmationSentAt,
     DateTime? depositConfirmationRespondedAt,
+    DateTime? contractEmailSentAt,
     bool? manuallyAdded,
     String? paymentType,
+    String? depositProofUrl,
+    DateTime? depositProofUploadedAt,
+    String? depositProofUploadedBy,
+    String? depositProofUploadedByName,
+    String? customerUploadedProofUrl,
+    DateTime? customerUploadedProofAt,
+    bool? customerProofVerified,
+    DateTime? customerProofVerifiedAt,
+    String? customerProofVerifiedBy,
+    String? customerProofVerifiedByName,
+    bool? customerProofRejected,
+    DateTime? customerProofRejectedAt,
+    String? customerProofRejectedBy,
+    String? customerProofRejectedByName,
+    String? customerProofRejectionReason,
   }) {
     return SalesAppointment(
       id: id ?? this.id,
@@ -238,6 +354,8 @@ class SalesAppointment {
       assignedToName: assignedToName ?? this.assignedToName,
       optInNote: optInNote ?? this.optInNote,
       optInProducts: optInProducts ?? this.optInProducts,
+      optInPackages: optInPackages ?? this.optInPackages,
+      optInQuestions: optInQuestions ?? this.optInQuestions,
       depositConfirmationToken:
           depositConfirmationToken ?? this.depositConfirmationToken,
       depositConfirmationStatus:
@@ -246,8 +364,38 @@ class SalesAppointment {
           depositConfirmationSentAt ?? this.depositConfirmationSentAt,
       depositConfirmationRespondedAt:
           depositConfirmationRespondedAt ?? this.depositConfirmationRespondedAt,
+      contractEmailSentAt: contractEmailSentAt ?? this.contractEmailSentAt,
       manuallyAdded: manuallyAdded ?? this.manuallyAdded,
       paymentType: paymentType ?? this.paymentType,
+      depositProofUrl: depositProofUrl ?? this.depositProofUrl,
+      depositProofUploadedAt:
+          depositProofUploadedAt ?? this.depositProofUploadedAt,
+      depositProofUploadedBy:
+          depositProofUploadedBy ?? this.depositProofUploadedBy,
+      depositProofUploadedByName:
+          depositProofUploadedByName ?? this.depositProofUploadedByName,
+      customerUploadedProofUrl:
+          customerUploadedProofUrl ?? this.customerUploadedProofUrl,
+      customerUploadedProofAt:
+          customerUploadedProofAt ?? this.customerUploadedProofAt,
+      customerProofVerified:
+          customerProofVerified ?? this.customerProofVerified,
+      customerProofVerifiedAt:
+          customerProofVerifiedAt ?? this.customerProofVerifiedAt,
+      customerProofVerifiedBy:
+          customerProofVerifiedBy ?? this.customerProofVerifiedBy,
+      customerProofVerifiedByName:
+          customerProofVerifiedByName ?? this.customerProofVerifiedByName,
+      customerProofRejected:
+          customerProofRejected ?? this.customerProofRejected,
+      customerProofRejectedAt:
+          customerProofRejectedAt ?? this.customerProofRejectedAt,
+      customerProofRejectedBy:
+          customerProofRejectedBy ?? this.customerProofRejectedBy,
+      customerProofRejectedByName:
+          customerProofRejectedByName ?? this.customerProofRejectedByName,
+      customerProofRejectionReason:
+          customerProofRejectionReason ?? this.customerProofRejectionReason,
     );
   }
 
@@ -301,12 +449,14 @@ class SalesAppointmentNote {
   final DateTime createdAt;
   final String createdBy;
   final String? createdByName;
+  final String? stageTransition; // e.g., "opt_in → deposit_requested"
 
   SalesAppointmentNote({
     required this.text,
     required this.createdAt,
     required this.createdBy,
     this.createdByName,
+    this.stageTransition,
   });
 
   factory SalesAppointmentNote.fromMap(Map<String, dynamic> map) {
@@ -315,6 +465,7 @@ class SalesAppointmentNote {
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdBy: map['createdBy']?.toString() ?? '',
       createdByName: map['createdByName']?.toString(),
+      stageTransition: map['stageTransition']?.toString(),
     );
   }
 
@@ -324,6 +475,7 @@ class SalesAppointmentNote {
       'createdAt': Timestamp.fromDate(createdAt),
       'createdBy': createdBy,
       'createdByName': createdByName,
+      'stageTransition': stageTransition,
     };
   }
 }
@@ -332,11 +484,13 @@ class OptInProduct {
   final String id;
   final String name;
   final double price;
+  final int quantity;
 
   const OptInProduct({
     required this.id,
     required this.name,
     required this.price,
+    this.quantity = 1,
   });
 
   factory OptInProduct.fromMap(Map<String, dynamic> map) {
@@ -344,10 +498,11 @@ class OptInProduct {
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
       price: (map['price'] is num) ? (map['price'] as num).toDouble() : 0.0,
+      quantity: (map['quantity'] is num) ? (map['quantity'] as num).toInt() : 1,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {'id': id, 'name': name, 'price': price};
+    return {'id': id, 'name': name, 'price': price, 'quantity': quantity};
   }
 }

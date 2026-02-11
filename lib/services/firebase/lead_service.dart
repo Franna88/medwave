@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../models/leads/lead.dart';
 import '../../models/leads/lead_note.dart';
 import '../../models/leads/lead_channel.dart';
@@ -12,6 +14,10 @@ import 'lead_booking_service.dart';
 class LeadService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final SalesAppointmentService _appointmentService = SalesAppointmentService();
+
+  // Cloud Function base URL
+  static const String _cloudFunctionBaseUrl =
+      'https://us-central1-medx-ai.cloudfunctions.net/api';
 
   /// Get all leads
   Future<List<Lead>> getAllLeads({
@@ -395,10 +401,31 @@ class LeadService {
       final allLeads = await getAllLeads(channelId: channelId);
 
       // Filter by query
-      final lowerQuery = query.toLowerCase();
+      final lowerQuery = query.toLowerCase().trim();
+      
+      // Normalize search query by removing extra spaces
+      final normalizedSearch = lowerQuery.replaceAll(RegExp(r'\s+'), ' ');
+      
       return allLeads.where((lead) {
-        return lead.firstName.toLowerCase().contains(lowerQuery) ||
-            lead.lastName.toLowerCase().contains(lowerQuery) ||
+        // Use fullName for searching (combines firstName and lastName)
+        final fullName = lead.fullName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+        
+        // Check if search query matches full name (handles "first last" searches)
+        final nameMatches = fullName.contains(normalizedSearch);
+        
+        // Also check if all words in search query appear in full name (for flexible matching)
+        final searchWords = normalizedSearch.split(' ').where((w) => w.isNotEmpty).toList();
+        final allWordsMatch = searchWords.isNotEmpty &&
+            searchWords.every((word) => fullName.contains(word));
+        
+        // Also check individual firstName and lastName for backward compatibility
+        final firstNameMatch = lead.firstName.toLowerCase().contains(lowerQuery);
+        final lastNameMatch = lead.lastName.toLowerCase().contains(lowerQuery);
+        
+        return nameMatches ||
+            allWordsMatch ||
+            firstNameMatch ||
+            lastNameMatch ||
             lead.email.toLowerCase().contains(lowerQuery) ||
             lead.phone.contains(query);
       }).toList();
@@ -415,10 +442,31 @@ class LeadService {
     try {
       final allLeads = await getAllLeads();
 
-      final lowerQuery = query.toLowerCase();
+      final lowerQuery = query.toLowerCase().trim();
+      
+      // Normalize search query by removing extra spaces
+      final normalizedSearch = lowerQuery.replaceAll(RegExp(r'\s+'), ' ');
+      
       return allLeads.where((lead) {
-        return lead.firstName.toLowerCase().contains(lowerQuery) ||
-            lead.lastName.toLowerCase().contains(lowerQuery) ||
+        // Use fullName for searching (combines firstName and lastName)
+        final fullName = lead.fullName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+        
+        // Check if search query matches full name (handles "first last" searches)
+        final nameMatches = fullName.contains(normalizedSearch);
+        
+        // Also check if all words in search query appear in full name (for flexible matching)
+        final searchWords = normalizedSearch.split(' ').where((w) => w.isNotEmpty).toList();
+        final allWordsMatch = searchWords.isNotEmpty &&
+            searchWords.every((word) => fullName.contains(word));
+        
+        // Also check individual firstName and lastName for backward compatibility
+        final firstNameMatch = lead.firstName.toLowerCase().contains(lowerQuery);
+        final lastNameMatch = lead.lastName.toLowerCase().contains(lowerQuery);
+        
+        return nameMatches ||
+            allWordsMatch ||
+            firstNameMatch ||
+            lastNameMatch ||
             lead.email.toLowerCase().contains(lowerQuery) ||
             lead.phone.contains(query);
       }).toList();
@@ -607,6 +655,51 @@ class LeadService {
     } catch (e) {
       if (kDebugMode) {
         print('Error creating lead from form submission: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Trigger GHL leads sync via Cloud Function
+  static Future<Map<String, dynamic>> triggerGHLLeadsSync() async {
+    try {
+      if (kDebugMode) {
+        print('🔄 Triggering GHL Leads sync via Cloud Function...');
+      }
+
+      final url = Uri.parse('$_cloudFunctionBaseUrl/ghl/sync-leads');
+      final response = await http
+          .post(url, headers: {'Content-Type': 'application/json'})
+          .timeout(
+            const Duration(seconds: 30),
+          ); // 30 seconds to get response (sync runs in background)
+
+      // Accept 202 (Accepted) - sync started and running in background
+      if (response.statusCode != 200 && response.statusCode != 202) {
+        throw Exception(
+          'GHL Leads sync failed: ${response.statusCode} ${response.body}',
+        );
+      }
+
+      final result = json.decode(response.body) as Map<String, dynamic>;
+
+      if (kDebugMode) {
+        if (response.statusCode == 202) {
+          print('✅ GHL Leads sync started (running in background)');
+          print('   - Message: ${result['message']}');
+        } else {
+          print('✅ GHL Leads sync completed');
+          print('   - Result: ${result['message']}');
+          if (result['stats'] != null) {
+            print('   - Stats: ${result['stats']}');
+          }
+        }
+      }
+
+      return result;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error triggering GHL Leads sync: $e');
       }
       rethrow;
     }

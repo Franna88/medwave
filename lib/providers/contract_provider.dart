@@ -4,7 +4,6 @@ import '../models/contracts/contract.dart';
 import '../models/streams/appointment.dart';
 import '../services/firebase/contract_service.dart';
 import '../services/emailjs_service.dart';
-import '../services/whatsapp_service.dart';
 
 /// Provider for managing contract state
 class ContractProvider extends ChangeNotifier {
@@ -16,6 +15,7 @@ class ContractProvider extends ChangeNotifier {
   bool _isSaving = false;
   String? _error;
   StreamSubscription<List<Contract>>? _subscription;
+  bool _lastContractBccSent = true;
 
   // Getters
   Contract? get currentContract => _currentContract;
@@ -23,6 +23,7 @@ class ContractProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
   String? get error => _error;
+  bool get lastContractBccSent => _lastContractBccSent;
 
   /// Generate contract for an appointment
   Future<Contract?> generateContractForAppointment({
@@ -45,43 +46,8 @@ class ContractProvider extends ChangeNotifier {
 
       _currentContract = contract;
 
-      // Send contract link email (best-effort; non-blocking to signing flow)
-      try {
-        final contractUrl = getFullContractUrl(contract);
-        debugPrint('📧 ContractProvider: Sending contract email to ${appointment.email}');
-        
-        final emailSent = await EmailJSService.sendContractLinkEmail(
-          appointment: appointment,
-          contractUrl: contractUrl,
-        );
-        debugPrint('📧 ContractProvider: Email sent: $emailSent');
-        
-        // Also send WhatsApp notification to let customer know email was sent
-        debugPrint('📱 ContractProvider: Checking WhatsApp...');
-        debugPrint('📱 ContractProvider: isConfigured=${WhatsAppService.isConfigured()}');
-        debugPrint('📱 ContractProvider: phone=${appointment.phone}');
-        debugPrint('📱 ContractProvider: isValidPhone=${WhatsAppService.isValidPhoneNumber(appointment.phone)}');
-        
-        if (WhatsAppService.isConfigured() && 
-            WhatsAppService.isValidPhoneNumber(appointment.phone)) {
-          debugPrint('📱 ContractProvider: Sending WhatsApp to ${appointment.phone}...');
-          final whatsappResult = await WhatsAppService.sendOptInThankYou(
-            customerPhone: appointment.phone,
-            customerName: appointment.customerName,
-          );
-          debugPrint(
-            '📱 ContractProvider: WhatsApp result - success=${whatsappResult.success}, message=${whatsappResult.message}',
-          );
-        } else {
-          if (!WhatsAppService.isConfigured()) {
-            debugPrint('📱 ContractProvider: WhatsApp not configured - skipping');
-          } else {
-            debugPrint('📱 ContractProvider: Invalid phone for WhatsApp: ${appointment.phone}');
-          }
-        }
-      } catch (emailError) {
-        debugPrint('⚠️ ContractProvider: Error in email/WhatsApp block: $emailError');
-      }
+      // Contract is created but NOT automatically sent
+      // Admin can manually send it via the "Resend Contract Email" button after reviewing/editing
 
       _isSaving = false;
       notifyListeners();
@@ -101,6 +67,101 @@ class ContractProvider extends ChangeNotifier {
       }
 
       return null;
+    }
+  }
+
+  /// Create a contract revision (edited version)
+  Future<Contract?> createContractRevision({
+    required Contract originalContract,
+    required SalesAppointment appointment,
+    required String createdBy,
+    required String createdByName,
+    String? editReason,
+    List<ContractProduct>? products,
+    String? customerName,
+    String? email,
+    String? phone,
+    String? shippingAddress,
+    String? paymentType,
+    Map<String, dynamic>? editedContractContent, // Allow editing contract terms
+    double? subtotal, // Optional calculated subtotal (accounts for quantities)
+  }) async {
+    if (_isSaving) return null;
+
+    _isSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final revision = await _service.createContractRevision(
+        originalContract: originalContract,
+        appointment: appointment,
+        createdBy: createdBy,
+        createdByName: createdByName,
+        editReason: editReason,
+        products: products,
+        customerName: customerName,
+        email: email,
+        phone: phone,
+        shippingAddress: shippingAddress,
+        paymentType: paymentType,
+        editedContractContent: editedContractContent,
+        subtotal: subtotal,
+      );
+
+      _currentContract = revision;
+      _isSaving = false;
+      notifyListeners();
+      return revision;
+    } catch (e) {
+      _error = e.toString();
+      _isSaving = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  /// Resend contract email (for revisions or original contracts)
+  Future<bool> resendContractEmail({
+    required Contract contract,
+    required SalesAppointment appointment,
+  }) async {
+    try {
+      final contractUrl = getFullContractUrl(contract);
+      final success = await EmailJSService.sendContractLinkEmail(
+        appointment: appointment,
+        contractUrl: contractUrl,
+      );
+      if (success) {
+        _lastContractBccSent =
+            await EmailJSService.sendContractSentNotificationToBcc(
+              contractId: contract.id,
+              customerName: appointment.customerName,
+              contractSentDate: DateTime.now(),
+            );
+        if (!_lastContractBccSent && kDebugMode) {
+          print(
+            'ContractProvider: Contract sent to client but BCC notification failed. In EmailJS set "To Email" to {{bcc_email}} or {{to_email}} (we send both).',
+          );
+        }
+      }
+      return success;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Get contract revision history
+  Future<List<Contract>> getContractRevisionHistory(String contractId) async {
+    try {
+      return await _service.getContractRevisionHistory(contractId);
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ContractProvider: Error getting revision history: $e');
+      }
+      return [];
     }
   }
 
@@ -214,6 +275,22 @@ class ContractProvider extends ChangeNotifier {
 
       // Reload contract to get updated fields (digitalSignatureToken, pdfUrl, etc.)
       await loadContractById(contractId);
+
+      // Notify BCC list that contract was signed (non-blocking)
+      if (_currentContract != null && _currentContract!.signedAt != null) {
+        try {
+          await EmailJSService.sendContractSignedNotificationToBcc(
+            contractId: _currentContract!.id,
+            customerName: _currentContract!.customerName,
+            contractSignedDate: _currentContract!.signedAt!,
+          );
+        } catch (e) {
+          if (kDebugMode) {
+            print(
+                '⚠️ ContractProvider: Contract signed but BCC notification failed: $e');
+          }
+        }
+      }
 
       _isSaving = false;
       notifyListeners();

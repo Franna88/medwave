@@ -46,6 +46,7 @@ const MARKETING_EMAIL =
   functions.config().marketing?.deposit_email ||
   process.env.MARKETING_EMAIL ||
   'info@barefootbytes.com';
+  
 
 // Validate API key is configured
 if (!GHL_API_KEY) {
@@ -1230,6 +1231,44 @@ app.post('/facebook/match-ghl', async (req, res) => {
 });
 
 // ============================================================================
+// GHL LEADS SYNC - Manual HTTP Endpoint
+// ============================================================================
+
+app.post('/ghl/sync-leads', async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  
+  try {
+    console.log('🔄 Manual GHL Leads sync triggered...');
+    
+    // Return immediately - sync runs in background
+    res.status(202).json({
+      success: true,
+      message: 'GHL Leads sync started. This may take several minutes.',
+      status: 'running'
+    });
+    
+    // Run sync in background (don't await - let it run asynchronously)
+    syncGHLLeads(GHL_API_KEY)
+      .then((result) => {
+        console.log('✅ Background GHL Leads sync completed:', result);
+      })
+      .catch((error) => {
+        console.error('❌ Background GHL Leads sync failed:', error);
+      });
+      
+  } catch (error) {
+    console.error('❌ Error starting GHL Leads sync:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start GHL Leads sync',
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
 // ADVERT DATA API ENDPOINTS - New Collection Structure
 // ============================================================================
 
@@ -1954,3 +1993,35 @@ exports.scheduledFacebook6MonthSync = functions.pubsub
     }
   });
 */
+
+// ============================================================================
+// GHL LEADS SYNC - Scheduled Function
+// ============================================================================
+
+const { syncGHLLeads } = require('./lib/syncGHLLeads');
+
+/**
+ * Scheduled function to auto-sync GHL leads to Firebase
+ * Runs every 2 hours to keep leads collection up-to-date
+ * Fetches new leads from Andries and Davide pipelines since last sync
+ */
+exports.syncGHLLeads = functions
+  .runWith({
+    timeoutSeconds: 540, // 9 minutes (max for 1st gen functions)
+    memory: '512MB'
+  })
+  .pubsub
+  .schedule('every 2 hours')
+  .timeZone('Africa/Johannesburg')
+  .onRun(async (context) => {
+    try {
+      console.log('⏰ GHL Leads sync triggered at:', new Date().toISOString());
+      // Pass API key from config
+      const result = await syncGHLLeads(GHL_API_KEY);
+      console.log('✅ GHL Leads sync completed:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ GHL Leads sync failed:', error);
+      throw error;
+    }
+  });

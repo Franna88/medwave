@@ -11,7 +11,7 @@ class BulkExportService {
   Future<File?> exportPatientsToCSV(List<Patient> patients) async {
     try {
       List<List<dynamic>> rows = [];
-      
+
       // Header row
       rows.add([
         'Patient ID',
@@ -42,7 +42,9 @@ class BulkExportService {
           patient.firstName,
           patient.lastName,
           patient.idNumber,
-          patient.dateOfBirth != null ? DateFormat('yyyy-MM-dd').format(patient.dateOfBirth!) : '',
+          patient.dateOfBirth != null
+              ? DateFormat('yyyy-MM-dd').format(patient.dateOfBirth!)
+              : '',
           patient.age?.toString() ?? '',
           patient.gender,
           patient.phoneNumber,
@@ -54,8 +56,12 @@ class BulkExportService {
           patient.medicalAidNumber,
           patient.treatmentType,
           patient.totalSessions.toString(),
-          patient.createdAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(patient.createdAt!) : '',
-          patient.lastSessionDate != null ? DateFormat('yyyy-MM-dd').format(patient.lastSessionDate!) : '',
+          patient.createdAt != null
+              ? DateFormat('yyyy-MM-dd HH:mm').format(patient.createdAt!)
+              : '',
+          patient.lastSessionDate != null
+              ? DateFormat('yyyy-MM-dd').format(patient.lastSessionDate!)
+              : '',
           patient.status,
         ]);
       }
@@ -70,7 +76,8 @@ class BulkExportService {
         await medwaveDir.create(recursive: true);
       }
 
-      final fileName = 'patients_export_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+      final fileName =
+          'patients_export_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
       final file = File('${medwaveDir.path}/$fileName');
       await file.writeAsString(csv);
 
@@ -83,10 +90,13 @@ class BulkExportService {
   }
 
   /// Export patient sessions to CSV
-  Future<File?> exportPatientSessionsToCSV(Patient patient, List<Session> sessions) async {
+  Future<File?> exportPatientSessionsToCSV(
+    Patient patient,
+    List<Session> sessions,
+  ) async {
     try {
       List<List<dynamic>> rows = [];
-      
+
       // Header row
       rows.add([
         'Session Number',
@@ -127,7 +137,9 @@ class BulkExportService {
           session.photos.length.toString(),
           session.wounds.length.toString(),
           session.followUpRequired ? 'Yes' : 'No',
-          session.followUpDate != null ? DateFormat('yyyy-MM-dd').format(session.followUpDate!) : '',
+          session.followUpDate != null
+              ? DateFormat('yyyy-MM-dd').format(session.followUpDate!)
+              : '',
         ]);
       }
 
@@ -141,7 +153,8 @@ class BulkExportService {
         await medwaveDir.create(recursive: true);
       }
 
-      final fileName = 'sessions_${patient.firstName}_${patient.lastName}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+      final fileName =
+          'sessions_${patient.firstName}_${patient.lastName}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
       final file = File('${medwaveDir.path}/$fileName');
       await file.writeAsString(csv);
 
@@ -154,10 +167,13 @@ class BulkExportService {
   }
 
   /// Export appointments to CSV
-  Future<File?> exportAppointmentsToCSV(List<Appointment> appointments, Map<String, Patient> patientsMap) async {
+  Future<File?> exportAppointmentsToCSV(
+    List<Appointment> appointments,
+    Map<String, Patient> patientsMap,
+  ) async {
     try {
       List<List<dynamic>> rows = [];
-      
+
       // Header row
       rows.add([
         'Appointment ID',
@@ -180,7 +196,9 @@ class BulkExportService {
         final patient = patientsMap[appointment.patientId];
         rows.add([
           appointment.id,
-          patient != null ? '${patient.firstName} ${patient.lastName}' : 'Unknown',
+          patient != null
+              ? '${patient.firstName} ${patient.lastName}'
+              : 'Unknown',
           appointment.patientId,
           DateFormat('yyyy-MM-dd').format(appointment.startTime),
           DateFormat('HH:mm').format(appointment.startTime),
@@ -191,7 +209,9 @@ class BulkExportService {
           appointment.notes ?? '',
           appointment.location ?? '',
           appointment.reminderSent ? 'Yes' : 'No',
-          appointment.createdAt != null ? DateFormat('yyyy-MM-dd HH:mm').format(appointment.createdAt!) : '',
+          appointment.createdAt != null
+              ? DateFormat('yyyy-MM-dd HH:mm').format(appointment.createdAt!)
+              : '',
         ]);
       }
 
@@ -205,7 +225,8 @@ class BulkExportService {
         await medwaveDir.create(recursive: true);
       }
 
-      final fileName = 'appointments_export_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+      final fileName =
+          'appointments_export_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
       final file = File('${medwaveDir.path}/$fileName');
       await file.writeAsString(csv);
 
@@ -225,7 +246,8 @@ class BulkExportService {
   ) async {
     final filteredPatients = patients.where((patient) {
       if (patient.createdAt == null) return false;
-      return patient.createdAt!.isAfter(startDate) && patient.createdAt!.isBefore(endDate);
+      return patient.createdAt!.isAfter(startDate) &&
+          patient.createdAt!.isBefore(endDate);
     }).toList();
 
     return exportPatientsToCSV(filteredPatients);
@@ -251,7 +273,8 @@ class BulkExportService {
       await Share.shareXFiles(
         [XFile(file.path)],
         subject: subject ?? 'MedWave Data Export',
-        text: 'Exported data from MedWave. You can save this file to Downloads, Google Drive, or any location of your choice.',
+        text:
+            'Exported data from MedWave. You can save this file to Downloads, Google Drive, or any location of your choice.',
       );
       print('✅ File shared successfully');
     } catch (e) {
@@ -275,18 +298,21 @@ class BulkExportService {
     try {
       final exportPath = await getExportDirectoryPath();
       final directory = Directory(exportPath);
-      
+
       if (!await directory.exists()) {
         return [];
       }
 
-      final files = directory.listSync()
+      final files = directory
+          .listSync()
           .whereType<File>()
           .where((file) => file.path.endsWith('.csv'))
           .toList();
 
       // Sort by modification date (newest first)
-      files.sort((a, b) => b.statSync().modified.compareTo(a.statSync().modified));
+      files.sort(
+        (a, b) => b.statSync().modified.compareTo(a.statSync().modified),
+      );
 
       return files;
     } catch (e) {
@@ -330,4 +356,3 @@ class BulkExportService {
     }
   }
 }
-

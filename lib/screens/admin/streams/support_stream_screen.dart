@@ -7,6 +7,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/stream_utils.dart';
 import '../../../widgets/common/score_badge.dart';
+import '../../../widgets/support/support_ticket_detail_dialog.dart';
 
 class SupportStreamScreen extends StatefulWidget {
   const SupportStreamScreen({super.key});
@@ -25,10 +26,12 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
   String _searchQuery = '';
 
   final List<StreamStage> _stages = StreamStage.getSupportStages();
+  late final ScrollController _horizontalScrollController;
 
   @override
   void initState() {
     super.initState();
+    _horizontalScrollController = ScrollController();
     _loadTickets();
     _searchController.addListener(_onSearchChanged);
   }
@@ -36,6 +39,7 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _horizontalScrollController.dispose();
     super.dispose();
   }
 
@@ -163,6 +167,24 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
     }
   }
 
+  Future<void> _showTicketDetail(SupportTicket ticket) async {
+    await showDialog(
+      context: context,
+      builder: (context) => SupportTicketDetailDialog(
+        ticket: ticket,
+        stages: _stages,
+        onDeleted: () {
+          // Refresh tickets list after deletion
+          _loadTickets();
+        },
+        onUpdated: () {
+          // Refresh tickets list after update
+          _loadTickets();
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -274,15 +296,20 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
   }
 
   Widget _buildKanbanBoard() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _stages.map((stage) {
-          final tickets = _getTicketsForStage(stage.id);
-          return _buildStageColumn(stage, tickets);
-        }).toList(),
+    return Scrollbar(
+      controller: _horizontalScrollController,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        controller: _horizontalScrollController,
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: _stages.map((stage) {
+            final tickets = _getTicketsForStage(stage.id);
+            return _buildStageColumn(stage, tickets);
+          }).toList(),
+        ),
       ),
     );
   }
@@ -463,116 +490,130 @@ class _SupportStreamScreenState extends State<SupportStreamScreen> {
   }
 
   Widget _buildTicketCard(SupportTicket ticket) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                child: Text(
-                  ticket.customerName.isNotEmpty
-                      ? ticket.customerName[0].toUpperCase()
-                      : 'S',
-                  style: TextStyle(
-                    color: AppTheme.primaryColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ticket.customerName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Text(
-                      ticket.email,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-              // Priority badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getPriorityColor(ticket.priority).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _getPriorityColor(ticket.priority).withOpacity(0.3),
-                  ),
-                ),
-                child: Text(
-                  ticket.priorityDisplay,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: _getPriorityColor(ticket.priority),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (ticket.issueDescription != null &&
-              ticket.issueDescription!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              ticket.issueDescription!,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+    return InkWell(
+      onTap: () => _showTicketDetail(ticket),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
-              const SizedBox(width: 4),
-              Text(
-                ticket.timeInStageDisplay,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              const Spacer(),
-              if (ticket.formScore != null) ScoreBadge(score: ticket.formScore),
-              if (ticket.formScore != null) const SizedBox(width: 8),
-              PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[600]),
-                onSelected: (stageId) => _moveTicketToStage(ticket, stageId),
-                itemBuilder: (context) => _stages
-                    .where((s) => s.id != ticket.currentStage)
-                    .map(
-                      (stage) => PopupMenuItem(
-                        value: stage.id,
-                        child: Text('Move to ${stage.name}'),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                  child: Text(
+                    ticket.customerName.isNotEmpty
+                        ? ticket.customerName[0].toUpperCase()
+                        : 'S',
+                    style: TextStyle(
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ticket.customerName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
-                    )
-                    .toList(),
+                      Text(
+                        ticket.email,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                // Priority badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getPriorityColor(ticket.priority).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _getPriorityColor(
+                        ticket.priority,
+                      ).withOpacity(0.3),
+                    ),
+                  ),
+                  child: Text(
+                    ticket.priorityDisplay,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: _getPriorityColor(ticket.priority),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (ticket.issueDescription != null &&
+                ticket.issueDescription!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                ticket.issueDescription!,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
-          ),
-        ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
+                const SizedBox(width: 4),
+                Text(
+                  ticket.timeInStageDisplay,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                const Spacer(),
+                if (ticket.formScore != null)
+                  ScoreBadge(score: ticket.formScore),
+                if (ticket.formScore != null) const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: Colors.grey[600],
+                  ),
+                  onSelected: (stageId) => _moveTicketToStage(ticket, stageId),
+                  itemBuilder: (context) => _stages
+                      .where((s) => s.id != ticket.currentStage)
+                      .map(
+                        (stage) => PopupMenuItem(
+                          value: stage.id,
+                          child: Text('Move to ${stage.name}'),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

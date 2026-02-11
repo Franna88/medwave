@@ -10,6 +10,7 @@ import '../../../models/leads/lead.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/admin_provider.dart';
 import '../../../providers/product_items_provider.dart';
+import '../../../providers/product_packages_provider.dart';
 import '../../../providers/inventory_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../utils/role_manager.dart';
@@ -40,12 +41,15 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
   List<models.SalesAppointment> _filteredAppointments = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  bool _isSyncing = false;
 
   final List<StreamStage> _stages = StreamStage.getSalesStages();
+  late final ScrollController _horizontalScrollController;
 
   @override
   void initState() {
     super.initState();
+    _horizontalScrollController = ScrollController();
     _loadAppointments();
     _searchController.addListener(_onSearchChanged);
     // Load admin users for assignment feature (Super Admin only)
@@ -56,6 +60,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       }
       // Load product items for Opt In stage selections
       context.read<ProductItemsProvider>().listenToProducts();
+      // Load packages for Opt In stage selections
+      context.read<ProductPackagesProvider>().listenToPackages();
       // Load inventory stock for View Stock feature
       context.read<InventoryProvider>().listenToInventory();
     });
@@ -65,20 +71,23 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
   void dispose() {
     _appointmentsSubscription?.cancel();
     _searchController.dispose();
+    _horizontalScrollController.dispose();
     super.dispose();
   }
 
   void _loadAppointments() {
     _appointmentsSubscription?.cancel();
-    _appointmentsSubscription = _appointmentService.appointmentsStream().listen((appointments) {
-      if (mounted) {
-        setState(() {
-          _allAppointments = appointments;
-          _filterAppointments();
-          _isLoading = false;
-        });
-      }
-    });
+    _appointmentsSubscription = _appointmentService.appointmentsStream().listen(
+      (appointments) {
+        if (mounted) {
+          setState(() {
+            _allAppointments = appointments;
+            _filterAppointments();
+            _isLoading = false;
+          });
+        }
+      },
+    );
   }
 
   void _onSearchChanged() {
@@ -105,7 +114,30 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
 
     if (_searchQuery.isNotEmpty) {
       currentFilteredAppointments = currentFilteredAppointments.where((apt) {
-        return apt.customerName.toLowerCase().contains(_searchQuery) ||
+        // Normalize both search query and customer name by removing extra spaces
+        final normalizedSearch = _searchQuery.trim().replaceAll(
+          RegExp(r'\s+'),
+          ' ',
+        );
+        final normalizedName = apt.customerName.toLowerCase().trim().replaceAll(
+          RegExp(r'\s+'),
+          ' ',
+        );
+
+        // Check if search query matches customer name (handles "first last" searches)
+        final nameMatches = normalizedName.contains(normalizedSearch);
+
+        // Also check if all words in search query appear in customer name (for flexible matching)
+        final searchWords = normalizedSearch
+            .split(' ')
+            .where((w) => w.isNotEmpty)
+            .toList();
+        final allWordsMatch =
+            searchWords.isNotEmpty &&
+            searchWords.every((word) => normalizedName.contains(word));
+
+        return nameMatches ||
+            allWordsMatch ||
             apt.email.toLowerCase().contains(_searchQuery) ||
             apt.phone.contains(_searchQuery);
       }).toList();
@@ -217,210 +249,428 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     final products = productProvider.items
         .where((p) => p.isActive)
         .toList(growable: false);
-    final selectedProductIds = <String>{};
+    final selectedProductQuantities = <String, int>{};
     final noteController = TextEditingController(
       text: 'Manually moved to ${newStage.name}',
     );
 
+    // Opt-in questionnaire controllers
+    final Map<String, TextEditingController> questionControllers = {
+      'Best phone number': TextEditingController(),
+      'Name of business': TextEditingController(),
+      'Best email': TextEditingController(),
+      'Sales person dealing with': TextEditingController(),
+      'Shipping address': TextEditingController(),
+      'Method of payment': TextEditingController(),
+      'Interested package': TextEditingController(),
+    };
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            title: Text('Move ${appointment.customerName}'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('From: ${oldStage.name}'),
-                Text('To: ${newStage.name}'),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: noteController,
-                  decoration: const InputDecoration(
-                    labelText: 'Note (optional)',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-                if (isOptIn) ...[
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Select product(s)',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 260,
-                    width: 720,
-                    child: products.isEmpty
-                        ? const Text('No products available')
-                        : Column(
-                            children: [
-                              // Header row
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8.0,
-                                ),
-                                child: Row(
-                                  children: const [
-                                    SizedBox(width: 24), // checkbox space
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Text(
-                                        'Product',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
+      builder: (context) {
+        final authProvider = context.read<AuthProvider>();
+        final isSuperAdmin = authProvider.userRole == UserRole.superAdmin;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              title: Text('Move ${appointment.customerName}'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('From: ${oldStage.name}'),
+                    Text('To: ${newStage.name}'),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Note (optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                    ),
+                    if (isOptIn) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Select product(s)',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 260,
+                        width: 720,
+                        child: products.isEmpty
+                            ? const Text('No products available')
+                            : Column(
+                                children: [
+                                  // Header row
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
                                     ),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Text(
-                                        'Description',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Country',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    SizedBox(
-                                      width: 120,
-                                      child: Text(
-                                        'Price',
-                                        textAlign: TextAlign.right,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Divider(height: 1),
-                              const SizedBox(height: 8),
-                              Expanded(
-                                child: ListView.separated(
-                                  primary: false,
-                                  shrinkWrap: false,
-                                  itemCount: products.length,
-                                  separatorBuilder: (_, __) =>
-                                      const Divider(height: 1),
-                                  itemBuilder: (context, index) {
-                                    final product = products[index];
-                                    final isSelected = selectedProductIds
-                                        .contains(product.id);
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
-                                      ),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Checkbox(
-                                            value: isSelected,
-                                            onChanged: (checked) {
-                                              setState(() {
-                                                if (checked == true) {
-                                                  selectedProductIds.add(
-                                                    product.id,
-                                                  );
-                                                } else {
-                                                  selectedProductIds.remove(
-                                                    product.id,
-                                                  );
-                                                }
-                                              });
-                                            },
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            flex: 3,
-                                            child: Text(
-                                              product.name,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 14,
-                                              ),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(width: 24), // checkbox space
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Product',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
                                           ),
-                                          Expanded(
-                                            flex: 3,
-                                            child: Text(
-                                              product.description,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[700],
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Description',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
                                           ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              product.country,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
+                                        ),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            'Country',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
                                           ),
-                                          const SizedBox(width: 12),
+                                        ),
+                                        SizedBox(width: 12),
+                                        SizedBox(
+                                          width: 100,
+                                          child: Text(
+                                            'Quantity',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        if (isSuperAdmin) ...[
+                                          SizedBox(width: 12),
                                           SizedBox(
                                             width: 120,
                                             child: Text(
-                                              'R ${product.price.toStringAsFixed(2)}',
+                                              'Price',
                                               textAlign: TextAlign.right,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
                                                 fontSize: 13,
                                               ),
                                             ),
                                           ),
                                         ],
-                                      ),
-                                    );
-                                  },
+                                      ],
+                                    ),
+                                  ),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      primary: false,
+                                      shrinkWrap: false,
+                                      itemCount: products.length,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, index) {
+                                        final product = products[index];
+                                        final isSelected =
+                                            selectedProductQuantities
+                                                .containsKey(product.id);
+                                        final quantityController =
+                                            TextEditingController(
+                                              text:
+                                                  selectedProductQuantities[product
+                                                          .id]
+                                                      ?.toString() ??
+                                                  '1',
+                                            );
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Checkbox(
+                                                value: isSelected,
+                                                onChanged: (checked) {
+                                                  setState(() {
+                                                    if (checked == true) {
+                                                      selectedProductQuantities[product
+                                                              .id] =
+                                                          1;
+                                                      quantityController.text =
+                                                          '1';
+                                                    } else {
+                                                      selectedProductQuantities
+                                                          .remove(product.id);
+                                                    }
+                                                  });
+                                                },
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  product.name,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  product.description,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700],
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: Text(
+                                                  product.country,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: 12),
+                                              SizedBox(
+                                                width: 100,
+                                                child: isSelected
+                                                    ? Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.remove,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              if (currentQty >
+                                                                  1) {
+                                                                setState(() {
+                                                                  selectedProductQuantities[product
+                                                                          .id] =
+                                                                      currentQty -
+                                                                      1;
+                                                                  quantityController
+                                                                          .text =
+                                                                      (currentQty -
+                                                                              1)
+                                                                          .toString();
+                                                                });
+                                                              }
+                                                            },
+                                                          ),
+                                                          Expanded(
+                                                            child: TextField(
+                                                              controller:
+                                                                  quantityController,
+                                                              keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              onChanged: (value) {
+                                                                final qty =
+                                                                    int.tryParse(
+                                                                      value,
+                                                                    ) ??
+                                                                    1;
+                                                                if (qty >= 1) {
+                                                                  setState(() {
+                                                                    selectedProductQuantities[product
+                                                                            .id] =
+                                                                        qty;
+                                                                  });
+                                                                }
+                                                              },
+                                                              decoration: const InputDecoration(
+                                                                border:
+                                                                    OutlineInputBorder(),
+                                                                contentPadding:
+                                                                    EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          4,
+                                                                      vertical:
+                                                                          4,
+                                                                    ),
+                                                                isDense: true,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.add,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              setState(() {
+                                                                selectedProductQuantities[product
+                                                                        .id] =
+                                                                    currentQty +
+                                                                    1;
+                                                                quantityController
+                                                                        .text =
+                                                                    (currentQty +
+                                                                            1)
+                                                                        .toString();
+                                                              });
+                                                            },
+                                                          ),
+                                                        ],
+                                                      )
+                                                    : const SizedBox.shrink(),
+                                              ),
+                                              if (isSuperAdmin) ...[
+                                                const SizedBox(width: 12),
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Text(
+                                                    'R ${product.price.toStringAsFixed(2)}',
+                                                    textAlign: TextAlign.right,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                      // Opt-In Questionnaire
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Opt-In Questionnaire (Optional)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...questionControllers.entries.map((entry) {
+                        if (entry.key == 'Method of payment') {
+                          final value = _paymentMethodOptions
+                                  .contains(entry.value.text.trim())
+                              ? entry.value.text.trim()
+                              : null;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: DropdownButtonFormField<String>(
+                              value: value,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
                                 ),
                               ),
-                            ],
+                              hint: Text(_getQuestionHint(entry.key)),
+                              items: _paymentMethodOptions
+                                  .map((String v) => DropdownMenuItem<String>(
+                                        value: v,
+                                        child: Text(v),
+                                      ))
+                                  .toList(),
+                              onChanged: (String? v) {
+                                setState(() => entry.value.text = v ?? '');
+                              },
+                            ),
+                          );
+                        }
+                        final isMultiline = entry.key == 'Shipping address';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: TextField(
+                            controller: entry.value,
+                            decoration: InputDecoration(
+                              labelText: entry.key,
+                              hintText: _getQuestionHint(entry.key),
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            maxLines: isMultiline ? 3 : 1,
                           ),
-                  ),
-                ],
+                        );
+                      }),
+                    ], // Close if (isOptIn) block
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Move'),
+                ),
               ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Move'),
-              ),
-            ],
-          );
-        },
-      ),
+            );
+          },
+        );
+      },
     );
 
     if (confirmed == true) {
+      final authProvider = context.read<AuthProvider>();
       try {
         String? assignedToUserId;
         String? assignedToUserName;
@@ -431,15 +681,30 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         }
 
         List<models.OptInProduct>? optInSelections;
-        if (isOptIn && selectedProductIds.isNotEmpty) {
-          optInSelections = selectedProductIds.map((id) {
-            final product = products.firstWhere((p) => p.id == id);
+        if (isOptIn && selectedProductQuantities.isNotEmpty) {
+          optInSelections = selectedProductQuantities.entries.map((entry) {
+            final product = products.firstWhere((p) => p.id == entry.key);
             return models.OptInProduct(
               id: product.id,
               name: product.name,
               price: product.price,
+              quantity: entry.value,
             );
           }).toList();
+        }
+
+        // Build opt-in questions map
+        Map<String, String>? optInQuestions;
+        if (isOptIn) {
+          final answers = <String, String>{};
+          questionControllers.forEach((question, controller) {
+            if (controller.text.trim().isNotEmpty) {
+              answers[question] = controller.text.trim();
+            }
+          });
+          if (answers.isNotEmpty) {
+            optInQuestions = answers;
+          }
         }
 
         final noteText = noteController.text.isEmpty
@@ -456,6 +721,12 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           assignedToName: assignedToUserName,
           optInNote: isOptIn ? noteText : null,
           optInProducts: optInSelections,
+          optInQuestions: optInQuestions,
+        );
+
+        // Dispose question controllers
+        questionControllers.values.forEach(
+          (controller) => controller.dispose(),
         );
 
         if (mounted) {
@@ -484,6 +755,11 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
             SnackBar(content: Text('Error moving appointment: $e')),
           );
         }
+      } finally {
+        // Ensure controllers are disposed even on error
+        questionControllers.values.forEach(
+          (controller) => controller.dispose(),
+        );
       }
     }
   }
@@ -495,12 +771,45 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     bool isSearching = false;
     String? selectedAppointmentId;
     String? selectedLeadId;
+    Timer? _searchDebounce;
 
     final result = await showDialog<Map<String, dynamic>?>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
+          // Helper function to sort search results by relevance
+          List<T> sortSearchResults<T>(
+            List<T> results,
+            String query,
+            String Function(T) getName,
+          ) {
+            final lowerQuery = query.toLowerCase();
+            results.sort((a, b) {
+              final nameA = getName(a).toLowerCase();
+              final nameB = getName(b).toLowerCase();
+
+              // Exact match at start gets highest priority
+              final aStarts = nameA.startsWith(lowerQuery);
+              final bStarts = nameB.startsWith(lowerQuery);
+              if (aStarts && !bStarts) return -1;
+              if (!aStarts && bStarts) return 1;
+
+              // Exact match anywhere gets second priority
+              final aContains = nameA.contains(lowerQuery);
+              final bContains = nameB.contains(lowerQuery);
+              if (aContains && !bContains) return -1;
+              if (!aContains && bContains) return 1;
+
+              // Alphabetical order for same priority
+              return nameA.compareTo(nameB);
+            });
+            return results;
+          }
+
           Future<void> performSearch(String query) async {
+            // Cancel previous debounce timer
+            _searchDebounce?.cancel();
+
             if (query.trim().isEmpty) {
               setDialogState(() {
                 appointmentResults = [];
@@ -510,41 +819,57 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
               return;
             }
 
-            setDialogState(() {
-              isSearching = true;
-              appointmentResults = [];
-              leadResults = [];
+            // Debounce search - wait 300ms after user stops typing
+            _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
+              setDialogState(() {
+                isSearching = true;
+                appointmentResults = [];
+                leadResults = [];
+              });
+
+              try {
+                // Search both appointments and leads simultaneously (parallel search)
+                final searchQuery = query.trim();
+
+                final results = await Future.wait([
+                  _appointmentService.searchAppointments(searchQuery),
+                  _leadService.searchLeadsAcrossAllChannels(searchQuery),
+                ]);
+
+                final appointments =
+                    results[0] as List<models.SalesAppointment>;
+                final leads = results[1] as List<Lead>;
+
+                // Sort results by relevance (exact matches first, then partial)
+                final sortedAppointments = sortSearchResults(
+                  appointments,
+                  searchQuery,
+                  (apt) => apt.customerName,
+                );
+                final sortedLeads = sortSearchResults(
+                  leads,
+                  searchQuery,
+                  (lead) => lead.fullName,
+                );
+
+                setDialogState(() {
+                  appointmentResults = sortedAppointments;
+                  leadResults = sortedLeads;
+                  isSearching = false;
+                  selectedAppointmentId = null;
+                  selectedLeadId = null;
+                });
+              } catch (e) {
+                setDialogState(() {
+                  isSearching = false;
+                });
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error searching: $e')),
+                  );
+                }
+              }
             });
-
-            try {
-              // First, search appointments
-              final appointments = await _appointmentService.searchAppointments(
-                query,
-              );
-
-              // If no appointments found, search leads
-              List<Lead> leads = [];
-              if (appointments.isEmpty) {
-                leads = await _leadService.searchLeadsAcrossAllChannels(query);
-              }
-
-              setDialogState(() {
-                appointmentResults = appointments;
-                leadResults = leads;
-                isSearching = false;
-                selectedAppointmentId = null;
-                selectedLeadId = null;
-              });
-            } catch (e) {
-              setDialogState(() {
-                isSearching = false;
-              });
-              if (mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Error searching: $e')));
-              }
-            }
           }
 
           return AlertDialog(
@@ -576,85 +901,210 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                         child: CircularProgressIndicator(),
                       ),
                     )
-                  else if (appointmentResults.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Appointments Found:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 200,
-                          child: ListView.builder(
-                            itemCount: appointmentResults.length,
-                            itemBuilder: (context, index) {
-                              final apt = appointmentResults[index];
-                              final isSelected =
-                                  selectedAppointmentId == apt.id;
-                              return ListTile(
-                                selected: isSelected,
-                                title: Text(apt.customerName),
-                                subtitle: Text('${apt.email} • ${apt.phone}'),
-                                trailing: Text(
-                                  'Current: ${_stages.firstWhere((s) => s.id == apt.currentStage).name}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
+                  else if (appointmentResults.isNotEmpty ||
+                      leadResults.isNotEmpty)
+                    SizedBox(
+                      height: 300,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (appointmentResults.isNotEmpty) ...[
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.event,
+                                    size: 16,
+                                    color: AppTheme.primaryColor,
                                   ),
-                                ),
-                                onTap: () {
-                                  setDialogState(() {
-                                    selectedAppointmentId = apt.id;
-                                    selectedLeadId = null;
-                                  });
-                                },
-                              );
-                            },
-                          ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Appointments (${appointmentResults.length})',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              ...appointmentResults.map((apt) {
+                                final isSelected =
+                                    selectedAppointmentId == apt.id;
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppTheme.primaryColor.withOpacity(0.1)
+                                        : Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppTheme.primaryColor
+                                          : Colors.grey.shade300,
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                  ),
+                                  child: ListTile(
+                                    dense: true,
+                                    selected: isSelected,
+                                    title: Text(
+                                      apt.customerName,
+                                      style: TextStyle(
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${apt.email} • ${apt.phone}',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                    trailing: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryColor
+                                            .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        _stages
+                                            .firstWhere(
+                                              (s) => s.id == apt.currentStage,
+                                            )
+                                            .name,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.primaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      setDialogState(() {
+                                        selectedAppointmentId = apt.id;
+                                        selectedLeadId = null;
+                                      });
+                                    },
+                                  ),
+                                );
+                              }),
+                              if (leadResults.isNotEmpty)
+                                const SizedBox(height: 16),
+                            ],
+                            if (leadResults.isNotEmpty) ...[
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.person,
+                                    size: 16,
+                                    color: Colors.orange,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Leads (${leadResults.length})',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              ...leadResults.map((lead) {
+                                final isSelected = selectedLeadId == lead.id;
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? Colors.orange.withOpacity(0.1)
+                                        : Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? Colors.orange
+                                          : Colors.grey.shade300,
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                  ),
+                                  child: ListTile(
+                                    dense: true,
+                                    selected: isSelected,
+                                    title: Text(
+                                      lead.fullName,
+                                      style: TextStyle(
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${lead.email} • ${lead.phone}',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                    trailing: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        'Lead',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.orange[700],
+                                        ),
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      setDialogState(() {
+                                        selectedLeadId = lead.id;
+                                        selectedAppointmentId = null;
+                                      });
+                                    },
+                                  ),
+                                );
+                              }),
+                            ],
+                          ],
                         ),
-                      ],
-                    )
-                  else if (leadResults.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Leads Found:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 200,
-                          child: ListView.builder(
-                            itemCount: leadResults.length,
-                            itemBuilder: (context, index) {
-                              final lead = leadResults[index];
-                              final isSelected = selectedLeadId == lead.id;
-                              return ListTile(
-                                selected: isSelected,
-                                title: Text(lead.fullName),
-                                subtitle: Text('${lead.email} • ${lead.phone}'),
-                                onTap: () {
-                                  setDialogState(() {
-                                    selectedLeadId = lead.id;
-                                    selectedAppointmentId = null;
-                                  });
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                      ),
                     )
                   else if (searchController.text.trim().isNotEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(16.0),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
                       child: Center(
-                        child: Text(
-                          'No results found',
-                          style: TextStyle(color: Colors.grey),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.search_off,
+                              size: 48,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'No results found',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Try searching by name, email, or phone number',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -685,6 +1135,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _searchDebounce?.cancel();
       searchController.dispose();
     });
 
@@ -756,282 +1207,507 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     final products = productProvider.items
         .where((p) => p.isActive)
         .toList(growable: false);
-    final selectedProductIds = <String>{};
+    final selectedProductQuantities = <String, int>{};
     final noteController = TextEditingController(
       text: 'Manually moved to ${newStage.name}',
     );
-    String selectedPaymentType = appointment.paymentType; // Keep existing or default
+    String selectedPaymentType =
+        appointment.paymentType; // Keep existing or default
+
+    // Opt-in questionnaire controllers
+    final Map<String, TextEditingController> questionControllers = {
+      'Best phone number': TextEditingController(),
+      'Name of business': TextEditingController(),
+      'Best email': TextEditingController(),
+      'Sales person dealing with': TextEditingController(),
+      'Shipping address': TextEditingController(),
+      'Method of payment': TextEditingController(),
+      'Interested package': TextEditingController(),
+    };
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            title: Text('Move ${appointment.customerName}'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('From: ${oldStage.name}'),
-                Text('To: ${newStage.name}'),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: noteController,
-                  decoration: const InputDecoration(
-                    labelText: 'Note (optional)',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-                if (isOptIn) ...[
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Payment Type',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: RadioListTile<String>(
-                          title: const Text('Deposit'),
-                          value: 'deposit',
-                          groupValue: selectedPaymentType,
-                          onChanged: (value) {
-                            setState(() {
-                              selectedPaymentType = value!;
-                            });
-                          },
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                        ),
+      builder: (context) {
+        final authProvider = context.read<AuthProvider>();
+        final isSuperAdmin = authProvider.userRole == UserRole.superAdmin;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              title: Text('Move ${appointment.customerName}'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('From: ${oldStage.name}'),
+                    Text('To: ${newStage.name}'),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Note (optional)',
+                        border: OutlineInputBorder(),
                       ),
-                      Expanded(
-                        child: RadioListTile<String>(
-                          title: const Text(
-                            'Full Payment',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.w600,
+                      maxLines: 3,
+                    ),
+                    if (isOptIn) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Payment Type',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Deposit'),
+                              value: 'deposit',
+                              groupValue: selectedPaymentType,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedPaymentType = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
                             ),
                           ),
-                          value: 'full_payment',
-                          groupValue: selectedPaymentType,
-                          onChanged: (value) {
-                            setState(() {
-                              selectedPaymentType = value!;
-                            });
-                          },
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                          activeColor: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (selectedPaymentType == 'full_payment')
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.green.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.star, size: 16, color: Colors.green[700]),
-                          const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              'Priority order - will get installation priority',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.green[700],
-                                fontWeight: FontWeight.w500,
+                            child: RadioListTile<String>(
+                              title: const Text(
+                                'Full Payment',
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
+                              value: 'full_payment',
+                              groupValue: selectedPaymentType,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedPaymentType = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              activeColor: Colors.green,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Select product(s)',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 260,
-                    width: 720,
-                    child: products.isEmpty
-                        ? const Text('No products available')
-                        : Column(
+                      if (selectedPaymentType == 'full_payment')
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: Colors.green.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
                             children: [
-                              // Header row
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8.0,
-                                ),
-                                child: Row(
-                                  children: const [
-                                    SizedBox(width: 24),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Text(
-                                        'Product',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Text(
-                                        'Description',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Country',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    SizedBox(
-                                      width: 120,
-                                      child: Text(
-                                        'Price',
-                                        textAlign: TextAlign.right,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                              Icon(
+                                Icons.star,
+                                size: 16,
+                                color: Colors.green[700],
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Priority order - will get installation priority',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green[700],
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
-                              const Divider(height: 1),
-                              const SizedBox(height: 8),
-                              Expanded(
-                                child: ListView.separated(
-                                  primary: false,
-                                  shrinkWrap: false,
-                                  itemCount: products.length,
-                                  separatorBuilder: (_, __) =>
-                                      const Divider(height: 1),
-                                  itemBuilder: (context, index) {
-                                    final product = products[index];
-                                    final isSelected = selectedProductIds
-                                        .contains(product.id);
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
-                                      ),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Checkbox(
-                                            value: isSelected,
-                                            onChanged: (checked) {
-                                              setState(() {
-                                                if (checked == true) {
-                                                  selectedProductIds.add(
-                                                    product.id,
-                                                  );
-                                                } else {
-                                                  selectedProductIds.remove(
-                                                    product.id,
-                                                  );
-                                                }
-                                              });
-                                            },
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            flex: 3,
-                                            child: Text(
-                                              product.name,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 14,
-                                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Select product(s)',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 260,
+                        width: 720,
+                        child: products.isEmpty
+                            ? const Text('No products available')
+                            : Column(
+                                children: [
+                                  // Header row
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(width: 24),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Product',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
                                           ),
-                                          Expanded(
-                                            flex: 3,
-                                            child: Text(
-                                              product.description,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[700],
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Description',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
                                           ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              product.country,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
+                                        ),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            'Country',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
                                           ),
-                                          const SizedBox(width: 12),
+                                        ),
+                                        SizedBox(width: 12),
+                                        SizedBox(
+                                          width: 100,
+                                          child: Text(
+                                            'Quantity',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        if (isSuperAdmin) ...[
+                                          SizedBox(width: 12),
                                           SizedBox(
                                             width: 120,
                                             child: Text(
-                                              'R ${product.price.toStringAsFixed(2)}',
+                                              'Price',
                                               textAlign: TextAlign.right,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
                                                 fontSize: 13,
                                               ),
                                             ),
                                           ),
                                         ],
-                                      ),
-                                    );
-                                  },
+                                      ],
+                                    ),
+                                  ),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      primary: false,
+                                      shrinkWrap: false,
+                                      itemCount: products.length,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, index) {
+                                        final product = products[index];
+                                        final isSelected =
+                                            selectedProductQuantities
+                                                .containsKey(product.id);
+                                        final quantityController =
+                                            TextEditingController(
+                                              text:
+                                                  selectedProductQuantities[product
+                                                          .id]
+                                                      ?.toString() ??
+                                                  '1',
+                                            );
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Checkbox(
+                                                value: isSelected,
+                                                onChanged: (checked) {
+                                                  setState(() {
+                                                    if (checked == true) {
+                                                      selectedProductQuantities[product
+                                                              .id] =
+                                                          1;
+                                                      quantityController.text =
+                                                          '1';
+                                                    } else {
+                                                      selectedProductQuantities
+                                                          .remove(product.id);
+                                                    }
+                                                  });
+                                                },
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  product.name,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  product.description,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700],
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: Text(
+                                                  product.country,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: 12),
+                                              SizedBox(
+                                                width: 100,
+                                                child: isSelected
+                                                    ? Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.remove,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              if (currentQty >
+                                                                  1) {
+                                                                setState(() {
+                                                                  selectedProductQuantities[product
+                                                                          .id] =
+                                                                      currentQty -
+                                                                      1;
+                                                                  quantityController
+                                                                          .text =
+                                                                      (currentQty -
+                                                                              1)
+                                                                          .toString();
+                                                                });
+                                                              }
+                                                            },
+                                                          ),
+                                                          Expanded(
+                                                            child: TextField(
+                                                              controller:
+                                                                  quantityController,
+                                                              keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              onChanged: (value) {
+                                                                final qty =
+                                                                    int.tryParse(
+                                                                      value,
+                                                                    ) ??
+                                                                    1;
+                                                                if (qty >= 1) {
+                                                                  setState(() {
+                                                                    selectedProductQuantities[product
+                                                                            .id] =
+                                                                        qty;
+                                                                  });
+                                                                }
+                                                              },
+                                                              decoration: const InputDecoration(
+                                                                border:
+                                                                    OutlineInputBorder(),
+                                                                contentPadding:
+                                                                    EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          4,
+                                                                      vertical:
+                                                                          4,
+                                                                    ),
+                                                                isDense: true,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.add,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              setState(() {
+                                                                selectedProductQuantities[product
+                                                                        .id] =
+                                                                    currentQty +
+                                                                    1;
+                                                                quantityController
+                                                                        .text =
+                                                                    (currentQty +
+                                                                            1)
+                                                                        .toString();
+                                                              });
+                                                            },
+                                                          ),
+                                                        ],
+                                                      )
+                                                    : const SizedBox.shrink(),
+                                              ),
+                                              if (isSuperAdmin) ...[
+                                                const SizedBox(width: 12),
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Text(
+                                                    'R ${product.price.toStringAsFixed(2)}',
+                                                    textAlign: TextAlign.right,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                      // Opt-In Questionnaire
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Opt-In Questionnaire (Optional)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...questionControllers.entries.map((entry) {
+                        if (entry.key == 'Method of payment') {
+                          final value = _paymentMethodOptions
+                                  .contains(entry.value.text.trim())
+                              ? entry.value.text.trim()
+                              : null;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: DropdownButtonFormField<String>(
+                              value: value,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
                                 ),
                               ),
-                            ],
+                              hint: Text(_getQuestionHint(entry.key)),
+                              items: _paymentMethodOptions
+                                  .map((String v) => DropdownMenuItem<String>(
+                                        value: v,
+                                        child: Text(v),
+                                      ))
+                                  .toList(),
+                              onChanged: (String? v) {
+                                setState(() => entry.value.text = v ?? '');
+                              },
+                            ),
+                          );
+                        }
+                        final isMultiline = entry.key == 'Shipping address';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: TextField(
+                            controller: entry.value,
+                            decoration: InputDecoration(
+                              labelText: entry.key,
+                              hintText: _getQuestionHint(entry.key),
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            maxLines: isMultiline ? 3 : 1,
                           ),
-                  ),
-                ],
+                        );
+                      }),
+                    ], // Close if (isOptIn) block
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Move'),
+                ),
               ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Move'),
-              ),
-            ],
-          );
-        },
-      ),
+            );
+          },
+        );
+      },
     );
 
     if (confirmed == true) {
+      final authProvider = context.read<AuthProvider>();
       try {
         String? assignedToUserId;
         String? assignedToUserName;
@@ -1042,15 +1718,30 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         }
 
         List<models.OptInProduct>? optInSelections;
-        if (isOptIn && selectedProductIds.isNotEmpty) {
-          optInSelections = selectedProductIds.map((id) {
-            final product = products.firstWhere((p) => p.id == id);
+        if (isOptIn && selectedProductQuantities.isNotEmpty) {
+          optInSelections = selectedProductQuantities.entries.map((entry) {
+            final product = products.firstWhere((p) => p.id == entry.key);
             return models.OptInProduct(
               id: product.id,
               name: product.name,
               price: product.price,
+              quantity: entry.value,
             );
           }).toList();
+        }
+
+        // Build opt-in questions map
+        Map<String, String>? optInQuestions;
+        if (isOptIn) {
+          final answers = <String, String>{};
+          questionControllers.forEach((question, controller) {
+            if (controller.text.trim().isNotEmpty) {
+              answers[question] = controller.text.trim();
+            }
+          });
+          if (answers.isNotEmpty) {
+            optInQuestions = answers;
+          }
         }
 
         final noteText = noteController.text.isEmpty
@@ -1067,7 +1758,13 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           assignedToName: assignedToUserName,
           optInNote: isOptIn ? noteText : null,
           optInProducts: optInSelections,
+          optInQuestions: optInQuestions,
           paymentType: isOptIn ? selectedPaymentType : null,
+        );
+
+        // Dispose question controllers
+        questionControllers.values.forEach(
+          (controller) => controller.dispose(),
         );
 
         if (mounted) {
@@ -1103,277 +1800,816 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       final products = productProvider.items
           .where((p) => p.isActive)
           .toList(growable: false);
-      final selectedProductIds = <String>{};
+      final selectedProductQuantities = <String, int>{};
+      final selectedPackageQuantities = <String, int>{};
+      int optInSegmentIndex = 0; // 0 = Products, 1 = Packages
       final noteController = TextEditingController(
         text: 'Manually added to Opt In',
       );
       String selectedPaymentType = 'deposit'; // Default to deposit
 
+      // Opt-in questionnaire controllers
+      final Map<String, TextEditingController> questionControllers = {
+        'Best phone number': TextEditingController(),
+        'Name of business': TextEditingController(),
+        'Best email': TextEditingController(),
+        'Sales person dealing with': TextEditingController(),
+        'Shipping address': TextEditingController(),
+        'Method of payment': TextEditingController(),
+        'Interested package': TextEditingController(),
+      };
+
       // Show product selection dialog first
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              title: Text('Add ${lead.fullName} to Opt In'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Email: ${lead.email}'),
-                  Text('Phone: ${lead.phone}'),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: noteController,
-                    decoration: const InputDecoration(
-                      labelText: 'Note (optional)',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Payment Type',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
+        builder: (context) {
+          final authProvider = context.read<AuthProvider>();
+          final isSuperAdmin = authProvider.userRole == UserRole.superAdmin;
+          final packageProvider = context.read<ProductPackagesProvider>();
+          final packages = packageProvider.packages
+              .where((p) => p.isActive)
+              .toList(growable: false);
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return AlertDialog(
+                backgroundColor: Colors.white,
+                title: Text('Add ${lead.fullName} to Opt In'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: RadioListTile<String>(
-                          title: const Text('Deposit'),
-                          value: 'deposit',
-                          groupValue: selectedPaymentType,
-                          onChanged: (value) {
-                            setState(() {
-                              selectedPaymentType = value!;
-                            });
-                          },
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
+                      Text('Email: ${lead.email}'),
+                      Text('Phone: ${lead.phone}'),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: noteController,
+                        decoration: const InputDecoration(
+                          labelText: 'Note (optional)',
+                          border: OutlineInputBorder(),
                         ),
+                        maxLines: 3,
                       ),
-                      Expanded(
-                        child: RadioListTile<String>(
-                          title: const Text(
-                            'Full Payment',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.w600,
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Payment Type',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Deposit'),
+                              value: 'deposit',
+                              groupValue: selectedPaymentType,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedPaymentType = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
                             ),
                           ),
-                          value: 'full_payment',
-                          groupValue: selectedPaymentType,
-                          onChanged: (value) {
-                            setState(() {
-                              selectedPaymentType = value!;
-                            });
-                          },
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                          activeColor: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (selectedPaymentType == 'full_payment')
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.green.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.star, size: 16, color: Colors.green[700]),
-                          const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              'Priority order - will get installation priority',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.green[700],
-                                fontWeight: FontWeight.w500,
+                            child: RadioListTile<String>(
+                              title: const Text(
+                                'Full Payment',
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
+                              value: 'full_payment',
+                              groupValue: selectedPaymentType,
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedPaymentType = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              activeColor: Colors.green,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Select product(s)',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 260,
-                    width: 720,
-                    child: products.isEmpty
-                        ? const Text('No products available')
-                        : Column(
+                      if (selectedPaymentType == 'full_payment')
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: Colors.green.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8.0,
-                                ),
-                                child: Row(
-                                  children: const [
-                                    SizedBox(width: 24),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Text(
-                                        'Product',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Text(
-                                        'Description',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Country',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    SizedBox(
-                                      width: 120,
-                                      child: Text(
-                                        'Price',
-                                        textAlign: TextAlign.right,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                              Icon(
+                                Icons.star,
+                                size: 16,
+                                color: Colors.green[700],
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Priority order - will get installation priority',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green[700],
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
-                              const Divider(height: 1),
-                              const SizedBox(height: 8),
-                              Expanded(
-                                child: ListView.separated(
-                                  primary: false,
-                                  shrinkWrap: false,
-                                  itemCount: products.length,
-                                  separatorBuilder: (_, __) =>
-                                      const Divider(height: 1),
-                                  itemBuilder: (context, index) {
-                                    final product = products[index];
-                                    final isSelected = selectedProductIds
-                                        .contains(product.id);
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
-                                      ),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Checkbox(
-                                            value: isSelected,
-                                            onChanged: (checked) {
-                                              setState(() {
-                                                if (checked == true) {
-                                                  selectedProductIds.add(
-                                                    product.id,
-                                                  );
-                                                } else {
-                                                  selectedProductIds.remove(
-                                                    product.id,
-                                                  );
-                                                }
-                                              });
-                                            },
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            flex: 3,
-                                            child: Text(
-                                              product.name,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 14,
-                                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Select product(s) or package(s)',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<int>(
+                        segments: const [
+                          ButtonSegment<int>(
+                            value: 0,
+                            label: Text('Products'),
+                            icon: Icon(Icons.inventory_2, size: 18),
+                          ),
+                          ButtonSegment<int>(
+                            value: 1,
+                            label: Text('Packages'),
+                            icon: Icon(Icons.inventory, size: 18),
+                          ),
+                        ],
+                        selected: {optInSegmentIndex},
+                        onSelectionChanged: (Set<int> selected) {
+                          setState(() {
+                            optInSegmentIndex = selected.first;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 260,
+                        width: 720,
+                        child: Builder(
+                          builder: (context) {
+                            if (optInSegmentIndex == 0) {
+                              return products.isEmpty
+                                  ? const Text('No products available')
+                                  : Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(width: 24),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Product',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
                                           ),
-                                          Expanded(
-                                            flex: 3,
-                                            child: Text(
-                                              product.description,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[700],
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Description',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
                                           ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              product.country,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
+                                        ),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            'Country',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
                                             ),
                                           ),
-                                          const SizedBox(width: 12),
+                                        ),
+                                        SizedBox(width: 12),
+                                        SizedBox(
+                                          width: 100,
+                                          child: Text(
+                                            'Quantity',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        if (isSuperAdmin) ...[
+                                          SizedBox(width: 12),
                                           SizedBox(
                                             width: 120,
                                             child: Text(
-                                              'R ${product.price.toStringAsFixed(2)}',
+                                              'Price',
                                               textAlign: TextAlign.right,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
                                                 fontSize: 13,
                                               ),
                                             ),
                                           ),
                                         ],
-                                      ),
-                                    );
-                                  },
+                                      ],
+                                    ),
+                                  ),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      primary: false,
+                                      shrinkWrap: false,
+                                      itemCount: products.length,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, index) {
+                                        final product = products[index];
+                                        final isSelected =
+                                            selectedProductQuantities
+                                                .containsKey(product.id);
+                                        final quantityController =
+                                            TextEditingController(
+                                              text:
+                                                  selectedProductQuantities[product
+                                                          .id]
+                                                      ?.toString() ??
+                                                  '1',
+                                            );
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Checkbox(
+                                                value: isSelected,
+                                                onChanged: (checked) {
+                                                  setState(() {
+                                                    if (checked == true) {
+                                                      selectedProductQuantities[product
+                                                              .id] =
+                                                          1;
+                                                      quantityController.text =
+                                                          '1';
+                                                    } else {
+                                                      selectedProductQuantities
+                                                          .remove(product.id);
+                                                    }
+                                                  });
+                                                },
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  product.name,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  product.description,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700],
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: Text(
+                                                  product.country,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: 12),
+                                              SizedBox(
+                                                width: 100,
+                                                child: isSelected
+                                                    ? Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.remove,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              if (currentQty >
+                                                                  1) {
+                                                                setState(() {
+                                                                  selectedProductQuantities[product
+                                                                          .id] =
+                                                                      currentQty -
+                                                                      1;
+                                                                quantityController
+                                                                          .text =
+                                                                      (currentQty -
+                                                                              1)
+                                                                          .toString();
+                                                                });
+                                                              }
+                                                            },
+                                                          ),
+                                                          Expanded(
+                                                            child: TextField(
+                                                              controller:
+                                                                  quantityController,
+                                                              keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              onChanged: (value) {
+                                                                final qty =
+                                                                    int.tryParse(
+                                                                      value,
+                                                                ) ??
+                                                                    1;
+                                                                if (qty >= 1) {
+                                                                  setState(() {
+                                                                    selectedProductQuantities[product
+                                                                            .id] =
+                                                                        qty;
+                                                                  });
+                                                                }
+                                                              },
+                                                              decoration: const InputDecoration(
+                                                                border:
+                                                                    OutlineInputBorder(),
+                                                                contentPadding:
+                                                                    EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          4,
+                                                                      vertical:
+                                                                          4,
+                                                                ),
+                                                                isDense: true,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.add,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedProductQuantities[product
+                                                                      .id] ??
+                                                                  1;
+                                                              setState(() {
+                                                                selectedProductQuantities[product
+                                                                        .id] =
+                                                                    currentQty +
+                                                                    1;
+                                                                quantityController
+                                                                        .text =
+                                                                    (currentQty +
+                                                                            1)
+                                                                        .toString();
+                                                              });
+                                                            },
+                                                          ),
+                                                        ],
+                                                      )
+                                                    : const SizedBox.shrink(),
+                                                ),
+                                              if (isSuperAdmin) ...[
+                                                const SizedBox(width: 12),
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Text(
+                                                    'R ${product.price.toStringAsFixed(2)}',
+                                                    textAlign: TextAlign.right,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }
+                            return packages.isEmpty
+                                ? const Text('No packages available')
+                                : Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8.0,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(width: 24),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Package',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          flex: 3,
+                                          child: Text(
+                                            'Description',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            'Country',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        SizedBox(
+                                          width: 100,
+                                          child: Text(
+                                            'Quantity',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        if (isSuperAdmin) ...[
+                                          SizedBox(width: 12),
+                                          SizedBox(
+                                            width: 120,
+                                            child: Text(
+                                              'Price',
+                                              textAlign: TextAlign.right,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: ListView.separated(
+                                      primary: false,
+                                      shrinkWrap: false,
+                                      itemCount: packages.length,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, index) {
+                                        final package = packages[index];
+                                        final isSelected =
+                                            selectedPackageQuantities
+                                                .containsKey(package.id);
+                                        final quantityController =
+                                            TextEditingController(
+                                              text:
+                                                  selectedPackageQuantities[
+                                                                  package.id]
+                                                              ?.toString() ??
+                                                          '1',
+                                            );
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 10,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Checkbox(
+                                                value: isSelected,
+                                                onChanged: (checked) {
+                                                  setState(() {
+                                                    if (checked == true) {
+                                                      selectedPackageQuantities[
+                                                                  package.id] =
+                                                              1;
+                                                      quantityController.text =
+                                                              '1';
+                                                    } else {
+                                                      selectedPackageQuantities
+                                                          .remove(package.id);
+                                                    }
+                                                  });
+                                                },
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  package.name,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 3,
+                                                child: Text(
+                                                  package.description,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[700],
+                                                  ),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                flex: 2,
+                                                child: Text(
+                                                  package.country,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: 12),
+                                              SizedBox(
+                                                width: 100,
+                                                child: isSelected
+                                                    ? Row(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        children: [
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.remove,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedPackageQuantities[
+                                                                              package.id] ??
+                                                                          1;
+                                                              if (currentQty >
+                                                                  1) {
+                                                                setState(() {
+                                                                  selectedPackageQuantities[
+                                                                          package.id] =
+                                                                      currentQty -
+                                                                          1;
+                                                                quantityController
+                                                                        .text =
+                                                                    (currentQty -
+                                                                            1)
+                                                                        .toString();
+                                                                });
+                                                              }
+                                                            },
+                                                          ),
+                                                          Expanded(
+                                                            child: TextField(
+                                                              controller:
+                                                                  quantityController,
+                                                              keyboardType:
+                                                                  TextInputType
+                                                                      .number,
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                              onChanged: (value) {
+                                                                final qty =
+                                                                    int.tryParse(
+                                                                          value) ??
+                                                                      1;
+                                                                if (qty >= 1) {
+                                                                  setState(() {
+                                                                    selectedPackageQuantities[
+                                                                            package.id] =
+                                                                        qty;
+                                                                  });
+                                                                }
+                                                              },
+                                                              decoration: const InputDecoration(
+                                                                border:
+                                                                    OutlineInputBorder(),
+                                                                contentPadding:
+                                                                    EdgeInsets.symmetric(
+                                                                      horizontal: 4,
+                                                                      vertical: 4,
+                                                                    ),
+                                                                isDense: true,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          IconButton(
+                                                            icon: const Icon(
+                                                              Icons.add,
+                                                              size: 18,
+                                                            ),
+                                                            padding:
+                                                                EdgeInsets.zero,
+                                                            constraints:
+                                                                const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                            onPressed: () {
+                                                              final currentQty =
+                                                                  selectedPackageQuantities[
+                                                                              package.id] ??
+                                                                          1;
+                                                              setState(() {
+                                                                selectedPackageQuantities[
+                                                                        package.id] =
+                                                                    currentQty +
+                                                                        1;
+                                                                quantityController
+                                                                        .text =
+                                                                    (currentQty +
+                                                                            1)
+                                                                        .toString();
+                                                              });
+                                                            },
+                                                          ),
+                                                        ],
+                                                      )
+                                                    : const SizedBox.shrink(),
+                                                ),
+                                              if (isSuperAdmin) ...[
+                                                const SizedBox(width: 12),
+                                                SizedBox(
+                                                  width: 120,
+                                                  child: Text(
+                                                    'R ${package.price.toStringAsFixed(2)}',
+                                                    textAlign: TextAlign.right,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                          },
+                        ),
+                      ),
+                      // Opt-In Questionnaire
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Opt-In Questionnaire (Optional)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...questionControllers.entries.map((entry) {
+                        if (entry.key == 'Method of payment') {
+                          final value = _paymentMethodOptions
+                                  .contains(entry.value.text.trim())
+                              ? entry.value.text.trim()
+                              : null;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: DropdownButtonFormField<String>(
+                              value: value,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
                                 ),
                               ),
-                            ],
+                              hint: Text(_getQuestionHint(entry.key)),
+                              items: _paymentMethodOptions
+                                  .map((String v) => DropdownMenuItem<String>(
+                                        value: v,
+                                        child: Text(v),
+                                      ))
+                                  .toList(),
+                              onChanged: (String? v) {
+                                setState(() => entry.value.text = v ?? '');
+                              },
+                            ),
+                          );
+                        }
+                        final isMultiline = entry.key == 'Shipping address';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: TextField(
+                            controller: entry.value,
+                            decoration: InputDecoration(
+                              labelText: entry.key,
+                              hintText: _getQuestionHint(entry.key),
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            maxLines: isMultiline ? 3 : 1,
                           ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Add'),
                   ),
                 ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Add'),
-                ),
-              ],
-            );
-          },
-        ),
+              );
+            },
+          );
+        },
       );
 
       if (confirmed != true) return;
@@ -1382,16 +2618,44 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
 
       // Create list of opt-in products
       List<models.OptInProduct>? optInSelections;
-      if (selectedProductIds.isNotEmpty) {
-        optInSelections = selectedProductIds.map((id) {
-          final product = products.firstWhere((p) => p.id == id);
+      if (selectedProductQuantities.isNotEmpty) {
+        optInSelections = selectedProductQuantities.entries.map((entry) {
+          final product = products.firstWhere((p) => p.id == entry.key);
           return models.OptInProduct(
             id: product.id,
             name: product.name,
             price: product.price,
+            quantity: entry.value,
           );
         }).toList();
       }
+
+      // Create list of opt-in packages
+      final packageProvider = context.read<ProductPackagesProvider>();
+      final packagesForSubmit = packageProvider.packages
+          .where((p) => p.isActive)
+          .toList(growable: false);
+      List<models.OptInProduct> optInPackageSelections = [];
+      if (selectedPackageQuantities.isNotEmpty) {
+        optInPackageSelections = selectedPackageQuantities.entries.map((entry) {
+          final package = packagesForSubmit.firstWhere((p) => p.id == entry.key);
+          return models.OptInProduct(
+            id: package.id,
+            name: package.name,
+            price: package.price,
+            quantity: entry.value,
+          );
+        }).toList();
+      }
+
+      // Build opt-in questions map
+      final answers = <String, String>{};
+      questionControllers.forEach((question, controller) {
+        if (controller.text.trim().isNotEmpty) {
+          answers[question] = controller.text.trim();
+        }
+      });
+      final optInQuestions = answers.isNotEmpty ? answers : null;
 
       final noteText = noteController.text.isEmpty
           ? 'Manually added to Opt In'
@@ -1437,19 +2701,25 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         manuallyAdded: true,
         optInNote: noteText,
         optInProducts: optInSelections ?? [],
+        optInPackages: optInPackageSelections,
+        optInQuestions: optInQuestions,
         paymentType: selectedPaymentType,
       );
+
+      // Dispose question controllers
+      questionControllers.values.forEach((controller) => controller.dispose());
 
       // Create the appointment
       final appointmentId = await _appointmentService.createAppointment(
         appointment,
       );
 
-      // Update lead with appointment reference and opt-in products
+      // Update lead with appointment reference and opt-in products/packages
       final updatedLead = lead.copyWith(
         convertedToAppointmentId: appointmentId,
         optInNote: noteText,
         optInProducts: optInSelections ?? [],
+        optInPackages: optInPackageSelections,
         updatedAt: now,
       );
       await _leadService.updateLead(updatedLead);
@@ -1569,6 +2839,113 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                         Text(
                           'View Stock',
                           style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Sync GHL Leads button
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _isSyncing
+                      ? null
+                      : () async {
+                          setState(() => _isSyncing = true);
+                          try {
+                            final result =
+                                await LeadService.triggerGHLLeadsSync();
+                            if (mounted) {
+                              // Check if sync is running in background (202 status)
+                              if (result['status'] == 'running') {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '🔄 ${result['message'] ?? 'Sync started in background. Check Firebase logs for progress.'}',
+                                    ),
+                                    backgroundColor: Colors.blue,
+                                    duration: const Duration(seconds: 5),
+                                  ),
+                                );
+                              } else {
+                                // Sync completed immediately (unlikely but handle it)
+                                final stats =
+                                    result['stats'] as Map<String, dynamic>?;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '✅ Sync complete! ${stats?['newLeadsCreated'] ?? 0} new leads created',
+                                    ),
+                                    backgroundColor: Colors.green,
+                                    duration: const Duration(seconds: 4),
+                                  ),
+                                );
+                                // Refresh appointments after sync
+                                _loadAppointments();
+                              }
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '❌ Sync failed: ${e.toString()}',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  duration: const Duration(seconds: 4),
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isSyncing = false);
+                            }
+                          }
+                        },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _isSyncing
+                          ? Colors.grey[400]
+                          : AppTheme.secondaryColor,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        _isSyncing
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.sync,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _isSyncing ? 'Syncing...' : 'Sync GHL Leads',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1979,15 +3356,20 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
   }
 
   Widget _buildKanbanBoard() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _stages.map((stage) {
-          final appointments = _getAppointmentsForStage(stage.id);
-          return _buildStageColumn(stage, appointments);
-        }).toList(),
+    return Scrollbar(
+      controller: _horizontalScrollController,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        controller: _horizontalScrollController,
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: _stages.map((stage) {
+            final appointments = _getAppointmentsForStage(stage.id);
+            return _buildStageColumn(stage, appointments);
+          }).toList(),
+        ),
       ),
     );
   }
@@ -1996,6 +3378,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     StreamStage stage,
     List<models.SalesAppointment> appointments,
   ) {
+    final isGreyedOut =
+        stage.id == 'appointments' || stage.id == 'rescheduled';
     final sortedAppointments = StreamUtils.sortByFormScore(
       appointments,
       (apt) => apt.formScore,
@@ -2004,6 +3388,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       sortedAppointments,
       (apt) => apt.formScore,
     );
+    final headerColor = isGreyedOut
+        ? Colors.grey[500]!
+        : Color(int.parse(stage.color.replaceFirst('#', '0xff')));
 
     return Container(
       width: 320,
@@ -2015,7 +3402,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Color(int.parse(stage.color.replaceFirst('#', '0xff'))),
+              color: headerColor,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(12),
               ),
@@ -2075,22 +3462,28 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
               onAcceptWithDetails: (details) =>
                   _moveAppointmentToStage(details.data, stage.id),
               builder: (context, candidateData, rejectedData) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: candidateData.isNotEmpty
+                final listBgColor = isGreyedOut
+                    ? Colors.grey.shade200
+                    : (candidateData.isNotEmpty
                         ? Color(
                             int.parse(stage.color.replaceFirst('#', '0xff')),
                           ).withOpacity(0.1)
-                        : Colors.white,
+                        : Colors.white);
+                final listBorderColor = isGreyedOut
+                    ? Colors.grey.shade400
+                    : (candidateData.isNotEmpty
+                        ? Color(
+                            int.parse(stage.color.replaceFirst('#', '0xff')),
+                          )
+                        : Colors.grey.shade200);
+                return Container(
+                  decoration: BoxDecoration(
+                    color: listBgColor,
                     borderRadius: const BorderRadius.vertical(
                       bottom: Radius.circular(12),
                     ),
                     border: Border.all(
-                      color: candidateData.isNotEmpty
-                          ? Color(
-                              int.parse(stage.color.replaceFirst('#', '0xff')),
-                            )
-                          : Colors.grey.shade200,
+                      color: listBorderColor,
                       width: candidateData.isNotEmpty ? 2 : 1,
                     ),
                     boxShadow: [
@@ -2269,7 +3662,10 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
               if (appointment.depositPaid) ...[
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.purple.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
@@ -2297,41 +3693,120 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 ),
               ],
             ],
-            // Payment type badge
+            // Payment type badge and Contract sent tag
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: appointment.isFullPayment
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: appointment.isFullPayment
-                      ? Colors.green.withOpacity(0.3)
-                      : Colors.orange.withOpacity(0.3),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    appointment.isFullPayment ? Icons.star : Icons.payments_outlined,
-                    size: 12,
-                    color: appointment.isFullPayment ? Colors.green[700] : Colors.orange[700],
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    appointment.isFullPayment ? 'Full Payment' : 'Deposit',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: appointment.isFullPayment ? Colors.green[700] : Colors.orange[700],
+                  decoration: BoxDecoration(
+                    color: appointment.isFullPayment
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: appointment.isFullPayment
+                          ? Colors.green.withOpacity(0.3)
+                          : Colors.orange.withOpacity(0.3),
                     ),
                   ),
-                ],
-              ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        appointment.isFullPayment
+                            ? Icons.star
+                            : Icons.payments_outlined,
+                        size: 12,
+                        color: appointment.isFullPayment
+                            ? Colors.green[700]
+                            : Colors.orange[700],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        appointment.isFullPayment ? 'Full Payment' : 'Deposit',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: appointment.isFullPayment
+                              ? Colors.green[700]
+                              : Colors.orange[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (appointment.contractEmailSentAt != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.mark_email_read_outlined,
+                          size: 12,
+                          color: Colors.blue[700],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Contract sent',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
+            // Proof needs verification badge
+            if (appointment.customerUploadedProofUrl != null &&
+                appointment.customerUploadedProofUrl!.isNotEmpty &&
+                !appointment.customerProofVerified) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.pending_actions,
+                      size: 12,
+                      color: Colors.orange[700],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Proof Needs Verification',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             // Assigned to badge
             if (appointment.assignedToName != null &&
                 appointment.assignedToName!.isNotEmpty) ...[
@@ -2414,5 +3889,33 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
         ),
       ),
     );
+  }
+
+  static const List<String> _paymentMethodOptions = [
+    'Cash',
+    'Financing',
+    'In-House Finance',
+    'Rental',
+  ];
+
+  String _getQuestionHint(String question) {
+    switch (question) {
+      case 'Best phone number':
+        return 'Enter best contact number';
+      case 'Name of business':
+        return 'Enter business name';
+      case 'Best email':
+        return 'Enter preferred email address';
+      case 'Sales person dealing with':
+        return 'Name of sales representative';
+      case 'Shipping address':
+        return 'Full shipping address including postal code';
+      case 'Method of payment':
+        return 'Select method of payment';
+      case 'Interested package':
+        return 'Package or product bundle of interest';
+      default:
+        return '';
+    }
   }
 }

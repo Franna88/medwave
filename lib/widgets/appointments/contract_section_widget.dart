@@ -7,7 +7,9 @@ import '../../models/streams/appointment.dart';
 import '../../models/contracts/contract.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/firebase/sales_appointment_service.dart';
 import '../../theme/app_theme.dart';
+import 'contract_edit_dialog.dart';
 
 /// Widget showing contract status and actions for an appointment
 class ContractSectionWidget extends StatefulWidget {
@@ -58,7 +60,34 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
     }
   }
 
+  bool get _isUnassigned =>
+      widget.appointment.assignedTo?.trim().isEmpty ?? true;
+
+  void _showAssignFirstMessage() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Assignment required'),
+        content: const Text(
+          'Please assign a sales agent to this appointment before generating a contract.\n\n'
+          'Use the Assignment section above to assign a Sales Admin.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _generateContract() async {
+    if (_isUnassigned) {
+      _showAssignFirstMessage();
+      return;
+    }
+
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.user?.uid ?? '';
     final userName = authProvider.userName;
@@ -135,6 +164,141 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
         ),
       );
     }
+  }
+
+  Future<void> _editContract() async {
+    if (_contract == null) return;
+
+    // Load appointment to get current data
+    final appointment = widget.appointment;
+
+    // Show edit dialog
+    final revision = await showDialog<Contract>(
+      context: context,
+      builder: (context) =>
+          ContractEditDialog(contract: _contract!, appointment: appointment),
+    );
+
+    if (revision != null && mounted) {
+      // Reload contract to show the new revision
+      await _loadContract();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Contract revision created successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  Future<void> _resendContractEmail() async {
+    if (_contract == null) return;
+
+    final provider = context.read<ContractProvider>();
+    final success = await provider.resendContractEmail(
+      contract: _contract!,
+      appointment: widget.appointment,
+    );
+
+    if (mounted && success) {
+      final appointmentService = SalesAppointmentService();
+      try {
+        await appointmentService.updateContractEmailSent(widget.appointment.id);
+      } catch (_) {
+        // Non-fatal: email was sent, tag update failed
+      }
+      try {
+        final authProvider = context.read<AuthProvider>();
+        final uid = authProvider.user?.uid;
+        if (uid != null && mounted) {
+          await appointmentService.addNote(
+            appointmentId: widget.appointment.id,
+            noteText: 'Contract email sent to customer.',
+            userId: uid,
+            userName: authProvider.userName,
+          );
+        }
+      } catch (_) {
+        // Non-fatal: note add failed
+      }
+      if (mounted) {
+        final bccSent = provider.lastContractBccSent;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              bccSent
+                  ? 'Contract email sent successfully'
+                  : 'Contract sent to client. Team notification could not be sent.',
+            ),
+            backgroundColor: bccSent ? Colors.green : Colors.orange,
+          ),
+        );
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to send contract email'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showRevisionHistory() async {
+    if (_contract == null) return;
+
+    final provider = context.read<ContractProvider>();
+    final history = await provider.getContractRevisionHistory(_contract!.id);
+
+    if (!mounted) return;
+
+    final dateFormat = DateFormat('MMM dd, yyyy');
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final screenHeight = MediaQuery.of(context).size.height;
+        final contentHeight = (screenHeight * 0.5).clamp(200.0, 400.0);
+        return AlertDialog(
+          title: const Text('Contract Revision History'),
+          content: SizedBox(
+            width: 400,
+            height: contentHeight,
+            child: ListView.builder(
+              itemCount: history.length,
+              itemBuilder: (context, index) {
+                final contract = history[index];
+                return ListTile(
+                  leading: contract.revisionNumber == 0
+                      ? const Icon(Icons.description, color: Colors.blue)
+                      : const Icon(Icons.edit, color: Colors.orange),
+                  title: Text(
+                    contract.revisionNumber == 0
+                        ? 'Original Contract'
+                        : 'Revision #${contract.revisionNumber}',
+                  ),
+                  subtitle: Text(
+                    contract.editReason ?? 'No reason provided',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: Text(
+                    dateFormat.format(contract.createdAt),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _voidContract() async {
@@ -339,6 +503,7 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
   }
 
   Widget _buildNoContract() {
+    final unassigned = _isUnassigned;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -348,7 +513,7 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
         ),
         const SizedBox(height: 12),
         ElevatedButton.icon(
-          onPressed: _generateContract,
+          onPressed: unassigned ? null : _generateContract,
           icon: const Icon(Icons.add),
           label: const Text('Generate Contract'),
           style: ElevatedButton.styleFrom(
@@ -356,6 +521,13 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
             foregroundColor: Colors.white,
           ),
         ),
+        if (unassigned) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Assign a sales agent above to generate a contract.',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ],
       ],
     );
   }
@@ -389,6 +561,38 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
           ),
         ),
         const SizedBox(height: 12),
+
+        // Show revision info if this is a revision
+        if (_contract!.parentContractId != null) ...[
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.history, size: 14, color: Colors.blue[700]),
+                const SizedBox(width: 4),
+                Text(
+                  'Revision #${_contract!.revisionNumber}',
+                  style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                ),
+                if (_contract!.editReason != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '- ${_contract!.editReason}',
+                      style: TextStyle(fontSize: 11, color: Colors.blue[600]),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
 
         // Created date
         _buildInfoRow(
@@ -427,6 +631,25 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
               icon: const Icon(Icons.copy, size: 18),
               label: const Text('Copy Link'),
             ),
+            OutlinedButton.icon(
+              onPressed: _resendContractEmail,
+              icon: const Icon(Icons.send, size: 18),
+              label: const Text('Send Contract'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _editContract,
+              icon: const Icon(Icons.edit, size: 18),
+              label: const Text('Edit'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.primaryColor,
+              ),
+            ),
+            if (_contract!.parentContractId != null)
+              OutlinedButton.icon(
+                onPressed: _showRevisionHistory,
+                icon: const Icon(Icons.history, size: 18),
+                label: const Text('View History'),
+              ),
             OutlinedButton.icon(
               onPressed: _voidContract,
               icon: const Icon(Icons.block, size: 18),
@@ -585,7 +808,7 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
 
         // Generate new contract button
         ElevatedButton.icon(
-          onPressed: _generateContract,
+          onPressed: _isUnassigned ? null : _generateContract,
           icon: const Icon(Icons.refresh),
           label: const Text('Generate New Contract'),
           style: ElevatedButton.styleFrom(
@@ -593,6 +816,13 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
             foregroundColor: Colors.white,
           ),
         ),
+        if (_isUnassigned) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Assign a sales agent above to generate a new contract.',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ],
       ],
     );
   }

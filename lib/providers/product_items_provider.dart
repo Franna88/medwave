@@ -51,6 +51,7 @@ class ProductItemsProvider extends ChangeNotifier {
     required String country,
     required bool isActive,
     required double price,
+    double? costAmount,
   }) {
     return _service.createProductItem(
       name: name,
@@ -58,6 +59,7 @@ class ProductItemsProvider extends ChangeNotifier {
       country: country,
       isActive: isActive,
       price: price,
+      costAmount: costAmount,
     );
   }
 

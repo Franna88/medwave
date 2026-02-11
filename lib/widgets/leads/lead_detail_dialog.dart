@@ -629,9 +629,24 @@ class _LeadDetailDialogState extends State<LeadDetailDialog> {
                 ),
               );
             }).toList(),
+            // Add attribution for questionnaire notes
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                note.stageTransition != null
+                    ? '| Moved by ${note.createdByName ?? 'Unknown'}'
+                    : (note.createdBy == 'system'
+                          ? '| Added by System'
+                          : '| Added by ${note.createdByName ?? 'Unknown'}'),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ),
           ] else ...[
-            // Display regular text note
-            Text(note.textAsString, style: const TextStyle(fontSize: 13)),
+            // Display regular text note with attribution
+            Text(
+              '${note.textAsString}${note.stageTransition != null ? ' | Moved by ${note.createdByName ?? 'Unknown'}' : (note.createdBy == 'system' ? ' | Added by System' : ' | Added by ${note.createdByName ?? 'Unknown'}')}',
+              style: const TextStyle(fontSize: 13),
+            ),
           ],
         ],
       ),

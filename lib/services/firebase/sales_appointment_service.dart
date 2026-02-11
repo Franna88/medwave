@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
@@ -5,6 +6,7 @@ import '../../models/streams/appointment.dart' as models;
 import '../../models/streams/order.dart' as models;
 import '../emailjs_service.dart';
 import 'order_service.dart';
+import 'storage_service.dart';
 
 /// Service for managing sales appointments in Firebase
 class SalesAppointmentService {
@@ -82,6 +84,20 @@ class SalesAppointmentService {
     }
   }
 
+  /// Get real-time stream of a specific appointment
+  Stream<models.SalesAppointment?> getAppointmentStream(String appointmentId) {
+    return _firestore
+        .collection('appointments')
+        .doc(appointmentId)
+        .snapshots()
+        .map((doc) {
+          if (!doc.exists) {
+            return null;
+          }
+          return models.SalesAppointment.fromFirestore(doc);
+        });
+  }
+
   /// Stream of all appointments
   Stream<List<models.SalesAppointment>> appointmentsStream() {
     return _firestore.collection('appointments').snapshots().map((snapshot) {
@@ -119,6 +135,24 @@ class SalesAppointmentService {
     } catch (e) {
       if (kDebugMode) {
         print('Error updating appointment: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Mark that the contract link email was sent to the customer
+  Future<void> updateContractEmailSent(String appointmentId) async {
+    try {
+      final appointment = await getAppointment(appointmentId);
+      if (appointment == null) return;
+      final updated = appointment.copyWith(
+        contractEmailSentAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await updateAppointment(updated);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating contract email sent: $e');
       }
       rethrow;
     }
@@ -183,12 +217,14 @@ class SalesAppointmentService {
     String? assignedToName,
     String? optInNote,
     List<models.OptInProduct>? optInProducts,
+    Map<String, String>? optInQuestions,
     String? depositConfirmationToken,
     String? depositConfirmationStatus,
     DateTime? depositConfirmationSentAt,
     DateTime? depositConfirmationRespondedAt,
     bool shouldSendDepositEmail = true,
     String? paymentType,
+    String? contractViewUrl,
   }) async {
     try {
       final appointment = await getAppointment(appointmentId);
@@ -228,6 +264,7 @@ class SalesAppointmentService {
           appointment: appointment,
           yesUrl: yesUrl,
           noUrl: noUrl,
+          contractViewUrl: contractViewUrl,
         );
       }
 
@@ -261,6 +298,7 @@ class SalesAppointmentService {
         createdAt: now,
         createdBy: userId,
         createdByName: userName,
+        stageTransition: '${appointment.currentStage} → $newStage',
       );
 
       final updatedNotes = [...appointment.notes, transitionNote];
@@ -280,6 +318,7 @@ class SalesAppointmentService {
         assignedToName: assignedToName ?? appointment.assignedToName,
         optInNote: optInNote ?? appointment.optInNote,
         optInProducts: optInProducts ?? appointment.optInProducts,
+        optInQuestions: optInQuestions ?? appointment.optInQuestions,
         depositConfirmationToken:
             confirmationToken ?? appointment.depositConfirmationToken,
         depositConfirmationStatus:
@@ -428,9 +467,14 @@ class SalesAppointmentService {
 
           print('✉️ Finance email sent status: $sent');
           if (sent) {
-            print('✅ SUCCESS: Finance team notified at info@barefootbytes.com');
+            print(
+              '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
+              // '✅ SUCCESS: Finance team notified at tertiusva@gmail.com',
+            );
           } else {
-            print('❌ FAILED: Finance email was not sent (EmailJS returned false)');
+            print(
+              '❌ FAILED: Finance email was not sent (EmailJS returned false)',
+            );
           }
         } catch (e) {
           print('❌ ERROR sending finance notification: $e');
@@ -525,6 +569,13 @@ class SalesAppointmentService {
         'updatedAt': Timestamp.fromDate(now),
       });
 
+      _sendDepositConfirmedBccNotification(
+        appointmentId: appointmentId,
+        customerName: appointment.customerName,
+        confirmedDate: now,
+      );
+      _sendDepositConfirmedWelcomeToCustomer(appointment);
+
       if (kDebugMode) {
         print('Finance marked deposit received for $appointmentId');
       }
@@ -542,6 +593,441 @@ class SalesAppointmentService {
         success: false,
         message: 'Something went wrong. Please try again later.',
         status: DepositResponseStatus.invalid,
+      );
+    }
+  }
+
+  /// Upload deposit proof and move appointment to deposit_made
+  Future<DepositProofUploadResult> uploadDepositProofAndConfirm({
+    required String appointmentId,
+    required dynamic proofFile, // XFile
+    required String uploadedBy,
+    required String uploadedByName,
+  }) async {
+    try {
+      // 1. Upload file to storage
+      final storageService = StorageService();
+      final proofUrl = await storageService.uploadDepositProof(
+        appointmentId: appointmentId,
+        imageFile: proofFile,
+      );
+
+      if (kDebugMode) {
+        print('✅ Deposit proof uploaded: $proofUrl');
+      }
+
+      // 2. Get current appointment
+      final appointment = await getAppointment(appointmentId);
+      if (appointment == null) {
+        return const DepositProofUploadResult(
+          success: false,
+          message: 'Appointment not found.',
+        );
+      }
+
+      // 3. Update stage history: close deposit_requested, add deposit_made
+      final now = DateTime.now();
+      final updatedHistory = [...appointment.stageHistory];
+
+      // Close current stage
+      if (updatedHistory.isNotEmpty) {
+        final lastEntry = updatedHistory.last;
+        if (lastEntry.exitedAt == null) {
+          updatedHistory[updatedHistory.length -
+              1] = models.SalesAppointmentStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: now,
+            note: lastEntry.note,
+          );
+        }
+      }
+
+      // Add deposit_made entry
+      updatedHistory.add(
+        models.SalesAppointmentStageHistoryEntry(
+          stage: 'deposit_made',
+          enteredAt: now,
+          note:
+              'Deposit proof uploaded by $uploadedByName. Automatically moved to Deposit Made.',
+        ),
+      );
+
+      // 4. Update appointment in Firestore
+      await _firestore.collection('appointments').doc(appointmentId).update({
+        'depositProofUrl': proofUrl,
+        'depositProofUploadedAt': Timestamp.fromDate(now),
+        'depositProofUploadedBy': uploadedBy,
+        'depositProofUploadedByName': uploadedByName,
+        'currentStage': 'deposit_made',
+        'depositPaid': true,
+        'stageEnteredAt': Timestamp.fromDate(now),
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      _sendDepositConfirmedBccNotification(
+        appointmentId: appointmentId,
+        customerName: appointment.customerName,
+        confirmedDate: now,
+      );
+      _sendDepositConfirmedWelcomeToCustomer(appointment);
+
+      if (kDebugMode) {
+        print(
+          '✅ Appointment $appointmentId moved to deposit_made with proof upload',
+        );
+      }
+
+      // 5. Return success result
+      return DepositProofUploadResult(
+        success: true,
+        message:
+            'Deposit proof uploaded and appointment moved to Deposit Made.',
+        proofUrl: proofUrl,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error uploading deposit proof: $e');
+      }
+      return DepositProofUploadResult(
+        success: false,
+        message: 'Failed to upload deposit proof: $e',
+      );
+    }
+  }
+
+  /// Customer uploads proof after confirming deposit
+  /// Does NOT move stage - just stores proof and flags for verification
+  Future<CustomerProofUploadResult> uploadCustomerDepositProof({
+    required String appointmentId,
+    required Uint8List fileData,
+    required String fileName,
+  }) async {
+    try {
+      // 1. Upload to storage
+      final storageService = StorageService();
+      final proofUrl = await storageService.uploadCustomerDepositProof(
+        appointmentId: appointmentId,
+        fileData: fileData,
+        fileName: fileName,
+      );
+
+      if (kDebugMode) {
+        print('✅ Customer deposit proof uploaded: $proofUrl');
+      }
+
+      // 2. Get current appointment
+      final appointment = await getAppointment(appointmentId);
+      if (appointment == null) {
+        return const CustomerProofUploadResult(
+          success: false,
+          message: 'Appointment not found.',
+        );
+      }
+
+      // 3. Update appointment with proof but don't move stage
+      final now = DateTime.now();
+
+      await _firestore.collection('appointments').doc(appointmentId).update({
+        'customerUploadedProofUrl': proofUrl,
+        'customerUploadedProofAt': Timestamp.fromDate(now),
+        'customerProofVerified': false,
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      // 4. Add note to stage history (without closing/opening stages)
+      final updatedHistory = [...appointment.stageHistory];
+      if (updatedHistory.isNotEmpty) {
+        final lastIndex = updatedHistory.length - 1;
+        final lastEntry = updatedHistory[lastIndex];
+
+        // Update the current stage entry with a note
+        updatedHistory[lastIndex] = models.SalesAppointmentStageHistoryEntry(
+          stage: lastEntry.stage,
+          enteredAt: lastEntry.enteredAt,
+          exitedAt: lastEntry.exitedAt,
+          note:
+              (lastEntry.note ?? '') +
+              '\nCustomer uploaded proof of payment on ${now.toString().split('.')[0]}, pending sales verification.',
+        );
+
+        await _firestore.collection('appointments').doc(appointmentId).update({
+          'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        });
+      }
+
+      if (kDebugMode) {
+        print(
+          '✅ Customer proof stored for appointment $appointmentId, awaiting verification',
+        );
+      }
+
+      return CustomerProofUploadResult(
+        success: true,
+        message:
+            'Proof of payment uploaded successfully. Our team will verify it shortly.',
+        proofUrl: proofUrl,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error uploading customer deposit proof: $e');
+      }
+      return CustomerProofUploadResult(
+        success: false,
+        message: 'Failed to upload proof: $e',
+      );
+    }
+  }
+
+  /// Sales agent verifies customer-uploaded proof and moves to deposit_made
+  Future<ProofVerificationResult> verifySalesDepositProof({
+    required String appointmentId,
+    required String verifiedBy,
+    required String verifiedByName,
+  }) async {
+    try {
+      // 1. Get appointment
+      final appointment = await getAppointment(appointmentId);
+      if (appointment == null) {
+        return const ProofVerificationResult(
+          success: false,
+          message: 'Appointment not found.',
+        );
+      }
+
+      // 2. Verify customer proof exists
+      if (appointment.customerUploadedProofUrl == null ||
+          appointment.customerUploadedProofUrl!.isEmpty) {
+        return const ProofVerificationResult(
+          success: false,
+          message: 'No customer proof found to verify.',
+        );
+      }
+
+      // 3. Update stage history: close deposit_requested, add deposit_made
+      final now = DateTime.now();
+      final updatedHistory = [...appointment.stageHistory];
+
+      // Close current stage
+      if (updatedHistory.isNotEmpty) {
+        final lastEntry = updatedHistory.last;
+        if (lastEntry.exitedAt == null) {
+          updatedHistory[updatedHistory.length -
+              1] = models.SalesAppointmentStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: now,
+            note: lastEntry.note,
+          );
+        }
+      }
+
+      // Add deposit_made entry
+      updatedHistory.add(
+        models.SalesAppointmentStageHistoryEntry(
+          stage: 'deposit_made',
+          enteredAt: now,
+          note:
+              'Customer proof verified by $verifiedByName. Moved to Deposit Made.',
+        ),
+      );
+
+      // 4. Update appointment
+      await _firestore.collection('appointments').doc(appointmentId).update({
+        'customerProofVerified': true,
+        'customerProofVerifiedAt': Timestamp.fromDate(now),
+        'customerProofVerifiedBy': verifiedBy,
+        'customerProofVerifiedByName': verifiedByName,
+        'currentStage': 'deposit_made',
+        'depositPaid': true,
+        'stageEnteredAt': Timestamp.fromDate(now),
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      _sendDepositConfirmedBccNotification(
+        appointmentId: appointmentId,
+        customerName: appointment.customerName,
+        confirmedDate: now,
+      );
+      _sendDepositConfirmedWelcomeToCustomer(appointment);
+
+      if (kDebugMode) {
+        print(
+          '✅ Customer proof verified by $verifiedByName for appointment $appointmentId, moved to deposit_made',
+        );
+      }
+
+      return const ProofVerificationResult(
+        success: true,
+        message:
+            'Proof verified successfully. Appointment moved to Deposit Made.',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error verifying customer proof: $e');
+      }
+      return ProofVerificationResult(
+        success: false,
+        message: 'Failed to verify proof: $e',
+      );
+    }
+  }
+
+  /// Sends "Deposit Confirmed" BCC notification when ticket reaches deposit_made.
+  /// Resolves contract ID via Firestore; on failure logs only and does not throw.
+  Future<void> _sendDepositConfirmedBccNotification({
+    required String appointmentId,
+    required String customerName,
+    required DateTime confirmedDate,
+  }) async {
+    try {
+      final contractSnap = await _firestore
+          .collection('contracts')
+          .where('appointmentId', isEqualTo: appointmentId)
+          .get();
+      final docs = contractSnap.docs;
+      String contractId = 'N/A';
+      if (docs.isNotEmpty) {
+        docs.sort((a, b) {
+          final aAt = a.data()['createdAt'] as Timestamp?;
+          final bAt = b.data()['createdAt'] as Timestamp?;
+          final aMs = aAt?.millisecondsSinceEpoch ?? 0;
+          final bMs = bAt?.millisecondsSinceEpoch ?? 0;
+          return bMs.compareTo(aMs);
+        });
+        contractId = docs.first.id;
+      }
+      await EmailJSService.sendDepositConfirmedNotificationToBcc(
+        contractId: contractId,
+        customerName: customerName,
+        depositConfirmedDate: confirmedDate,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+          '⚠️ Deposit confirmed BCC notification failed for $appointmentId: $e',
+        );
+      }
+    }
+  }
+
+  /// Sends deposit-confirmed welcome email to the customer (template_kxndxus).
+  /// Fire-and-forget so deposit confirmation result is not affected by email failure.
+  void _sendDepositConfirmedWelcomeToCustomer(
+    models.SalesAppointment appointment,
+  ) {
+    EmailJSService.sendDepositConfirmedWelcomeToCustomer(
+      toEmail: appointment.email,
+      clientName: appointment.customerName,
+    ).then((sent) {
+      if (kDebugMode && !sent) {
+        print(
+          '⚠️ Deposit confirmed welcome email failed for ${appointment.id} (${appointment.email})',
+        );
+      }
+    });
+  }
+
+  /// Sales agent rejects customer-uploaded proof and clears it
+  Future<ProofRejectionResult> rejectCustomerDepositProof({
+    required String appointmentId,
+    required String rejectedBy,
+    required String rejectedByName,
+    String? rejectionReason,
+  }) async {
+    try {
+      // 1. Get appointment
+      final appointment = await getAppointment(appointmentId);
+      if (appointment == null) {
+        return const ProofRejectionResult(
+          success: false,
+          message: 'Appointment not found.',
+        );
+      }
+
+      // 2. Verify customer proof exists
+      if (appointment.customerUploadedProofUrl == null ||
+          appointment.customerUploadedProofUrl!.isEmpty) {
+        return const ProofRejectionResult(
+          success: false,
+          message: 'No customer proof found to reject.',
+        );
+      }
+
+      // 3. Update stage history with rejection note
+      final now = DateTime.now();
+      final updatedHistory = [...appointment.stageHistory];
+
+      // Add rejection note to current stage
+      if (updatedHistory.isNotEmpty) {
+        final lastEntry = updatedHistory.last;
+        if (lastEntry.exitedAt == null) {
+          final reasonText =
+              rejectionReason != null && rejectionReason.isNotEmpty
+              ? ' Reason: $rejectionReason'
+              : '';
+          updatedHistory[updatedHistory.length -
+              1] = models.SalesAppointmentStageHistoryEntry(
+            stage: lastEntry.stage,
+            enteredAt: lastEntry.enteredAt,
+            exitedAt: null,
+            note: lastEntry.note != null && lastEntry.note!.isNotEmpty
+                ? '${lastEntry.note}\nCustomer proof rejected by $rejectedByName.$reasonText'
+                : 'Customer proof rejected by $rejectedByName.$reasonText',
+          );
+        }
+      }
+
+      // Add a note to lead history (notes list) for rejecting POP
+      final reasonSuffix = rejectionReason != null && rejectionReason.isNotEmpty
+          ? ' Reason: $rejectionReason'
+          : '';
+      final rejectionNote = models.SalesAppointmentNote(
+        text:
+            'Deposit proof of payment rejected by $rejectedByName.$reasonSuffix',
+        createdAt: now,
+        createdBy: rejectedBy,
+        createdByName: rejectedByName,
+      );
+      final updatedNotes = [...appointment.notes, rejectionNote];
+
+      // 4. Update appointment - clear customer proof fields, set rejection metadata, add note
+      await _firestore.collection('appointments').doc(appointmentId).update({
+        'customerUploadedProofUrl': null,
+        'customerUploadedProofAt': null,
+        'customerProofVerified': false,
+        'customerProofVerifiedAt': null,
+        'customerProofVerifiedBy': null,
+        'customerProofVerifiedByName': null,
+        'customerProofRejected': true,
+        'customerProofRejectedAt': Timestamp.fromDate(now),
+        'customerProofRejectedBy': rejectedBy,
+        'customerProofRejectedByName': rejectedByName,
+        'customerProofRejectionReason': rejectionReason,
+        'stageHistory': updatedHistory.map((entry) => entry.toMap()).toList(),
+        'notes': updatedNotes.map((n) => n.toMap()).toList(),
+        'updatedAt': Timestamp.fromDate(now),
+      });
+
+      if (kDebugMode) {
+        print(
+          '✅ Customer proof rejected by $rejectedByName for appointment $appointmentId',
+        );
+      }
+
+      return const ProofRejectionResult(
+        success: true,
+        message: 'Proof rejected successfully. You can now upload a new proof.',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error rejecting customer proof: $e');
+      }
+      return ProofRejectionResult(
+        success: false,
+        message: 'Failed to reject proof: $e',
       );
     }
   }
@@ -689,14 +1175,28 @@ class SalesAppointmentService {
       // Generate install booking token for email link
       final installBookingToken = const Uuid().v4();
 
-      // Convert appointment optInProducts to OrderItems
-      final orderItems = appointment.optInProducts
-          .map((product) => models.OrderItem(
-                name: product.name,
-                quantity: 1,
-                price: product.price,
-              ))
+      // Convert appointment optInProducts and optInPackages to OrderItems
+      final productItems = appointment.optInProducts
+          .map(
+            (product) => models.OrderItem(
+              name: product.name,
+              quantity: product.quantity,
+              price: product.price,
+              productId: product.id,
+            ),
+          )
           .toList();
+      final packageItems = appointment.optInPackages
+          .map(
+            (pkg) => models.OrderItem(
+              name: pkg.name,
+              quantity: pkg.quantity,
+              price: pkg.price,
+              packageId: pkg.id,
+            ),
+          )
+          .toList();
+      final orderItems = [...productItems, ...packageItems];
 
       // Determine if this is a priority order (full payment)
       final isPriorityOrder = appointment.isFullPayment;
@@ -714,7 +1214,8 @@ class SalesAppointmentService {
         customerName: appointment.customerName,
         email: appointment.email,
         phone: appointment.phone,
-        currentStage: 'orders_placed', // First stage in Operations stream (updated)
+        currentStage:
+            'orders_placed', // First stage in Operations stream (updated)
         orderDate: now,
         items: orderItems, // Products from the appointment
         createdAt: now,
@@ -738,6 +1239,7 @@ class SalesAppointmentService {
         createdBy: userId,
         createdByName: userName,
         formScore: appointment.formScore,
+        optInQuestions: appointment.optInQuestions,
         // Installation booking fields
         installBookingToken: installBookingToken,
         installBookingStatus: models.InstallBookingStatus.pending,
@@ -768,7 +1270,9 @@ class SalesAppointmentService {
       } catch (emailError) {
         // Log but don't fail the conversion if email fails
         if (kDebugMode) {
-          print('Warning: Failed to send installation booking email: $emailError');
+          print(
+            'Warning: Failed to send installation booking email: $emailError',
+          );
         }
       }
 
@@ -782,14 +1286,36 @@ class SalesAppointmentService {
               order: createdOrder,
             );
             if (kDebugMode) {
-              print('Priority order notification sent to admin for order $orderId');
+              print(
+                'Priority order notification sent to admin for order $orderId',
+              );
             }
           }
         } catch (emailError) {
           // Log but don't fail the conversion if email fails
           if (kDebugMode) {
-            print('Warning: Failed to send priority order notification: $emailError');
+            print(
+              'Warning: Failed to send priority order notification: $emailError',
+            );
           }
+        }
+      }
+
+      // Send lead transitioned to operations notification to operations team
+      try {
+        await EmailJSService.sendLeadTransitionedToOperationsNotification(
+          appointment: appointment,
+        );
+        if (kDebugMode) {
+          print(
+            'Lead transitioned to operations notification sent for order $orderId',
+          );
+        }
+      } catch (emailError) {
+        if (kDebugMode) {
+          print(
+            'Warning: Failed to send lead transitioned to operations notification: $emailError',
+          );
         }
       }
 
@@ -843,9 +1369,32 @@ class SalesAppointmentService {
       final allAppointments = await getAllAppointments();
 
       // Filter by query
-      final lowerQuery = query.toLowerCase();
+      final lowerQuery = query.toLowerCase().trim();
+
+      // Normalize search query by removing extra spaces
+      final normalizedSearch = lowerQuery.replaceAll(RegExp(r'\s+'), ' ');
+
       return allAppointments.where((appointment) {
-        return appointment.customerName.toLowerCase().contains(lowerQuery) ||
+        // Normalize customer name by removing extra spaces
+        final normalizedName = appointment.customerName
+            .toLowerCase()
+            .trim()
+            .replaceAll(RegExp(r'\s+'), ' ');
+
+        // Check if search query matches customer name (handles "first last" searches)
+        final nameMatches = normalizedName.contains(normalizedSearch);
+
+        // Also check if all words in search query appear in customer name (for flexible matching)
+        final searchWords = normalizedSearch
+            .split(' ')
+            .where((w) => w.isNotEmpty)
+            .toList();
+        final allWordsMatch =
+            searchWords.isNotEmpty &&
+            searchWords.every((word) => normalizedName.contains(word));
+
+        return nameMatches ||
+            allWordsMatch ||
             appointment.email.toLowerCase().contains(lowerQuery) ||
             appointment.phone.contains(query);
       }).toList();
@@ -927,4 +1476,46 @@ class DepositConfirmationResult {
     required this.message,
     required this.status,
   });
+}
+
+/// Result class for deposit proof upload operations
+class DepositProofUploadResult {
+  final bool success;
+  final String message;
+  final String? proofUrl;
+
+  const DepositProofUploadResult({
+    required this.success,
+    required this.message,
+    this.proofUrl,
+  });
+}
+
+/// Result class for customer proof upload operations
+class CustomerProofUploadResult {
+  final bool success;
+  final String message;
+  final String? proofUrl;
+
+  const CustomerProofUploadResult({
+    required this.success,
+    required this.message,
+    this.proofUrl,
+  });
+}
+
+/// Result class for proof verification operations
+class ProofVerificationResult {
+  final bool success;
+  final String message;
+
+  const ProofVerificationResult({required this.success, required this.message});
+}
+
+/// Result class for proof rejection operations
+class ProofRejectionResult {
+  final bool success;
+  final String message;
+
+  const ProofRejectionResult({required this.success, required this.message});
 }

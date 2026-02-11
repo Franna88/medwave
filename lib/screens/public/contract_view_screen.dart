@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/contracts/contract.dart';
 import '../../providers/contract_provider.dart';
 import '../../theme/app_theme.dart';
@@ -23,6 +25,9 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _hasAgreed = false;
   bool _isSubmitting = false;
+  Timer? _pdfPollTimer;
+  int _pdfPollCount = 0;
+  bool _pdfPollScheduled = false;
 
   @override
   void initState() {
@@ -32,9 +37,34 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
 
   @override
   void dispose() {
+    _pdfPollTimer?.cancel();
     _signatureController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _startPdfPoll(BuildContext context) {
+    if (_pdfPollTimer != null) return;
+    final provider = context.read<ContractProvider>();
+    _pdfPollTimer = Timer.periodic(const Duration(seconds: 4), (t) async {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      await provider.loadContractByIdAndToken(
+        widget.contractId,
+        widget.token,
+      );
+      if (!mounted) return;
+      _pdfPollCount++;
+      final c = provider.currentContract;
+      if (c?.pdfUrl != null || _pdfPollCount >= 15) {
+        t.cancel();
+        _pdfPollTimer = null;
+        if (mounted) setState(() {});
+      }
+    });
+    setState(() {});
   }
 
   Future<void> _loadContract() async {
@@ -228,6 +258,14 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
 
+    // When signed and pdfUrl null, start polling once for PDF to appear
+    if (contract.pdfUrl == null && !_pdfPollScheduled) {
+      _pdfPollScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startPdfPoll(context);
+      });
+    }
+
     return SingleChildScrollView(
       child: Center(
         child: Container(
@@ -280,6 +318,11 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     _buildInfoRow(
                       'Signed by',
                       contract.digitalSignature ?? '-',
+                      valueStyle: GoogleFonts.dancingScript(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     _buildInfoRow(
@@ -296,6 +339,49 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+
+              // When signed and pdfUrl null: show preparing message (polling started above)
+              if (contract.status == ContractStatus.signed &&
+                  contract.pdfUrl == null) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Your signed contract PDF is being prepared. It will appear below in a moment.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.blue[900],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: () async {
+                          await _loadContract();
+                          if (mounted) setState(() {});
+                        },
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Refresh'),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'You can also open this page anytime from the link in the deposit email we sent you to download your contract.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
 
               // PDF Download (if available)
               if (contract.pdfUrl != null)
@@ -324,16 +410,20 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     ),
                   ),
                 ),
-              const SizedBox(height: 24),
+              if (contract.pdfUrl != null) const SizedBox(height: 24),
 
               // Next steps - different messaging for full payment vs deposit
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: contract.isFullPayment ? Colors.green[50] : Colors.blue[50],
+                  color: contract.isFullPayment
+                      ? Colors.green[50]
+                      : Colors.blue[50],
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: contract.isFullPayment ? Colors.green[200]! : Colors.blue[200]!,
+                    color: contract.isFullPayment
+                        ? Colors.green[200]!
+                        : Colors.blue[200]!,
                   ),
                 ),
                 child: Column(
@@ -342,8 +432,12 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     Row(
                       children: [
                         Icon(
-                          contract.isFullPayment ? Icons.star : Icons.info_outline,
-                          color: contract.isFullPayment ? Colors.green[700] : Colors.blue[700],
+                          contract.isFullPayment
+                              ? Icons.star
+                              : Icons.info_outline,
+                          color: contract.isFullPayment
+                              ? Colors.green[700]
+                              : Colors.blue[700],
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -351,7 +445,9 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: contract.isFullPayment ? Colors.green[800] : null,
+                            color: contract.isFullPayment
+                                ? Colors.green[800]
+                                : null,
                           ),
                         ),
                       ],
@@ -369,7 +465,11 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.verified, color: Colors.green[700], size: 20),
+                            Icon(
+                              Icons.verified,
+                              color: Colors.green[700],
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -464,12 +564,12 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     _buildContractContent(contract),
                     SizedBox(height: isMobile ? 16 : 24),
 
-                    // Legal compliance
-                    _buildLegalCompliance(),
-                    SizedBox(height: isMobile ? 16 : 24),
-
                     // Signature section
                     _buildSignatureSection(),
+                    SizedBox(height: isMobile ? 16 : 24),
+
+                    // Legal compliance
+                    _buildLegalCompliance(),
                     const SizedBox(height: 100), // Space for fixed button
                   ],
                 ),
@@ -547,6 +647,11 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
           _buildInfoRow('Email', contract.email),
           const SizedBox(height: 12),
           _buildInfoRow('Phone', contract.phone),
+          if (contract.shippingAddress != null &&
+              contract.shippingAddress!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildInfoRow('Shipping Address', contract.shippingAddress!),
+          ],
           const SizedBox(height: 12),
           _buildInfoRow(
             'Date',
@@ -558,31 +663,25 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
   }
 
   Widget _buildQuoteSection(Contract contract) {
+    final totalInclVat = contract.subtotal * 1.15;
+    final vatAmount = contract.subtotal * 0.15;
+    final depositPercentage = totalInclVat > 0
+        ? ((contract.depositAmount / totalInclVat) * 100).toStringAsFixed(0)
+        : '10';
+
     return _buildCard(
       title: 'Quote',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Products
+          // Products - without prices
           ...contract.products.map((product) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      product.name,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                  Text(
-                    'R ${product.price.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text(product.name, style: const TextStyle(fontSize: 16)),
                 ],
               ),
             );
@@ -590,23 +689,25 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
 
           const Divider(height: 32),
 
-          // Pricing summary - right aligned like standard invoices
+          // Pricing summary - breakdown first, final total at bottom
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Subtotal
-              _buildPriceRow('Subtotal', contract.subtotal),
-              const SizedBox(height: 12),
-
-              // Deposit (40%)
-              _buildPriceRow('Initial Deposit (40%)', contract.depositAmount),
-              const SizedBox(height: 12),
-
-              // Remaining balance (60%)
+              _buildPriceRow('Subtotal (ex. VAT)', contract.subtotal),
+              const SizedBox(height: 8),
+              _buildPriceRow('VAT (15%)', vatAmount),
+              const SizedBox(height: 8),
               _buildPriceRow(
-                'Remaining Balance (60%)',
-                contract.remainingBalance,
-                isSubdued: true,
+                'Deposit ($depositPercentage%)',
+                contract.depositAmount,
+              ),
+              const SizedBox(height: 8),
+              _buildPriceRow('Balance due', contract.remainingBalance),
+              const Divider(height: 24),
+              _buildPriceRow(
+                'Total (incl. VAT)',
+                totalInclVat,
+                isHighlighted: true,
               ),
             ],
           ),
@@ -731,7 +832,12 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
               filled: true,
               fillColor: Colors.white,
             ),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            style: GoogleFonts.dancingScript(
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+              letterSpacing: 1.2,
+            ),
             textCapitalization: TextCapitalization.words,
           ),
         ],
@@ -824,7 +930,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value, {TextStyle? valueStyle}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -842,7 +948,9 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            style:
+                valueStyle ??
+                const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
         ),
       ],

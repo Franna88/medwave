@@ -1,14 +1,26 @@
+import 'dart:async';
+import 'dart:html' as html;
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../models/streams/order.dart' as models;
 import '../../models/admin/installer.dart';
+import '../../models/inventory/inventory_stock.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/installer_provider.dart';
 import '../../providers/inventory_provider.dart';
+import '../../providers/product_items_provider.dart';
+import '../../providers/product_packages_provider.dart';
 import '../../services/firebase/order_service.dart';
 import '../../theme/app_theme.dart';
+import 'installation_signoff_section_widget.dart';
+
+const String _noInstallationRequiredId = 'NO_INSTALLATION_REQUIRED';
+const String _noInstallationRequiredName = 'No Installation Required';
 
 class OrderDetailDialog extends StatefulWidget {
   final models.Order order;
@@ -32,13 +44,37 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   bool _isSavingInstaller = false;
   bool _isSavingDate = false;
   bool _isDeleting = false;
+  bool _isSplitting = false;
   String? _selectedInstallerId;
+  Set<String> _selectedItemsForOverride = {}; // Items selected for override
+  StreamSubscription<models.Order?>?
+  _orderSubscription; // For real-time updates
 
   @override
   void initState() {
     super.initState();
     _currentOrder = widget.order;
     _selectedInstallerId = widget.order.assignedInstallerId;
+    _setupRealtimeUpdates();
+  }
+
+  void _setupRealtimeUpdates() {
+    // Listen to real-time updates for this order
+    _orderSubscription = _orderService.getOrderStream(_currentOrder.id).listen((
+      order,
+    ) {
+      if (mounted && order != null) {
+        setState(() {
+          _currentOrder = order;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _orderSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _sendBookingEmail() async {
@@ -125,13 +161,88 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     }
   }
 
+  Future<void> _setNoInstallationRequired() async {
+    setState(() => _isSavingInstaller = true);
+
+    try {
+      await _orderService.assignInstaller(
+        orderId: _currentOrder.id,
+        installerId: _noInstallationRequiredId,
+        installerName: _noInstallationRequiredName,
+        installerPhone: null,
+        installerEmail: null,
+      );
+
+      setState(() {
+        _selectedInstallerId = _noInstallationRequiredId;
+        _currentOrder = _currentOrder.copyWith(
+          assignedInstallerId: _noInstallationRequiredId,
+          assignedInstallerName: _noInstallationRequiredName,
+          assignedInstallerPhone: null,
+          assignedInstallerEmail: null,
+        );
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order marked as: No Installation Required'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      widget.onOrderUpdated?.call();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingInstaller = false);
+      }
+    }
+  }
+
   Future<void> _setInstallDate() async {
+    // Validate that installer is assigned or "No Installation Required" is selected
+    // Allow if installer is assigned OR if "No Installation Required" is selected
+    final hasInstaller =
+        _currentOrder.assignedInstallerId != null &&
+        _currentOrder.assignedInstallerId!.isNotEmpty;
+    final isNoInstallationRequired =
+        _currentOrder.assignedInstallerId == _noInstallationRequiredId;
+
+    if (!hasInstaller && !isNoInstallationRequired) {
+      if (mounted) {
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Assign installer first'),
+            content: const Text(
+              'Please assign an installer or select "No Installation Required" before confirming installation date.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+      return; // Prevent date selection
+    }
+
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.user?.uid ?? '';
     final userName = authProvider.userName;
 
     // Show date picker starting from customer's earliest selected date or now
-    final initialDate = _currentOrder.earliestSelectedDate ??
+    final initialDate =
+        _currentOrder.earliestSelectedDate ??
         DateTime.now().add(const Duration(days: 21));
 
     final pickedDate = await showDatePicker(
@@ -190,10 +301,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 
   void _showStockDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => _StockViewDialog(),
-    );
+    showDialog(context: context, builder: (context) => _StockViewDialog());
   }
 
   Future<void> _showDeleteConfirmation() async {
@@ -286,9 +394,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     setState(() => _isDeleting = true);
 
     try {
-      await _orderService.deleteLeadCompletely(
-        orderId: _currentOrder.id,
-      );
+      await _orderService.deleteLeadCompletely(orderId: _currentOrder.id);
 
       if (mounted) {
         // Close the dialog first
@@ -320,6 +426,150 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     }
   }
 
+  Future<void> _handleOverrideItems() async {
+    if (_selectedItemsForOverride.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select items to override'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 12),
+            Text('Override Out of Stock Items'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This will create a new order (Order 2) with the selected items and remove them from this order (Order 1).',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            const Text('Items to override:'),
+            const SizedBox(height: 8),
+            ..._selectedItemsForOverride.map(
+              (itemName) => Padding(
+                padding: const EdgeInsets.only(left: 8, bottom: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.remove_circle,
+                      size: 16,
+                      color: Colors.orange[400],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(itemName),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'The new order will appear in the same stage with a reference to this order.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Override Items'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isSplitting = true);
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.user?.uid ?? '';
+      final userName = authProvider.userName;
+
+      final newOrderId = await _orderService.splitOrderForOverriddenItems(
+        orderId: _currentOrder.id,
+        overriddenItemNames: _selectedItemsForOverride.toList(),
+        userId: userId,
+        userName: userName,
+      );
+
+      // Refresh the order
+      final updatedOrder = await _orderService.getOrder(_currentOrder.id);
+      if (updatedOrder != null) {
+        setState(() {
+          _currentOrder = updatedOrder;
+          _selectedItemsForOverride.clear();
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Order split successfully! New order #${newOrderId.substring(0, 8)} created.',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+
+        // Notify parent to refresh
+        widget.onOrderUpdated?.call();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error splitting order: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSplitting = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -337,6 +587,17 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Operations stage checklist (dropdown)
+                    if (_currentOrder.currentStage == 'orders_placed' ||
+                        _currentOrder.currentStage == 'priority_shipment' ||
+                        _currentOrder.currentStage ==
+                            'inventory_packing_list' ||
+                        _currentOrder.currentStage == 'items_picked' ||
+                        _currentOrder.currentStage == 'out_for_delivery' ||
+                        _currentOrder.currentStage == 'installed') ...[
+                      _buildOperationsStageChecklistExpansion(),
+                      const SizedBox(height: 24),
+                    ],
                     _buildCustomerInfo(),
                     const SizedBox(height: 24),
                     // Show delivery info section when order has tracking/waybill
@@ -347,10 +608,121 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     ],
                     _buildOrderItemsSection(),
                     const SizedBox(height: 24),
+                    // Show business information if questionnaire data exists
+                    if (_currentOrder.optInQuestions != null &&
+                        _currentOrder.optInQuestions!.isNotEmpty) ...[
+                      _buildBusinessInformationSection(),
+                      const SizedBox(height: 24),
+                    ],
+                    // Show installation proof and signature if they exist
+                    if (_currentOrder.proofOfInstallationPhotoUrls.isNotEmpty ||
+                        _currentOrder.customerSignaturePhotoUrl != null) ...[
+                      if (_currentOrder
+                          .proofOfInstallationPhotoUrls
+                          .isNotEmpty) ...[
+                        _buildInstallationProofSection(),
+                        const SizedBox(height: 24),
+                      ],
+                    ],
                     _buildInstallationBookingSection(),
                     const SizedBox(height: 24),
                     _buildInstallerSection(),
                     const SizedBox(height: 24),
+                    // Final Payment Proof Section (show when in out_for_delivery stage)
+                    if (_currentOrder.currentStage == 'out_for_delivery')
+                      _buildFinalPaymentProofSection(),
+                    if (_currentOrder.currentStage == 'out_for_delivery')
+                      const SizedBox(height: 24),
+                    // Show acknowledgement status for Installed stage
+                    if (_currentOrder.currentStage == 'installed') ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color:
+                              _currentOrder.hasInstallationSignoff &&
+                                  _currentOrder.installationSignoffId != null
+                              ? Colors.green[50]
+                              : Colors.amber[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color:
+                                _currentOrder.hasInstallationSignoff &&
+                                    _currentOrder.installationSignoffId != null
+                                ? Colors.green[300]!
+                                : Colors.amber[300]!,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _currentOrder.hasInstallationSignoff &&
+                                      _currentOrder.installationSignoffId !=
+                                          null
+                                  ? Icons.check_circle
+                                  : Icons.pending_actions,
+                              color:
+                                  _currentOrder.hasInstallationSignoff &&
+                                      _currentOrder.installationSignoffId !=
+                                          null
+                                  ? Colors.green[700]
+                                  : Colors.amber[700],
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Item Acknowledgement',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color:
+                                          _currentOrder
+                                                  .hasInstallationSignoff &&
+                                              _currentOrder
+                                                      .installationSignoffId !=
+                                                  null
+                                          ? Colors.green[900]
+                                          : Colors.amber[900],
+                                    ),
+                                  ),
+                                  Text(
+                                    _currentOrder.hasInstallationSignoff &&
+                                            _currentOrder
+                                                    .installationSignoffId !=
+                                                null
+                                        ? 'Customer has signed acknowledgement'
+                                        : 'Awaiting customer signature',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    // Show installation sign-off section for installed and later stages
+                    InstallationSignoffSectionWidget(
+                      order: _currentOrder,
+                      onSignoffGenerated: () {
+                        // Refresh order data if needed
+                        widget.onOrderUpdated?.call();
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    // Show shipped items from parent order if this is a split order
+                    if (_currentOrder
+                        .shippedItemsFromParentOrder
+                        .isNotEmpty) ...[
+                      _buildShippedItemsFromParentSection(),
+                      const SizedBox(height: 24),
+                    ],
                     _buildActionsSection(),
                     if (_currentOrder.notes.isNotEmpty) ...[
                       const SizedBox(height: 24),
@@ -374,51 +746,98 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         color: AppTheme.primaryColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          CircleAvatar(
-            backgroundColor: Colors.white.withOpacity(0.2),
-            child: Text(
-              _currentOrder.customerName.isNotEmpty
-                  ? _currentOrder.customerName[0].toUpperCase()
-                  : 'O',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.white.withOpacity(0.2),
+                child: Text(
+                  _currentOrder.customerName.isNotEmpty
+                      ? _currentOrder.customerName[0].toUpperCase()
+                      : 'O',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _currentOrder.customerName,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatOrderNumber(_currentOrder),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          // Split order badge
+          if (_currentOrder.splitFromOrderId != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.orange.shade300, width: 1.5),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.call_split, size: 16, color: Colors.orange[800]),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Split Order - Part of Order #${_currentOrder.splitFromOrderId!.substring(0, 8)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange[800],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _currentOrder.customerName,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Order #${_currentOrder.id.substring(0, 8)}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+          ],
         ],
       ),
     );
+  }
+
+  String _formatOrderNumber(models.Order order) {
+    if (order.splitFromOrderId != null) {
+      // Show Order 2's ID with reference to Order 1
+      return 'Order #${order.id.substring(0, 8)} (Part 2 of Order #${order.splitFromOrderId!.substring(0, 8)})';
+    }
+    return 'Order #${order.id.substring(0, 8)}';
+  }
+
+  String _formatInvoiceNumber(models.Order order) {
+    if (order.splitFromOrderId != null && order.invoiceNumber != null) {
+      // Order 2: Same invoice number as Order 1, but with notation showing it's part of Order 1
+      return '${order.invoiceNumber} (Part 2 of Order #${order.splitFromOrderId!.substring(0, 8)})';
+    }
+    return order.invoiceNumber ?? 'N/A';
   }
 
   Widget _buildCustomerInfo() {
@@ -428,22 +847,35 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       children: [
         _buildInfoRow('Email', _currentOrder.email),
         _buildInfoRow('Phone', _currentOrder.phone),
+        if (_currentOrder.optInQuestions?['Shipping address'] != null &&
+            _currentOrder.optInQuestions!['Shipping address']!.isNotEmpty)
+          _buildInfoRow(
+            'Shipping Address',
+            _currentOrder.optInQuestions!['Shipping address']!,
+          ),
         _buildInfoRow(
           'Order Date',
           _currentOrder.orderDate != null
               ? DateFormat('MMM d, yyyy').format(_currentOrder.orderDate!)
               : 'N/A',
         ),
-        _buildInfoRow('Stage', _currentOrder.currentStage.replaceAll('_', ' ').toUpperCase()),
+        _buildInfoRow(
+          'Stage',
+          _currentOrder.currentStage.replaceAll('_', ' ').toUpperCase(),
+        ),
         _buildInfoRow('Time in Stage', _currentOrder.timeInStageDisplay),
+        if (_currentOrder.invoiceNumber != null)
+          _buildInfoRow('Invoice', _formatInvoiceNumber(_currentOrder)),
       ],
     );
   }
 
   Widget _buildDeliveryInfoSection() {
-    final hasTracking = _currentOrder.trackingNumber != null &&
+    final hasTracking =
+        _currentOrder.trackingNumber != null &&
         _currentOrder.trackingNumber!.isNotEmpty;
-    final hasWaybill = _currentOrder.waybillPhotoUrl != null &&
+    final hasWaybill =
+        _currentOrder.waybillPhotoUrl != null &&
         _currentOrder.waybillPhotoUrl!.isNotEmpty;
 
     return _buildSection(
@@ -454,10 +886,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         if (hasTracking) ...[
           const Text(
             'Tracking Number:',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 14,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
           ),
           const SizedBox(height: 8),
           Container(
@@ -519,10 +948,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         // Waybill Photo
         const Text(
           'Parcel Photo:',
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
         ),
         const SizedBox(height: 8),
         if (hasWaybill) ...[
@@ -548,7 +974,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           child: CircularProgressIndicator(
                             value: loadingProgress.expectedTotalBytes != null
                                 ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
+                                      loadingProgress.expectedTotalBytes!
                                 : null,
                           ),
                         );
@@ -559,8 +985,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.broken_image,
-                                  size: 48, color: Colors.grey[400]),
+                              Icon(
+                                Icons.broken_image,
+                                size: 48,
+                                color: Colors.grey[400],
+                              ),
                               const SizedBox(height: 8),
                               Text(
                                 'Failed to load image',
@@ -616,8 +1045,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.image_not_supported,
-                      size: 48, color: Colors.grey[400]),
+                  Icon(
+                    Icons.image_not_supported,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'Parcel photo not available',
@@ -652,7 +1084,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       child: CircularProgressIndicator(
                         value: loadingProgress.expectedTotalBytes != null
                             ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
+                                  loadingProgress.expectedTotalBytes!
                             : null,
                       ),
                     );
@@ -664,8 +1096,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.error_outline,
-                              size: 64, color: Colors.red[300]),
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red[300],
+                          ),
                           const SizedBox(height: 16),
                           const Text(
                             'Failed to load image',
@@ -697,6 +1132,880 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         ),
       ),
     );
+  }
+
+  Widget _buildInstallationProofSection() {
+    final proofUrls = _currentOrder.proofOfInstallationPhotoUrls
+        .where((url) => url.isNotEmpty)
+        .toList();
+    final hasProof = proofUrls.isNotEmpty;
+
+    return _buildSection(
+      title: 'Proof of Installation',
+      icon: Icons.photo_camera,
+      children: [
+        Text(
+          'Installation Photo${proofUrls.length > 1 ? 's' : ''}:',
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        if (hasProof) ...[
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: proofUrls.asMap().entries.map((entry) {
+                final index = entry.key;
+                final url = entry.value;
+                return Container(
+                  margin: EdgeInsets.only(
+                    right: index < proofUrls.length - 1 ? 12 : 0,
+                  ),
+                  width: 200,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showFullImage(url),
+                        child: Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.grey.shade300,
+                              width: 2,
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.network(
+                                  url,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            value:
+                                                loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        );
+                                      },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey.shade200,
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.broken_image,
+                                            size: 48,
+                                            color: Colors.grey[400],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Failed to load',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                                Positioned(
+                                  bottom: 8,
+                                  right: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.6),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.zoom_in,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Tap to enlarge',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (proofUrls.length > 1) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Image ${index + 1}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ] else ...[
+          Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.image_not_supported,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Installation proof not available',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFinalPaymentProofSection() {
+    final children = <Widget>[];
+
+    // Show customer-uploaded proof if exists
+    if (_currentOrder.customerUploadedFinalPaymentProofUrl != null &&
+        _currentOrder.customerUploadedFinalPaymentProofUrl!.isNotEmpty) {
+      final isPdf = _currentOrder.customerUploadedFinalPaymentProofUrl!
+          .toLowerCase()
+          .contains('.pdf');
+
+      children.addAll([
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            const Text(
+              'Customer Uploaded Proof',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            const SizedBox(width: 8),
+            if (!_currentOrder.customerFinalPaymentProofVerified)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'NEEDS VERIFICATION',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'VERIFIED',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () => _showProofFile(
+            _currentOrder.customerUploadedFinalPaymentProofUrl!,
+            isPdf,
+          ),
+          child: Container(
+            height: 150,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: _currentOrder.customerFinalPaymentProofVerified
+                    ? Colors.green
+                    : Colors.orange,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: isPdf
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.picture_as_pdf,
+                          size: 64,
+                          color: Colors.red[700],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'PDF Document',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap to view',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Image.network(
+                    _currentOrder.customerUploadedFinalPaymentProofUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Failed to load image',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+        if (_currentOrder.customerUploadedFinalPaymentProofAt != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Uploaded by customer on ${DateFormat('MMM dd, yyyy').format(_currentOrder.customerUploadedFinalPaymentProofAt!)}',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ],
+        if (!_currentOrder.customerFinalPaymentProofVerified) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _verifyCustomerFinalPaymentProof,
+                  icon: const Icon(Icons.verified),
+                  label: const Text('Verify'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _rejectCustomerFinalPaymentProof,
+                  icon: const Icon(Icons.cancel),
+                  label: const Text('Reject'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ] else if (_currentOrder.customerFinalPaymentProofVerifiedByName !=
+            null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Verified by ${_currentOrder.customerFinalPaymentProofVerifiedByName}',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.green[700],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ]);
+    }
+
+    // Add operations-uploaded proof of payment display if uploaded
+    if (_currentOrder.finalPaymentProofUrl != null &&
+        _currentOrder.finalPaymentProofUrl!.isNotEmpty) {
+      final isPdf = _currentOrder.finalPaymentProofUrl!.toLowerCase().contains(
+        '.pdf',
+      );
+
+      children.addAll([
+        const SizedBox(height: 16),
+        const Text(
+          'Proof of Payment',
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: () =>
+              _showProofFile(_currentOrder.finalPaymentProofUrl!, isPdf),
+          child: Container(
+            height: 150,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: isPdf
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.picture_as_pdf,
+                          size: 64,
+                          color: Colors.red[700],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'PDF Document',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tap to view',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Image.network(
+                    _currentOrder.finalPaymentProofUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Failed to load image',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+        ),
+        if (_currentOrder.finalPaymentProofUploadedByName != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Uploaded by ${_currentOrder.finalPaymentProofUploadedByName}',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+        ],
+      ]);
+    }
+
+    // Add operations upload section if no proof exists or customer proof was rejected
+    if ((_currentOrder.finalPaymentProofUrl == null ||
+            _currentOrder.finalPaymentProofUrl!.isEmpty) &&
+        (_currentOrder.customerUploadedFinalPaymentProofUrl == null ||
+            _currentOrder.customerUploadedFinalPaymentProofUrl!.isEmpty ||
+            _currentOrder.customerFinalPaymentProofRejected)) {
+      children.addAll([
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.teal.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.teal.withOpacity(0.2)),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.cloud_upload_outlined,
+                size: 48,
+                color: Colors.teal[700],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Upload Proof of Payment',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.teal[900],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Upload an image or PDF document of the final payment proof.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _uploadFinalPaymentProof,
+                icon: const Icon(Icons.upload_file),
+                label: const Text('Select File'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ]);
+    }
+
+    return _buildSection(
+      title: 'Final Payment Proof',
+      icon: Icons.payments,
+      children: children,
+    );
+  }
+
+  Future<void> _showProofFile(String url, bool isPdf) async {
+    if (isPdf) {
+      // Open PDF in new tab/window
+      // ignore: avoid_web_libraries_in_flutter
+      html.window.open(url, '_blank');
+    } else {
+      // Open image in new tab on web (full screen like PDF); dialog on mobile
+      if (kIsWeb) {
+        // ignore: avoid_web_libraries_in_flutter
+        html.window.open(url, '_blank');
+      } else {
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 800, maxHeight: 600),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppBar(
+                    title: const Text('Proof of Payment'),
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  Expanded(child: Image.network(url, fit: BoxFit.contain)),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _uploadFinalPaymentProof() async {
+    try {
+      // Show options to pick image or document
+      final sourceType = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Select Proof of Payment'),
+          content: const Text('Choose how you want to upload the proof:'),
+          actions: [
+            TextButton.icon(
+              onPressed: () => Navigator.of(context).pop('image'),
+              icon: const Icon(Icons.image),
+              label: const Text('Image/Screenshot'),
+            ),
+            if (kIsWeb)
+              TextButton.icon(
+                onPressed: () => Navigator.of(context).pop('pdf'),
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('PDF Document'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+
+      if (sourceType == null) return;
+
+      Uint8List? fileData;
+      String? fileName;
+
+      if (sourceType == 'image') {
+        final ImagePicker picker = ImagePicker();
+        final XFile? image = await picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 85,
+        );
+        if (image != null) {
+          fileData = await image.readAsBytes();
+          fileName = image.name;
+        }
+      } else if (sourceType == 'pdf' && kIsWeb) {
+        final file = await _pickPdfWeb();
+        if (file != null) {
+          fileData = await file.readAsBytes();
+          fileName = file.name;
+        }
+      }
+
+      if (fileData == null || fileName == null) return;
+
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Uploading proof...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Get user info
+      final authProvider = context.read<AuthProvider>();
+      final userId = authProvider.user?.uid ?? '';
+      final userName = authProvider.userName ?? 'Unknown';
+
+      // Upload
+      final result = await _orderService.uploadFinalPaymentProof(
+        orderId: _currentOrder.id,
+        fileData: fileData,
+        fileName: fileName,
+        uploadedBy: userId,
+        uploadedByName: userName,
+      );
+
+      // Close loading
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Show result
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message),
+            backgroundColor: result.success ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading proof: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<XFile?> _pickPdfWeb() async {
+    if (!kIsWeb) return null;
+
+    final completer = Completer<XFile?>();
+    final uploadInput = html.FileUploadInputElement()
+      ..accept = 'application/pdf,.pdf';
+    uploadInput.click();
+
+    uploadInput.onChange.listen((e) async {
+      final files = uploadInput.files;
+      if (files != null && files.isNotEmpty) {
+        final file = files[0];
+        final reader = html.FileReader();
+        reader.readAsArrayBuffer(file);
+
+        reader.onLoadEnd.listen((e) {
+          final bytes = reader.result as List<int>;
+          final xFile = XFile.fromData(
+            Uint8List.fromList(bytes),
+            name: file.name,
+            mimeType: 'application/pdf',
+          );
+          completer.complete(xFile);
+        });
+      } else {
+        completer.complete(null);
+      }
+    });
+
+    Future.delayed(const Duration(seconds: 60), () {
+      if (!completer.isCompleted) {
+        completer.complete(null);
+      }
+    });
+
+    return completer.future;
+  }
+
+  Future<void> _verifyCustomerFinalPaymentProof() async {
+    // Confirm with dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Verify Proof of Payment'),
+        content: const Text(
+          'Have you reviewed the customer\'s proof of payment?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Verify'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Verifying proof...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Get user info
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.user?.uid ?? '';
+    final userName = authProvider.userName ?? 'Unknown';
+
+    // Call service
+    final result = await _orderService.verifyCustomerFinalPaymentProof(
+      orderId: _currentOrder.id,
+      verifiedBy: userId,
+      verifiedByName: userName,
+    );
+
+    // Close loading dialog
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+
+    // Show result
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: result.success ? Colors.green : Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _rejectCustomerFinalPaymentProof() async {
+    // Show dialog to confirm rejection and get optional reason
+    final TextEditingController reasonController = TextEditingController();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject Proof of Payment'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Are you sure you want to reject this proof? '
+              'The customer will need to upload a valid proof, or you can upload it manually.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Reason (optional)',
+                hintText: 'e.g., Invalid document, not a proof of payment',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) {
+      reasonController.dispose();
+      return;
+    }
+
+    final reason = reasonController.text.trim();
+    reasonController.dispose();
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Rejecting proof...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Get user info
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.user?.uid ?? '';
+    final userName = authProvider.userName ?? 'Unknown';
+
+    // Call service
+    final result = await _orderService.rejectCustomerFinalPaymentProof(
+      orderId: _currentOrder.id,
+      rejectedBy: userId,
+      rejectedByName: userName,
+      rejectionReason: reason.isNotEmpty ? reason : null,
+    );
+
+    // Close loading dialog
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+
+    // Show result
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: result.success ? Colors.green : Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildOrderItemsSection() {
@@ -754,13 +2063,19 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     Row(
                       children: [
                         if (allPicked)
-                          Icon(Icons.check_circle, size: 16, color: Colors.green[700]),
+                          Icon(
+                            Icons.check_circle,
+                            size: 16,
+                            color: Colors.green[700],
+                          ),
                         const SizedBox(width: 4),
                         Text(
                           '$pickedCount / $totalCount items',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: allPicked ? Colors.green[800] : Colors.blue[800],
+                            color: allPicked
+                                ? Colors.green[800]
+                                : Colors.blue[800],
                           ),
                         ),
                       ],
@@ -784,150 +2099,472 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           ),
           const SizedBox(height: 12),
 
+          // Override button (only show if order is in inventory_packing_list stage AND there are out-of-stock items selected)
+          Consumer3<
+            InventoryProvider,
+            ProductPackagesProvider,
+            ProductItemsProvider
+          >(
+            builder: (context, inventoryProvider, packageProvider, productProvider, child) {
+              // Show override functionality in inventory_packing_list OR items_picked stage
+              // Allow override in items_picked stage for items that weren't picked yet
+              final isInValidStage =
+                  _currentOrder.currentStage == 'inventory_packing_list' ||
+                  _currentOrder.currentStage == 'items_picked';
+
+              if (!isInValidStage) {
+                return const SizedBox.shrink();
+              }
+
+              // Check if there are any out-of-stock items (that haven't been picked), including package constituent items
+              bool isItemOutOfStock(models.OrderItem orderItem) {
+                final itemPicked = pickedItems[orderItem.name] ?? false;
+                if (itemPicked) return false;
+                if (orderItem.packageId != null) {
+                  final pkg = packageProvider.packages
+                      .where((p) => p.id == orderItem.packageId)
+                      .toList();
+                  if (pkg.isEmpty) return true;
+                  for (final entry in pkg.first.packageItems) {
+                    final requiredQty = entry.quantity * orderItem.quantity;
+                    final stockMatch = inventoryProvider.allStockItems
+                        .where((s) => s.productId == entry.productId)
+                        .toList();
+                    final hasStock = stockMatch.isNotEmpty;
+                    final currentQty = hasStock
+                        ? stockMatch.first.currentQty
+                        : 0;
+                    if (!hasStock || currentQty < requiredQty) return true;
+                  }
+                  return false;
+                }
+                final hasStock = inventoryProvider.allStockItems.any(
+                  (s) =>
+                      s.productName.toLowerCase() ==
+                      orderItem.name.toLowerCase(),
+                );
+                if (!hasStock) return true;
+                final stockItem = inventoryProvider.allStockItems.firstWhere(
+                  (s) =>
+                      s.productName.toLowerCase() ==
+                      orderItem.name.toLowerCase(),
+                );
+                final isInsufficientStock =
+                    stockItem.currentQty < orderItem.quantity;
+                return stockItem.isOutOfStock || isInsufficientStock;
+              }
+
+              final hasOutOfStockItems = items.any(isItemOutOfStock);
+
+              if (hasOutOfStockItems && _selectedItemsForOverride.isNotEmpty) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ElevatedButton.icon(
+                    onPressed: _isSplitting ? null : _handleOverrideItems,
+                    icon: _isSplitting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation(Colors.white),
+                            ),
+                          )
+                        : const Icon(Icons.assignment_return, size: 18),
+                    label: Text(
+                      _isSplitting
+                          ? 'Splitting Order...'
+                          : 'Override Selected Items (${_selectedItemsForOverride.length})',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+
           // Item list
           ...items.asMap().entries.map((entry) {
             final index = entry.key;
             final item = entry.value;
             final isPicked = pickedItems[item.name] ?? false;
 
-            return Consumer<InventoryProvider>(
-              builder: (context, inventoryProvider, child) {
-                // Find stock for this item
-                final stockItem = inventoryProvider.allStockItems.firstWhere(
-                  (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
-                  orElse: () => inventoryProvider.allStockItems.isNotEmpty
-                      ? inventoryProvider.allStockItems.first
-                      : throw Exception('No stock'),
-                );
+            return Consumer3<
+              InventoryProvider,
+              ProductPackagesProvider,
+              ProductItemsProvider
+            >(
+              builder: (context, inventoryProvider, packageProvider, productProvider, child) {
+                // Package: expand to package items and show stock per product
+                List<Map<String, dynamic>>? packageItemRows;
+                if (item.packageId != null) {
+                  final pkg = packageProvider.packages
+                      .where((p) => p.id == item.packageId)
+                      .toList();
+                  if (pkg.isNotEmpty) {
+                    final package = pkg.first;
+                    packageItemRows = [];
+                    for (final entry in package.packageItems) {
+                      final product = productProvider.items
+                          .where((p) => p.id == entry.productId)
+                          .toList();
+                      final name = product.isEmpty
+                          ? 'Product ${entry.productId}'
+                          : product.first.name;
+                      final requiredQty = entry.quantity * item.quantity;
+                      final stockMatch = inventoryProvider.allStockItems
+                          .where((s) => s.productId == entry.productId)
+                          .toList();
+                      final hasStock = stockMatch.isNotEmpty;
+                      final currentQty = hasStock
+                          ? stockMatch.first.currentQty
+                          : 0;
+                      final itemOutOfStock =
+                          !hasStock || currentQty < requiredQty;
+                      final itemLowStock =
+                          hasStock &&
+                          stockMatch.first.isLowStock &&
+                          currentQty >= requiredQty;
+                      packageItemRows.add({
+                        'name': name,
+                        'qty': requiredQty,
+                        'stockQty': hasStock ? currentQty : null,
+                        'isOutOfStock': itemOutOfStock,
+                        'isLowStock': itemLowStock,
+                        'hasInsufficientStock': currentQty < requiredQty,
+                      });
+                    }
+                  }
+                }
 
-                final hasStock = inventoryProvider.allStockItems.any(
-                  (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
-                );
+                // Non-package: single product stock lookup
+                final hasStock =
+                    item.packageId == null &&
+                    inventoryProvider.allStockItems.any(
+                      (s) =>
+                          s.productName.toLowerCase() ==
+                          item.name.toLowerCase(),
+                    );
+                final stockItem = hasStock
+                    ? inventoryProvider.allStockItems.firstWhere(
+                        (s) =>
+                            s.productName.toLowerCase() ==
+                            item.name.toLowerCase(),
+                      )
+                    : null;
+                final isOutOfStock =
+                    hasStock && stockItem != null && stockItem.isOutOfStock;
+                final isInsufficientStock =
+                    hasStock &&
+                    stockItem != null &&
+                    stockItem.currentQty < item.quantity;
+                final isInValidStage =
+                    _currentOrder.currentStage == 'inventory_packing_list' ||
+                    _currentOrder.currentStage == 'items_picked';
+                final packageOutOfStock =
+                    packageItemRows != null &&
+                    packageItemRows.any(
+                      (r) =>
+                          r['isOutOfStock'] as bool ||
+                          r['hasInsufficientStock'] as bool,
+                    );
+                final canOverride =
+                    (item.packageId != null
+                        ? packageOutOfStock
+                        : (isOutOfStock || isInsufficientStock)) &&
+                    !isPicked &&
+                    isInValidStage;
+                final isSelectedForOverride = _selectedItemsForOverride
+                    .contains(item.name);
 
                 return Container(
-                  margin: EdgeInsets.only(bottom: index < items.length - 1 ? 8 : 0),
+                  margin: EdgeInsets.only(
+                    bottom: index < items.length - 1 ? 8 : 0,
+                  ),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isPicked ? Colors.green.shade50 : Colors.white,
+                    color: isPicked
+                        ? Colors.green.shade50
+                        : isSelectedForOverride
+                        ? Colors.orange.shade50
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: isPicked ? Colors.green.shade300 : Colors.grey.shade300,
-                      width: isPicked ? 2 : 1,
+                      color: isPicked
+                          ? Colors.green.shade300
+                          : isSelectedForOverride
+                          ? Colors.orange.shade300
+                          : Colors.grey.shade300,
+                      width: isPicked || isSelectedForOverride ? 2 : 1,
                     ),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Index number
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: isPicked
-                              ? Colors.green.shade100
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isPicked ? Colors.green[700] : Colors.grey[600],
+                      Row(
+                        children: [
+                          if (canOverride)
+                            Checkbox(
+                              value: isSelectedForOverride,
+                              onChanged: (value) {
+                                setState(() {
+                                  if (value == true) {
+                                    _selectedItemsForOverride.add(item.name);
+                                  } else {
+                                    _selectedItemsForOverride.remove(item.name);
+                                  }
+                                });
+                              },
+                              activeColor: Colors.orange,
+                            )
+                          else
+                            const SizedBox(width: 40),
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: isPicked
+                                  ? Colors.green.shade100
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isPicked
+                                      ? Colors.green[700]
+                                      : Colors.grey[600],
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Item details
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.name,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: isPicked ? Colors.grey[600] : Colors.black87,
-                                decoration: isPicked ? TextDecoration.lineThrough : null,
-                              ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: isPicked
+                                        ? Colors.grey[600]
+                                        : Colors.black87,
+                                    decoration: isPicked
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Qty: ${item.quantity}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Qty: ${item.quantity}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                          ),
+                          // Stock badge for non-package; for package we show per-item below
+                          if (item.packageId == null) ...[
+                            if (hasStock && stockItem != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: stockItem.isOutOfStock
+                                      ? Colors.red.shade100
+                                      : stockItem.isLowStock
+                                      ? Colors.orange.shade100
+                                      : Colors.green.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  stockItem.isOutOfStock
+                                      ? 'Out of Stock'
+                                      : stockItem.isLowStock
+                                      ? 'Low (${stockItem.currentQty})'
+                                      : 'In Stock (${stockItem.currentQty})',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: stockItem.isOutOfStock
+                                        ? Colors.red[700]
+                                        : stockItem.isLowStock
+                                        ? Colors.orange[700]
+                                        : Colors.green[700],
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'No stock info',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Stock status badge
-                      if (hasStock)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: stockItem.isOutOfStock
-                                ? Colors.red.shade100
-                                : stockItem.isLowStock
-                                    ? Colors.orange.shade100
+                          ] else if (packageItemRows != null &&
+                              packageItemRows.isNotEmpty)
+                            // Package summary badge (optional; items listed below)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: packageOutOfStock
+                                    ? Colors.red.shade100
                                     : Colors.green.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            stockItem.isOutOfStock
-                                ? 'Out of Stock'
-                                : stockItem.isLowStock
-                                    ? 'Low (${stockItem.currentQty})'
-                                    : 'In Stock (${stockItem.currentQty})',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: stockItem.isOutOfStock
-                                  ? Colors.red[700]
-                                  : stockItem.isLowStock
-                                      ? Colors.orange[700]
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                packageOutOfStock
+                                    ? 'See items below'
+                                    : 'In Stock',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: packageOutOfStock
+                                      ? Colors.red[700]
                                       : Colors.green[700],
+                                ),
+                              ),
                             ),
-                          ),
-                        )
-                      else
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'No stock info',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[600],
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: isPicked
+                                  ? Colors.green
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isPicked
+                                    ? Colors.green
+                                    : Colors.grey.shade400,
+                                width: 2,
+                              ),
                             ),
+                            child: isPicked
+                                ? const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 16,
+                                  )
+                                : null,
                           ),
-                        ),
-
-                      const SizedBox(width: 8),
-
-                      // Picked status indicator (view only)
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: isPicked ? Colors.green : Colors.transparent,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: isPicked ? Colors.green : Colors.grey.shade400,
-                            width: 2,
-                          ),
-                        ),
-                        child: isPicked
-                            ? const Icon(Icons.check, color: Colors.white, size: 16)
-                            : null,
+                        ],
                       ),
+                      // Package contents: list each item with name, qty, stock (like normal items)
+                      if (packageItemRows != null &&
+                          packageItemRows.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        ...packageItemRows.map((row) {
+                          final rowName = row['name'] as String;
+                          final rowQty = row['qty'] as int;
+                          final rowStockQty = row['stockQty'] as int?;
+                          final rowOut = row['isOutOfStock'] as bool;
+                          final rowLow = row['isLowStock'] as bool;
+                          final rowInsufficient =
+                              row['hasInsufficientStock'] as bool;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6, left: 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        rowName,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Qty: $rowQty',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: rowOut || rowInsufficient
+                                        ? Colors.red.shade100
+                                        : rowLow
+                                        ? Colors.orange.shade100
+                                        : Colors.green.shade100,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: rowOut || rowInsufficient
+                                          ? Colors.red.shade300
+                                          : rowLow
+                                          ? Colors.orange.shade300
+                                          : Colors.green.shade300,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    rowInsufficient || rowOut
+                                        ? (rowStockQty != null
+                                              ? 'Low ($rowStockQty) - Need $rowQty'
+                                              : 'Out of Stock')
+                                        : rowLow
+                                        ? 'Low ($rowStockQty)'
+                                        : 'In Stock ($rowStockQty)',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: rowOut || rowInsufficient
+                                          ? Colors.red[700]
+                                          : rowLow
+                                          ? Colors.orange[700]
+                                          : Colors.green[700],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
                     ],
                   ),
                 );
@@ -935,6 +2572,316 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             );
           }),
         ],
+        // Show remaining items from parent order if this is a split order
+        if (_currentOrder.splitFromOrderId != null &&
+            _currentOrder.remainingItemsFromParentOrder.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.grey[700]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Other Items from Original Order',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'These items remained in Order #${_currentOrder.splitFromOrderId!.substring(0, 8)} and were not overridden:',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 8),
+                ..._currentOrder.remainingItemsFromParentOrder
+                    .asMap()
+                    .entries
+                    .map((entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      return Container(
+                        margin: EdgeInsets.only(
+                          bottom:
+                              index <
+                                  _currentOrder
+                                          .remainingItemsFromParentOrder
+                                          .length -
+                                      1
+                              ? 6
+                              : 0,
+                        ),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Qty: ${item.quantity}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.inventory_2,
+                                    size: 12,
+                                    color: Colors.blue[700],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'In Order 1',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildOperationsStageChecklistExpansion() {
+    final content = _buildOperationsStageChecklist();
+    if (content == null) return const SizedBox.shrink();
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ExpansionTile(
+        title: Row(
+          children: [
+            Icon(Icons.checklist, size: 20, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              'Next steps',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: content,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget? _buildOperationsStageChecklist() {
+    final stage = _currentOrder.currentStage;
+    String title;
+    List<({String label, bool done})> items;
+
+    switch (stage) {
+      case 'orders_placed':
+        final customerSelectedDate =
+            _currentOrder.customerSelectedDates.isNotEmpty;
+        title = 'To move to Priority Shipment';
+        items = [
+          (
+            label: 'Customer needs to select installation date',
+            done: customerSelectedDate,
+          ),
+        ];
+        break;
+      case 'priority_shipment':
+        final hasInstallDate = _currentOrder.confirmedInstallDate != null;
+        final warehousePicked =
+            _currentOrder.pickedAt != null ||
+            _currentOrder.pickedItems.values.any((v) => v);
+        title = 'To move to Inventory Packing List';
+        items = [
+          (label: 'Confirm installation date', done: hasInstallDate),
+          (label: 'Warehouse needs to pick items', done: warehousePicked),
+        ];
+        break;
+      case 'inventory_packing_list':
+        final hasPicked =
+            _currentOrder.pickedAt != null ||
+            _currentOrder.pickedItems.values.any((v) => v);
+        title = 'To move to Items Picked';
+        items = [(label: 'Proceed to shipping', done: hasPicked)];
+        break;
+      case 'items_picked':
+        final hasTracking =
+            _currentOrder.trackingNumber != null &&
+            _currentOrder.trackingNumber!.isNotEmpty;
+        final hasWaybill =
+            _currentOrder.waybillPhotoUrl != null &&
+            _currentOrder.waybillPhotoUrl!.isNotEmpty;
+        title = 'To move to Out for Delivery';
+        items = [
+          (
+            label: 'Add tracking number and waybill photo and send shipping',
+            done: hasTracking && hasWaybill,
+          ),
+        ];
+        break;
+      case 'out_for_delivery':
+        title = 'To move to Installed';
+        items = [(label: 'Manually move to Installed', done: false)];
+        break;
+      case 'installed':
+        final hasSignoff = _currentOrder.hasInstallationSignoff;
+        final paymentVerified = _currentOrder.customerFinalPaymentProofVerified;
+        title = 'To move to Payment';
+        items = [
+          (label: 'Acknowledgement form signed', done: hasSignoff),
+          (
+            label:
+                'Proof of final payment verified (can be done in Out for Delivery)',
+            done: paymentVerified,
+          ),
+        ];
+        break;
+      default:
+        return null;
+    }
+
+    return _buildOrderChecklistSection(title, items);
+  }
+
+  Widget _buildOrderChecklistSection(
+    String title,
+    List<({String label, bool done})> items,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.checklist, size: 20, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...items.map((item) => _buildOrderChecklistRow(item.label, item.done)),
+      ],
+    );
+  }
+
+  Widget _buildOrderChecklistRow(String label, bool done) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            done ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 20,
+            color: done ? Colors.green : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: done ? Colors.grey[700] : Colors.grey[600],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessInformationSection() {
+    return _buildSection(
+      title: 'Business Information',
+      icon: Icons.business_center,
+      children: [
+        ..._currentOrder.optInQuestions!.entries.map((entry) {
+          return _buildInfoRow(entry.key, entry.value);
+        }).toList(),
       ],
     );
   }
@@ -942,6 +2889,12 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   Widget _buildInstallationBookingSection() {
     final hasSelectedDates = _currentOrder.customerSelectedDates.isNotEmpty;
     final hasConfirmedDate = _currentOrder.confirmedInstallDate != null;
+    final hasInstaller =
+        _currentOrder.assignedInstallerId != null &&
+        _currentOrder.assignedInstallerId!.isNotEmpty;
+    final isNoInstallationRequired =
+        _currentOrder.assignedInstallerId == _noInstallationRequiredId;
+    final needsInstallerWarning = !hasInstaller && !isNoInstallationRequired;
 
     return _buildSection(
       title: 'Installation Booking',
@@ -950,7 +2903,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
         // Booking status
         Row(
           children: [
-            const Text('Status: ', style: TextStyle(fontWeight: FontWeight.w500)),
+            const Text(
+              'Status: ',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
             _buildStatusChip(_currentOrder.installBookingStatus),
           ],
         ),
@@ -999,48 +2955,88 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           const SizedBox(height: 12),
         ],
 
+        if (needsInstallerWarning) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange[700]),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Please assign an installer or select "No Installation Required" before confirming installation date.',
+                    style: TextStyle(color: Colors.orange[800]),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+
         // Confirmed install date
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Confirmed Install Date:',
-                    style: TextStyle(fontWeight: FontWeight.w500),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Confirmed Install Date:',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        hasConfirmedDate
+                            ? DateFormat(
+                                'EEEE, MMMM d, yyyy',
+                              ).format(_currentOrder.confirmedInstallDate!)
+                            : 'Not set',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color:
+                              hasConfirmedDate ? Colors.blue[700] : Colors.grey,
+                          fontWeight: hasConfirmedDate
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    hasConfirmedDate
-                        ? DateFormat('EEEE, MMMM d, yyyy')
-                            .format(_currentOrder.confirmedInstallDate!)
-                        : 'Not set',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: hasConfirmedDate ? Colors.blue[700] : Colors.grey,
-                      fontWeight:
-                          hasConfirmedDate ? FontWeight.w600 : FontWeight.normal,
-                    ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: (_isSavingDate || needsInstallerWarning)
+                      ? null
+                      : _setInstallDate,
+                  icon: _isSavingDate
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.edit_calendar, size: 18),
+                  label: Text(hasConfirmedDate ? 'Change' : 'Set Date'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            ElevatedButton.icon(
-              onPressed: _isSavingDate ? null : _setInstallDate,
-              icon: _isSavingDate
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.edit_calendar, size: 18),
-              label: Text(hasConfirmedDate ? 'Change' : 'Set Date'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
+            if (needsInstallerWarning) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Please add installer before setting a date.',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
-            ),
+            ],
           ],
         ),
       ],
@@ -1082,6 +3078,10 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                     value: null,
                     child: Text('Unassigned'),
                   ),
+                  const DropdownMenuItem<String>(
+                    value: _noInstallationRequiredId,
+                    child: Text(_noInstallationRequiredName),
+                  ),
                   ...installers.map((installer) {
                     return DropdownMenuItem<String>(
                       value: installer.id,
@@ -1105,7 +3105,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 onChanged: _isSavingInstaller
                     ? null
                     : (value) {
-                        if (value != null) {
+                        if (value == null) {
+                          // Handle unassigned - could add logic here if needed
+                        } else if (value == _noInstallationRequiredId) {
+                          _setNoInstallationRequired();
+                        } else {
                           final installer = installers.firstWhere(
                             (i) => i.id == value,
                           );
@@ -1118,19 +3122,40 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color:
+                      _currentOrder.assignedInstallerId ==
+                          _noInstallationRequiredId
+                      ? Colors.grey.shade100
+                      : Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.blue[700]),
+                    Icon(
+                      _currentOrder.assignedInstallerId ==
+                              _noInstallationRequiredId
+                          ? Icons.block
+                          : Icons.check_circle,
+                      color:
+                          _currentOrder.assignedInstallerId ==
+                              _noInstallationRequiredId
+                          ? Colors.grey[700]
+                          : Colors.blue[700],
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Assigned to: ${_currentOrder.assignedInstallerName}',
+                        _currentOrder.assignedInstallerId ==
+                                _noInstallationRequiredId
+                            ? 'No Installation Required'
+                            : 'Assigned to: ${_currentOrder.assignedInstallerName}',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: Colors.blue[800],
+                          color:
+                              _currentOrder.assignedInstallerId ==
+                                  _noInstallationRequiredId
+                              ? Colors.grey[800]
+                              : Colors.blue[800],
                         ),
                       ),
                     ),
@@ -1189,10 +3214,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
           const SizedBox(height: 8),
           Text(
             'Last email sent: ${DateFormat('MMM d, yyyy h:mm a').format(_currentOrder.installBookingEmailSentAt!)}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
         ],
       ],
@@ -1204,7 +3226,9 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       title: 'Notes',
       icon: Icons.note,
       children: [
-        ..._currentOrder.notes.reversed.take(5).map(
+        ..._currentOrder.notes.reversed
+            .take(5)
+            .map(
               (note) => Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(12),
@@ -1216,17 +3240,11 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      note.text,
-                      style: const TextStyle(fontSize: 14),
-                    ),
+                    Text(note.text, style: const TextStyle(fontSize: 14)),
                     const SizedBox(height: 4),
                     Text(
                       '${note.createdByName ?? 'Unknown'} • ${DateFormat('MMM d, h:mm a').format(note.createdAt)}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -1289,10 +3307,7 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             const SizedBox(width: 8),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -1312,23 +3327,212 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
             width: 120,
             child: Text(
               label,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildShippedItemsFromParentSection() {
+    final shippedItems = _currentOrder.shippedItemsFromParentOrder;
+
+    return _buildSection(
+      title: 'Items Shipped in Parent Order (Order 1)',
+      icon: Icons.local_shipping,
+      children: [
+        const Text(
+          'The following items were already shipped in the parent order:',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        const SizedBox(height: 12),
+        ...shippedItems.map((shippedItem) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.inventory_2, size: 16, color: Colors.blue[700]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        shippedItem.itemName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue[900],
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Qty: ${shippedItem.quantity}',
+                      style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                    ),
+                  ],
+                ),
+                if (shippedItem.waybillNumber != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: Colors.blue.shade300,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.qr_code, size: 18, color: Colors.blue[800]),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Waybill Number',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.blue[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              shippedItem.waybillNumber!,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue[900],
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (shippedItem.trackingNumber != null &&
+                    shippedItem.trackingNumber !=
+                        shippedItem.waybillNumber) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.track_changes,
+                        size: 14,
+                        color: Colors.blue[600],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Tracking: ${shippedItem.trackingNumber}',
+                        style: TextStyle(fontSize: 11, color: Colors.blue[700]),
+                      ),
+                    ],
+                  ),
+                ],
+                if (shippedItem.waybillPhotoUrl != null) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _showFullImage(shippedItem.waybillPhotoUrl!),
+                    child: Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.blue.shade300),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.network(
+                              shippedItem.waybillPhotoUrl!,
+                              fit: BoxFit.cover,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        value:
+                                            loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    );
+                                  },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey.shade200,
+                                  child: const Center(
+                                    child: Icon(Icons.broken_image, size: 32),
+                                  ),
+                                );
+                              },
+                            ),
+                            Positioned(
+                              bottom: 4,
+                              right: 4,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.6),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.zoom_in,
+                                      color: Colors.white,
+                                      size: 12,
+                                    ),
+                                    SizedBox(width: 2),
+                                    Text(
+                                      'Tap to view',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -1373,8 +3577,76 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   }
 }
 
-/// Dialog to show available stock
-class _StockViewDialog extends StatelessWidget {
+/// Dialog to show available stock; Edit mode adds +/- and Save per row (single dialog, no nested pop).
+class _StockViewDialog extends StatefulWidget {
+  @override
+  State<_StockViewDialog> createState() => _StockViewDialogState();
+}
+
+class _StockViewDialogState extends State<_StockViewDialog> {
+  bool _editMode = false;
+  Map<String, int> _pendingQty = {};
+  String? _savingStockId;
+
+  void _enterEditMode(List<InventoryStock> stockItems) {
+    setState(() {
+      _editMode = true;
+      _pendingQty = {for (final s in stockItems) s.id: s.currentQty};
+    });
+  }
+
+  void _exitEditMode() {
+    setState(() {
+      _editMode = false;
+      _pendingQty = {};
+    });
+  }
+
+  int _getEditingQty(InventoryStock stock) =>
+      _pendingQty[stock.id] ?? stock.currentQty;
+
+  void _adjustQty(InventoryStock stock, int delta) {
+    setState(() {
+      final current = _pendingQty[stock.id] ?? stock.currentQty;
+      _pendingQty[stock.id] = (current + delta).clamp(0, 999999);
+    });
+  }
+
+  Future<void> _saveRow(
+    BuildContext context,
+    InventoryProvider inventoryProvider,
+    InventoryStock stock,
+  ) async {
+    final newQty = _pendingQty[stock.id] ?? stock.currentQty;
+    setState(() => _savingStockId = stock.id);
+    try {
+      final userId = context.read<AuthProvider>().user?.uid ?? 'unknown';
+      await inventoryProvider.updateStockQuantity(
+        stockId: stock.id,
+        newQty: newQty,
+        updatedBy: userId,
+        notes: 'Adjusted from order detail',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Stock updated'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update stock: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _savingStockId = null);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -1385,32 +3657,58 @@ class _StockViewDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.inventory_2, color: Colors.white),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Available Stock',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            Consumer<InventoryProvider>(
+              builder: (context, inventoryProvider, child) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
                     ),
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.inventory_2, color: Colors.white),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Available Stock',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      if (!_editMode)
+                        TextButton(
+                          onPressed: inventoryProvider.allStockItems.isEmpty
+                              ? null
+                              : () => _enterEditMode(
+                                  inventoryProvider.allStockItems,
+                                ),
+                          child: const Text(
+                            'Edit',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        )
+                      else
+                        TextButton(
+                          onPressed: _exitEditMode,
+                          child: const Text(
+                            'Done',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
             Flexible(
               child: Consumer<InventoryProvider>(
@@ -1435,6 +3733,7 @@ class _StockViewDialog extends StatelessWidget {
                     itemCount: stockItems.length,
                     itemBuilder: (context, index) {
                       final stock = stockItems[index];
+                      final isSaving = _savingStockId == stock.id;
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.all(12),
@@ -1442,15 +3741,15 @@ class _StockViewDialog extends StatelessWidget {
                           color: stock.isOutOfStock
                               ? Colors.red.shade50
                               : stock.isLowStock
-                                  ? Colors.orange.shade50
-                                  : Colors.green.shade50,
+                              ? Colors.orange.shade50
+                              : Colors.green.shade50,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: stock.isOutOfStock
                                 ? Colors.red.shade200
                                 : stock.isLowStock
-                                    ? Colors.orange.shade200
-                                    : Colors.green.shade200,
+                                ? Colors.orange.shade200
+                                : Colors.green.shade200,
                           ),
                         ),
                         child: Row(
@@ -1475,34 +3774,90 @@ class _StockViewDialog extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '${stock.currentQty}',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: stock.isOutOfStock
-                                        ? Colors.red[700]
-                                        : stock.isLowStock
-                                            ? Colors.orange[700]
-                                            : Colors.green[700],
+                            if (!_editMode) ...[
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '${stock.currentQty}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: stock.isOutOfStock
+                                          ? Colors.red[700]
+                                          : stock.isLowStock
+                                          ? Colors.orange[700]
+                                          : Colors.green[700],
+                                    ),
+                                  ),
+                                  Text(
+                                    stock.stockStatus,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: stock.isOutOfStock
+                                          ? Colors.red[700]
+                                          : stock.isLowStock
+                                          ? Colors.orange[700]
+                                          : Colors.green[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ] else ...[
+                              IconButton(
+                                icon: const Icon(Icons.remove, size: 18),
+                                onPressed: isSaving
+                                    ? null
+                                    : () => _adjustQty(stock, -1),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  padding: const EdgeInsets.all(4),
+                                  minimumSize: const Size(28, 28),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                child: SizedBox(
+                                  width: 40,
+                                  child: Text(
+                                    '${_getEditingQty(stock)}',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                                Text(
-                                  stock.stockStatus,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: stock.isOutOfStock
-                                        ? Colors.red[700]
-                                        : stock.isLowStock
-                                            ? Colors.orange[700]
-                                            : Colors.green[700],
-                                  ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add, size: 18),
+                                onPressed: isSaving
+                                    ? null
+                                    : () => _adjustQty(stock, 1),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  padding: const EdgeInsets.all(4),
+                                  minimumSize: const Size(28, 28),
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: isSaving
+                                    ? null
+                                    : () => _saveRow(
+                                        context,
+                                        inventoryProvider,
+                                        stock,
+                                      ),
+                                child: Text(isSaving ? 'Saving...' : 'Save'),
+                              ),
+                            ],
                           ],
                         ),
                       );
@@ -1517,4 +3872,3 @@ class _StockViewDialog extends StatelessWidget {
     );
   }
 }
-

@@ -1,11 +1,46 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../models/inventory/inventory_stock.dart';
 import '../../models/streams/order.dart' as models;
 import '../../providers/auth_provider.dart';
+import '../../providers/inventory_provider.dart';
+import '../../providers/product_items_provider.dart';
+import '../../providers/product_packages_provider.dart';
 import '../../services/firebase/order_service.dart';
 import '../../theme/app_theme.dart';
 import 'shipping_details_screen.dart';
+
+/// One row in the flattened pick list (one card = one product, packages expanded).
+class _PickListRow {
+  final models.OrderItem orderItem;
+  final String displayName;
+  final int displayQty;
+  final int? stockQty;
+  final bool isOutOfStock;
+  final bool isLowStock;
+  final bool hasInsufficientStock;
+  final bool orderLineIsOutOfStock;
+
+  /// Set for package constituent rows; used for composite pick key.
+  final String? productId;
+
+  const _PickListRow({
+    required this.orderItem,
+    required this.displayName,
+    required this.displayQty,
+    this.stockQty,
+    required this.isOutOfStock,
+    required this.isLowStock,
+    required this.hasInsufficientStock,
+    required this.orderLineIsOutOfStock,
+    this.productId,
+  });
+
+  String get pickKey =>
+      productId != null ? '${orderItem.name}|$productId' : orderItem.name;
+}
 
 /// Screen for processing an order - shows item checklist for picking
 class OrderProcessingScreen extends StatefulWidget {
@@ -25,16 +60,19 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
   bool _isLoading = false;
   bool _isMovingToPickList = false;
 
+  /// Flattened row count; used when persisting so order card shows correct progress.
+  int? _lastFlattenedCount;
+
   @override
   void initState() {
     super.initState();
     _currentOrder = widget.order;
     _pickedItems = Map<String, bool>.from(widget.order.pickedItems);
 
-    // Initialize picked items map with all items set to false if empty
+    // Initialize picked items map: for non-package items use item.name; package rows use composite keys (added when user picks)
     if (_pickedItems.isEmpty) {
       for (final item in widget.order.items) {
-        _pickedItems[item.name] = false;
+        if (item.packageId == null) _pickedItems[item.name] = false;
       }
     }
 
@@ -42,6 +80,13 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     if (_currentOrder.currentStage == 'priority_shipment') {
       _moveToPackingList();
     }
+
+    // Load inventory and packages for stock validation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<InventoryProvider>().listenToInventory();
+      context.read<ProductPackagesProvider>().listenToPackages();
+      context.read<ProductItemsProvider>().listenToProducts();
+    });
   }
 
   Future<void> _moveToPackingList() async {
@@ -70,53 +115,273 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     } catch (e) {
       setState(() => _isMovingToPickList = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
-  Future<void> _toggleItemPicked(String itemName, bool picked) async {
+  Future<void> _toggleItemPicked(String pickKey, bool picked) async {
+    // If trying to pick, validate stock. Composite key "orderLineName|productId" = single package row; else order line name.
+    final isComposite = pickKey.contains('|');
+    final orderLineName = isComposite ? pickKey.split('|').first : pickKey;
+    final productIdForRow = isComposite && pickKey.split('|').length > 1
+        ? pickKey.substring(orderLineName.length + 1)
+        : null;
+
+    if (picked) {
+      final inventoryProvider = context.read<InventoryProvider>();
+      final orderItem = _currentOrder.items.firstWhere(
+        (item) => item.name == orderLineName,
+        orElse: () =>
+            models.OrderItem(name: orderLineName, quantity: 1, price: 0),
+      );
+
+      if (productIdForRow != null && orderItem.packageId != null) {
+        // Single package row: validate only this product's stock
+        final packageProvider = context.read<ProductPackagesProvider>();
+        final pkg = packageProvider.packages
+            .where((p) => p.id == orderItem.packageId)
+            .toList();
+        if (pkg.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Cannot pick: Package not found.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+        final entry = pkg.first.packageItems
+            .where((e) => e.productId == productIdForRow)
+            .toList();
+        if (entry.isEmpty) return;
+        final requiredQty = entry.first.quantity * orderItem.quantity;
+        final stockMatch = inventoryProvider.allStockItems
+            .where((s) => s.productId == productIdForRow)
+            .toList();
+        if (stockMatch.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Cannot pick: Product has no inventory record.'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+          return;
+        }
+        final stockItem = stockMatch.first;
+        if (stockItem.currentQty < requiredQty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Cannot pick: ${stockItem.productName} only ${stockItem.currentQty} in stock, need $requiredQty.',
+                ),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+          return;
+        }
+      } else if (orderItem.packageId != null) {
+        // Legacy: whole package picked at once (should not happen with composite keys)
+        final packageProvider = context.read<ProductPackagesProvider>();
+        final pkg = packageProvider.packages
+            .where((p) => p.id == orderItem.packageId)
+            .toList();
+        if (pkg.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Cannot pick: Package not found.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+        final package = pkg.first;
+        for (final e in package.packageItems) {
+          final requiredQty = e.quantity * orderItem.quantity;
+          final stockMatch = inventoryProvider.allStockItems
+              .where((s) => s.productId == e.productId)
+              .toList();
+          if (stockMatch.isEmpty || stockMatch.first.currentQty < requiredQty) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Cannot pick: Insufficient stock for package item.',
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+            return;
+          }
+        }
+      } else {
+        // Product or legacy: match by productId or name
+        final requiredQty = orderItem.quantity;
+        InventoryStock? stockItem;
+        if (orderItem.productId != null) {
+          final byId = inventoryProvider.allStockItems
+              .where((s) => s.productId == orderItem.productId)
+              .toList();
+          stockItem = byId.isEmpty ? null : byId.first;
+        }
+        final stockByName = inventoryProvider.allStockItems
+            .where(
+              (s) => s.productName.toLowerCase() == orderLineName.toLowerCase(),
+            )
+            .toList();
+        final hasStock = stockItem != null || stockByName.isNotEmpty;
+        final stock =
+            stockItem ?? (stockByName.isNotEmpty ? stockByName.first : null);
+
+        if (hasStock && stock != null) {
+          if (stock.currentQty < requiredQty) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Cannot pick: Only ${stock.currentQty} in stock, but $requiredQty needed. Please contact admin to override.',
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 4),
+                  action: SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  ),
+                ),
+              );
+            }
+            return;
+          }
+          if (stock.isOutOfStock) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Cannot pick: Item is out of stock. Please contact admin to override.',
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 4),
+                  action: SnackBarAction(
+                    label: 'OK',
+                    textColor: Colors.white,
+                    onPressed: () {},
+                  ),
+                ),
+              );
+            }
+            return;
+          }
+          if (stock.isLowStock && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Warning: "${orderItem.name}" is low stock (${stock.currentQty} remaining)',
+                ),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        } else if (!hasStock && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Warning: "${orderItem.name}" not found in inventory system',
+              ),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+
     setState(() {
-      _pickedItems[itemName] = picked;
+      _pickedItems[pickKey] = picked;
     });
 
-    // Save to Firestore
     try {
       await _orderService.updatePickedItems(
         orderId: _currentOrder.id,
         pickedItems: _pickedItems,
+        totalFlattenedItemCount: _lastFlattenedCount,
       );
     } catch (e) {
-      // Revert on error
       setState(() {
-        _pickedItems[itemName] = !picked;
+        _pickedItems[pickKey] = !picked;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving: $e')));
       }
     }
   }
 
-  bool get _allItemsPicked {
-    for (final item in _currentOrder.items) {
-      if (_pickedItems[item.name] != true) return false;
-    }
-    return true;
-  }
-
-  int get _pickedCount => _pickedItems.values.where((v) => v).length;
-
-  double get _pickingProgress {
-    if (_currentOrder.items.isEmpty) return 0.0;
-    return _pickedCount / _currentOrder.items.length;
+  /// Ensures every flattened row has a key in _pickedItems (post-frame). Optionally persists to sync order card.
+  void _ensurePickedItemsKeys(List<_PickListRow> rows) {
+    final missing = rows.where((r) => !_pickedItems.containsKey(r.pickKey));
+    if (missing.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        for (final r in rows) {
+          _pickedItems.putIfAbsent(r.pickKey, () => false);
+        }
+      });
+      _orderService
+          .updatePickedItems(
+            orderId: _currentOrder.id,
+            pickedItems: _pickedItems,
+            totalFlattenedItemCount: rows.length,
+          )
+          .catchError((e) {
+            if (kDebugMode) {
+              debugPrint('Order processing: sync flattened count failed: $e');
+            }
+          });
+    });
   }
 
   Future<void> _proceedToShipping() async {
-    if (!_allItemsPicked) {
+    if (_currentOrder.items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please pick all items before proceeding'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+    final inventoryProvider = context.read<InventoryProvider>();
+    final packageProvider = context.read<ProductPackagesProvider>();
+    final productProvider = context.read<ProductItemsProvider>();
+    final rows = _buildFlattenedRows(
+      inventoryProvider,
+      packageProvider,
+      productProvider,
+    );
+    final totalCount = rows.length;
+    final pickedCount = totalCount == 0
+        ? 0
+        : rows.where((r) => _pickedItems[r.pickKey] == true).length;
+    final allItemsPicked = totalCount > 0 && pickedCount == totalCount;
+    if (!allItemsPicked) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please pick all items before proceeding'),
@@ -157,6 +422,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
               order: _currentOrder.copyWith(
                 currentStage: 'items_picked',
                 pickedItems: _pickedItems,
+                totalFlattenedItemCount: _lastFlattenedCount,
               ),
             ),
           ),
@@ -165,9 +431,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -176,19 +442,56 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: Column(
-        children: [
-          _buildHeader(),
-          if (_isMovingToPickList)
-            const LinearProgressIndicator()
-          else
-            _buildProgressBar(),
-          Expanded(
-            child: _buildItemsList(),
+      body:
+          Consumer3<
+            InventoryProvider,
+            ProductPackagesProvider,
+            ProductItemsProvider
+          >(
+            builder:
+                (
+                  context,
+                  inventoryProvider,
+                  packageProvider,
+                  productProvider,
+                  _,
+                ) {
+                  final rows = _buildFlattenedRows(
+                    inventoryProvider,
+                    packageProvider,
+                    productProvider,
+                  );
+                  _lastFlattenedCount = rows.length;
+                  _ensurePickedItemsKeys(rows);
+                  final totalCount = rows.length;
+                  final pickedCount = totalCount == 0
+                      ? 0
+                      : rows
+                            .where((r) => _pickedItems[r.pickKey] == true)
+                            .length;
+                  final allItemsPicked =
+                      totalCount > 0 && pickedCount == totalCount;
+                  final progress = totalCount > 0
+                      ? pickedCount / totalCount
+                      : 0.0;
+                  return Column(
+                    children: [
+                      _buildHeader(),
+                      if (_isMovingToPickList)
+                        const LinearProgressIndicator()
+                      else
+                        _buildProgressBar(
+                          pickedCount: pickedCount,
+                          totalCount: totalCount,
+                          progress: progress,
+                          allItemsPicked: allItemsPicked,
+                        ),
+                      Expanded(child: _buildItemsList(rows: rows)),
+                      _buildBottomBar(allItemsPicked: allItemsPicked),
+                    ],
+                  );
+                },
           ),
-          _buildBottomBar(),
-        ],
-      ),
     );
   }
 
@@ -201,10 +504,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            AppTheme.headerGradientStart,
-            AppTheme.headerGradientEnd,
-          ],
+          colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
         ),
       ),
       child: SafeArea(
@@ -244,7 +544,10 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
@@ -252,11 +555,17 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.calendar_today, color: Colors.white, size: 14),
+                      const Icon(
+                        Icons.calendar_today,
+                        color: Colors.white,
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         _currentOrder.confirmedInstallDate != null
-                            ? dateFormat.format(_currentOrder.confirmedInstallDate!)
+                            ? dateFormat.format(
+                                _currentOrder.confirmedInstallDate!,
+                              )
                             : 'No date',
                         style: const TextStyle(
                           color: Colors.white,
@@ -275,7 +584,12 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     );
   }
 
-  Widget _buildProgressBar() {
+  Widget _buildProgressBar({
+    required int pickedCount,
+    required int totalCount,
+    required double progress,
+    required bool allItemsPicked,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       color: Colors.white,
@@ -293,11 +607,13 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                 ),
               ),
               Text(
-                '$_pickedCount / ${_currentOrder.items.length}',
+                '$pickedCount / $totalCount',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: _allItemsPicked ? AppTheme.successColor : AppTheme.primaryColor,
+                  color: allItemsPicked
+                      ? AppTheme.successColor
+                      : AppTheme.primaryColor,
                 ),
               ),
             ],
@@ -306,20 +622,24 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: _pickingProgress,
+              value: progress,
               backgroundColor: AppTheme.borderColor,
               valueColor: AlwaysStoppedAnimation<Color>(
-                _allItemsPicked ? AppTheme.successColor : AppTheme.primaryColor,
+                allItemsPicked ? AppTheme.successColor : AppTheme.primaryColor,
               ),
               minHeight: 10,
             ),
           ),
-          if (_allItemsPicked) ...[
+          if (allItemsPicked) ...[
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.check_circle, color: AppTheme.successColor, size: 16),
+                Icon(
+                  Icons.check_circle,
+                  color: AppTheme.successColor,
+                  size: 16,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'All items picked!',
@@ -337,8 +657,8 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     );
   }
 
-  Widget _buildItemsList() {
-    if (_currentOrder.items.isEmpty) {
+  Widget _buildItemsList({required List<_PickListRow> rows}) {
+    if (rows.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -356,6 +676,59 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                 color: AppTheme.secondaryColor.withOpacity(0.7),
               ),
             ),
+            if (_currentOrder.splitFromOrderId != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.orange[700],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'All items were moved to a split order due to out of stock override.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange[800],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.grey[600], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This order has no items to pick.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -363,31 +736,169 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _currentOrder.items.length,
+      itemCount: rows.length,
       itemBuilder: (context, index) {
-        final item = _currentOrder.items[index];
-        final isPicked = _pickedItems[item.name] ?? false;
-        return _buildItemCard(item, isPicked, index);
+        return _buildPickRowCard(rows[index], index);
       },
     );
   }
 
-  Widget _buildItemCard(models.OrderItem item, bool isPicked, int index) {
+  List<_PickListRow> _buildFlattenedRows(
+    InventoryProvider inventoryProvider,
+    ProductPackagesProvider packageProvider,
+    ProductItemsProvider productProvider,
+  ) {
+    final List<_PickListRow> rows = [];
+    for (final item in _currentOrder.items) {
+      if (item.packageId != null) {
+        final pkg = packageProvider.packages
+            .where((p) => p.id == item.packageId)
+            .toList();
+        if (pkg.isEmpty) {
+          rows.add(
+            _PickListRow(
+              orderItem: item,
+              displayName: item.name,
+              displayQty: item.quantity,
+              stockQty: null,
+              isOutOfStock: true,
+              isLowStock: false,
+              hasInsufficientStock: true,
+              orderLineIsOutOfStock: true,
+            ),
+          );
+        } else {
+          final package = pkg.first;
+          bool orderLineIsOutOfStock = false;
+          for (final entry in package.packageItems) {
+            final stockMatch = inventoryProvider.allStockItems
+                .where((s) => s.productId == entry.productId)
+                .toList();
+            final hasStock = stockMatch.isNotEmpty;
+            final currentQty = hasStock ? stockMatch.first.currentQty : 0;
+            final requiredQty = entry.quantity * item.quantity;
+            if (!hasStock || currentQty < requiredQty) {
+              orderLineIsOutOfStock = true;
+            }
+          }
+          for (final entry in package.packageItems) {
+            final product = productProvider.items
+                .where((p) => p.id == entry.productId)
+                .toList();
+            final name = product.isEmpty
+                ? 'Product ${entry.productId}'
+                : product.first.name;
+            final requiredQty = entry.quantity * item.quantity;
+            final stockMatch = inventoryProvider.allStockItems
+                .where((s) => s.productId == entry.productId)
+                .toList();
+            final hasStock = stockMatch.isNotEmpty;
+            final currentQty = hasStock ? stockMatch.first.currentQty : 0;
+            final itemOutOfStock = !hasStock || currentQty < requiredQty;
+            final itemLowStock =
+                hasStock &&
+                stockMatch.first.isLowStock &&
+                currentQty >= requiredQty;
+            rows.add(
+              _PickListRow(
+                orderItem: item,
+                displayName: name,
+                displayQty: requiredQty,
+                stockQty: hasStock ? currentQty : null,
+                isOutOfStock: itemOutOfStock,
+                isLowStock: itemLowStock,
+                hasInsufficientStock: currentQty < requiredQty,
+                orderLineIsOutOfStock: orderLineIsOutOfStock,
+                productId: entry.productId,
+              ),
+            );
+          }
+        }
+      } else {
+        final byId = item.productId != null
+            ? inventoryProvider.allStockItems
+                  .where((s) => s.productId == item.productId)
+                  .toList()
+            : <InventoryStock>[];
+        final byName = inventoryProvider.allStockItems
+            .where(
+              (s) => s.productName.toLowerCase() == item.name.toLowerCase(),
+            )
+            .toList();
+        final hasStock = byId.isNotEmpty || byName.isNotEmpty;
+        final stock = (byId.isNotEmpty
+            ? byId.first
+            : (byName.isNotEmpty ? byName.first : null));
+        int? stockQty;
+        bool isOutOfStock = false;
+        bool isLowStock = false;
+        bool hasInsufficientStock = false;
+        if (hasStock && stock != null) {
+          stockQty = stock.currentQty;
+          hasInsufficientStock = stockQty < item.quantity;
+          isOutOfStock = stock.isOutOfStock || hasInsufficientStock;
+          isLowStock = stock.isLowStock;
+        }
+        rows.add(
+          _PickListRow(
+            orderItem: item,
+            displayName: item.name,
+            displayQty: item.quantity,
+            stockQty: stockQty,
+            isOutOfStock: isOutOfStock,
+            isLowStock: isLowStock,
+            hasInsufficientStock: hasInsufficientStock,
+            orderLineIsOutOfStock: isOutOfStock,
+          ),
+        );
+      }
+    }
+    return rows;
+  }
+
+  Widget _buildPickRowCard(_PickListRow row, int displayIndex) {
+    final isPicked =
+        _pickedItems[row.pickKey] ??
+        (row.productId != null && _pickedItems[row.orderItem.name] == true);
+    // Use this row's own stock state so in-stock items can be picked even if another row in the same order line is OOS.
+    final thisRowUnpickable = row.isOutOfStock || row.hasInsufficientStock;
+    final canPick = !thisRowUnpickable || isPicked;
+    final isOut = row.isOutOfStock || row.hasInsufficientStock;
+
+    String badgeText;
+    if (isOut) {
+      badgeText = row.stockQty != null
+          ? 'Low (${row.stockQty}) - Need ${row.displayQty}'
+          : 'Out of Stock';
+    } else if (row.isLowStock) {
+      badgeText = 'Low (${row.stockQty})';
+    } else {
+      badgeText = 'In Stock (${row.stockQty})';
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isPicked
+            ? Colors.white
+            : isOut
+            ? Colors.red.shade50
+            : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isPicked
               ? AppTheme.successColor.withOpacity(0.5)
+              : isOut
+              ? Colors.red.shade300
               : AppTheme.borderColor,
-          width: isPicked ? 2 : 1,
+          width: isPicked || isOut ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: isPicked
                 ? AppTheme.successColor.withOpacity(0.1)
+                : isOut
+                ? Colors.red.withOpacity(0.1)
                 : Colors.black.withOpacity(0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
@@ -398,77 +909,163 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => _toggleItemPicked(item.name, !isPicked),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isPicked
-                        ? AppTheme.successColor.withOpacity(0.1)
-                        : AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${index + 1}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isPicked ? AppTheme.successColor : AppTheme.primaryColor,
+          onTap: canPick
+              ? () => _toggleItemPicked(row.pickKey, !isPicked)
+              : null,
+          child: Opacity(
+            opacity: canPick ? 1.0 : 0.6,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isPicked
+                          ? AppTheme.successColor.withOpacity(0.1)
+                          : isOut
+                          ? Colors.red.shade100
+                          : AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${displayIndex + 1}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isPicked
+                              ? AppTheme.successColor
+                              : isOut
+                              ? Colors.red[700]
+                              : AppTheme.primaryColor,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.name,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: isPicked
-                              ? AppTheme.secondaryColor.withOpacity(0.6)
-                              : AppTheme.textColor,
-                          decoration: isPicked ? TextDecoration.lineThrough : null,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                row.displayName,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: isPicked
+                                      ? AppTheme.secondaryColor.withOpacity(0.6)
+                                      : isOut
+                                      ? Colors.red[800]
+                                      : AppTheme.textColor,
+                                  decoration: isPicked
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                              ),
+                            ),
+                            if (!isPicked)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isOut
+                                      ? Colors.red.shade100
+                                      : row.isLowStock
+                                      ? Colors.orange.shade100
+                                      : Colors.green.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isOut
+                                        ? Colors.red.shade300
+                                        : row.isLowStock
+                                        ? Colors.orange.shade300
+                                        : Colors.green.shade300,
+                                  ),
+                                ),
+                                child: Text(
+                                  badgeText,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: isOut
+                                        ? Colors.red[700]
+                                        : row.isLowStock
+                                        ? Colors.orange[700]
+                                        : Colors.green[700],
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Qty: ${item.quantity}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.secondaryColor.withOpacity(0.6),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Qty: ${row.displayQty}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.secondaryColor.withOpacity(0.6),
+                          ),
                         ),
-                      ),
-                    ],
+                        if (isOut && !isPicked) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.block,
+                                size: 14,
+                                color: Colors.red[700],
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Cannot pick - Out of stock',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.red[700],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: isPicked ? AppTheme.successColor : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
                       color: isPicked
                           ? AppTheme.successColor
-                          : AppTheme.borderColor,
-                      width: 2,
+                          : isOut
+                          ? Colors.red.shade200
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isPicked
+                            ? AppTheme.successColor
+                            : isOut
+                            ? Colors.red.shade400
+                            : AppTheme.borderColor,
+                        width: 2,
+                      ),
                     ),
+                    child: isPicked
+                        ? const Icon(Icons.check, color: Colors.white, size: 20)
+                        : isOut
+                        ? Icon(Icons.block, color: Colors.red[700], size: 18)
+                        : null,
                   ),
-                  child: isPicked
-                      ? const Icon(Icons.check, color: Colors.white, size: 20)
-                      : null,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -476,7 +1073,7 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     );
   }
 
-  Widget _buildBottomBar() {
+  Widget _buildBottomBar({required bool allItemsPicked}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -494,7 +1091,9 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: _isLoading || !_allItemsPicked ? null : _proceedToShipping,
+            onPressed: _isLoading || !allItemsPicked
+                ? null
+                : _proceedToShipping,
             icon: _isLoading
                 ? const SizedBox(
                     width: 20,
@@ -506,10 +1105,10 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
                   )
                 : const Icon(Icons.local_shipping),
             label: Text(
-              _allItemsPicked ? 'Proceed to Shipping' : 'Pick All Items First',
+              allItemsPicked ? 'Proceed to Shipping' : 'Pick All Items First',
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _allItemsPicked
+              backgroundColor: allItemsPicked
                   ? AppTheme.successColor
                   : AppTheme.secondaryColor.withOpacity(0.3),
               foregroundColor: Colors.white,
@@ -528,4 +1127,3 @@ class _OrderProcessingScreenState extends State<OrderProcessingScreen> {
     );
   }
 }
-

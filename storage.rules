@@ -14,6 +14,35 @@ service firebase.storage {
       allow read, write: if true;
     }
 
+    // Customer deposit proofs - allow unauthenticated write for customer uploads
+    // Customers can upload proof of payment after confirming deposit
+    match /customer_deposit_proofs/{appointmentId}/{fileName} {
+      // Allow public read and write for customers to upload and retrieve their proof
+      // Read is needed to get the download URL after upload
+      allow read, create: if true;
+      // Prevent updates/deletes - files are immutable once uploaded
+      allow update, delete: if false;
+    }
+
+    // Deposit proofs uploaded by sales - require authentication
+    match /deposit_proofs/{appointmentId}/{fileName} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Customer final payment proofs - allow public read and create
+    match /customer_final_payment_proofs/{orderId}/{fileName} {
+      // Allow public read and write for customers to upload and retrieve their proof
+      // Read is needed to get the download URL after upload
+      allow read, create: if true;
+      // Prevent updates/deletes - files are immutable once uploaded
+      allow update, delete: if false;
+    }
+
+    // Final payment proofs uploaded by operations - require authentication
+    match /final_payment_proofs/{orderId}/{fileName} {
+      allow read, write: if request.auth != null;
+    }
+
     // Default: Require authentication for all other paths
     match /{allPaths=**} {
       allow read, write: if request.auth != null;
