@@ -46,24 +46,26 @@ class EmailJSService {
   // Contract sent notification - sent only to BCC list when contract link email is sent to client
   static const String _contractSentNotificationTemplateId = 'template_y067fcc';
   // Contract signed notification - sent only to BCC list when client signs the contract
-  static const String _contractSignedNotificationTemplateId = 'template_vbo4xef';
+  static const String _contractSignedNotificationTemplateId =
+      'template_vbo4xef';
   // Deposit confirmed notification - sent only to BCC list when ticket reaches deposit_made
   static const String _contractDepositConfirmedNotificationTemplateId =
       'template_2ngaebm';
   // Deposit confirmed welcome email - sent to customer when deposit is confirmed (finance/sales)
   static const String _depositConfirmedWelcomeTemplateId = 'template_kxndxus';
   // Lead transitioned to operations - sent to operations team when appointment is converted to order (recipient hardcoded in EmailJS template)
-  static const String _leadTransitionedToOperationsTemplateId = 'template_6bij9vg';
+  static const String _leadTransitionedToOperationsTemplateId =
+      'template_6bij9vg';
 
   // Admin email for notifications
   static const String _adminEmail =
       'info@barefootbytes.com'; // TODO: Update with actual superadmin email
 
   // BCC list: used for Contract Sent, Contract Signed, and Deposit Confirmed notifications
-  // static const String _bccEmailList =
-  //     'info@barefootbytes.com; janae@medwavegroup.com; andries@medwavegroup.com; davide@medwavegroup.com; francois@medwavegroup.com';
   static const String _bccEmailList =
-      'tertiusvawork@gmail.com; tertiusva@gmail.com';
+      'info@barefootbytes.com; janae@medwavegroup.com; andries@medwavegroup.com; davide@medwavegroup.com; francois@medwavegroup.com';
+  // static const String _bccEmailList =
+  //     'tertiusvawork@gmail.com; tertiusva@gmail.com';
 
   /// Send booking confirmation email
   static Future<bool> sendBookingConfirmation({
@@ -329,7 +331,8 @@ class EmailJSService {
       final list = _bccEmailList.trim();
       if (list.isEmpty) {
         debugPrint(
-            '⚠️ Contract signed notification skipped: BCC list is empty');
+          '⚠️ Contract signed notification skipped: BCC list is empty',
+        );
         return false;
       }
       final parts = list.contains(';')
@@ -395,7 +398,8 @@ class EmailJSService {
       final list = _bccEmailList.trim();
       if (list.isEmpty) {
         debugPrint(
-            '⚠️ Deposit confirmed notification skipped: BCC list is empty');
+          '⚠️ Deposit confirmed notification skipped: BCC list is empty',
+        );
         return false;
       }
       final parts = list.contains(';')
@@ -488,9 +492,7 @@ class EmailJSService {
         return false;
       }
     } catch (error, stackTrace) {
-      debugPrint(
-        '❌ Error sending deposit confirmed welcome email: $error',
-      );
+      debugPrint('❌ Error sending deposit confirmed welcome email: $error');
       debugPrint('$stackTrace');
       return false;
     }
@@ -773,8 +775,8 @@ class EmailJSService {
     String? noUrl,
   }) async {
     // Reuse the same email as marketing team (finance department)
-    final resolvedEmail = financeEmail ?? 'tertiusva@gmail.com';
-    // final resolvedEmail = financeEmail ?? 'rachel@medwavegroup.com';
+    // final resolvedEmail = financeEmail ?? 'tertiusva@gmail.com';
+    final resolvedEmail = financeEmail ?? 'rachel@medwavegroup.com';
     final resolvedYesUrl = yesUrl ?? _defaultOperationsBoardLink();
     final resolvedNoUrl = noUrl ?? _defaultOperationsBoardLink();
 

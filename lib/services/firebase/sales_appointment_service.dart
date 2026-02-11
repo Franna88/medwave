@@ -467,10 +467,9 @@ class SalesAppointmentService {
 
           print('✉️ Finance email sent status: $sent');
           if (sent) {
-            print('✅ SUCCESS: Finance team notified at tertiusva@gmail.com');
             print(
-              // '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
-              '✅ SUCCESS: Finance team notified at tertiusva@gmail.com',
+              '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
+              // '✅ SUCCESS: Finance team notified at tertiusva@gmail.com',
             );
           } else {
             print(
@@ -908,14 +907,17 @@ class SalesAppointmentService {
     } catch (e) {
       if (kDebugMode) {
         print(
-            '⚠️ Deposit confirmed BCC notification failed for $appointmentId: $e');
+          '⚠️ Deposit confirmed BCC notification failed for $appointmentId: $e',
+        );
       }
     }
   }
 
   /// Sends deposit-confirmed welcome email to the customer (template_kxndxus).
   /// Fire-and-forget so deposit confirmation result is not affected by email failure.
-  void _sendDepositConfirmedWelcomeToCustomer(models.SalesAppointment appointment) {
+  void _sendDepositConfirmedWelcomeToCustomer(
+    models.SalesAppointment appointment,
+  ) {
     EmailJSService.sendDepositConfirmedWelcomeToCustomer(
       toEmail: appointment.email,
       clientName: appointment.customerName,
