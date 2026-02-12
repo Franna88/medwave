@@ -884,7 +884,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                   TextField(
                     controller: searchController,
                     decoration: const InputDecoration(
-                      labelText: 'Search by name, email, or phone',
+                      labelText: 'Search leads (name, email, phone, notes, stage, etc.)',
                       hintText: 'Enter search query...',
                       prefixIcon: Icon(Icons.search),
                       border: OutlineInputBorder(),

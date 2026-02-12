@@ -394,41 +394,88 @@ class LeadService {
     }
   }
 
-  /// Search leads by name, email, or phone
+  /// Returns true if [value] is non-null, non-empty and contains [lowerQuery].
+  static bool _fieldContains(String? value, String lowerQuery) {
+    if (value == null || value.isEmpty) return false;
+    return value.toLowerCase().contains(lowerQuery);
+  }
+
+  /// Returns searchable text from a note (string or flattened map values).
+  static String _noteToSearchableString(LeadNote note) {
+    final t = note.text;
+    if (t is String) return t;
+    if (t is Map) {
+      return t.values.map((v) => v?.toString() ?? '').join(' ');
+    }
+    return '';
+  }
+
+  /// Check if a lead matches the normalized search query (name, email, phone, notes, source, stage, etc.).
+  bool _leadMatchesQuery(Lead lead, String lowerQuery) {
+    final normalizedSearch = lowerQuery.replaceAll(RegExp(r'\s+'), ' ');
+
+    // Name: fullName, word match, firstName, lastName
+    final fullName = lead.fullName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
+    final nameMatches = fullName.contains(normalizedSearch);
+    final searchWords = normalizedSearch.split(' ').where((w) => w.isNotEmpty).toList();
+    final allWordsMatch = searchWords.isNotEmpty &&
+        searchWords.every((word) => fullName.contains(word));
+    if (nameMatches ||
+        allWordsMatch ||
+        lead.firstName.toLowerCase().contains(lowerQuery) ||
+        lead.lastName.toLowerCase().contains(lowerQuery)) {
+      return true;
+    }
+
+    // Email and phone
+    if (lead.email.toLowerCase().contains(lowerQuery) ||
+        lead.phone.toLowerCase().contains(lowerQuery)) {
+      return true;
+    }
+
+    // Optional string fields
+    if (_fieldContains(lead.source, lowerQuery) ||
+        _fieldContains(lead.channelId, lowerQuery) ||
+        _fieldContains(lead.currentStage, lowerQuery) ||
+        _fieldContains(lead.createdByName, lowerQuery) ||
+        _fieldContains(lead.assignedToName, lowerQuery) ||
+        _fieldContains(lead.depositInvoiceNumber, lowerQuery) ||
+        _fieldContains(lead.cashCollectedInvoiceNumber, lowerQuery) ||
+        _fieldContains(lead.bookingId, lowerQuery) ||
+        _fieldContains(lead.bookingStatus, lowerQuery) ||
+        _fieldContains(lead.optInNote, lowerQuery) ||
+        _fieldContains(lead.submissionId, lowerQuery)) {
+      return true;
+    }
+
+    // UTM
+    if (_fieldContains(lead.utmSource, lowerQuery) ||
+        _fieldContains(lead.utmMedium, lowerQuery) ||
+        _fieldContains(lead.utmCampaign, lowerQuery) ||
+        _fieldContains(lead.utmCampaignId, lowerQuery) ||
+        _fieldContains(lead.utmAdset, lowerQuery) ||
+        _fieldContains(lead.utmAdsetId, lowerQuery) ||
+        _fieldContains(lead.utmAd, lowerQuery) ||
+        _fieldContains(lead.utmAdId, lowerQuery)) {
+      return true;
+    }
+
+    // Notes: search inside note text (string or flattened map values)
+    for (final note in lead.notes) {
+      final noteText = _noteToSearchableString(note).toLowerCase();
+      if (noteText.isNotEmpty && noteText.contains(lowerQuery)) return true;
+    }
+
+    return false;
+  }
+
+  /// Search leads by name, email, phone, notes, source, stage, etc.
   Future<List<Lead>> searchLeads(String channelId, String query) async {
     try {
-      // Get all leads for the channel
       final allLeads = await getAllLeads(channelId: channelId);
-
-      // Filter by query
       final lowerQuery = query.toLowerCase().trim();
-      
-      // Normalize search query by removing extra spaces
-      final normalizedSearch = lowerQuery.replaceAll(RegExp(r'\s+'), ' ');
-      
-      return allLeads.where((lead) {
-        // Use fullName for searching (combines firstName and lastName)
-        final fullName = lead.fullName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
-        
-        // Check if search query matches full name (handles "first last" searches)
-        final nameMatches = fullName.contains(normalizedSearch);
-        
-        // Also check if all words in search query appear in full name (for flexible matching)
-        final searchWords = normalizedSearch.split(' ').where((w) => w.isNotEmpty).toList();
-        final allWordsMatch = searchWords.isNotEmpty &&
-            searchWords.every((word) => fullName.contains(word));
-        
-        // Also check individual firstName and lastName for backward compatibility
-        final firstNameMatch = lead.firstName.toLowerCase().contains(lowerQuery);
-        final lastNameMatch = lead.lastName.toLowerCase().contains(lowerQuery);
-        
-        return nameMatches ||
-            allWordsMatch ||
-            firstNameMatch ||
-            lastNameMatch ||
-            lead.email.toLowerCase().contains(lowerQuery) ||
-            lead.phone.contains(query);
-      }).toList();
+      if (lowerQuery.isEmpty) return [];
+      return allLeads.where((lead) => _leadMatchesQuery(lead, lowerQuery)).toList();
     } catch (e) {
       if (kDebugMode) {
         print('Error searching leads: $e');
@@ -437,39 +484,13 @@ class LeadService {
     }
   }
 
-  /// Search leads across all channels by name, email, or phone
+  /// Search leads across all channels by name, email, phone, notes, source, stage, etc.
   Future<List<Lead>> searchLeadsAcrossAllChannels(String query) async {
     try {
       final allLeads = await getAllLeads();
-
       final lowerQuery = query.toLowerCase().trim();
-      
-      // Normalize search query by removing extra spaces
-      final normalizedSearch = lowerQuery.replaceAll(RegExp(r'\s+'), ' ');
-      
-      return allLeads.where((lead) {
-        // Use fullName for searching (combines firstName and lastName)
-        final fullName = lead.fullName.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
-        
-        // Check if search query matches full name (handles "first last" searches)
-        final nameMatches = fullName.contains(normalizedSearch);
-        
-        // Also check if all words in search query appear in full name (for flexible matching)
-        final searchWords = normalizedSearch.split(' ').where((w) => w.isNotEmpty).toList();
-        final allWordsMatch = searchWords.isNotEmpty &&
-            searchWords.every((word) => fullName.contains(word));
-        
-        // Also check individual firstName and lastName for backward compatibility
-        final firstNameMatch = lead.firstName.toLowerCase().contains(lowerQuery);
-        final lastNameMatch = lead.lastName.toLowerCase().contains(lowerQuery);
-        
-        return nameMatches ||
-            allWordsMatch ||
-            firstNameMatch ||
-            lastNameMatch ||
-            lead.email.toLowerCase().contains(lowerQuery) ||
-            lead.phone.contains(query);
-      }).toList();
+      if (lowerQuery.isEmpty) return [];
+      return allLeads.where((lead) => _leadMatchesQuery(lead, lowerQuery)).toList();
     } catch (e) {
       if (kDebugMode) {
         print('Error searching leads across all channels: $e');
