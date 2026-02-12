@@ -21,6 +21,24 @@ const String _kLineTypePackageItem = 'packageItem';
 const String _kLineTypeAddedService = 'addedService';
 const String _kLineTypeDiscount = 'discount';
 
+/// Normalize numeric input: remove spaces, use dot for decimals (comma accepted).
+String _normalizeNumericInput(String s) =>
+    s.replaceAll(' ', '').replaceAll(',', '.');
+
+/// Parse double from user input (allows spaces and comma/dot as decimal).
+double? _parseDoubleInput(String? s) {
+  if (s == null || s.trim().isEmpty) return null;
+  return double.tryParse(_normalizeNumericInput(s.trim()));
+}
+
+/// Parse int from user input (allows spaces; decimals rounded).
+int? _parseIntInput(String? s) {
+  if (s == null || s.trim().isEmpty) return null;
+  final d = double.tryParse(_normalizeNumericInput(s.trim()));
+  if (d == null || d.isNaN) return null;
+  return d.round().clamp(1, 999999);
+}
+
 /// One editable line on the invoice (product, package, or custom).
 class _InvoiceLineItem {
   final String id;
@@ -853,10 +871,10 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
               labelText: 'Amount (R)',
-              hintText: 'e.g. 50',
+              hintText: 'e.g. 50 or 1 500,50',
             ),
             onSubmitted: (value) {
-              final a = double.tryParse(value);
+              final a = _parseDoubleInput(value);
               if (a != null && a > 0) Navigator.of(context).pop(a);
             },
           ),
@@ -867,7 +885,7 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
             ),
             TextButton(
               onPressed: () {
-                final a = double.tryParse(controller.text.trim());
+                final a = _parseDoubleInput(controller.text.trim());
                 if (a != null && a > 0) {
                   Navigator.of(context).pop(a);
                 }
@@ -1369,7 +1387,7 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                         ),
                                       ),
                                       onChanged: (value) {
-                                        final qty = int.tryParse(value) ?? 1;
+                                        final qty = _parseIntInput(value) ?? 1;
                                         if (qty >= 1) {
                                           line.quantity = qty;
                                           setState(() {});
@@ -1394,7 +1412,7 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                       ),
                                       onChanged: (value) {
                                         final price =
-                                            double.tryParse(value) ?? 0.0;
+                                            _parseDoubleInput(value) ?? 0.0;
                                         line.price = price;
                                         setState(() {});
                                       },
