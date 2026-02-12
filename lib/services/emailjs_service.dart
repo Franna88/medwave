@@ -62,10 +62,10 @@ class EmailJSService {
       'info@barefootbytes.com'; // TODO: Update with actual superadmin email
 
   // BCC list: used for Contract Sent, Contract Signed, and Deposit Confirmed notifications
-  static const String _bccEmailList =
-      'info@barefootbytes.com; janae@medwavegroup.com; andries@medwavegroup.com; davide@medwavegroup.com; francois@medwavegroup.com';
   // static const String _bccEmailList =
-  //     'tertiusvawork@gmail.com; tertiusva@gmail.com';
+  //     'info@barefootbytes.com; janae@medwavegroup.com; andries@medwavegroup.com; davide@medwavegroup.com; francois@medwavegroup.com';
+  static const String _bccEmailList =
+      'tertiusvawork@gmail.com; tertiusva@gmail.com';
 
   /// Send booking confirmation email
   static Future<bool> sendBookingConfirmation({

@@ -52,10 +52,11 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     _horizontalScrollController = ScrollController();
     _loadAppointments();
     _searchController.addListener(_onSearchChanged);
-    // Load admin users for assignment feature (Super Admin only)
+    // Load admin users for assignment feature (Super Admin and Country Admin)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
-      if (authProvider.userRole == UserRole.superAdmin) {
+      final role = authProvider.userRole;
+      if (role == UserRole.superAdmin || role == UserRole.countryAdmin) {
         context.read<AdminProvider>().loadAdminUsers();
       }
       // Load product items for Opt In stage selections
