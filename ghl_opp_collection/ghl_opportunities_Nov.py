@@ -38,6 +38,8 @@ GHL_API_VERSION = '2021-07-28'
 # Pipeline IDs (Only Andries and Davide)
 ANDRIES_PIPELINE_ID = 'XeAGJWRnUGJ5tuhXam2g'
 DAVIDE_PIPELINE_ID = 'AUduOJBB2lxlsEaNmlJz'
+Elmien = 'FSop78ljd2tK3C4KRQAA'
+Karin = 'MIC1e4ef5NmSmfZEtePc'
 
 # Date range will be calculated dynamically (yesterday and today in SA timezone)
 
@@ -210,7 +212,7 @@ def get_stage_name(pipeline_id, stage_id):
 
 def fetch_all_november_opportunities():
     # Date range: Jan 27, 2026 to today
-    START_DATE_STR = "2026-02-11T14:00:00.000"
+    START_DATE_STR = "2025-10-01T00:00:00.000"
     # Parse START_DATE as datetime object for comparison
     START_DATE_DT = datetime.fromisoformat(START_DATE_STR.replace("Z", "+00:00")).replace(tzinfo=timezone.utc)
     
@@ -225,7 +227,7 @@ def fetch_all_november_opportunities():
     print(f"📅 Date Range: {START_DATE_STR} to {END_DATE}")
     print(f"🎯 Location ID: {GHL_LOCATION_ID}")
     print(f"📊 API Version: {GHL_API_VERSION}")
-    print(f"👥 Pipelines: Andries & Davide ONLY\n")
+    print(f"👥 Pipelines: Andries, Davide, Elmien & Karin ONLY\n")
 
     # ---------------------------
     # OPTIMIZED: FETCH & FILTER IN ONE STEP WITH EARLY TERMINATION
@@ -290,7 +292,7 @@ def fetch_all_november_opportunities():
                 
                 # Check if within date range AND belongs to target pipelines
                 if (START_DATE_DT <= created_at_dt <= now_utc and 
-                    opp.get("pipelineId") in (ANDRIES_PIPELINE_ID, DAVIDE_PIPELINE_ID)):
+                    opp.get("pipelineId") in (ANDRIES_PIPELINE_ID, DAVIDE_PIPELINE_ID, Elmien, Karin)):
                     filtered_opportunities.append(opp)
                     page_filtered_count += 1
 

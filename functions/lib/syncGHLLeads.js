@@ -1,6 +1,6 @@
 /**
  * GHL Leads Sync Module
- * Fetches new leads from GoHighLevel (Andries and Davide pipelines)
+ * Fetches new leads from GoHighLevel (Andries, Davide, Elmien, and Karin pipelines)
  * and stores them in Firebase leads collection with deduplication
  */
 
@@ -12,9 +12,11 @@ const GHL_BASE_URL = 'https://services.leadconnectorhq.com';
 const GHL_LOCATION_ID = 'QdLXaFEqrdF0JbVbpKLw';
 const GHL_API_VERSION = '2021-07-28';
 
-// Pipeline IDs (Only Andries and Davide)
+// Pipeline IDs
 const ANDRIES_PIPELINE_ID = 'XeAGJWRnUGJ5tuhXam2g';
 const DAVIDE_PIPELINE_ID = 'AUduOJBB2lxlsEaNmlJz';
+const ELMIEN_PIPELINE_ID = 'FSop78ljd2tK3C4KRQAA';
+const KARIN_PIPELINE_ID = 'MIC1e4ef5NmSmfZEtePc';
 
 // Baseline timestamp: December 11, 2025 00:00:00 UTC
 // This is when the last manual sync was run
@@ -446,7 +448,12 @@ async function syncGHLLeads(apiKey = null) {
     console.log();
     
     // Fetch opportunities since last sync
-    const pipelineIds = [ANDRIES_PIPELINE_ID, DAVIDE_PIPELINE_ID];
+    const pipelineIds = [
+      ANDRIES_PIPELINE_ID,
+      DAVIDE_PIPELINE_ID,
+      ELMIEN_PIPELINE_ID,
+      KARIN_PIPELINE_ID
+    ];
     const opportunities = await fetchOpportunitiesSinceTimestamp(
       lastSyncTimestamp,
       pipelineIds,
