@@ -33,6 +33,8 @@ class SalesAppointment {
   final DateTime? depositConfirmationRespondedAt;
   final DateTime?
   contractEmailSentAt; // When contract link email was sent to customer
+  final String?
+  contractEmailSendError; // Short reason when contract email send failed (e.g. invalid email)
   final bool
   manuallyAdded; // Indicates if appointment was manually added to stream
   final String paymentType; // 'deposit' or 'full_payment'
@@ -83,6 +85,7 @@ class SalesAppointment {
     this.depositConfirmationSentAt,
     this.depositConfirmationRespondedAt,
     this.contractEmailSentAt,
+    this.contractEmailSendError,
     this.manuallyAdded = false,
     this.paymentType = 'deposit',
     this.depositProofUrl,
@@ -187,6 +190,7 @@ class SalesAppointment {
       depositConfirmationRespondedAt:
           (map['depositConfirmationRespondedAt'] as Timestamp?)?.toDate(),
       contractEmailSentAt: (map['contractEmailSentAt'] as Timestamp?)?.toDate(),
+      contractEmailSendError: map['contractEmailSendError']?.toString(),
       manuallyAdded: map['manuallyAdded'] == true,
       paymentType: map['paymentType']?.toString() ?? 'deposit',
       depositProofUrl: map['depositProofUrl']?.toString(),
@@ -253,6 +257,7 @@ class SalesAppointment {
       'contractEmailSentAt': contractEmailSentAt != null
           ? Timestamp.fromDate(contractEmailSentAt!)
           : null,
+      'contractEmailSendError': contractEmailSendError,
       'manuallyAdded': manuallyAdded,
       'paymentType': paymentType,
       'depositProofUrl': depositProofUrl,
@@ -312,6 +317,8 @@ class SalesAppointment {
     DateTime? depositConfirmationSentAt,
     DateTime? depositConfirmationRespondedAt,
     DateTime? contractEmailSentAt,
+    String? contractEmailSendError,
+    bool clearContractEmailSendError = false,
     bool? manuallyAdded,
     String? paymentType,
     String? depositProofUrl,
@@ -365,6 +372,9 @@ class SalesAppointment {
       depositConfirmationRespondedAt:
           depositConfirmationRespondedAt ?? this.depositConfirmationRespondedAt,
       contractEmailSentAt: contractEmailSentAt ?? this.contractEmailSentAt,
+      contractEmailSendError: clearContractEmailSendError
+          ? null
+          : (contractEmailSendError ?? this.contractEmailSendError),
       manuallyAdded: manuallyAdded ?? this.manuallyAdded,
       paymentType: paymentType ?? this.paymentType,
       depositProofUrl: depositProofUrl ?? this.depositProofUrl,

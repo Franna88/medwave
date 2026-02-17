@@ -262,6 +262,34 @@ class ContractPdfService {
     }
   }
 
+  /// Upload a copy of the contract PDF for BCC email download link (avoids EmailJS 50KB limit).
+  /// Path: contracts/{contractId}/sent_copy.pdf
+  Future<String> uploadSentCopyToStorage(
+    Contract contract,
+    Uint8List pdfBytes,
+  ) async {
+    try {
+      final fileName = 'sent_copy.pdf';
+      final ref = _storage.ref().child('contracts/${contract.id}/$fileName');
+      await ref.putData(
+        pdfBytes,
+        SettableMetadata(
+          contentType: 'application/pdf',
+          customMetadata: {
+            'contractId': contract.id,
+            'customerName': contract.customerName,
+          },
+        ),
+      );
+      return await ref.getDownloadURL();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error uploading sent copy PDF: $e');
+      }
+      rethrow;
+    }
+  }
+
   /// Build PDF header with logo and title
   pw.Widget _buildHeader(pw.MemoryImage logo) {
     return pw.Container(
@@ -689,7 +717,7 @@ class ContractPdfService {
           pw.SizedBox(height: 4),
           _buildTotalRow('VAT (15%)', vatAmount),
           pw.SizedBox(height: 4),
-          _buildTotalRow('Deposit Allocate', contract.depositAmount),
+          _buildTotalRow('Deposit Allocate (10%)', contract.depositAmount),
           pw.SizedBox(height: 4),
           _buildTotalRow('Balance due', contract.remainingBalance),
           pw.Divider(),

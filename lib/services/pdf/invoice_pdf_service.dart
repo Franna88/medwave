@@ -316,7 +316,7 @@ class InvoicePdfService {
               children: [
                 _buildTotalRow('Subtotal', subtotal),
                 pw.SizedBox(height: 4),
-                _buildTotalRow('Deposit Allocate', depositAmount, isBold: true),
+                _buildTotalRow('Deposit Allocate (10%)', depositAmount, isBold: true),
                 pw.Divider(),
                 _buildTotalRow(
                   'Invoice Amount Due',

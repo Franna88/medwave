@@ -665,8 +665,9 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
   Widget _buildQuoteSection(Contract contract) {
     final totalInclVat = contract.subtotal * 1.15;
     final vatAmount = contract.subtotal * 0.15;
-    final depositPercentage = totalInclVat > 0
-        ? ((contract.depositAmount / totalInclVat) * 100).toStringAsFixed(0)
+    // Deposit is 10% of subtotal (ex VAT); show percentage of subtotal so label matches calculation
+    final depositPercentage = contract.subtotal > 0
+        ? ((contract.depositAmount / contract.subtotal) * 100).toStringAsFixed(0)
         : '10';
 
     return _buildCard(

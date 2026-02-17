@@ -61,11 +61,13 @@ class EmailJSService {
   static const String _adminEmail =
       'info@barefootbytes.com'; // TODO: Update with actual superadmin email
 
-  // BCC list: used for Contract Sent, Contract Signed, and Deposit Confirmed notifications
+  // BCC list: Previously used for Contract Sent, Contract Signed, and Deposit Confirmed notifications.
+  // BCC recipients are now configured directly in the EmailJS template, so this constant is no longer used.
+  // Kept for reference - these were the emails previously used:
   // static const String _bccEmailList =
-  //     'info@barefootbytes.com; janae@medwavegroup.com; andries@medwavegroup.com; davide@medwavegroup.com; francois@medwavegroup.com';
-  static const String _bccEmailList =
-      'tertiusvawork@gmail.com; tertiusva@gmail.com';
+  //     'info@barefootbytes.com; elmienphysio@medwavegroup.com; andries@medwavegroup.com; davide@medwavegroup.com; francois@medwavegroup.com';
+  // static const String _bccEmailList =
+  //     'tertiusvawork@gmail.com; tertiusva@gmail.com';
 
   /// Send booking confirmation email
   static Future<bool> sendBookingConfirmation({
@@ -200,8 +202,29 @@ class EmailJSService {
     }
   }
 
-  /// Send contract link email right after generation (Opt In flow)
-  static Future<bool> sendContractLinkEmail({
+  /// Result of sending contract link email. [errorMessage] is a short user-facing reason when [success] is false (max ~80 chars).
+  static const int _maxErrorMessageLength = 80;
+
+  static String _shortSendError(int statusCode, String body) {
+    final short = body.length > 120 ? '${body.substring(0, 120)}…' : body;
+    if (statusCode == 400) return 'Invalid or missing email';
+    if (statusCode == 413) return 'Payload too large';
+    if (statusCode >= 500) return 'Server error';
+    if (short.toLowerCase().contains('variable') &&
+        short.toLowerCase().contains('limit'))
+      return 'Variables size limit exceeded';
+    if (short.toLowerCase().contains('email'))
+      return short.length > _maxErrorMessageLength
+          ? short.substring(0, _maxErrorMessageLength)
+          : short;
+    return short.length > _maxErrorMessageLength
+        ? short.substring(0, _maxErrorMessageLength)
+        : short;
+  }
+
+  /// Send contract link email right after generation (Opt In flow).
+  /// Returns (success: true, errorMessage: null) on success, or (success: false, errorMessage: short reason) on failure.
+  static Future<({bool success, String? errorMessage})> sendContractLinkEmail({
     required sales_models.SalesAppointment appointment,
     required String contractUrl,
     String? websiteUrl,
@@ -238,77 +261,96 @@ class EmailJSService {
 
       if (response.statusCode == 200) {
         debugPrint('✅ Contract link email sent successfully');
-        return true;
+        return (success: true, errorMessage: null);
       } else {
+        final reason = _shortSendError(response.statusCode, response.body);
         debugPrint(
           '❌ Failed to send contract link email (${response.statusCode}): ${response.body}',
         );
-        return false;
+        return (success: false, errorMessage: reason);
       }
     } catch (error) {
       debugPrint('❌ Error sending contract link email: $error');
-      return false;
+      final msg = error.toString();
+      final reason = msg.length > _maxErrorMessageLength
+          ? msg.substring(0, _maxErrorMessageLength)
+          : msg;
+      return (success: false, errorMessage: reason);
     }
   }
 
   /// Send "Contract Sent" notification to the BCC list (no customer recipient).
   /// Call after successfully sending the contract link email to the client.
-  /// EmailJS template: set "To Email" to {{bcc_email}} to send to the full list,
-  /// or {{to_email}} for a single recipient (first in list). We send both.
+  /// EmailJS template: BCC recipients are configured directly in the template. No recipient variables needed.
+  /// If [contractDownloadUrl] is provided, it is sent as {{contract_download_url}} (link to PDF; avoids EmailJS 50KB variable limit).
   static Future<bool> sendContractSentNotificationToBcc({
     required String contractId,
     required String customerName,
     required DateTime contractSentDate,
+    String? contractDownloadUrl,
   }) async {
     try {
-      final list = _bccEmailList.trim();
-      if (list.isEmpty) {
-        debugPrint('⚠️ Contract sent notification skipped: BCC list is empty');
-        return false;
-      }
-      final parts = list.contains(';')
-          ? list
-                .split(';')
-                .map((e) => e.trim())
-                .where((e) => e.isNotEmpty)
-                .toList()
-          : [list];
-      final toEmail = parts.isNotEmpty ? parts.first : list;
-      // Full BCC list for template "To Email" = {{bcc_email}} (semicolon-separated)
-      final bccEmailList = parts.join(';');
       debugPrint(
-        '📧 Sending contract sent notification to: $toEmail / bcc list (template $_contractSentNotificationTemplateId)',
+        '📧 Sending contract sent notification (template $_contractSentNotificationTemplateId)',
+      );
+
+      const int emailJsMaxVariablesBytes = 50 * 1024; // 50KB
+      const int safeLimitBytes = 45 * 1024; // leave margin
+
+      final templateParams = <String, dynamic>{
+        'customer_name': customerName,
+        'contract_id': contractId,
+        'contract_sent_date': DateFormat(
+          'MMMM dd, yyyy',
+        ).format(contractSentDate),
+      };
+      if (contractDownloadUrl != null && contractDownloadUrl.isNotEmpty) {
+        templateParams['contract_download_url'] = contractDownloadUrl;
+      }
+
+      // Ensure we never exceed EmailJS 50KB variables limit (omit optional URL if needed)
+      final paramsJson = json.encode(templateParams);
+      final paramsBytes = paramsJson.length;
+      if (paramsBytes > safeLimitBytes) {
+        if (templateParams.containsKey('contract_download_url')) {
+          templateParams.remove('contract_download_url');
+          final retryJson = json.encode(templateParams);
+          if (retryJson.length > emailJsMaxVariablesBytes) {
+            debugPrint(
+              '⚠️ Contract sent BCC: template_params still too large (${retryJson.length} bytes) after removing URL. Check other fields.',
+            );
+          } else {
+            debugPrint(
+              '⚠️ Contract sent BCC: params were ${paramsBytes} bytes; sending without contract_download_url to stay under 50KB.',
+            );
+          }
+        }
+      }
+      final body = {
+        'service_id': _serviceId,
+        'template_id': _contractSentNotificationTemplateId,
+        'user_id': _userId,
+        'template_params': templateParams,
+      };
+      debugPrint(
+        '📧 Contract sent BCC request size: ${(json.encode(body).length / 1024).toStringAsFixed(1)} KB',
       );
 
       final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'service_id': _serviceId,
-          'template_id': _contractSentNotificationTemplateId,
-          'user_id': _userId,
-          'template_params': {
-            'email': toEmail,
-            'to_email': toEmail,
-            'bcc_email': bccEmailList,
-            'customer_name': customerName,
-            'contract_id': contractId,
-            'contract_sent_date': DateFormat(
-              'MMMM dd, yyyy',
-            ).format(contractSentDate),
-          },
-        }),
+        body: json.encode(body),
       );
 
       if (response.statusCode == 200) {
         debugPrint(
-          '✅ Contract sent notification (BCC) sent successfully to $toEmail',
+          '✅ Contract sent notification (BCC) sent successfully',
         );
         return true;
       } else {
         debugPrint(
-          '❌ Contract sent notification failed: ${response.statusCode} body=${response.body} to=$toEmail',
+          '❌ Contract sent notification failed: ${response.statusCode} body=${response.body}',
         );
         return false;
       }
@@ -320,32 +362,16 @@ class EmailJSService {
   }
 
   /// Send "Contract Signed" notification to the BCC list (no customer recipient).
-  /// Call after the client signs the contract. Uses same BCC list as contract sent.
-  /// EmailJS template: set "To Email" to {{bcc_email}} or {{to_email}}.
+  /// Call after the client signs the contract.
+  /// EmailJS template: BCC recipients are configured directly in the template. No recipient variables needed.
   static Future<bool> sendContractSignedNotificationToBcc({
     required String contractId,
     required String customerName,
     required DateTime contractSignedDate,
   }) async {
     try {
-      final list = _bccEmailList.trim();
-      if (list.isEmpty) {
-        debugPrint(
-          '⚠️ Contract signed notification skipped: BCC list is empty',
-        );
-        return false;
-      }
-      final parts = list.contains(';')
-          ? list
-                .split(';')
-                .map((e) => e.trim())
-                .where((e) => e.isNotEmpty)
-                .toList()
-          : [list];
-      final toEmail = parts.isNotEmpty ? parts.first : list;
-      final bccEmailList = parts.join(';');
       debugPrint(
-        '📧 Sending contract signed notification to: $toEmail / bcc list (template $_contractSignedNotificationTemplateId)',
+        '📧 Sending contract signed notification (template $_contractSignedNotificationTemplateId)',
       );
 
       final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
@@ -357,9 +383,6 @@ class EmailJSService {
           'template_id': _contractSignedNotificationTemplateId,
           'user_id': _userId,
           'template_params': {
-            'email': toEmail,
-            'to_email': toEmail,
-            'bcc_email': bccEmailList,
             'customer_name': customerName,
             'contract_id': contractId,
             'contract_signed_date': DateFormat(
@@ -371,12 +394,12 @@ class EmailJSService {
 
       if (response.statusCode == 200) {
         debugPrint(
-          '✅ Contract signed notification (BCC) sent successfully to $toEmail',
+          '✅ Contract signed notification (BCC) sent successfully',
         );
         return true;
       } else {
         debugPrint(
-          '❌ Contract signed notification failed: ${response.statusCode} body=${response.body} to=$toEmail',
+          '❌ Contract signed notification failed: ${response.statusCode} body=${response.body}',
         );
         return false;
       }
@@ -388,31 +411,15 @@ class EmailJSService {
   }
 
   /// Send "Deposit Confirmed" notification to the BCC list when ticket reaches deposit_made.
-  /// Uses same BCC list as contract sent/signed. EmailJS template: set "To Email" to {{bcc_email}} or {{to_email}}.
+  /// EmailJS template: BCC recipients are configured directly in the template. No recipient variables needed.
   static Future<bool> sendDepositConfirmedNotificationToBcc({
     required String contractId,
     required String customerName,
     required DateTime depositConfirmedDate,
   }) async {
     try {
-      final list = _bccEmailList.trim();
-      if (list.isEmpty) {
-        debugPrint(
-          '⚠️ Deposit confirmed notification skipped: BCC list is empty',
-        );
-        return false;
-      }
-      final parts = list.contains(';')
-          ? list
-                .split(';')
-                .map((e) => e.trim())
-                .where((e) => e.isNotEmpty)
-                .toList()
-          : [list];
-      final toEmail = parts.isNotEmpty ? parts.first : list;
-      final bccEmailList = parts.join(';');
       debugPrint(
-        '📧 Sending deposit confirmed notification to: $toEmail / bcc list (template $_contractDepositConfirmedNotificationTemplateId)',
+        '📧 Sending deposit confirmed notification (template $_contractDepositConfirmedNotificationTemplateId)',
       );
 
       final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
@@ -424,9 +431,6 @@ class EmailJSService {
           'template_id': _contractDepositConfirmedNotificationTemplateId,
           'user_id': _userId,
           'template_params': {
-            'email': toEmail,
-            'to_email': toEmail,
-            'bcc_email': bccEmailList,
             'customer_name': customerName,
             'contract_id': contractId,
             'deposit_confirmed_date': DateFormat(
@@ -438,12 +442,12 @@ class EmailJSService {
 
       if (response.statusCode == 200) {
         debugPrint(
-          '✅ Deposit confirmed notification (BCC) sent successfully to $toEmail',
+          '✅ Deposit confirmed notification (BCC) sent successfully',
         );
         return true;
       } else {
         debugPrint(
-          '❌ Deposit confirmed notification failed: ${response.statusCode} body=${response.body} to=$toEmail',
+          '❌ Deposit confirmed notification failed: ${response.statusCode} body=${response.body}',
         );
         return false;
       }

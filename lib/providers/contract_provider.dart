@@ -121,35 +121,50 @@ class ContractProvider extends ChangeNotifier {
     }
   }
 
-  /// Resend contract email (for revisions or original contracts)
-  Future<bool> resendContractEmail({
+  /// Resend contract email (for revisions or original contracts).
+  /// Returns (success, errorMessage) so UI can show a short reason when send fails.
+  Future<({bool success, String? errorMessage})> resendContractEmail({
     required Contract contract,
     required SalesAppointment appointment,
   }) async {
     try {
       final contractUrl = getFullContractUrl(contract);
-      final success = await EmailJSService.sendContractLinkEmail(
+      final result = await EmailJSService.sendContractLinkEmail(
         appointment: appointment,
         contractUrl: contractUrl,
       );
-      if (success) {
+      if (result.success) {
+        String? downloadUrl;
+        try {
+          downloadUrl = await _service.getContractPdfDownloadUrl(contract);
+        } catch (e) {
+          if (kDebugMode) {
+            print(
+              'ContractProvider: Could not generate PDF download link for BCC: $e',
+            );
+          }
+        }
         _lastContractBccSent =
             await EmailJSService.sendContractSentNotificationToBcc(
               contractId: contract.id,
               customerName: appointment.customerName,
               contractSentDate: DateTime.now(),
+              contractDownloadUrl: downloadUrl,
             );
         if (!_lastContractBccSent && kDebugMode) {
           print(
             'ContractProvider: Contract sent to client but BCC notification failed. In EmailJS set "To Email" to {{bcc_email}} or {{to_email}} (we send both).',
           );
         }
+        return (success: true, errorMessage: null);
       }
-      return success;
+      return (success: false, errorMessage: result.errorMessage);
     } catch (e) {
       _error = e.toString();
       notifyListeners();
-      return false;
+      final msg = e.toString();
+      final reason = msg.length > 80 ? msg.substring(0, 80) : msg;
+      return (success: false, errorMessage: reason);
     }
   }
 
@@ -287,7 +302,8 @@ class ContractProvider extends ChangeNotifier {
         } catch (e) {
           if (kDebugMode) {
             print(
-                '⚠️ ContractProvider: Contract signed but BCC notification failed: $e');
+              '⚠️ ContractProvider: Contract signed but BCC notification failed: $e',
+            );
           }
         }
       }

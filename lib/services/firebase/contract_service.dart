@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:crypto/crypto.dart';
@@ -504,6 +505,18 @@ class ContractService {
       }
       rethrow;
     }
+  }
+
+  /// Generate contract PDF bytes (no upload). Used e.g. for BCC email attachment.
+  Future<Uint8List> getContractPdfBytes(Contract contract) async {
+    return await _pdfService.generatePdfBytes(contract);
+  }
+
+  /// Generate contract PDF, upload a copy to Storage, and return the download URL.
+  /// Used for BCC "contract sent" email so recipients get a link (EmailJS has a 50KB variable limit).
+  Future<String> getContractPdfDownloadUrl(Contract contract) async {
+    final bytes = await _pdfService.generatePdfBytes(contract);
+    return await _pdfService.uploadSentCopyToStorage(contract, bytes);
   }
 
   /// Void a contract

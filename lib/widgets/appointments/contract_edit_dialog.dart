@@ -1466,7 +1466,7 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                 ],
                                 const SizedBox(height: 4),
                                 _buildTotalRow(
-                                  'Deposit Allocate',
+                                  'Deposit Allocate (10%)',
                                   _subtotal() * 0.10,
                                   isBold: true,
                                 ),
