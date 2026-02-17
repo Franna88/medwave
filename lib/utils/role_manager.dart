@@ -382,6 +382,11 @@ class RoleManager {
                 '/admin/streams/support',
                 'support_agent',
               ),
+              NavigationSubItem(
+                'Analytics',
+                '/admin/streams/analytics',
+                'analytics',
+              ),
             ],
           ),
         );

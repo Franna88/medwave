@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:medwave_app/screens/admin/streams/stream_analytics_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 // Conditional import: uses web plugin on web, stub on mobile
@@ -663,6 +664,11 @@ GoRouter _buildRouter(AuthProvider authProvider) => GoRouter(
               path: 'support',
               name: 'admin-streams-support',
               builder: (context, state) => const SupportStreamScreen(),
+            ),
+            GoRoute(
+              path: 'analytics',
+              name: 'admin-streams-analytics',
+              builder: (context, state) => const StreamAnalyticsScreen(),
             ),
           ],
         ),
