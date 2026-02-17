@@ -196,34 +196,74 @@ function extractLeadData(opportunity, contact) {
 }
 
 /**
- * Check if lead already exists in Firebase
+ * Get existing lead IDs in batch using Firestore getAll()
+ * Returns a Set of existing contact IDs for O(1) lookup
  */
-async function checkLeadExists(db, contactId) {
-  try {
-    const leadDoc = await db.collection('leads').doc(contactId).get();
-    return leadDoc.exists;
-  } catch (error) {
-    console.error(`⚠️ Error checking if lead exists (${contactId}):`, error);
-    return false; // Assume doesn't exist on error, will be caught during write
+async function getExistingLeadIds(db, contactIds) {
+  const existingIds = new Set();
+  
+  // Firestore getAll() supports up to 500 document references per call
+  const batchSize = 500;
+  
+  for (let i = 0; i < contactIds.length; i += batchSize) {
+    const batch = contactIds.slice(i, i + batchSize);
+    const docRefs = batch.map(contactId => db.collection('leads').doc(contactId));
+    
+    try {
+      const docs = await db.getAll(...docRefs);
+      docs.forEach(doc => {
+        if (doc.exists) {
+          existingIds.add(doc.id);
+        }
+      });
+    } catch (error) {
+      console.error(`⚠️ Error batch checking leads (batch ${Math.floor(i / batchSize) + 1}):`, error);
+      // Continue with other batches even if one fails
+    }
   }
+  
+  return existingIds;
 }
 
 /**
- * Create lead in Firebase
+ * Batch create leads in Firebase
+ * Processes leads in batches of 500 (Firestore batch limit)
+ * Returns count of successfully created leads
  */
-async function createLeadInFirebase(db, contactId, leadData) {
-  try {
-    await db.collection('leads').doc(contactId).set(leadData);
-    return true;
-  } catch (error) {
-    console.error(`❌ Error creating lead (${contactId}):`, error);
-    return false;
+async function batchCreateLeads(db, leadsArray) {
+  if (leadsArray.length === 0) {
+    return 0;
   }
+  
+  const batchSize = 500;
+  let createdCount = 0;
+  
+  for (let i = 0; i < leadsArray.length; i += batchSize) {
+    const batch = leadsArray.slice(i, i + batchSize);
+    const firestoreBatch = db.batch();
+    
+    batch.forEach(({ contactId, leadData }) => {
+      const docRef = db.collection('leads').doc(contactId);
+      firestoreBatch.set(docRef, leadData);
+    });
+    
+    try {
+      await firestoreBatch.commit();
+      createdCount += batch.length;
+      console.log(`   ✅ Committed batch ${Math.floor(i / batchSize) + 1}: ${createdCount} leads created so far...`);
+    } catch (error) {
+      console.error(`❌ Error committing batch ${Math.floor(i / batchSize) + 1}:`, error);
+      // Continue with next batch even if one fails
+    }
+  }
+  
+  return createdCount;
 }
 
 /**
  * Fetch opportunities from GHL API since a given timestamp
- * Handles pagination and rate limiting
+ * Handles pagination and rate limiting with early termination
+ * Stops fetching when encountering opportunities older than timestamp
  */
 async function fetchOpportunitiesSinceTimestamp(timestamp, pipelineIds, apiKey) {
   const allOpportunities = [];
@@ -232,10 +272,11 @@ async function fetchOpportunitiesSinceTimestamp(timestamp, pipelineIds, apiKey) 
   const limit = 100;
   const maxPages = 1000; // Safety limit
   
-  // Convert timestamp to ISO string for filtering
-  const sinceDate = timestamp.toISOString();
+  // Convert timestamp to Date object for comparison (API returns ISO strings)
+  const sinceDate = timestamp instanceof Date ? timestamp : new Date(timestamp);
+  const sinceDateISO = sinceDate.toISOString();
   
-  console.log(`📊 Fetching opportunities created after: ${sinceDate}`);
+  console.log(`📊 Fetching opportunities created after: ${sinceDateISO}`);
   
   while (page <= maxPages) {
     try {
@@ -265,23 +306,49 @@ async function fetchOpportunitiesSinceTimestamp(timestamp, pipelineIds, apiKey) 
         break;
       }
       
-      // Filter opportunities by:
-      // 1. Created after timestamp
-      // 2. Belongs to target pipelines
-      const filtered = opportunities.filter(opp => {
+      // Filter opportunities by date range AND pipeline during fetch
+      // Also check for early termination
+      const filtered = [];
+      let oldestOnPage = null;
+      let shouldStop = false;
+      
+      for (const opp of opportunities) {
         const createdAt = opp.createdAt;
         const pipelineId = opp.pipelineId;
         
-        // Check if created after timestamp
-        if (createdAt && createdAt >= sinceDate) {
-          // Check if belongs to target pipelines
-          return pipelineIds.includes(pipelineId);
+        if (!createdAt) {
+          continue;
         }
-        return false;
-      });
+        
+        // Parse createdAt for comparison
+        const createdAtDate = new Date(createdAt);
+        
+        // Track oldest opportunity on this page
+        if (oldestOnPage === null || createdAtDate < oldestOnPage) {
+          oldestOnPage = createdAtDate;
+        }
+        
+        // Stop fetching if we've gone past our timestamp
+        if (createdAtDate < sinceDate) {
+          console.log(`   ⏹️  Reached opportunities older than ${sinceDateISO}, stopping fetch`);
+          shouldStop = true;
+          break;
+        }
+        
+        // Check if created after timestamp AND belongs to target pipelines
+        if (createdAt >= sinceDateISO && pipelineIds.includes(pipelineId)) {
+          filtered.push(opp);
+        }
+      }
       
       allOpportunities.push(...filtered);
       console.log(`   📄 Page ${page}: Found ${filtered.length} new opportunities (Total: ${allOpportunities.length})`);
+      
+      // Stop if we encountered opportunities older than timestamp
+      if (shouldStop || (oldestOnPage && oldestOnPage < sinceDate)) {
+        console.log(`   ⏹️  Oldest opportunity on page (${oldestOnPage.toISOString()}) is before ${sinceDateISO}, stopping fetch`);
+        break;
+      }
       
       // If we got fewer results than limit, this is likely the last page
       if (opportunities.length < limit) {
@@ -400,30 +467,39 @@ async function syncGHLLeads(apiKey = null) {
     console.log('='.repeat(80));
     console.log();
     
-    // Process each opportunity
-    for (let i = 0; i < opportunities.length; i++) {
-      const opp = opportunities[i];
+    // Extract all contact IDs for batch existence check
+    const contactIds = [];
+    const opportunityMap = new Map(); // Map contactId -> opportunity
+    
+    for (const opp of opportunities) {
+      const contactId = opp.contactId || opp.contact?.id;
+      if (contactId) {
+        contactIds.push(contactId);
+        opportunityMap.set(contactId, opp);
+      }
+    }
+    
+    console.log(`📋 Checking existence of ${contactIds.length} leads...`);
+    
+    // Batch check which leads already exist
+    const existingLeadIds = await getExistingLeadIds(db, contactIds);
+    stats.duplicatesSkipped = existingLeadIds.size;
+    
+    console.log(`   Found ${existingLeadIds.size} existing leads, ${contactIds.length - existingLeadIds.size} new leads to create`);
+    console.log();
+    
+    // Collect leads to create
+    const leadsToCreate = [];
+    
+    for (const contactId of contactIds) {
+      // Skip if already exists
+      if (existingLeadIds.has(contactId)) {
+        continue;
+      }
+      
+      const opp = opportunityMap.get(contactId);
       
       try {
-        const contactId = opp.contactId || opp.contact?.id;
-        
-        if (!contactId) {
-          console.log(`⚠️ Skipped opportunity ${opp.id}: no contactId`);
-          stats.errors++;
-          continue;
-        }
-        
-        // Check if lead already exists
-        const exists = await checkLeadExists(db, contactId);
-        
-        if (exists) {
-          stats.duplicatesSkipped++;
-          if ((i + 1) % 50 === 0) {
-            console.log(`   Processed ${i + 1}/${opportunities.length}... (${stats.newLeadsCreated} created, ${stats.duplicatesSkipped} skipped)`);
-          }
-          continue;
-        }
-        
         // Extract contact information
         const contact = opp.contact || {};
         if (!contact.name && !opp.name) {
@@ -435,27 +511,29 @@ async function syncGHLLeads(apiKey = null) {
         // Extract lead data
         const leadData = extractLeadData(opp, contact);
         
-        // Create lead in Firebase
-        const created = await createLeadInFirebase(db, contactId, leadData);
-        
-        if (created) {
-          stats.newLeadsCreated++;
-          if (stats.newLeadsCreated % 10 === 0) {
-            console.log(`   ✅ Created ${stats.newLeadsCreated} leads...`);
-          }
-        } else {
-          stats.errors++;
-        }
-        
-        // Progress update every 50 opportunities
-        if ((i + 1) % 50 === 0) {
-          console.log(`   Processed ${i + 1}/${opportunities.length}... (${stats.newLeadsCreated} created, ${stats.duplicatesSkipped} skipped)`);
-        }
+        leadsToCreate.push({
+          contactId: contactId,
+          leadData: leadData
+        });
         
       } catch (error) {
         console.error(`❌ Error processing opportunity ${opp.id}:`, error.message);
         stats.errors++;
         stats.lastError = error.message;
+      }
+    }
+    
+    console.log(`📦 Prepared ${leadsToCreate.length} leads for batch creation`);
+    console.log();
+    
+    // Batch create leads
+    if (leadsToCreate.length > 0) {
+      console.log('💾 Batch writing leads to Firestore...');
+      const createdCount = await batchCreateLeads(db, leadsToCreate);
+      stats.newLeadsCreated = createdCount;
+      
+      if (createdCount < leadsToCreate.length) {
+        stats.errors += (leadsToCreate.length - createdCount);
       }
     }
     

@@ -53,9 +53,9 @@ GHL_LOCATION_ID = 'QdLXaFEqrdF0JbVbpKLw'
 GHL_BASE_URL = 'https://services.leadconnectorhq.com'
 GHL_API_VERSION = '2021-07-28'
 
-# Date range for November 2025
-START_DATE = '2025-11-27T00:00:00.000Z'
-END_DATE = '2025-12-07T23:59:59.999Z'
+# Date range for December 2025
+START_DATE = '2025-12-11T00:00:00.000Z'
+END_DATE = '2026-01-30T23:59:59.999Z'
 
 # Test mode flag - set to True to fetch only 1 submission for testing
 TEST_MODE = False
@@ -162,10 +162,10 @@ def calculate_form_score(submission):
     return total_score
 
 
-def fetch_all_november_submissions():
+def fetch_all_december_submissions():
     """Fetch all form submissions for November 2025"""
     print('='*80)
-    print('GHL FORM SUBMISSIONS COLLECTION - NOVEMBER 2025')
+    print('GHL FORM SUBMISSIONS COLLECTION - DECEMBER 2025')
     print('='*80 + '\n')
     
     if TEST_MODE:
@@ -369,8 +369,8 @@ def fetch_all_november_submissions():
     print(f'   Errors: {error_count}')
     print(f'\n   Collection: ghl_data')
     print(f'   Document ID format: contactId (e.g., "ziJ4rSgkJA5qIqIXzD0X")')
-    print(f'   Month: November 2025')
-    print(f'\n✅ All November 2025 GHL form submissions stored in Firestore!\n')
+    print(f'   Month: December 2025')
+    print(f'\n✅ All December 2025 GHL form submissions stored in Firestore!\n')
     
     # Show some stats
     if submissions_without_contact_id:
@@ -378,5 +378,5 @@ def fetch_all_november_submissions():
 
 
 if __name__ == '__main__':
-    fetch_all_november_submissions()
+    fetch_all_december_submissions()
 

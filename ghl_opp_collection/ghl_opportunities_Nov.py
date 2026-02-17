@@ -209,37 +209,39 @@ def get_stage_name(pipeline_id, stage_id):
 # ---------------------------------------------------------------
 
 def fetch_all_november_opportunities():
-    # Date range: Nov 27, 2025 to Dec 7, 2025 (today)
-    # Start: Nov 27, 2025 00:00:00 UTC
-    START_DATE = "2025-11-27T00:00:00.000Z"
+    # Date range: Jan 27, 2026 to today
+    START_DATE_STR = "2026-02-11T14:00:00.000"
+    # Parse START_DATE as datetime object for comparison
+    START_DATE_DT = datetime.fromisoformat(START_DATE_STR.replace("Z", "+00:00")).replace(tzinfo=timezone.utc)
     
-    # End: Dec 7, 2025 23:59:59 UTC (today)
+    # End: today
     now_utc = datetime.now(timezone.utc)
     END_DATE = now_utc.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     
     print("="*80)
-    print("GHL OPPORTUNITIES COLLECTION - NOV 27 TO DEC 7")
+    print("GHL OPPORTUNITIES COLLECTION - FEB 11")
     print("="*80 + "\n")
 
-    print(f"📅 Date Range: {START_DATE} to {END_DATE}")
+    print(f"📅 Date Range: {START_DATE_STR} to {END_DATE}")
     print(f"🎯 Location ID: {GHL_LOCATION_ID}")
     print(f"📊 API Version: {GHL_API_VERSION}")
     print(f"👥 Pipelines: Andries & Davide ONLY\n")
 
     # ---------------------------
-    # STEP 1: FETCH OPPORTUNITIES
+    # OPTIMIZED: FETCH & FILTER IN ONE STEP WITH EARLY TERMINATION
     # ---------------------------
     print("="*80)
-    print("STEP 1: FETCHING ALL OPPORTUNITIES FROM GHL")
+    print("STEP 1: FETCHING OPPORTUNITIES (WITH DATE FILTERING)")
     print("="*80 + "\n")
 
     url = f"{GHL_BASE_URL}/opportunities/search"
-    all_opportunities = []
+    filtered_opportunities = []
 
     params = {"location_id": GHL_LOCATION_ID, "limit": 100, "page": 1}
     page = 1
-
-    while True:
+    should_continue = True
+    
+    while should_continue:
         print(f"📄 Fetching page {page}...")
         params["page"] = page
 
@@ -259,13 +261,50 @@ def fetch_all_november_opportunities():
                 print("   ✅ No more opportunities found\n")
                 break
 
-            all_opportunities.extend(opportunities)
-            print(f"   Found {len(opportunities)} opportunities on this page")
+            # Filter opportunities by date range AND pipeline during fetch
+            page_filtered_count = 0
+            oldest_on_page = None
+            
+            for opp in opportunities:
+                created_at_str = opp.get("createdAt", "")
+                if not created_at_str:
+                    continue
+                
+                # Parse createdAt for comparison
+                try:
+                    created_at_dt = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                    if created_at_dt.tzinfo is None:
+                        created_at_dt = created_at_dt.replace(tzinfo=timezone.utc)
+                except:
+                    continue
+                
+                # Track oldest opportunity on this page
+                if oldest_on_page is None or created_at_dt < oldest_on_page:
+                    oldest_on_page = created_at_dt
+                
+                # Stop fetching if we've gone past our start date
+                if created_at_dt < START_DATE_DT:
+                    print(f"   ⏹️  Reached opportunities older than {START_DATE_STR}, stopping fetch")
+                    should_continue = False
+                    break
+                
+                # Check if within date range AND belongs to target pipelines
+                if (START_DATE_DT <= created_at_dt <= now_utc and 
+                    opp.get("pipelineId") in (ANDRIES_PIPELINE_ID, DAVIDE_PIPELINE_ID)):
+                    filtered_opportunities.append(opp)
+                    page_filtered_count += 1
 
-            meta = data.get("meta", {})
-            total = meta.get("total", 0)
-            if page * 100 >= total:
-                print(f"   ✅ Reached last page (Total: {total})\n")
+            print(f"   Found {len(opportunities)} opportunities on this page ({page_filtered_count} matched filters)")
+            
+            # If oldest on page is before START_DATE, we're done
+            if oldest_on_page and oldest_on_page < START_DATE_DT:
+                print(f"   ⏹️  Oldest opportunity on page ({oldest_on_page.isoformat()}) is before {START_DATE_STR}, stopping fetch")
+                should_continue = False
+                break
+
+            # Check if we should continue (if we got fewer results than limit, likely last page)
+            if len(opportunities) < 100:
+                print(f"   ✅ Reached last page\n")
                 break
 
             page += 1
@@ -275,47 +314,19 @@ def fetch_all_november_opportunities():
             print(f"❌ Error fetching opportunities: {e}")
             break
 
-    print(f"✅ Total opportunities fetched: {len(all_opportunities)}\n")
-
-    # ---------------------
-    # STEP 2: FILTER NOV 27 TO DEC 7
-    # ---------------------
-    print("="*80)
-    print("STEP 2: FILTERING FOR NOV 27 TO DEC 7 OPPORTUNITIES")
-    print("="*80 + "\n")
-
-    recent_opportunities = []
-    for o in all_opportunities:
-        created = o.get("createdAt", "")
-        if created and START_DATE <= created <= END_DATE:
-            recent_opportunities.append(o)
-
-    print(f"✅ Opportunities from Nov 27 to Dec 7: {len(recent_opportunities)}\n")
+    print(f"✅ Total opportunities fetched and filtered: {len(filtered_opportunities)}\n")
 
     # -------------------------------
-    # STEP 3: FILTER PIPELINES
+    # STEP 2: STORE IN FIRESTORE & COLLECT LEADS FOR BATCH WRITE
     # -------------------------------
     print("="*80)
-    print("STEP 3: FILTERING FOR ANDRIES & DAVIDE PIPELINES")
-    print("="*80 + "\n")
-
-    andries_davide_opportunities = [
-        o for o in recent_opportunities
-        if o.get("pipelineId") in (ANDRIES_PIPELINE_ID, DAVIDE_PIPELINE_ID)
-    ]
-
-    print(f"📊 Total to store: {len(andries_davide_opportunities)}\n")
-
-    # -------------------------------
-    # STEP 4: STORE IN FIRESTORE
-    # -------------------------------
-    print("="*80)
-    print('STEP 4: STORING IN FIRESTORE COLLECTION "ghl_opportunities"')
+    print('STEP 2: STORING IN FIRESTORE COLLECTION "ghl_opportunities"')
     print("="*80 + "\n")
 
     stored_count = 0
+    leads_to_create = []  # Collect leads for batch write
 
-    for opp in andries_davide_opportunities:
+    for opp in filtered_opportunities:
         try:
             contact_id = opp.get("contactId")
             if not contact_id:
@@ -359,7 +370,7 @@ def fetch_all_november_opportunities():
                 "attributions": attributions,
                 "fullOpportunity": opp,
                 "fetchedAt": datetime.now().isoformat(),
-                "dateRange": {"start": START_DATE, "end": END_DATE}
+                "dateRange": {"start": START_DATE_STR, "end": END_DATE}
             }
 
             db.collection("ghl_opportunities").document(contact_id).set(doc_data)
@@ -367,13 +378,10 @@ def fetch_all_november_opportunities():
             print(f"✅ Stored Opportunity {stored_count}: {name[:30]}")
 
             # -------------------------------------------------------------------
-            # NEW: CREATE LEAD if createdAt is from Nov 27 onwards
-            # (Duplicates are allowed - will be handled separately)
+            # NEW: COLLECT LEAD DATA if createdAt is from Nov 27 onwards
+            # (Will be batch written later)
             # -------------------------------------------------------------------
             if is_from_nov_27_onwards(created_at):
-
-                print(f"➡️ Creating LEAD for contactId {contact_id} (created from Nov 27 onwards)")
-
                 # Split name
                 first_name, last_name = split_name(contact_name)
 
@@ -432,19 +440,56 @@ def fetch_all_november_opportunities():
                     "fbclid": utm["fbclid"]
                 }
 
-                db.collection("leads").document(contact_id).set(lead_data)
-                print(f"   ➕ Lead created: {first_name} {last_name}")
+                leads_to_create.append((contact_id, lead_data, first_name, last_name))
 
             # -------------------------------------------------------------------
 
         except Exception as e:
             print(f"❌ Error storing opportunity or creating lead: {e}")
 
+    # -------------------------------
+    # STEP 3: BATCH WRITE LEADS
+    # -------------------------------
+    if leads_to_create:
+        print("\n" + "="*80)
+        print('STEP 3: BATCH WRITING LEADS TO FIRESTORE')
+        print("="*80 + "\n")
+        
+        batch = db.batch()
+        leads_created_count = 0
+        
+        for i, (contact_id, lead_data, first_name, last_name) in enumerate(leads_to_create):
+            try:
+                batch.set(db.collection("leads").document(contact_id), lead_data)
+                leads_created_count += 1
+                
+                # Commit batch every 500 operations (Firestore limit)
+                if (i + 1) % 500 == 0:
+                    batch.commit()
+                    print(f"   ✅ Committed batch: {leads_created_count} leads created so far...")
+                    batch = db.batch()
+            except Exception as e:
+                print(f"   ⚠️ Error adding lead {contact_id} to batch: {e}")
+        
+        # Commit remaining leads
+        if leads_created_count % 500 != 0:
+            try:
+                batch.commit()
+                print(f"   ✅ Committed final batch")
+            except Exception as e:
+                print(f"   ❌ Error committing final batch: {e}")
+        
+        print(f"✅ Total leads created: {leads_created_count}\n")
+    else:
+        print("\n✅ No leads to create\n")
+
     # SUMMARY
     print("\n" + "="*80)
     print("COMPLETE")
     print("="*80)
-    print(f"Stored opportunities: {stored_count}\n")
+    print(f"Stored opportunities: {stored_count}")
+    if leads_to_create:
+        print(f"Leads created: {len(leads_to_create)}\n")
 
 
 if __name__ == "__main__":

@@ -54,8 +54,8 @@ FB_AD_ACCOUNT_ID = "act_220298027464902"
 FB_API_VERSION = "v24.0"
 
 # Date range for December 2025
-START_DATE = '2025-12-01'
-END_DATE = '2025-12-31'
+START_DATE = '2026-01-01'
+END_DATE = '2026-01-31'
 
 def validate_facebook_token():
     """Validate Facebook Access Token"""
