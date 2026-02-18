@@ -6,6 +6,7 @@ import 'stream_analytics/widgets/shared/stat_card.dart';
 import 'stream_analytics/widgets/shared/section_title.dart';
 import 'stream_analytics/widgets/charts/analytics_charts.dart';
 import 'stream_analytics/data/analytics_data_generators.dart';
+import 'stream_analytics/tabs/opt_in_analytics_tab.dart';
 import 'stream_analytics/utils/analytics_helpers.dart';
 
 class StreamAnalyticsScreen extends StatefulWidget {
@@ -110,28 +111,9 @@ class _StreamAnalyticsScreenState extends State<StreamAnalyticsScreen>
 
   // Opt-Ins Tab
   Widget _buildOptInsTab() {
-    final mockData = AnalyticsDataGenerators.generateOptInsData(_dateFilter);
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          StatsRow(cards: [
-            StatCard(label: 'Total Opt-Ins', value: '${mockData['total']}', color: AppTheme.primaryColor, icon: Icons.how_to_reg),
-            StatCard(label: 'This Month', value: '${mockData['thisMonth']}', color: AppTheme.successColor, icon: Icons.calendar_today),
-            StatCard(label: 'Conversion Rate', value: '${mockData['conversionRate']}%', color: AppTheme.infoColor, icon: Icons.trending_up),
-          ]),
-          const SizedBox(height: 24),
-          const SectionTitle(title: 'Opt-Ins Over Time'),
-          const SizedBox(height: 16),
-          AnalyticsCharts.buildOptInsChart(mockData['chartData'] as List<Map<String, dynamic>>),
-          const SizedBox(height: 24),
-          const SectionTitle(title: 'Recent Opt-Ins'),
-          const SizedBox(height: 16),
-          _buildOptInsList(mockData['recent'] as List<Map<String, dynamic>>),
-        ],
-      ),
+    return OptInAnalyticsTab(
+      dateFilter: _dateFilter,
+      streamFilter: _streamFilter,
     );
   }
 
@@ -802,106 +784,6 @@ class _StreamAnalyticsScreenState extends State<StreamAnalyticsScreen>
   }
 
   // List Widgets
-  Widget _buildOptInsList(List<Map<String, dynamic>> items) {
-    if (items.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(32),
-        child: Center(
-          child: Text(
-            'No opt-ins found',
-            style: TextStyle(color: AppTheme.secondaryColor),
-          ),
-        ),
-      );
-    }
-    
-    return Column(
-      children: items.map((item) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.borderColor),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {},
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.person,
-                        color: AppTheme.primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item['name'],
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textColor,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item['date'],
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppTheme.secondaryColor.withOpacity(0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppTheme.cardColor,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppTheme.borderColor),
-                      ),
-                      child: Text(
-                        item['source'],
-                        style: TextStyle(
-                          color: AppTheme.secondaryColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   Widget _buildDepositBreakdown(Map<String, dynamic> breakdown) {
     return Column(
       children: breakdown.entries.map((entry) {

@@ -5,46 +5,6 @@ import '../utils/analytics_helpers.dart';
 /// Consolidated file containing all data generators for Stream Analytics
 
 class AnalyticsDataGenerators {
-  // Generate Opt-Ins Data
-  static Map<String, dynamic> generateOptInsData(String dateFilter) {
-    final dateRange = AnalyticsHelpers.getDateRange(dateFilter);
-    final daysDiff = dateRange['start'] == null 
-        ? 365 
-        : DateTime.now().difference(dateRange['start']!).inDays;
-    final monthsToShow = (daysDiff / 30).ceil().clamp(1, 12);
-    
-    // Calculate filtered totals based on date range
-    const baseTotal = 1247;
-    final filteredTotal = dateRange['start'] == null 
-        ? baseTotal 
-        : (baseTotal * (daysDiff / 365)).round();
-    final thisMonth = dateRange['start'] == null || daysDiff > 30
-        ? 156
-        : (156 * (daysDiff / 30)).round();
-    
-    return {
-      'total': filteredTotal,
-      'thisMonth': thisMonth,
-      'conversionRate': 12.5,
-      'chartData': List.generate(monthsToShow, (i) {
-        final date = DateTime.now().subtract(Duration(days: (monthsToShow - 1 - i) * 30));
-        return {
-          'label': DateFormat('MMM').format(date),
-          'value': 80 + (i * 5) + (i % 3) * 10,
-        };
-      }),
-      'recent': List.generate(10, (i) {
-        final date = DateTime.now().subtract(Duration(days: i));
-        if (!AnalyticsHelpers.isInDateRange(date, dateFilter)) return null;
-        return {
-          'name': 'Customer ${i + 1}',
-          'date': DateFormat('MMM d, y').format(date),
-          'source': ['Facebook', 'Google', 'Referral'][i % 3],
-        };
-      }).whereType<Map<String, dynamic>>().toList(),
-    };
-  }
-
   // Generate Deposits Data
   static Map<String, dynamic> generateDepositsData(String dateFilter) {
     final dateRange = AnalyticsHelpers.getDateRange(dateFilter);
