@@ -51,10 +51,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
         t.cancel();
         return;
       }
-      await provider.loadContractByIdAndToken(
-        widget.contractId,
-        widget.token,
-      );
+      await provider.loadContractByIdAndToken(widget.contractId, widget.token);
       if (!mounted) return;
       _pdfPollCount++;
       final c = provider.currentContract;
@@ -355,10 +352,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     children: [
                       Text(
                         'Your signed contract PDF is being prepared. It will appear below in a moment.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.blue[900],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.blue[900]),
                       ),
                       const SizedBox(height: 12),
                       TextButton.icon(
@@ -372,10 +366,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                       const SizedBox(height: 8),
                       Text(
                         'You can also open this page anytime from the link in the deposit email we sent you to download your contract.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[700],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                       ),
                     ],
                   ),
@@ -667,7 +658,9 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
     final vatAmount = contract.subtotal * 0.15;
     // Deposit is 10% of subtotal (ex VAT); show percentage of subtotal so label matches calculation
     final depositPercentage = contract.subtotal > 0
-        ? ((contract.depositAmount / contract.subtotal) * 100).toStringAsFixed(0)
+        ? ((contract.depositAmount / contract.subtotal) * 100).toStringAsFixed(
+            0,
+          )
         : '10';
 
     return _buildCard(
@@ -771,7 +764,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'By signing below, you acknowledge that you have read, understood, '
+            'By signing, you acknowledge that you have read, understood, '
             'and agree to be bound by all terms and conditions outlined in this agreement. '
             'Your electronic signature has the same legal effect as a handwritten signature.',
             style: TextStyle(

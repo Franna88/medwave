@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -22,7 +23,17 @@ class ContractPdfService {
       );
     }
     // #endregion
-    final pdf = pw.Document();
+    final baseFont = await PdfGoogleFonts.robotoRegular();
+    final boldFont = await PdfGoogleFonts.robotoBold();
+    final italicFont = await PdfGoogleFonts.robotoItalic();
+
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: baseFont,
+        bold: boldFont,
+        italic: italicFont,
+      ),
+    );
 
     // Load logo once: same image for cover (page 1) and invoice (page 2+)
     // #region agent log
@@ -118,6 +129,7 @@ class ContractPdfService {
       // #region agent log
       final contentStartTime = DateTime.now().millisecondsSinceEpoch;
       // #endregion
+      final safeText = _sanitizeText(plainText);
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
@@ -127,7 +139,7 @@ class ContractPdfService {
             PdfStyles.thickDivider,
             // Paragraph can span pages; pw.Text cannot, so long contract text would overflow
             pw.Paragraph(
-              text: plainText,
+              text: safeText,
               style: PdfStyles.bodyText,
               textAlign: pw.TextAlign.justify,
             ),
@@ -1114,5 +1126,22 @@ class ContractPdfService {
         ],
       ),
     );
+  }
+
+  /// Normalise Unicode punctuation characters that fall outside the basic
+  /// Latin range supported by standard PDF fonts. Roboto (set as the document
+  /// theme) handles ® and ™ natively; this helper is a belt-and-suspenders
+  /// fallback for smart quotes, dashes, ellipsis, and non-breaking spaces that
+  /// may arrive from rich-text editors (e.g. Quill) or copy-pasted content.
+  String _sanitizeText(String text) {
+    return text
+        .replaceAll('\u2018', "'") // left single quotation mark
+        .replaceAll('\u2019', "'") // right single quotation mark / apostrophe
+        .replaceAll('\u201C', '"') // left double quotation mark
+        .replaceAll('\u201D', '"') // right double quotation mark
+        .replaceAll('\u2013', '-') // en dash
+        .replaceAll('\u2014', '--') // em dash
+        .replaceAll('\u2026', '...') // horizontal ellipsis
+        .replaceAll('\u00A0', ' '); // non-breaking space
   }
 }
