@@ -123,14 +123,24 @@ class _OptInAnalyticsTabState extends State<OptInAnalyticsTab> {
         ? appointments.where(hasEverEnteredOptIn).toList()
         : <models.SalesAppointment>[];
     final total = withOptIn.length;
-    final inPeriod = total == 0
-        ? 0
-        : withOptIn
-            .where((a) => AnalyticsHelpers.isInDateRange(getOptInEnteredAt(a)!, widget.dateFilter))
-            .length;
-    final converted =
-        withOptIn.where(hasMovedToDepositRequestedOrLater).length;
-    final conversionRate = total > 0 ? (converted / total * 100) : 0.0;
+    
+    // Filter opt-ins to those in the selected date range
+    final inPeriodList = withOptIn
+        .where((a) {
+          final optInDate = getOptInEnteredAt(a);
+          return optInDate != null && 
+                 AnalyticsHelpers.isInDateRange(optInDate, widget.dateFilter);
+        })
+        .toList();
+    final inPeriod = inPeriodList.length;
+    
+    // Calculate conversion rate from opt-ins in the period
+    final convertedInPeriod = inPeriodList
+        .where(hasMovedToDepositRequestedOrLater)
+        .length;
+    final conversionRate = inPeriod > 0 
+        ? (convertedInPeriod / inPeriod * 100) 
+        : 0.0;
 
     final optInDates = withOptIn
         .map((a) => getOptInEnteredAt(a))
