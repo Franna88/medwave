@@ -465,6 +465,25 @@ class AdminService {
     });
   }
 
+  /// Get admin email by Firebase Auth userId (used e.g. for contract sent BCC).
+  /// Returns null if no admin user document matches.
+  static Future<String?> getAdminEmailByUserId(String userId) async {
+    try {
+      final querySnapshot = await _adminUsersCollection
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+      if (querySnapshot.docs.isEmpty) return null;
+      final adminUser = AdminUser.fromFirestore(querySnapshot.docs.first);
+      return adminUser.email;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ ADMIN SERVICE: getAdminEmailByUserId failed for $userId: $e');
+      }
+      return null;
+    }
+  }
+
   /// Create a new admin user (Super Admin only)
   static Future<String> createAdminUser({
     required String email,

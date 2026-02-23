@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/contracts/contract.dart';
 import '../models/streams/appointment.dart';
+import '../services/firebase/admin_service.dart';
 import '../services/firebase/contract_service.dart';
 import '../services/emailjs_service.dart';
 
@@ -144,12 +145,19 @@ class ContractProvider extends ChangeNotifier {
             );
           }
         }
+        String? assignedAdminEmail;
+        if (appointment.assignedTo != null &&
+            appointment.assignedTo!.trim().isNotEmpty) {
+          assignedAdminEmail =
+              await AdminService.getAdminEmailByUserId(appointment.assignedTo!);
+        }
         _lastContractBccSent =
             await EmailJSService.sendContractSentNotificationToBcc(
               contractId: contract.id,
               customerName: appointment.customerName,
               contractSentDate: DateTime.now(),
               contractDownloadUrl: downloadUrl,
+              assignedAdminEmail: assignedAdminEmail,
             );
         if (!_lastContractBccSent && kDebugMode) {
           print(

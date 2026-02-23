@@ -281,13 +281,14 @@ class EmailJSService {
 
   /// Send "Contract Sent" notification to the BCC list (no customer recipient).
   /// Call after successfully sending the contract link email to the client.
-  /// EmailJS template: BCC recipients are configured directly in the template. No recipient variables needed.
+  /// When [assignedAdminEmail] is set, the template receives {{to_email}} so the copy goes to that admin; when empty, template default applies.
   /// If [contractDownloadUrl] is provided, it is sent as {{contract_download_url}} (link to PDF; avoids EmailJS 50KB variable limit).
   static Future<bool> sendContractSentNotificationToBcc({
     required String contractId,
     required String customerName,
     required DateTime contractSentDate,
     String? contractDownloadUrl,
+    String? assignedAdminEmail,
   }) async {
     try {
       debugPrint(
@@ -306,6 +307,9 @@ class EmailJSService {
       };
       if (contractDownloadUrl != null && contractDownloadUrl.isNotEmpty) {
         templateParams['contract_download_url'] = contractDownloadUrl;
+      }
+      if (assignedAdminEmail != null && assignedAdminEmail.isNotEmpty) {
+        templateParams['bcc_email'] = assignedAdminEmail;
       }
 
       // Ensure we never exceed EmailJS 50KB variables limit (omit optional URL if needed)
@@ -344,9 +348,7 @@ class EmailJSService {
       );
 
       if (response.statusCode == 200) {
-        debugPrint(
-          '✅ Contract sent notification (BCC) sent successfully',
-        );
+        debugPrint('✅ Contract sent notification (BCC) sent successfully');
         return true;
       } else {
         debugPrint(
@@ -393,9 +395,7 @@ class EmailJSService {
       );
 
       if (response.statusCode == 200) {
-        debugPrint(
-          '✅ Contract signed notification (BCC) sent successfully',
-        );
+        debugPrint('✅ Contract signed notification (BCC) sent successfully');
         return true;
       } else {
         debugPrint(
@@ -441,9 +441,7 @@ class EmailJSService {
       );
 
       if (response.statusCode == 200) {
-        debugPrint(
-          '✅ Deposit confirmed notification (BCC) sent successfully',
-        );
+        debugPrint('✅ Deposit confirmed notification (BCC) sent successfully');
         return true;
       } else {
         debugPrint(
