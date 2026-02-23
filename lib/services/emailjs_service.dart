@@ -281,7 +281,7 @@ class EmailJSService {
 
   /// Send "Contract Sent" notification to the BCC list (no customer recipient).
   /// Call after successfully sending the contract link email to the client.
-  /// When [assignedAdminEmail] is set, the template receives {{to_email}} so the copy goes to that admin; when empty, template default applies.
+  /// When [assignedAdminEmail] is set, the template receives {{bcc_email}} so the copy goes to that admin; when empty, template default applies.
   /// If [contractDownloadUrl] is provided, it is sent as {{contract_download_url}} (link to PDF; avoids EmailJS 50KB variable limit).
   static Future<bool> sendContractSentNotificationToBcc({
     required String contractId,
@@ -365,16 +365,28 @@ class EmailJSService {
 
   /// Send "Contract Signed" notification to the BCC list (no customer recipient).
   /// Call after the client signs the contract.
-  /// EmailJS template: BCC recipients are configured directly in the template. No recipient variables needed.
+  /// When [assignedAdminEmail] is set, the template receives {{bcc_email}} so the copy goes to that admin; when empty, template default applies.
   static Future<bool> sendContractSignedNotificationToBcc({
     required String contractId,
     required String customerName,
     required DateTime contractSignedDate,
+    String? assignedAdminEmail,
   }) async {
     try {
       debugPrint(
         '📧 Sending contract signed notification (template $_contractSignedNotificationTemplateId)',
       );
+
+      final templateParams = <String, dynamic>{
+        'customer_name': customerName,
+        'contract_id': contractId,
+        'contract_signed_date': DateFormat(
+          'MMMM dd, yyyy',
+        ).format(contractSignedDate),
+      };
+      if (assignedAdminEmail != null && assignedAdminEmail.isNotEmpty) {
+        templateParams['bcc_email'] = assignedAdminEmail;
+      }
 
       final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
       final response = await http.post(
@@ -384,13 +396,7 @@ class EmailJSService {
           'service_id': _serviceId,
           'template_id': _contractSignedNotificationTemplateId,
           'user_id': _userId,
-          'template_params': {
-            'customer_name': customerName,
-            'contract_id': contractId,
-            'contract_signed_date': DateFormat(
-              'MMMM dd, yyyy',
-            ).format(contractSignedDate),
-          },
+          'template_params': templateParams,
         }),
       );
 
