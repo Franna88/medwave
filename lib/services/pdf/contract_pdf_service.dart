@@ -567,20 +567,28 @@ class ContractPdfService {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildInfoLine(
+              _buildQuoteInfoLine(
                 'Date:',
                 DateFormat('yyyy-MM-dd').format(contract.createdAt),
               ),
               pw.SizedBox(height: 4),
-              _buildInfoLine('Customer Name:', contract.customerName),
+              _buildQuoteInfoLine('Customer Name:', contract.customerName),
+              if (contract.businessName != null &&
+                  contract.businessName!.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                _buildQuoteInfoLine('Business Name:', contract.businessName!),
+              ],
               pw.SizedBox(height: 4),
-              _buildInfoLine('Customer Phone:', contract.phone),
+              _buildQuoteInfoLine('Customer Phone:', contract.phone),
               pw.SizedBox(height: 4),
-              _buildInfoLine('Customer Email:', contract.email),
+              _buildQuoteInfoLine('Customer Email:', contract.email),
               if (contract.shippingAddress != null &&
                   contract.shippingAddress!.isNotEmpty) ...[
                 pw.SizedBox(height: 4),
-                _buildInfoLine('Shipping Address:', contract.shippingAddress!),
+                _buildQuoteInfoLineWrapped(
+                  'Shipping Address:',
+                  contract.shippingAddress!,
+                ),
               ],
             ],
           ),
@@ -589,26 +597,27 @@ class ContractPdfService {
     );
   }
 
-  /// Build info line for invoice
-  pw.Widget _buildInfoLine(String label, String value) {
+  /// Build info line for invoice (quote section: dark color, uniform size)
+  pw.Widget _buildQuoteInfoLine(String label, String value) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(
-          '$label ',
-          style: pw.TextStyle(
-            fontSize: 12,
-            fontWeight: pw.FontWeight.bold,
-            color: PdfStyles.grayColor,
-          ),
-        ),
-        pw.Expanded(
-          child: pw.Text(
-            value,
-            style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
-          ),
-        ),
+        pw.Text('$label ', style: PdfStyles.quoteSectionLabel),
+        pw.Expanded(child: pw.Text(value, style: PdfStyles.quoteSectionValue)),
       ],
+    );
+  }
+
+  /// Build info line with wrapping value (e.g. shipping address). Label and value
+  /// flow as one paragraph so wrapped lines align at the left margin.
+  pw.Widget _buildQuoteInfoLineWrapped(String label, String value) {
+    return pw.RichText(
+      text: pw.TextSpan(
+        children: [
+          pw.TextSpan(text: '$label ', style: PdfStyles.quoteSectionLabel),
+          pw.TextSpan(text: value, style: PdfStyles.quoteSectionValue),
+        ],
+      ),
     );
   }
 
@@ -685,10 +694,7 @@ class ContractPdfService {
             child: pw.Text(
               product.name,
               style: isSubItem
-                  ? pw.TextStyle(
-                      fontSize: 10,
-                      color: PdfStyles.grayColor,
-                    )
+                  ? pw.TextStyle(fontSize: 10, color: PdfStyles.grayColor)
                   : PdfStyles.bodyText,
             ),
           ),
@@ -964,9 +970,7 @@ class ContractPdfService {
       mainAxisSize: pw.MainAxisSize.max,
       children: [
         // Header: centered logo, same size as second page (150×50)
-        pw.Center(
-          child: pw.Image(coverLogo, width: 150, height: 50),
-        ),
+        pw.Center(child: pw.Image(coverLogo, width: 150, height: 50)),
         pw.SizedBox(height: 48),
         // Center: title + slogan
         pw.Expanded(
@@ -1081,25 +1085,17 @@ class ContractPdfService {
         // Footer bar: Document Ref (left), Page 1 (right)
         pw.Container(
           padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          decoration: pw.BoxDecoration(
-            color: PdfStyles.lightGrayColor,
-          ),
+          decoration: pw.BoxDecoration(color: PdfStyles.lightGrayColor),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
                 'Document Ref: ${_formatDocumentRef(contract.id)}',
-                style: pw.TextStyle(
-                  fontSize: 12,
-                  color: PdfStyles.grayColor,
-                ),
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.grayColor),
               ),
               pw.Text(
                 'Page 1',
-                style: pw.TextStyle(
-                  fontSize: 12,
-                  color: PdfStyles.grayColor,
-                ),
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.grayColor),
               ),
             ],
           ),

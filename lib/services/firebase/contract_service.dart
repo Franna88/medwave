@@ -72,6 +72,7 @@ class ContractService {
 
       // Extract and validate shipping address
       final shippingAddress = appointment.optInQuestions?['Shipping address'];
+      final businessName = appointment.optInQuestions?['Name of business'];
 
       if (shippingAddress == null || shippingAddress.trim().isEmpty) {
         throw Exception(
@@ -124,6 +125,7 @@ class ContractService {
         email: appointment.email,
         phone: appointment.phone,
         shippingAddress: shippingAddress,
+        businessName: businessName,
         contractContentVersion: contractContent.version,
         contractContentData: {
           'content': contractContent.content,
@@ -168,6 +170,7 @@ class ContractService {
     String? email,
     String? phone,
     String? shippingAddress,
+    String? businessName,
     String? paymentType,
     Map<String, dynamic>? editedContractContent, // Allow editing contract terms
     double? subtotal, // Optional calculated subtotal (accounts for quantities)
@@ -188,6 +191,8 @@ class ContractService {
       final finalPhone = phone ?? originalContract.phone;
       final finalShippingAddress =
           shippingAddress ?? originalContract.shippingAddress;
+      final finalBusinessName =
+          businessName ?? originalContract.businessName;
       final finalPaymentType = paymentType ?? originalContract.paymentType;
 
       // Use provided subtotal if available, otherwise calculate from products
@@ -237,6 +242,7 @@ class ContractService {
         email: finalEmail,
         phone: finalPhone,
         shippingAddress: finalShippingAddress,
+        businessName: finalBusinessName,
         contractContentVersion: originalContract.contractContentVersion,
         contractContentData:
             finalContractContentData, // Use edited content if provided

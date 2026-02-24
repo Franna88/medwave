@@ -89,6 +89,7 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _shippingAddressController =
       TextEditingController();
+  final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _editReasonController = TextEditingController();
 
   // Payment type
@@ -194,6 +195,9 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
     _emailController.text = widget.contract.email;
     _phoneController.text = widget.contract.phone;
     _shippingAddressController.text = widget.contract.shippingAddress ?? '';
+    _businessNameController.text = widget.contract.businessName ??
+        widget.appointment.optInQuestions?['Name of business'] ??
+        '';
     _paymentType = widget.contract.paymentType;
 
     // Invoice line items: from contract, or seed from appointment when contract has no products
@@ -274,6 +278,7 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
     _emailController.dispose();
     _phoneController.dispose();
     _shippingAddressController.dispose();
+    _businessNameController.dispose();
     _editReasonController.dispose();
     super.dispose();
   }
@@ -390,6 +395,9 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
         shippingAddress: _shippingAddressController.text.trim(),
+        businessName: _businessNameController.text.trim().isEmpty
+            ? null
+            : _businessNameController.text.trim(),
         paymentType: _paymentType,
         editedContractContent: editedContractContent,
         subtotal: calculatedSubtotal,
@@ -490,6 +498,14 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
                       controller: _customerNameController,
                       decoration: const InputDecoration(
                         labelText: 'Customer Name',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _businessNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Business Name',
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -776,6 +792,7 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
         email: _emailController.text,
         phone: _phoneController.text,
         shippingAddress: _shippingAddressController.text,
+        businessName: _businessNameController.text,
         date: widget.contract.createdAt,
         onClose: () => setState(() {}),
       ),
@@ -790,6 +807,7 @@ class InvoicePreviewEditDialog extends StatefulWidget {
   final String email;
   final String phone;
   final String shippingAddress;
+  final String businessName;
   final DateTime date;
   final VoidCallback? onClose;
 
@@ -800,6 +818,7 @@ class InvoicePreviewEditDialog extends StatefulWidget {
     required this.email,
     required this.phone,
     required this.shippingAddress,
+    required this.businessName,
     required this.date,
     this.onClose,
   });
@@ -1234,6 +1253,13 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                 'Customer Name:',
                                 widget.customerName,
                               ),
+                              if (widget.businessName.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                _buildInfoLine(
+                                  'Business Name:',
+                                  widget.businessName,
+                                ),
+                              ],
                               const SizedBox(height: 4),
                               _buildInfoLine('Customer Phone:', widget.phone),
                               const SizedBox(height: 4),

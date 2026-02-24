@@ -634,6 +634,11 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInfoRow('Name', contract.customerName),
+          if (contract.businessName != null &&
+              contract.businessName!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildInfoRow('Business Name', contract.businessName!),
+          ],
           const SizedBox(height: 12),
           _buildInfoRow('Email', contract.email),
           const SizedBox(height: 12),

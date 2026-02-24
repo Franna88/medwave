@@ -103,6 +103,7 @@ class Contract {
   final String email;
   final String phone;
   final String? shippingAddress;
+  final String? businessName;
 
   // Contract Content
   final int contractContentVersion;
@@ -156,6 +157,7 @@ class Contract {
     required this.email,
     required this.phone,
     this.shippingAddress,
+    this.businessName,
     required this.contractContentVersion,
     required this.contractContentData,
     required this.products,
@@ -225,6 +227,7 @@ class Contract {
       email: map['email']?.toString() ?? '',
       phone: map['phone']?.toString() ?? '',
       shippingAddress: map['shippingAddress']?.toString(),
+      businessName: map['businessName']?.toString(),
       contractContentVersion: map['contractContentVersion'] as int? ?? 0,
       contractContentData:
           map['contractContentData'] as Map<String, dynamic>? ?? {},
@@ -277,6 +280,7 @@ class Contract {
       'email': email,
       'phone': phone,
       'shippingAddress': shippingAddress,
+      'businessName': businessName,
       'contractContentVersion': contractContentVersion,
       'contractContentData': contractContentData,
       'products': products.map((p) => p.toMap()).toList(),
@@ -316,6 +320,7 @@ class Contract {
     String? email,
     String? phone,
     String? shippingAddress,
+    String? businessName,
     int? contractContentVersion,
     Map<String, dynamic>? contractContentData,
     List<ContractProduct>? products,
@@ -353,6 +358,7 @@ class Contract {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       shippingAddress: shippingAddress ?? this.shippingAddress,
+      businessName: businessName ?? this.businessName,
       contractContentVersion:
           contractContentVersion ?? this.contractContentVersion,
       contractContentData: contractContentData ?? this.contractContentData,

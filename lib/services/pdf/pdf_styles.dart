@@ -55,6 +55,19 @@ class PdfStyles {
         color: grayColor,
       );
 
+  /// Quote/invoice customer block: label (bold, dark, uniform size)
+  static pw.TextStyle get quoteSectionLabel => pw.TextStyle(
+        fontSize: 11,
+        fontWeight: pw.FontWeight.bold,
+        color: textColor,
+      );
+
+  /// Quote/invoice customer block: value (regular, same dark color and size)
+  static pw.TextStyle get quoteSectionValue => pw.TextStyle(
+        fontSize: 11,
+        color: textColor,
+      );
+
   /// Signature text style with custom font
   static pw.TextStyle signatureText(pw.Font font) => pw.TextStyle(
         font: font,

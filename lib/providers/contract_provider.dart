@@ -84,6 +84,7 @@ class ContractProvider extends ChangeNotifier {
     String? email,
     String? phone,
     String? shippingAddress,
+    String? businessName,
     String? paymentType,
     Map<String, dynamic>? editedContractContent, // Allow editing contract terms
     double? subtotal, // Optional calculated subtotal (accounts for quantities)
@@ -106,6 +107,7 @@ class ContractProvider extends ChangeNotifier {
         email: email,
         phone: phone,
         shippingAddress: shippingAddress,
+        businessName: businessName,
         paymentType: paymentType,
         editedContractContent: editedContractContent,
         subtotal: subtotal,
