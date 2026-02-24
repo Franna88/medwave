@@ -1198,6 +1198,12 @@ class SalesAppointmentService {
           .toList();
       final orderItems = [...productItems, ...packageItems];
 
+      // Subtotal (ex VAT): sum of price * quantity for all items, same as contract/invoice
+      final subtotal = orderItems.fold<double>(
+        0,
+        (sum, i) => sum + ((i.price ?? 0) * i.quantity),
+      );
+
       // Determine if this is a priority order (full payment)
       final isPriorityOrder = appointment.isFullPayment;
       final orderNote = isPriorityOrder
@@ -1218,6 +1224,7 @@ class SalesAppointmentService {
             'orders_placed', // First stage in Operations stream (updated)
         orderDate: now,
         items: orderItems, // Products from the appointment
+        subtotal: subtotal,
         createdAt: now,
         updatedAt: now,
         stageEnteredAt: now,

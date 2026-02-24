@@ -38,6 +38,8 @@ class Order {
   final String currentStage;
   final DateTime? orderDate;
   final List<OrderItem> items;
+  /// Subtotal (ex VAT) from items when order was created; sum of price * quantity.
+  final double? subtotal;
   final DateTime? deliveryDate;
   final String? invoiceNumber;
   final DateTime? installDate;
@@ -145,6 +147,7 @@ class Order {
     required this.currentStage,
     this.orderDate,
     this.items = const [],
+    this.subtotal,
     this.deliveryDate,
     this.invoiceNumber,
     this.installDate,
@@ -253,6 +256,7 @@ class Order {
               ?.map((i) => OrderItem.fromMap(i as Map<String, dynamic>))
               .toList() ??
           [],
+      subtotal: (map['subtotal'] as num?)?.toDouble(),
       deliveryDate: (map['deliveryDate'] as Timestamp?)?.toDate(),
       invoiceNumber: map['invoiceNumber']?.toString(),
       installDate: (map['installDate'] as Timestamp?)?.toDate(),
@@ -398,6 +402,7 @@ class Order {
       'currentStage': currentStage,
       'orderDate': orderDate != null ? Timestamp.fromDate(orderDate!) : null,
       'items': items.map((i) => i.toMap()).toList(),
+      if (subtotal != null) 'subtotal': subtotal,
       'deliveryDate': deliveryDate != null
           ? Timestamp.fromDate(deliveryDate!)
           : null,
@@ -520,6 +525,7 @@ class Order {
     String? currentStage,
     DateTime? orderDate,
     List<OrderItem>? items,
+    double? subtotal,
     DateTime? deliveryDate,
     String? invoiceNumber,
     DateTime? installDate,
@@ -602,6 +608,7 @@ class Order {
       currentStage: currentStage ?? this.currentStage,
       orderDate: orderDate ?? this.orderDate,
       items: items ?? this.items,
+      subtotal: subtotal ?? this.subtotal,
       deliveryDate: deliveryDate ?? this.deliveryDate,
       invoiceNumber: invoiceNumber ?? this.invoiceNumber,
       installDate: installDate ?? this.installDate,

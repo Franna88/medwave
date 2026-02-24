@@ -2258,6 +2258,12 @@ class OrderService {
         }
       }
 
+      // Subtotal for new order: sum of price * quantity for overridden items
+      final newOrderSubtotal = overriddenItems.fold<double>(
+        0,
+        (sum, i) => sum + ((i.price ?? 0) * i.quantity),
+      );
+
       // Create new order (Order 2) with overridden items
       final newOrder = models.Order(
         id: '', // Will be set by Firestore
@@ -2268,6 +2274,7 @@ class OrderService {
         currentStage: originalOrder.currentStage, // Same stage as original
         orderDate: originalOrder.orderDate,
         items: overriddenItems, // Only overridden items
+        subtotal: newOrderSubtotal,
         deliveryDate: originalOrder.deliveryDate,
         invoiceNumber:
             originalOrder.invoiceNumber, // Same invoice number as Order 1

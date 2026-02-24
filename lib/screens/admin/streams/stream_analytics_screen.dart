@@ -6,7 +6,10 @@ import 'stream_analytics/widgets/shared/stat_card.dart';
 import 'stream_analytics/widgets/shared/section_title.dart';
 import 'stream_analytics/widgets/charts/analytics_charts.dart';
 import 'stream_analytics/data/analytics_data_generators.dart';
+import 'stream_analytics/tabs/closed_sales_analytics_tab.dart';
+import 'stream_analytics/tabs/deposits_analytics_tab.dart';
 import 'stream_analytics/tabs/opt_in_analytics_tab.dart';
+import 'stream_analytics/tabs/total_revenue_analytics_tab.dart';
 import 'stream_analytics/utils/analytics_helpers.dart';
 
 class StreamAnalyticsScreen extends StatefulWidget {
@@ -119,55 +122,17 @@ class _StreamAnalyticsScreenState extends State<StreamAnalyticsScreen>
 
   // Deposits Tab
   Widget _buildDepositsTab() {
-    final mockData = AnalyticsDataGenerators.generateDepositsData(_dateFilter);
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          StatsRow(cards: [
-            StatCard(label: 'Total Deposits', value: '${mockData['count']}', color: AppTheme.primaryColor, icon: Icons.account_balance_wallet),
-            StatCard(label: 'Total Value', value: AnalyticsHelpers.formatCurrency(mockData['totalValue']), color: AppTheme.successColor, icon: Icons.attach_money),
-            StatCard(label: 'Average Deposit', value: AnalyticsHelpers.formatCurrency(mockData['average']), color: AppTheme.infoColor, icon: Icons.calculate),
-          ]),
-          const SizedBox(height: 24),
-          const SectionTitle(title: 'Deposits Over Time'),
-          const SizedBox(height: 16),
-          AnalyticsCharts.buildDepositsChart(mockData['chartData'] as List<Map<String, dynamic>>),
-          const SizedBox(height: 24),
-          const SectionTitle(title: 'Deposit Breakdown'),
-          const SizedBox(height: 16),
-          _buildDepositBreakdown(mockData['breakdown'] as Map<String, dynamic>),
-        ],
-      ),
+    return DepositsAnalyticsTab(
+      dateFilter: _dateFilter,
+      streamFilter: _streamFilter,
     );
   }
 
   // Closed Sales Tab
   Widget _buildClosedSalesTab() {
-    final mockData = AnalyticsDataGenerators.generateClosedSalesData(_dateFilter);
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          StatsRow(cards: [
-            StatCard(label: 'Total Sales', value: '${mockData['count']}', color: AppTheme.successColor, icon: Icons.check_circle),
-            StatCard(label: 'Total Value', value: AnalyticsHelpers.formatCurrency(mockData['totalValue']), color: AppTheme.primaryColor, icon: Icons.attach_money),
-            StatCard(label: 'Avg Sale Value', value: AnalyticsHelpers.formatCurrency(mockData['average']), color: AppTheme.infoColor, icon: Icons.trending_up),
-          ]),
-          const SizedBox(height: 24),
-          const SectionTitle(title: 'Sales Performance'),
-          const SizedBox(height: 16),
-          AnalyticsCharts.buildSalesChart(mockData['chartData'] as List<Map<String, dynamic>>),
-          const SizedBox(height: 24),
-          const SectionTitle(title: 'Top Sales'),
-          const SizedBox(height: 16),
-          _buildSalesList(mockData['topSales'] as List<Map<String, dynamic>>),
-        ],
-      ),
+    return ClosedSalesAnalyticsTab(
+      dateFilter: _dateFilter,
+      streamFilter: _streamFilter,
     );
   }
 
@@ -200,28 +165,9 @@ class _StreamAnalyticsScreenState extends State<StreamAnalyticsScreen>
 
   // Total Revenue Tab
   Widget _buildTotalRevenueTab() {
-    final mockData = AnalyticsDataGenerators.generateRevenueData(_dateFilter);
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          StatsRow(cards: [
-            StatCard(label: 'Total Revenue', value: AnalyticsHelpers.formatCurrency(mockData['total']), color: AppTheme.successColor, icon: Icons.attach_money),
-            StatCard(label: 'This Month', value: AnalyticsHelpers.formatCurrency(mockData['thisMonth']), color: AppTheme.primaryColor, icon: Icons.calendar_today),
-            StatCard(label: 'Growth', value: '${mockData['growth']}%', color: mockData['growth'] >= 0 ? AppTheme.successColor : AppTheme.errorColor, icon: Icons.trending_up),
-          ]),
-          const SizedBox(height: 24),
-          const SectionTitle(title: 'Revenue Over Time'),
-          const SizedBox(height: 16),
-          AnalyticsCharts.buildRevenueChart(mockData['chartData'] as List<Map<String, dynamic>>),
-          const SizedBox(height: 24),
-          const SectionTitle(title: 'Revenue by Source'),
-          const SizedBox(height: 16),
-          _buildRevenueBySource(mockData['bySource'] as Map<String, double>),
-        ],
-      ),
+    return TotalRevenueAnalyticsTab(
+      dateFilter: _dateFilter,
+      streamFilter: _streamFilter,
     );
   }
 
@@ -784,180 +730,6 @@ class _StreamAnalyticsScreenState extends State<StreamAnalyticsScreen>
   }
 
   // List Widgets
-  Widget _buildDepositBreakdown(Map<String, dynamic> breakdown) {
-    return Column(
-      children: breakdown.entries.map((entry) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.borderColor),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      entry.key.contains('Full') ? Icons.payment : Icons.account_balance_wallet,
-                      size: 18,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    entry.key,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textColor,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                AnalyticsHelpers.formatCurrency(entry.value),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildSalesList(List<Map<String, dynamic>> sales) {
-    if (sales.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(32),
-        child: Center(
-          child: Text(
-            'No sales found',
-            style: TextStyle(color: AppTheme.secondaryColor),
-          ),
-        ),
-      );
-    }
-    
-    return Column(
-      children: sales.map((sale) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.successColor.withOpacity(0.3)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () {},
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.successColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.check_circle,
-                        color: AppTheme.successColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            sale['customer'],
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textColor,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            sale['date'],
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppTheme.secondaryColor.withOpacity(0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          AnalyticsHelpers.formatCurrency(sale['amount']),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.successColor,
-                          ),
-                        ),
-                        Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.successColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Closed',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.successColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   Widget _buildLatePaymentsList(List<Map<String, dynamic>> payments) {
     if (payments.isEmpty) {
       return Padding(
@@ -1088,83 +860,6 @@ class _StreamAnalyticsScreenState extends State<StreamAnalyticsScreen>
                 ),
               ),
             ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildRevenueBySource(Map<String, double> sources) {
-    return Column(
-      children: sources.entries.map((entry) {
-        IconData icon;
-        Color color;
-        switch (entry.key.toLowerCase()) {
-          case 'sales':
-            icon = Icons.attach_money;
-            color = AppTheme.successColor;
-            break;
-          case 'deposits':
-            icon = Icons.account_balance_wallet;
-            color = AppTheme.primaryColor;
-            break;
-          case 'installations':
-            icon = Icons.build;
-            color = AppTheme.infoColor;
-            break;
-          default:
-            icon = Icons.trending_up;
-            color = AppTheme.secondaryColor;
-        }
-        
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.3)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon, size: 18, color: color),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    entry.key,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textColor,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                AnalyticsHelpers.formatCurrency(entry.value),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
           ),
         );
       }).toList(),
