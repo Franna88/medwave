@@ -167,28 +167,6 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
     return lines;
   }
 
-  /// Replaces any package header line (id in packages) with full expansion: header + items + services.
-  List<_InvoiceLineItem> _expandPackageLinesInList(
-    List<_InvoiceLineItem> items,
-  ) {
-    final packageProvider = context.read<ProductPackagesProvider>();
-    final productProvider = context.read<ProductItemsProvider>();
-    final packages = packageProvider.packages;
-    final products = productProvider.items.where((p) => p.isActive).toList();
-    final result = <_InvoiceLineItem>[];
-    for (final line in items) {
-      final matching = packages.where((p) => p.id == line.id).toList();
-      if (matching.isNotEmpty &&
-          (line.lineType == _kLineTypePackageHeader ||
-              line.lineType == _kLineTypeStandalone)) {
-        result.addAll(_expandPackageToLines(matching.first, products));
-      } else {
-        result.add(line);
-      }
-    }
-    return result;
-  }
-
   void _initializeFields() {
     // Initialize customer info from contract
     _customerNameController.text = widget.contract.customerName;
@@ -202,6 +180,8 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
 
     // Invoice line items: from contract, or seed from appointment when contract has no products
     if (widget.contract.products.isNotEmpty) {
+      // Contract products are already stored in expanded form (header + packageItem + addedService lines).
+      // Do NOT call _expandPackageLinesInList here or we duplicate package content on every edit.
       _invoiceLineItems = widget.contract.products
           .map(
             (p) => _InvoiceLineItem(
@@ -217,7 +197,6 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
             ),
           )
           .toList();
-      _invoiceLineItems = _expandPackageLinesInList(_invoiceLineItems);
     } else if (widget.appointment.optInProducts.isNotEmpty ||
         widget.appointment.optInPackages.isNotEmpty) {
       final packageProvider = context.read<ProductPackagesProvider>();
