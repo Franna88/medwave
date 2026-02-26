@@ -111,7 +111,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
         // Screen will automatically show signed view
       } else if (mounted) {
         setState(() => _isSubmitting = false);
-        _showError(provider.error ?? 'Failed to sign contract');
+        _showError(provider.error ?? 'Failed to authorize agreement');
       }
     } catch (e) {
       if (mounted) {
@@ -143,7 +143,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
 
           final contract = provider.currentContract;
           if (contract == null) {
-            return _buildError('Contract not found');
+            return _buildError('Agreement not found');
           }
 
           // Check if voided
@@ -170,7 +170,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
         children: [
           CircularProgressIndicator(),
           SizedBox(height: 16),
-          Text('Loading contract...'),
+          Text('Loading agreement...'),
         ],
       ),
     );
@@ -186,7 +186,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
             Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
             const SizedBox(height: 16),
             Text(
-              'Unable to Load Contract',
+              'Unable to Load Agreement',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -215,7 +215,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
             Icon(Icons.block, size: 64, color: Colors.orange[300]),
             const SizedBox(height: 16),
             Text(
-              'Contract Voided',
+              'Agreement Voided',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -224,7 +224,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'This contract has been cancelled and is no longer valid.',
+              'This agreement has been cancelled and is no longer valid.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
@@ -288,7 +288,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Contract Signed Successfully!',
+                      'Agreement Signed Successfully!',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -351,7 +351,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Your signed contract PDF is being prepared. It will appear below in a moment.',
+                        'Your authorized agreement PDF is being prepared. It will appear below in a moment.',
                         style: TextStyle(fontSize: 14, color: Colors.blue[900]),
                       ),
                       const SizedBox(height: 12),
@@ -365,7 +365,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'You can also open this page anytime from the link in the deposit email we sent you to download your contract.',
+                        'You can also open this page anytime from the link in the deposit email we sent you to download your agreement.',
                         style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                       ),
                     ],
@@ -391,7 +391,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     }
                   },
                   icon: const Icon(Icons.download),
-                  label: const Text('Download Signed Contract PDF'),
+                  label: const Text('Download Authorized Agreement PDF'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
@@ -477,7 +477,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                       ),
                       Text(
                         'Thank you for choosing full payment! You will receive payment instructions via email shortly. '
-                        'As a full payment customer, your order will receive priority scheduling for installation.',
+                        'As a full payment customer, your agreement will receive priority scheduling for installation.',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[700],
@@ -794,7 +794,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                 ),
                 Expanded(
                   child: Text(
-                    'I have read and agree to the contract terms',
+                    'I have read and agree to the agreement terms',
                     style: TextStyle(
                       fontSize: isMobile ? 14 : 16,
                       fontWeight: FontWeight.w500,
@@ -882,7 +882,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                     ),
                   )
                 : const Text(
-                    'Sign Contract',
+                    'Authorize Agreement',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
