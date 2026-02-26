@@ -21,6 +21,24 @@ const String _kLineTypePackageItem = 'packageItem';
 const String _kLineTypeAddedService = 'addedService';
 const String _kLineTypeDiscount = 'discount';
 
+/// Normalize numeric input: remove spaces, use dot for decimals (comma accepted).
+String _normalizeNumericInput(String s) =>
+    s.replaceAll(' ', '').replaceAll(',', '.');
+
+/// Parse double from user input (allows spaces and comma/dot as decimal).
+double? _parseDoubleInput(String? s) {
+  if (s == null || s.trim().isEmpty) return null;
+  return double.tryParse(_normalizeNumericInput(s.trim()));
+}
+
+/// Parse int from user input (allows spaces; decimals rounded).
+int? _parseIntInput(String? s) {
+  if (s == null || s.trim().isEmpty) return null;
+  final d = double.tryParse(_normalizeNumericInput(s.trim()));
+  if (d == null || d.isNaN) return null;
+  return d.round().clamp(1, 999999);
+}
+
 /// One editable line on the invoice (product, package, or custom).
 class _InvoiceLineItem {
   final String id;
@@ -71,6 +89,7 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _shippingAddressController =
       TextEditingController();
+  final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _editReasonController = TextEditingController();
 
   // Payment type
@@ -148,38 +167,21 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
     return lines;
   }
 
-  /// Replaces any package header line (id in packages) with full expansion: header + items + services.
-  List<_InvoiceLineItem> _expandPackageLinesInList(
-    List<_InvoiceLineItem> items,
-  ) {
-    final packageProvider = context.read<ProductPackagesProvider>();
-    final productProvider = context.read<ProductItemsProvider>();
-    final packages = packageProvider.packages;
-    final products = productProvider.items.where((p) => p.isActive).toList();
-    final result = <_InvoiceLineItem>[];
-    for (final line in items) {
-      final matching = packages.where((p) => p.id == line.id).toList();
-      if (matching.isNotEmpty &&
-          (line.lineType == _kLineTypePackageHeader ||
-              line.lineType == _kLineTypeStandalone)) {
-        result.addAll(_expandPackageToLines(matching.first, products));
-      } else {
-        result.add(line);
-      }
-    }
-    return result;
-  }
-
   void _initializeFields() {
     // Initialize customer info from contract
     _customerNameController.text = widget.contract.customerName;
     _emailController.text = widget.contract.email;
     _phoneController.text = widget.contract.phone;
     _shippingAddressController.text = widget.contract.shippingAddress ?? '';
+    _businessNameController.text = widget.contract.businessName ??
+        widget.appointment.optInQuestions?['Name of business'] ??
+        '';
     _paymentType = widget.contract.paymentType;
 
     // Invoice line items: from contract, or seed from appointment when contract has no products
     if (widget.contract.products.isNotEmpty) {
+      // Contract products are already stored in expanded form (header + packageItem + addedService lines).
+      // Do NOT call _expandPackageLinesInList here or we duplicate package content on every edit.
       _invoiceLineItems = widget.contract.products
           .map(
             (p) => _InvoiceLineItem(
@@ -195,7 +197,6 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
             ),
           )
           .toList();
-      _invoiceLineItems = _expandPackageLinesInList(_invoiceLineItems);
     } else if (widget.appointment.optInProducts.isNotEmpty ||
         widget.appointment.optInPackages.isNotEmpty) {
       final packageProvider = context.read<ProductPackagesProvider>();
@@ -256,6 +257,7 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
     _emailController.dispose();
     _phoneController.dispose();
     _shippingAddressController.dispose();
+    _businessNameController.dispose();
     _editReasonController.dispose();
     super.dispose();
   }
@@ -372,6 +374,9 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
         shippingAddress: _shippingAddressController.text.trim(),
+        businessName: _businessNameController.text.trim().isEmpty
+            ? null
+            : _businessNameController.text.trim(),
         paymentType: _paymentType,
         editedContractContent: editedContractContent,
         subtotal: calculatedSubtotal,
@@ -472,6 +477,14 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
                       controller: _customerNameController,
                       decoration: const InputDecoration(
                         labelText: 'Customer Name',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _businessNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Business Name',
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -758,6 +771,7 @@ class _ContractEditDialogState extends State<ContractEditDialog> {
         email: _emailController.text,
         phone: _phoneController.text,
         shippingAddress: _shippingAddressController.text,
+        businessName: _businessNameController.text,
         date: widget.contract.createdAt,
         onClose: () => setState(() {}),
       ),
@@ -772,6 +786,7 @@ class InvoicePreviewEditDialog extends StatefulWidget {
   final String email;
   final String phone;
   final String shippingAddress;
+  final String businessName;
   final DateTime date;
   final VoidCallback? onClose;
 
@@ -782,6 +797,7 @@ class InvoicePreviewEditDialog extends StatefulWidget {
     required this.email,
     required this.phone,
     required this.shippingAddress,
+    required this.businessName,
     required this.date,
     this.onClose,
   });
@@ -853,10 +869,10 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
               labelText: 'Amount (R)',
-              hintText: 'e.g. 50',
+              hintText: 'e.g. 50 or 1 500,50',
             ),
             onSubmitted: (value) {
-              final a = double.tryParse(value);
+              final a = _parseDoubleInput(value);
               if (a != null && a > 0) Navigator.of(context).pop(a);
             },
           ),
@@ -867,7 +883,7 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
             ),
             TextButton(
               onPressed: () {
-                final a = double.tryParse(controller.text.trim());
+                final a = _parseDoubleInput(controller.text.trim());
                 if (a != null && a > 0) {
                   Navigator.of(context).pop(a);
                 }
@@ -1216,6 +1232,13 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                 'Customer Name:',
                                 widget.customerName,
                               ),
+                              if (widget.businessName.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                _buildInfoLine(
+                                  'Business Name:',
+                                  widget.businessName,
+                                ),
+                              ],
                               const SizedBox(height: 4),
                               _buildInfoLine('Customer Phone:', widget.phone),
                               const SizedBox(height: 4),
@@ -1369,7 +1392,7 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                         ),
                                       ),
                                       onChanged: (value) {
-                                        final qty = int.tryParse(value) ?? 1;
+                                        final qty = _parseIntInput(value) ?? 1;
                                         if (qty >= 1) {
                                           line.quantity = qty;
                                           setState(() {});
@@ -1394,7 +1417,7 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                       ),
                                       onChanged: (value) {
                                         final price =
-                                            double.tryParse(value) ?? 0.0;
+                                            _parseDoubleInput(value) ?? 0.0;
                                         line.price = price;
                                         setState(() {});
                                       },
@@ -1448,7 +1471,7 @@ class _InvoicePreviewEditDialogState extends State<InvoicePreviewEditDialog> {
                                 ],
                                 const SizedBox(height: 4),
                                 _buildTotalRow(
-                                  'Deposit Allocate',
+                                  'Deposit Allocate (10%)',
                                   _subtotal() * 0.10,
                                   isBold: true,
                                 ),

@@ -196,12 +196,12 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
     if (_contract == null) return;
 
     final provider = context.read<ContractProvider>();
-    final success = await provider.resendContractEmail(
+    final result = await provider.resendContractEmail(
       contract: _contract!,
       appointment: widget.appointment,
     );
 
-    if (mounted && success) {
+    if (mounted && result.success) {
       final appointmentService = SalesAppointmentService();
       try {
         await appointmentService.updateContractEmailSent(widget.appointment.id);
@@ -236,12 +236,24 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
         );
       }
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to send contract email'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      final reason = result.errorMessage ?? 'Send failed';
+      final appointmentService = SalesAppointmentService();
+      try {
+        await appointmentService.updateContractEmailSendFailed(
+          widget.appointment.id,
+          reason,
+        );
+      } catch (_) {
+        // Non-fatal: store failed, still show SnackBar
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Contract not sent. Cause: $reason'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -658,6 +670,20 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
             ),
           ],
         ),
+        if (widget.appointment.contractEmailSendError != null &&
+            widget.appointment.contractEmailSendError!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text(
+              'Contract not sent. Cause: ${widget.appointment.contractEmailSendError}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.orange[800],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -6,6 +6,31 @@ class ProductItemService {
   final CollectionReference<Map<String, dynamic>> _collection =
       FirebaseFirestore.instance.collection('product_items');
 
+  /// Fetches a single product by id. Returns null if not found or deleted.
+  Future<ProductItem?> getProductItem(String id) async {
+    final doc = await _collection.doc(id).get();
+    if (!doc.exists || doc.data() == null) return null;
+    return ProductItem.fromFirestore(doc);
+  }
+
+  /// Returns id -> name for all existing products in the given ids. Deleted/missing ids are omitted.
+  Future<Map<String, String>> getProductNamesByIds(List<String> ids) async {
+    final uniqueIds = ids.toSet().where((id) => id.isNotEmpty).toList();
+    if (uniqueIds.isEmpty) return {};
+    final results = await Future.wait(
+      uniqueIds.map((id) => _collection.doc(id).get()),
+    );
+    final map = <String, String>{};
+    for (var i = 0; i < uniqueIds.length; i++) {
+      final doc = results[i];
+      if (doc.exists && doc.data() != null) {
+        final item = ProductItem.fromFirestore(doc);
+        map[item.id] = item.name;
+      }
+    }
+    return map;
+  }
+
   Stream<List<ProductItem>> watchProductItems() {
     return _collection
         .orderBy('createdAt', descending: true)

@@ -19,6 +19,7 @@ class InvoicePdfService {
     required order_models.Order order,
     required double depositAmount,
     String? shippingAddress,
+    String? businessName,
   }) async {
     final pdf = pw.Document();
 
@@ -87,7 +88,7 @@ class InvoicePdfService {
             pw.SizedBox(height: 24),
 
             // Two-column: Company info | Customer info (EXACT same as contract)
-            _buildInvoiceInfoRow(order, shippingAddress),
+            _buildInvoiceInfoRow(order, shippingAddress, businessName: businessName),
             pw.SizedBox(height: 24),
 
             // Quote table (EXACT same structure as contract, but with invoice amount)
@@ -117,11 +118,13 @@ class InvoicePdfService {
     required order_models.Order order,
     required double depositAmount,
     String? shippingAddress,
+    String? businessName,
   }) async {
     final pdf = await generateInvoicePdf(
       order: order,
       depositAmount: depositAmount,
       shippingAddress: shippingAddress,
+      businessName: businessName,
     );
     return await pdf.save();
   }
@@ -164,8 +167,9 @@ class InvoicePdfService {
   /// Build invoice info row (EXACT same as contract PDF)
   pw.Widget _buildInvoiceInfoRow(
     order_models.Order order,
-    String? shippingAddress,
-  ) {
+    String? shippingAddress, {
+    String? businessName,
+  }) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -216,19 +220,23 @@ class InvoicePdfService {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildInfoLine(
+              _buildQuoteInfoLine(
                 'Date:',
                 DateFormat('yyyy-MM-dd').format(DateTime.now()),
               ),
               pw.SizedBox(height: 4),
-              _buildInfoLine('Customer Name:', order.customerName),
+              _buildQuoteInfoLine('Customer Name:', order.customerName),
+              if (businessName != null && businessName.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                _buildQuoteInfoLine('Business Name:', businessName),
+              ],
               pw.SizedBox(height: 4),
-              _buildInfoLine('Customer Phone:', order.phone),
+              _buildQuoteInfoLine('Customer Phone:', order.phone),
               pw.SizedBox(height: 4),
-              _buildInfoLine('Customer Email:', order.email),
+              _buildQuoteInfoLine('Customer Email:', order.email),
               if (shippingAddress != null && shippingAddress.isNotEmpty) ...[
                 pw.SizedBox(height: 4),
-                _buildInfoLine('Shipping Address:', shippingAddress),
+                _buildQuoteInfoLineWrapped('Shipping Address:', shippingAddress),
               ],
             ],
           ),
@@ -237,14 +245,27 @@ class InvoicePdfService {
     );
   }
 
-  /// Build info line for invoice (EXACT same as contract PDF)
-  pw.Widget _buildInfoLine(String label, String value) {
+  /// Build info line for invoice quote section (same as contract PDF)
+  pw.Widget _buildQuoteInfoLine(String label, String value) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text('$label ', style: PdfStyles.labelText),
-        pw.Expanded(child: pw.Text(value, style: PdfStyles.bodyText)),
+        pw.Text('$label ', style: PdfStyles.quoteSectionLabel),
+        pw.Expanded(child: pw.Text(value, style: PdfStyles.quoteSectionValue)),
       ],
+    );
+  }
+
+  /// Build info line with wrapping value (e.g. shipping address). Label and value
+  /// flow as one paragraph so wrapped lines align at the left margin.
+  pw.Widget _buildQuoteInfoLineWrapped(String label, String value) {
+    return pw.RichText(
+      text: pw.TextSpan(
+        children: [
+          pw.TextSpan(text: '$label ', style: PdfStyles.quoteSectionLabel),
+          pw.TextSpan(text: value, style: PdfStyles.quoteSectionValue),
+        ],
+      ),
     );
   }
 
@@ -316,7 +337,7 @@ class InvoicePdfService {
               children: [
                 _buildTotalRow('Subtotal', subtotal),
                 pw.SizedBox(height: 4),
-                _buildTotalRow('Deposit Allocate', depositAmount, isBold: true),
+                _buildTotalRow('Deposit Allocate (10%)', depositAmount, isBold: true),
                 pw.Divider(),
                 _buildTotalRow(
                   'Invoice Amount Due',

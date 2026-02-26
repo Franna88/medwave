@@ -140,7 +140,7 @@ class SalesAppointmentService {
     }
   }
 
-  /// Mark that the contract link email was sent to the customer
+  /// Mark that the contract link email was sent to the customer. Clears any prior send error.
   Future<void> updateContractEmailSent(String appointmentId) async {
     try {
       final appointment = await getAppointment(appointmentId);
@@ -148,11 +148,38 @@ class SalesAppointmentService {
       final updated = appointment.copyWith(
         contractEmailSentAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        clearContractEmailSendError: true,
       );
       await updateAppointment(updated);
     } catch (e) {
       if (kDebugMode) {
         print('Error updating contract email sent: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Store short reason when contract email send failed (e.g. invalid email). Max 80 chars stored.
+  static const int _maxContractEmailSendErrorLength = 80;
+
+  Future<void> updateContractEmailSendFailed(
+    String appointmentId,
+    String reason,
+  ) async {
+    try {
+      final appointment = await getAppointment(appointmentId);
+      if (appointment == null) return;
+      final truncated = reason.length > _maxContractEmailSendErrorLength
+          ? '${reason.substring(0, _maxContractEmailSendErrorLength)}…'
+          : reason;
+      final updated = appointment.copyWith(
+        contractEmailSendError: truncated,
+        updatedAt: DateTime.now(),
+      );
+      await updateAppointment(updated);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating contract email send failed: $e');
       }
       rethrow;
     }
@@ -218,6 +245,7 @@ class SalesAppointmentService {
     String? optInNote,
     List<models.OptInProduct>? optInProducts,
     Map<String, String>? optInQuestions,
+    String? email,
     String? depositConfirmationToken,
     String? depositConfirmationStatus,
     DateTime? depositConfirmationSentAt,
@@ -310,6 +338,7 @@ class SalesAppointmentService {
         updatedAt: now,
         stageHistory: updatedHistory,
         notes: updatedNotes,
+        email: email ?? appointment.email,
         depositAmount: depositAmount ?? appointment.depositAmount,
         depositPaid: depositPaid ?? appointment.depositPaid,
         appointmentDate: appointmentDate ?? appointment.appointmentDate,
@@ -467,10 +496,9 @@ class SalesAppointmentService {
 
           print('✉️ Finance email sent status: $sent');
           if (sent) {
-            print('✅ SUCCESS: Finance team notified at tertiusva@gmail.com');
             print(
-              // '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
-              '✅ SUCCESS: Finance team notified at tertiusva@gmail.com',
+              '✅ SUCCESS: Finance team notified at rachel@medwavegroup.com',
+              // '✅ SUCCESS: Finance team notified at tertiusva@gmail.com',
             );
           } else {
             print(
@@ -908,14 +936,17 @@ class SalesAppointmentService {
     } catch (e) {
       if (kDebugMode) {
         print(
-            '⚠️ Deposit confirmed BCC notification failed for $appointmentId: $e');
+          '⚠️ Deposit confirmed BCC notification failed for $appointmentId: $e',
+        );
       }
     }
   }
 
   /// Sends deposit-confirmed welcome email to the customer (template_kxndxus).
   /// Fire-and-forget so deposit confirmation result is not affected by email failure.
-  void _sendDepositConfirmedWelcomeToCustomer(models.SalesAppointment appointment) {
+  void _sendDepositConfirmedWelcomeToCustomer(
+    models.SalesAppointment appointment,
+  ) {
     EmailJSService.sendDepositConfirmedWelcomeToCustomer(
       toEmail: appointment.email,
       clientName: appointment.customerName,

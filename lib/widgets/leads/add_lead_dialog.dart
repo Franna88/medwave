@@ -10,11 +10,14 @@ import '../../theme/app_theme.dart';
 class AddLeadDialog extends StatefulWidget {
   final LeadChannel channel;
   final Lead? existingLead;
+  /// When true and creating (not editing), pops with the new lead id instead of true.
+  final bool returnLeadIdOnCreate;
 
   const AddLeadDialog({
     super.key,
     required this.channel,
     this.existingLead,
+    this.returnLeadIdOnCreate = false,
   });
 
   @override
@@ -112,7 +115,14 @@ class _AddLeadDialogState extends State<AddLeadDialog> {
           createdBy: userId,
           createdByName: userName,
         );
-        await _leadService.createLead(newLead);
+        final leadId = await _leadService.createLead(newLead);
+        if (mounted && widget.returnLeadIdOnCreate) {
+          Navigator.of(context).pop(leadId);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Lead created successfully')),
+          );
+          return;
+        }
       }
 
       if (mounted) {

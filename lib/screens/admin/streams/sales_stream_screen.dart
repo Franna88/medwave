@@ -20,8 +20,10 @@ import '../../../widgets/appointments/appointment_detail_dialog.dart';
 import '../../../widgets/appointments/reschedule_appointment_dialog.dart';
 import '../../../widgets/appointments/ready_for_ops_badge.dart';
 import '../../../services/firebase/lead_booking_service.dart';
+import '../../../services/firebase/lead_channel_service.dart';
 import '../../../models/leads/lead_booking.dart'
     show LeadBooking, BookingStatus, AICallPrompts;
+import '../../../widgets/leads/add_lead_dialog.dart';
 
 class SalesStreamScreen extends StatefulWidget {
   const SalesStreamScreen({super.key});
@@ -52,10 +54,11 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     _horizontalScrollController = ScrollController();
     _loadAppointments();
     _searchController.addListener(_onSearchChanged);
-    // Load admin users for assignment feature (Super Admin only)
+    // Load admin users for assignment feature (Super Admin and Country Admin)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
-      if (authProvider.userRole == UserRole.superAdmin) {
+      final role = authProvider.userRole;
+      if (role == UserRole.superAdmin || role == UserRole.countryAdmin) {
         context.read<AdminProvider>().loadAdminUsers();
       }
       // Load product items for Opt In stage selections
@@ -258,7 +261,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     final Map<String, TextEditingController> questionControllers = {
       'Best phone number': TextEditingController(),
       'Name of business': TextEditingController(),
-      'Best email': TextEditingController(),
+      'Best email': TextEditingController(text: appointment.email),
       'Sales person dealing with': TextEditingController(),
       'Shipping address': TextEditingController(),
       'Method of payment': TextEditingController(),
@@ -722,6 +725,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           optInNote: isOptIn ? noteText : null,
           optInProducts: optInSelections,
           optInQuestions: optInQuestions,
+          email: optInQuestions?['Best email']?.trim().isNotEmpty == true
+              ? optInQuestions!['Best email']!.trim()
+              : null,
         );
 
         // Dispose question controllers
@@ -884,7 +890,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                   TextField(
                     controller: searchController,
                     decoration: const InputDecoration(
-                      labelText: 'Search by name, email, or phone',
+                      labelText: 'Search leads (name, email, phone, notes, stage, etc.)',
                       hintText: 'Enter search query...',
                       prefixIcon: Icon(Icons.search),
                       border: OutlineInputBorder(),
@@ -892,6 +898,41 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                     onChanged: (value) {
                       performSearch(value);
                     },
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      FocusScope.of(context).unfocus();
+                      try {
+                        final channel = await LeadChannelService()
+                            .initializeDefaultChannel();
+                        final createdLeadId = await showDialog<dynamic>(
+                          context: context,
+                          builder: (context) => AddLeadDialog(
+                            channel: channel,
+                            returnLeadIdOnCreate: true,
+                          ),
+                        );
+                        if (createdLeadId is String && context.mounted) {
+                          Navigator.of(context).pop({
+                            'appointmentId': null,
+                            'leadId': createdLeadId,
+                          });
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Create lead'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primaryColor,
+                      side: BorderSide(color: AppTheme.primaryColor),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   if (isSearching)
@@ -1134,8 +1175,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       ),
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _searchDebounce?.cancel();
+    _searchDebounce?.cancel();
+    // Delay disposal until the dialog route has fully unmounted to avoid "used after being disposed"
+    Future.delayed(const Duration(milliseconds: 400), () {
       searchController.dispose();
     });
 
@@ -1218,7 +1260,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     final Map<String, TextEditingController> questionControllers = {
       'Best phone number': TextEditingController(),
       'Name of business': TextEditingController(),
-      'Best email': TextEditingController(),
+      'Best email': TextEditingController(text: appointment.email),
       'Sales person dealing with': TextEditingController(),
       'Shipping address': TextEditingController(),
       'Method of payment': TextEditingController(),
@@ -1759,6 +1801,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           optInNote: isOptIn ? noteText : null,
           optInProducts: optInSelections,
           optInQuestions: optInQuestions,
+          email: optInQuestions?['Best email']?.trim().isNotEmpty == true
+              ? optInQuestions!['Best email']!.trim()
+              : null,
           paymentType: isOptIn ? selectedPaymentType : null,
         );
 
@@ -1812,7 +1857,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       final Map<String, TextEditingController> questionControllers = {
         'Best phone number': TextEditingController(),
         'Name of business': TextEditingController(),
-        'Best email': TextEditingController(),
+        'Best email': TextEditingController(text: lead.email),
         'Sales person dealing with': TextEditingController(),
         'Shipping address': TextEditingController(),
         'Method of payment': TextEditingController(),
@@ -2661,12 +2706,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           ? 'Manually added to Opt In'
           : noteController.text;
 
+      final email = (optInQuestions != null &&
+              (optInQuestions['Best email'] ?? '').trim().isNotEmpty)
+          ? optInQuestions['Best email']!.trim()
+          : lead.email;
+
       // Create appointment directly at opt_in stage with manuallyAdded flag
       final appointment = models.SalesAppointment(
         id: '',
         leadId: leadId,
         customerName: lead.fullName,
-        email: lead.email,
+        email: email,
         phone: lead.phone,
         currentStage: 'opt_in',
         appointmentDate: lead.bookingDate,
@@ -3767,6 +3817,40 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: Colors.blue[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (appointment.contractEmailSendError != null &&
+                    appointment.contractEmailSendError!.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          size: 12,
+                          color: Colors.orange[800],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          appointment.contractEmailSendError!.length > 50
+                              ? 'Not sent: ${appointment.contractEmailSendError!.substring(0, 50)}…'
+                              : 'Not sent: ${appointment.contractEmailSendError}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange[800],
                           ),
                         ),
                       ],

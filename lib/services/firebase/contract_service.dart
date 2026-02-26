@@ -1,11 +1,15 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:crypto/crypto.dart';
 import 'package:uuid/uuid.dart';
+import '../../models/admin/product_package.dart';
 import '../../models/contracts/contract.dart';
 import '../../models/streams/appointment.dart';
 import 'contract_content_service.dart';
+import 'product_item_service.dart';
+import 'product_package_service.dart';
 import 'sales_appointment_service.dart';
 import '../pdf/contract_pdf_service.dart';
 
@@ -16,6 +20,8 @@ class ContractService {
       ContractContentService();
   final SalesAppointmentService _appointmentService = SalesAppointmentService();
   final ContractPdfService _pdfService = ContractPdfService();
+  final ProductPackageService _productPackageService = ProductPackageService();
+  final ProductItemService _productItemService = ProductItemService();
 
   static const String _collectionPath = 'contracts';
   static const String _secretKey =
@@ -71,6 +77,7 @@ class ContractService {
 
       // Extract and validate shipping address
       final shippingAddress = appointment.optInQuestions?['Shipping address'];
+      final businessName = appointment.optInQuestions?['Name of business'];
 
       if (shippingAddress == null || shippingAddress.trim().isEmpty) {
         throw Exception(
@@ -97,20 +104,41 @@ class ContractService {
       // Generate access token
       final accessToken = generateAccessToken(docRef.id);
 
-      // Build products from opt-in products and packages
+      // Build products from opt-in products (standalone)
       final productsFromProducts = appointment.optInProducts
           .map((p) => ContractProduct(
               id: p.id, name: p.name, price: p.price, quantity: p.quantity))
           .toList();
-      final productsFromPackages = appointment.optInPackages
-          .map((p) => ContractProduct(
-              id: p.id,
-              name: p.name,
-              price: p.price,
-              quantity: p.quantity,
-              lineType: 'packageHeader'))
-          .toList();
-      final allProducts = [...productsFromProducts, ...productsFromPackages];
+
+      // Expand opt-in packages to header + packageItem lines (existing products only) + addedService lines
+      final expandedPackageLines = <ContractProduct>[];
+      for (final p in appointment.optInPackages) {
+        final pkg = await _productPackageService.getProductPackage(p.id);
+        if (pkg == null) {
+          // Package missing/deleted: keep single header line
+          expandedPackageLines.add(ContractProduct(
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            quantity: p.quantity,
+            lineType: 'packageHeader',
+          ));
+          continue;
+        }
+        final productIds = pkg.packageItems
+            .map((e) => e.productId)
+            .where((id) => id.isNotEmpty)
+            .toList();
+        final productNames = productIds.isNotEmpty
+            ? await _productItemService.getProductNamesByIds(productIds)
+            : <String, String>{};
+        expandedPackageLines.addAll(_expandPackageToContractProducts(
+          pkg,
+          p,
+          productNames,
+        ));
+      }
+      final allProducts = [...productsFromProducts, ...expandedPackageLines];
 
       // Create contract object
       final contract = Contract(
@@ -123,6 +151,7 @@ class ContractService {
         email: appointment.email,
         phone: appointment.phone,
         shippingAddress: shippingAddress,
+        businessName: businessName,
         contractContentVersion: contractContent.version,
         contractContentData: {
           'content': contractContent.content,
@@ -154,6 +183,48 @@ class ContractService {
     }
   }
 
+  /// Builds header + package item lines (existing products only) + included service lines for one package.
+  List<ContractProduct> _expandPackageToContractProducts(
+    ProductPackage pkg,
+    OptInProduct optInPkg,
+    Map<String, String> productNames,
+  ) {
+    final lines = <ContractProduct>[];
+    lines.add(ContractProduct(
+      id: pkg.id,
+      name: pkg.name,
+      quantity: optInPkg.quantity,
+      price: optInPkg.price,
+      lineType: 'packageHeader',
+    ));
+    for (final entry in pkg.packageItems) {
+      final name = productNames[entry.productId];
+      if (name == null) continue; // Deleted product: omit from contract
+      lines.add(ContractProduct(
+        id: '${pkg.id}-item-${entry.productId}',
+        name: '${entry.quantity}x $name',
+        quantity: entry.quantity,
+        price: 0,
+        isSubItem: true,
+        parentId: pkg.id,
+        lineType: 'packageItem',
+      ));
+    }
+    final labels = pkg.includedServiceLabels ?? [];
+    for (var i = 0; i < labels.length; i++) {
+      lines.add(ContractProduct(
+        id: '${pkg.id}-svc-$i',
+        name: labels[i],
+        quantity: 1,
+        price: 0,
+        isSubItem: true,
+        parentId: pkg.id,
+        lineType: 'addedService',
+      ));
+    }
+    return lines;
+  }
+
   /// Create a contract revision (edited version of existing contract)
   Future<Contract> createContractRevision({
     required Contract originalContract,
@@ -167,6 +238,7 @@ class ContractService {
     String? email,
     String? phone,
     String? shippingAddress,
+    String? businessName,
     String? paymentType,
     Map<String, dynamic>? editedContractContent, // Allow editing contract terms
     double? subtotal, // Optional calculated subtotal (accounts for quantities)
@@ -187,6 +259,8 @@ class ContractService {
       final finalPhone = phone ?? originalContract.phone;
       final finalShippingAddress =
           shippingAddress ?? originalContract.shippingAddress;
+      final finalBusinessName =
+          businessName ?? originalContract.businessName;
       final finalPaymentType = paymentType ?? originalContract.paymentType;
 
       // Use provided subtotal if available, otherwise calculate from products
@@ -236,6 +310,7 @@ class ContractService {
         email: finalEmail,
         phone: finalPhone,
         shippingAddress: finalShippingAddress,
+        businessName: finalBusinessName,
         contractContentVersion: originalContract.contractContentVersion,
         contractContentData:
             finalContractContentData, // Use edited content if provided
@@ -504,6 +579,18 @@ class ContractService {
       }
       rethrow;
     }
+  }
+
+  /// Generate contract PDF bytes (no upload). Used e.g. for BCC email attachment.
+  Future<Uint8List> getContractPdfBytes(Contract contract) async {
+    return await _pdfService.generatePdfBytes(contract);
+  }
+
+  /// Generate contract PDF, upload a copy to Storage, and return the download URL.
+  /// Used for BCC "contract sent" email so recipients get a link (EmailJS has a 50KB variable limit).
+  Future<String> getContractPdfDownloadUrl(Contract contract) async {
+    final bytes = await _pdfService.generatePdfBytes(contract);
+    return await _pdfService.uploadSentCopyToStorage(contract, bytes);
   }
 
   /// Void a contract

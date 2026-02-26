@@ -6,6 +6,13 @@ class ProductPackageService {
   final CollectionReference<Map<String, dynamic>> _collection =
       FirebaseFirestore.instance.collection('product_packages');
 
+  /// Fetches a single package by id. Returns null if not found or deleted.
+  Future<ProductPackage?> getProductPackage(String id) async {
+    final doc = await _collection.doc(id).get();
+    if (!doc.exists || doc.data() == null) return null;
+    return ProductPackage.fromFirestore(doc);
+  }
+
   Stream<List<ProductPackage>> watchProductPackages() {
     return _collection
         .orderBy('createdAt', descending: true)

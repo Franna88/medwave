@@ -745,11 +745,12 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
   Widget _buildAssignmentSection() {
     final authProvider = context.watch<AuthProvider>();
     final userRole = authProvider.userRole;
-    final isSuperAdmin = userRole == UserRole.superAdmin;
+    final canAssignSalesAgent = userRole == UserRole.superAdmin ||
+        userRole == UserRole.countryAdmin;
 
     return _buildSection('Assignment', Icons.person_outline, [
-      if (isSuperAdmin) ...[
-        // Editable dropdown for Super Admin
+      if (canAssignSalesAgent) ...[
+        // Editable dropdown for Super Admin and Country Admin
         if (_isSavingAssignment)
           const Padding(
             padding: EdgeInsets.only(bottom: 12),
@@ -812,7 +813,7 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
             ),
           ),
       ] else ...[
-        // Read-only display for non-Super Admin users
+        // Read-only display for users who cannot assign
         _buildInfoRow(
           Icons.person,
           'Assigned To',

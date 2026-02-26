@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -22,7 +23,17 @@ class ContractPdfService {
       );
     }
     // #endregion
-    final pdf = pw.Document();
+    final baseFont = await PdfGoogleFonts.robotoRegular();
+    final boldFont = await PdfGoogleFonts.robotoBold();
+    final italicFont = await PdfGoogleFonts.robotoItalic();
+
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: baseFont,
+        bold: boldFont,
+        italic: italicFont,
+      ),
+    );
 
     // Load logo once: same image for cover (page 1) and invoice (page 2+)
     // #region agent log
@@ -118,6 +129,7 @@ class ContractPdfService {
       // #region agent log
       final contentStartTime = DateTime.now().millisecondsSinceEpoch;
       // #endregion
+      final safeText = _sanitizeText(plainText);
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
@@ -127,7 +139,7 @@ class ContractPdfService {
             PdfStyles.thickDivider,
             // Paragraph can span pages; pw.Text cannot, so long contract text would overflow
             pw.Paragraph(
-              text: plainText,
+              text: safeText,
               style: PdfStyles.bodyText,
               textAlign: pw.TextAlign.justify,
             ),
@@ -257,6 +269,34 @@ class ContractPdfService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error uploading PDF: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Upload a copy of the contract PDF for BCC email download link (avoids EmailJS 50KB limit).
+  /// Path: contracts/{contractId}/sent_copy.pdf
+  Future<String> uploadSentCopyToStorage(
+    Contract contract,
+    Uint8List pdfBytes,
+  ) async {
+    try {
+      final fileName = 'sent_copy.pdf';
+      final ref = _storage.ref().child('contracts/${contract.id}/$fileName');
+      await ref.putData(
+        pdfBytes,
+        SettableMetadata(
+          contentType: 'application/pdf',
+          customMetadata: {
+            'contractId': contract.id,
+            'customerName': contract.customerName,
+          },
+        ),
+      );
+      return await ref.getDownloadURL();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error uploading sent copy PDF: $e');
       }
       rethrow;
     }
@@ -527,20 +567,28 @@ class ContractPdfService {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildInfoLine(
+              _buildQuoteInfoLine(
                 'Date:',
                 DateFormat('yyyy-MM-dd').format(contract.createdAt),
               ),
               pw.SizedBox(height: 4),
-              _buildInfoLine('Customer Name:', contract.customerName),
+              _buildQuoteInfoLine('Customer Name:', contract.customerName),
+              if (contract.businessName != null &&
+                  contract.businessName!.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                _buildQuoteInfoLine('Business Name:', contract.businessName!),
+              ],
               pw.SizedBox(height: 4),
-              _buildInfoLine('Customer Phone:', contract.phone),
+              _buildQuoteInfoLine('Customer Phone:', contract.phone),
               pw.SizedBox(height: 4),
-              _buildInfoLine('Customer Email:', contract.email),
+              _buildQuoteInfoLine('Customer Email:', contract.email),
               if (contract.shippingAddress != null &&
                   contract.shippingAddress!.isNotEmpty) ...[
                 pw.SizedBox(height: 4),
-                _buildInfoLine('Shipping Address:', contract.shippingAddress!),
+                _buildQuoteInfoLineWrapped(
+                  'Shipping Address:',
+                  contract.shippingAddress!,
+                ),
               ],
             ],
           ),
@@ -549,26 +597,27 @@ class ContractPdfService {
     );
   }
 
-  /// Build info line for invoice
-  pw.Widget _buildInfoLine(String label, String value) {
+  /// Build info line for invoice (quote section: dark color, uniform size)
+  pw.Widget _buildQuoteInfoLine(String label, String value) {
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(
-          '$label ',
-          style: pw.TextStyle(
-            fontSize: 12,
-            fontWeight: pw.FontWeight.bold,
-            color: PdfStyles.grayColor,
-          ),
-        ),
-        pw.Expanded(
-          child: pw.Text(
-            value,
-            style: pw.TextStyle(fontSize: 12, color: PdfStyles.textColor),
-          ),
-        ),
+        pw.Text('$label ', style: PdfStyles.quoteSectionLabel),
+        pw.Expanded(child: pw.Text(value, style: PdfStyles.quoteSectionValue)),
       ],
+    );
+  }
+
+  /// Build info line with wrapping value (e.g. shipping address). Label and value
+  /// flow as one paragraph so wrapped lines align at the left margin.
+  pw.Widget _buildQuoteInfoLineWrapped(String label, String value) {
+    return pw.RichText(
+      text: pw.TextSpan(
+        children: [
+          pw.TextSpan(text: '$label ', style: PdfStyles.quoteSectionLabel),
+          pw.TextSpan(text: value, style: PdfStyles.quoteSectionValue),
+        ],
+      ),
     );
   }
 
@@ -645,10 +694,7 @@ class ContractPdfService {
             child: pw.Text(
               product.name,
               style: isSubItem
-                  ? pw.TextStyle(
-                      fontSize: 10,
-                      color: PdfStyles.grayColor,
-                    )
+                  ? pw.TextStyle(fontSize: 10, color: PdfStyles.grayColor)
                   : PdfStyles.bodyText,
             ),
           ),
@@ -689,7 +735,7 @@ class ContractPdfService {
           pw.SizedBox(height: 4),
           _buildTotalRow('VAT (15%)', vatAmount),
           pw.SizedBox(height: 4),
-          _buildTotalRow('Deposit Allocate', contract.depositAmount),
+          _buildTotalRow('Deposit Allocate (10%)', contract.depositAmount),
           pw.SizedBox(height: 4),
           _buildTotalRow('Balance due', contract.remainingBalance),
           pw.Divider(),
@@ -924,9 +970,7 @@ class ContractPdfService {
       mainAxisSize: pw.MainAxisSize.max,
       children: [
         // Header: centered logo, same size as second page (150×50)
-        pw.Center(
-          child: pw.Image(coverLogo, width: 150, height: 50),
-        ),
+        pw.Center(child: pw.Image(coverLogo, width: 150, height: 50)),
         pw.SizedBox(height: 48),
         // Center: title + slogan
         pw.Expanded(
@@ -1041,25 +1085,17 @@ class ContractPdfService {
         // Footer bar: Document Ref (left), Page 1 (right)
         pw.Container(
           padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          decoration: pw.BoxDecoration(
-            color: PdfStyles.lightGrayColor,
-          ),
+          decoration: pw.BoxDecoration(color: PdfStyles.lightGrayColor),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
                 'Document Ref: ${_formatDocumentRef(contract.id)}',
-                style: pw.TextStyle(
-                  fontSize: 12,
-                  color: PdfStyles.grayColor,
-                ),
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.grayColor),
               ),
               pw.Text(
                 'Page 1',
-                style: pw.TextStyle(
-                  fontSize: 12,
-                  color: PdfStyles.grayColor,
-                ),
+                style: pw.TextStyle(fontSize: 12, color: PdfStyles.grayColor),
               ),
             ],
           ),
@@ -1086,5 +1122,22 @@ class ContractPdfService {
         ],
       ),
     );
+  }
+
+  /// Normalise Unicode punctuation characters that fall outside the basic
+  /// Latin range supported by standard PDF fonts. Roboto (set as the document
+  /// theme) handles ® and ™ natively; this helper is a belt-and-suspenders
+  /// fallback for smart quotes, dashes, ellipsis, and non-breaking spaces that
+  /// may arrive from rich-text editors (e.g. Quill) or copy-pasted content.
+  String _sanitizeText(String text) {
+    return text
+        .replaceAll('\u2018', "'") // left single quotation mark
+        .replaceAll('\u2019', "'") // right single quotation mark / apostrophe
+        .replaceAll('\u201C', '"') // left double quotation mark
+        .replaceAll('\u201D', '"') // right double quotation mark
+        .replaceAll('\u2013', '-') // en dash
+        .replaceAll('\u2014', '--') // em dash
+        .replaceAll('\u2026', '...') // horizontal ellipsis
+        .replaceAll('\u00A0', ' '); // non-breaking space
   }
 }

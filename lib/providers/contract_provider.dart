@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/contracts/contract.dart';
 import '../models/streams/appointment.dart';
+import '../services/firebase/admin_service.dart';
 import '../services/firebase/contract_service.dart';
+import '../services/firebase/sales_appointment_service.dart';
 import '../services/emailjs_service.dart';
 
 /// Provider for managing contract state
@@ -82,6 +84,7 @@ class ContractProvider extends ChangeNotifier {
     String? email,
     String? phone,
     String? shippingAddress,
+    String? businessName,
     String? paymentType,
     Map<String, dynamic>? editedContractContent, // Allow editing contract terms
     double? subtotal, // Optional calculated subtotal (accounts for quantities)
@@ -104,6 +107,7 @@ class ContractProvider extends ChangeNotifier {
         email: email,
         phone: phone,
         shippingAddress: shippingAddress,
+        businessName: businessName,
         paymentType: paymentType,
         editedContractContent: editedContractContent,
         subtotal: subtotal,
@@ -121,35 +125,57 @@ class ContractProvider extends ChangeNotifier {
     }
   }
 
-  /// Resend contract email (for revisions or original contracts)
-  Future<bool> resendContractEmail({
+  /// Resend contract email (for revisions or original contracts).
+  /// Returns (success, errorMessage) so UI can show a short reason when send fails.
+  Future<({bool success, String? errorMessage})> resendContractEmail({
     required Contract contract,
     required SalesAppointment appointment,
   }) async {
     try {
       final contractUrl = getFullContractUrl(contract);
-      final success = await EmailJSService.sendContractLinkEmail(
+      final result = await EmailJSService.sendContractLinkEmail(
         appointment: appointment,
         contractUrl: contractUrl,
       );
-      if (success) {
+      if (result.success) {
+        String? downloadUrl;
+        try {
+          downloadUrl = await _service.getContractPdfDownloadUrl(contract);
+        } catch (e) {
+          if (kDebugMode) {
+            print(
+              'ContractProvider: Could not generate PDF download link for BCC: $e',
+            );
+          }
+        }
+        String? assignedAdminEmail;
+        if (appointment.assignedTo != null &&
+            appointment.assignedTo!.trim().isNotEmpty) {
+          assignedAdminEmail =
+              await AdminService.getAdminEmailByUserId(appointment.assignedTo!);
+        }
         _lastContractBccSent =
             await EmailJSService.sendContractSentNotificationToBcc(
               contractId: contract.id,
               customerName: appointment.customerName,
               contractSentDate: DateTime.now(),
+              contractDownloadUrl: downloadUrl,
+              assignedAdminEmail: assignedAdminEmail,
             );
         if (!_lastContractBccSent && kDebugMode) {
           print(
             'ContractProvider: Contract sent to client but BCC notification failed. In EmailJS set "To Email" to {{bcc_email}} or {{to_email}} (we send both).',
           );
         }
+        return (success: true, errorMessage: null);
       }
-      return success;
+      return (success: false, errorMessage: result.errorMessage);
     } catch (e) {
       _error = e.toString();
       notifyListeners();
-      return false;
+      final msg = e.toString();
+      final reason = msg.length > 80 ? msg.substring(0, 80) : msg;
+      return (success: false, errorMessage: reason);
     }
   }
 
@@ -279,15 +305,26 @@ class ContractProvider extends ChangeNotifier {
       // Notify BCC list that contract was signed (non-blocking)
       if (_currentContract != null && _currentContract!.signedAt != null) {
         try {
+          String? assignedAdminEmail;
+          final appointment = await SalesAppointmentService().getAppointment(
+            _currentContract!.appointmentId,
+          );
+          if (appointment?.assignedTo != null &&
+              appointment!.assignedTo!.trim().isNotEmpty) {
+            assignedAdminEmail =
+                await AdminService.getAdminEmailByUserId(appointment.assignedTo!);
+          }
           await EmailJSService.sendContractSignedNotificationToBcc(
             contractId: _currentContract!.id,
             customerName: _currentContract!.customerName,
             contractSignedDate: _currentContract!.signedAt!,
+            assignedAdminEmail: assignedAdminEmail,
           );
         } catch (e) {
           if (kDebugMode) {
             print(
-                '⚠️ ContractProvider: Contract signed but BCC notification failed: $e');
+              '⚠️ ContractProvider: Contract signed but BCC notification failed: $e',
+            );
           }
         }
       }
