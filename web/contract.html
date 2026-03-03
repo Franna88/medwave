@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    Contract page entry: same as index.html but with contract-specific title/og
+    so link previews (crawlers that don't run JS) show "MedWave Agreement Link".
+    Served for /contract and /contract/** via Firebase Hosting rewrites.
+  -->
+  <!-- Must match index.html base; default root. If you use flutter build web --base-href "/path/", update this in build/web/contract.html or add a post-build step. -->
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="View and sign your MedWave contract.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta property="og:title" content="MedWave Agreement Link">
+  <meta property="og:description" content="View and sign your MedWave contract.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="MedWave Agreement Link">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>MedWave Agreement Link</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

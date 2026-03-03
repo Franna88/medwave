@@ -57,6 +57,14 @@
       ],
       "rewrites": [
         {
+          "source": "/contract",
+          "destination": "/contract.html"
+        },
+        {
+          "source": "/contract/**",
+          "destination": "/contract.html"
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }
