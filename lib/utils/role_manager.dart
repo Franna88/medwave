@@ -107,12 +107,12 @@ class RoleManager {
       return true;
     }
 
-    // Stream-specific admins can only access their own stream
+    // Stream-specific admins: Operations can also access Sales; others only their stream
     switch (streamName.toLowerCase()) {
       case 'marketing':
         return role == UserRole.marketingAdmin;
       case 'sales':
-        return role == UserRole.salesAdmin;
+        return role == UserRole.salesAdmin || role == UserRole.operationsAdmin;
       case 'operations':
         return role == UserRole.operationsAdmin;
       case 'support':
@@ -134,7 +134,7 @@ class RoleManager {
       case UserRole.salesAdmin:
         return ['sales'];
       case UserRole.operationsAdmin:
-        return ['operations'];
+        return ['operations', 'sales'];
       case UserRole.supportAdmin:
         return ['support'];
       default:

@@ -14,6 +14,9 @@ import 'pdf_styles.dart';
 class InvoicePdfService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  static final _moneyFormat = NumberFormat('#,##0.00', 'en_US');
+  static String _formatMoney(double amount) => 'R ${_moneyFormat.format(amount)}';
+
   /// Generate invoice PDF document
   Future<pw.Document> generateInvoicePdf({
     required order_models.Order order,
@@ -28,16 +31,18 @@ class InvoicePdfService {
     final greyLogoBytes = greyLogoData.buffer.asUint8List();
     final greyLogo = pw.MemoryImage(greyLogoBytes);
 
-    // Calculate totals
-    final subtotal = order.items.fold<double>(
+    // Calculate totals (subtotal ex VAT, same as contract PDF)
+    final subtotalExVat = order.items.fold<double>(
       0,
       (sum, item) => sum + ((item.price ?? 0) * item.quantity),
     );
-    // Cap deposit at subtotal and ensure invoice amount is never negative
-    final cappedDepositAmount = depositAmount > subtotal
-        ? subtotal
+    final vatAmount = subtotalExVat * 0.15;
+    final totalInclVat = subtotalExVat + vatAmount;
+    // Cap deposit at total and ensure balance is never negative
+    final cappedDepositAmount = depositAmount > totalInclVat
+        ? totalInclVat
         : depositAmount;
-    final invoiceAmount = max(0.0, subtotal - cappedDepositAmount);
+    final balanceDue = max(0.0, totalInclVat - cappedDepositAmount);
 
     // Invoice page (EXACT same layout as contract PDF page 2)
     pdf.addPage(
@@ -88,15 +93,21 @@ class InvoicePdfService {
             pw.SizedBox(height: 24),
 
             // Two-column: Company info | Customer info (EXACT same as contract)
-            _buildInvoiceInfoRow(order, shippingAddress, businessName: businessName),
+            _buildInvoiceInfoRow(
+              order,
+              shippingAddress,
+              businessName: businessName,
+            ),
             pw.SizedBox(height: 24),
 
-            // Quote table (EXACT same structure as contract, but with invoice amount)
+            // Quote table (same layout as contract: Subtotal + VAT → Total, then Deposit + Balance due)
             _buildInvoiceQuoteTable(
               order,
-              subtotal,
+              subtotalExVat,
+              vatAmount,
+              totalInclVat,
               cappedDepositAmount,
-              invoiceAmount,
+              balanceDue,
             ),
             pw.SizedBox(height: 24),
 
@@ -236,7 +247,10 @@ class InvoicePdfService {
               _buildQuoteInfoLine('Customer Email:', order.email),
               if (shippingAddress != null && shippingAddress.isNotEmpty) ...[
                 pw.SizedBox(height: 4),
-                _buildQuoteInfoLineWrapped('Shipping Address:', shippingAddress),
+                _buildQuoteInfoLineWrapped(
+                  'Shipping Address:',
+                  shippingAddress,
+                ),
               ],
             ],
           ),
@@ -269,12 +283,13 @@ class InvoicePdfService {
     );
   }
 
-  /// Build invoice-style quote table (EXACT same structure as contract, but shows invoice amount due)
   pw.Widget _buildInvoiceQuoteTable(
     order_models.Order order,
-    double subtotal,
+    double subtotalExVat,
+    double vatAmount,
+    double totalInclVat,
     double depositAmount,
-    double invoiceAmount,
+    double balanceDue,
   ) {
     return pw.Container(
       decoration: pw.BoxDecoration(
@@ -330,21 +345,28 @@ class InvoicePdfService {
               ),
             ),
           ),
-          // Totals section (EXACT same structure, but shows Invoice Amount Due instead of Total)
+          // Totals: Subtotal + VAT → Total (incl. VAT), then divider, then Deposit + Balance due (same as contract PDF)
           pw.Container(
             padding: const pw.EdgeInsets.all(16),
             child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
               children: [
-                _buildTotalRow('Subtotal', subtotal),
+                _buildTotalRow('Subtotal', subtotalExVat),
                 pw.SizedBox(height: 4),
-                _buildTotalRow('Deposit Allocate (10%)', depositAmount, isBold: true),
+                _buildTotalRow('VAT (15%)', vatAmount),
                 pw.Divider(),
+                pw.SizedBox(height: 4),
                 _buildTotalRow(
-                  'Invoice Amount Due',
-                  invoiceAmount,
+                  'Total (incl. VAT)',
+                  totalInclVat,
                   isBold: true,
                   isLarge: true,
                 ),
+                pw.Divider(),
+                pw.SizedBox(height: 8),
+                _buildTotalRow('Deposit Allocate (10%)', depositAmount),
+                pw.SizedBox(height: 4),
+                _buildTotalRow('Balance due', balanceDue),
               ],
             ),
           ),
@@ -371,7 +393,7 @@ class InvoicePdfService {
       children: [
         pw.Text('$label: ', style: style),
         pw.SizedBox(width: 20),
-        pw.Text('R ${amount.toStringAsFixed(2)}', style: style),
+        pw.Text(_formatMoney(amount), style: style),
       ],
     );
   }

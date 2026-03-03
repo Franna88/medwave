@@ -20,6 +20,8 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="MedWave Provider - Professional wound care management platform for healthcare practitioners. Register patients, track progress, and manage care plans.">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta property="og:title" content="MedWave Provider - Professional Wound Care Management">
+  <meta property="og:description" content="MedWave Provider - Professional wound care management platform for healthcare practitioners.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -32,6 +34,20 @@
 
   <title>MedWave Provider - Professional Wound Care Management</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Dynamic title for contract page when sharing-->
+  <script>
+    (function() {
+      var path = typeof location !== 'undefined' && location.pathname || '';
+      if (path.indexOf('/contract') !== -1) {
+        document.title = 'MedWave Agreement Link';
+        var ogTitle = document.querySelector('meta[property="og:title"]');
+        if (ogTitle) ogTitle.setAttribute('content', 'MedWave Agreement Link');
+        var ogDesc = document.querySelector('meta[property="og:description"]');
+        if (ogDesc) ogDesc.setAttribute('content', 'View and sign your MedWave contract.');
+      }
+    })();
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

@@ -13,6 +13,9 @@ import 'pdf_styles.dart';
 class ContractPdfService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  static final _moneyFormat = NumberFormat('#,##0.00', 'en_US');
+  static String _formatMoney(double amount) => 'R ${_moneyFormat.format(amount)}';
+
   /// Generate complete contract PDF document with cover page
   Future<pw.Document> generateContractPdf(Contract contract) async {
     // #region agent log
@@ -731,13 +734,10 @@ class ContractPdfService {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
+          // Subtotal and VAT only determine the total
           _buildSubtotalDiscountTotalRows(contract),
           pw.SizedBox(height: 4),
           _buildTotalRow('VAT (15%)', vatAmount),
-          pw.SizedBox(height: 4),
-          _buildTotalRow('Deposit Allocate (10%)', contract.depositAmount),
-          pw.SizedBox(height: 4),
-          _buildTotalRow('Balance due', contract.remainingBalance),
           pw.Divider(),
           pw.SizedBox(height: 4),
           _buildTotalRow(
@@ -746,6 +746,12 @@ class ContractPdfService {
             isBold: true,
             isLarge: true,
           ),
+          pw.Divider(),
+          pw.SizedBox(height: 8),
+          // Deposit and balance shown underneath the total
+          _buildTotalRow('Deposit Allocate (10%)', contract.depositAmount),
+          pw.SizedBox(height: 4),
+          _buildTotalRow('Balance due', contract.remainingBalance),
         ],
       ),
     );
@@ -792,7 +798,7 @@ class ContractPdfService {
       children: [
         pw.Text('$label: ', style: style),
         pw.SizedBox(width: 20),
-        pw.Text('R ${amount.toStringAsFixed(2)}', style: style),
+        pw.Text(_formatMoney(amount), style: style),
       ],
     );
   }
@@ -937,7 +943,7 @@ class ContractPdfService {
               : (isSubdued ? PdfStyles.smallText : PdfStyles.bodyText),
         ),
         pw.Text(
-          'R ${amount.toStringAsFixed(2)}',
+          _formatMoney(amount),
           style: isHighlighted
               ? pw.TextStyle(
                   fontSize: 14,

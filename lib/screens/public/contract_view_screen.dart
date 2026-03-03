@@ -486,7 +486,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Total Amount: R ${contract.subtotal.toStringAsFixed(2)}',
+                        'Total Amount: R ${NumberFormat('#,##0.00', 'en_US').format(contract.subtotal)}',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -506,7 +506,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Deposit Amount: R ${contract.depositAmount.toStringAsFixed(2)}',
+                        'Deposit Amount: R ${NumberFormat('#,##0.00', 'en_US').format(contract.depositAmount)}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -688,26 +688,26 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
 
           const Divider(height: 32),
 
-          // Pricing summary - breakdown first, final total at bottom
+          // Pricing summary: Subtotal + VAT → Total, then Deposit and Balance below
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               _buildPriceRow('Subtotal (ex. VAT)', contract.subtotal),
               const SizedBox(height: 8),
               _buildPriceRow('VAT (15%)', vatAmount),
-              const SizedBox(height: 8),
-              _buildPriceRow(
-                'Deposit ($depositPercentage%)',
-                contract.depositAmount,
-              ),
-              const SizedBox(height: 8),
-              _buildPriceRow('Balance due', contract.remainingBalance),
               const Divider(height: 24),
               _buildPriceRow(
                 'Total (incl. VAT)',
                 totalInclVat,
                 isHighlighted: true,
               ),
+              const Divider(height: 24),
+              _buildPriceRow(
+                'Deposit ($depositPercentage%)',
+                contract.depositAmount,
+              ),
+              const SizedBox(height: 8),
+              _buildPriceRow('Balance due', contract.remainingBalance),
             ],
           ),
         ],
@@ -974,7 +974,7 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
           ),
         ),
         Text(
-          'R ${amount.toStringAsFixed(2)}',
+          'R ${NumberFormat('#,##0.00', 'en_US').format(amount)}',
           style: TextStyle(
             fontSize: isHighlighted ? 20 : 16,
             fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
