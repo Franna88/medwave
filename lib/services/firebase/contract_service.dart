@@ -106,8 +106,14 @@ class ContractService {
 
       // Build products from opt-in products (standalone)
       final productsFromProducts = appointment.optInProducts
-          .map((p) => ContractProduct(
-              id: p.id, name: p.name, price: p.price, quantity: p.quantity))
+          .map(
+            (p) => ContractProduct(
+              id: p.id,
+              name: p.name,
+              price: p.price,
+              quantity: p.quantity,
+            ),
+          )
           .toList();
 
       // Expand opt-in packages to header + packageItem lines (existing products only) + addedService lines
@@ -116,13 +122,15 @@ class ContractService {
         final pkg = await _productPackageService.getProductPackage(p.id);
         if (pkg == null) {
           // Package missing/deleted: keep single header line
-          expandedPackageLines.add(ContractProduct(
-            id: p.id,
-            name: p.name,
-            price: p.price,
-            quantity: p.quantity,
-            lineType: 'packageHeader',
-          ));
+          expandedPackageLines.add(
+            ContractProduct(
+              id: p.id,
+              name: p.name,
+              price: p.price,
+              quantity: p.quantity,
+              lineType: 'packageHeader',
+            ),
+          );
           continue;
         }
         final productIds = pkg.packageItems
@@ -132,11 +140,9 @@ class ContractService {
         final productNames = productIds.isNotEmpty
             ? await _productItemService.getProductNamesByIds(productIds)
             : <String, String>{};
-        expandedPackageLines.addAll(_expandPackageToContractProducts(
-          pkg,
-          p,
-          productNames,
-        ));
+        expandedPackageLines.addAll(
+          _expandPackageToContractProducts(pkg, p, productNames),
+        );
       }
       final allProducts = [...productsFromProducts, ...expandedPackageLines];
 
@@ -190,37 +196,43 @@ class ContractService {
     Map<String, String> productNames,
   ) {
     final lines = <ContractProduct>[];
-    lines.add(ContractProduct(
-      id: pkg.id,
-      name: pkg.name,
-      quantity: optInPkg.quantity,
-      price: optInPkg.price,
-      lineType: 'packageHeader',
-    ));
+    lines.add(
+      ContractProduct(
+        id: pkg.id,
+        name: pkg.name,
+        quantity: optInPkg.quantity,
+        price: optInPkg.price,
+        lineType: 'packageHeader',
+      ),
+    );
     for (final entry in pkg.packageItems) {
       final name = productNames[entry.productId];
       if (name == null) continue; // Deleted product: omit from contract
-      lines.add(ContractProduct(
-        id: '${pkg.id}-item-${entry.productId}',
-        name: '${entry.quantity}x $name',
-        quantity: entry.quantity,
-        price: 0,
-        isSubItem: true,
-        parentId: pkg.id,
-        lineType: 'packageItem',
-      ));
+      lines.add(
+        ContractProduct(
+          id: '${pkg.id}-item-${entry.productId}',
+          name: '${entry.quantity}x $name',
+          quantity: entry.quantity,
+          price: 0,
+          isSubItem: true,
+          parentId: pkg.id,
+          lineType: 'packageItem',
+        ),
+      );
     }
     final labels = pkg.includedServiceLabels ?? [];
     for (var i = 0; i < labels.length; i++) {
-      lines.add(ContractProduct(
-        id: '${pkg.id}-svc-$i',
-        name: labels[i],
-        quantity: 1,
-        price: 0,
-        isSubItem: true,
-        parentId: pkg.id,
-        lineType: 'addedService',
-      ));
+      lines.add(
+        ContractProduct(
+          id: '${pkg.id}-svc-$i',
+          name: labels[i],
+          quantity: 1,
+          price: 0,
+          isSubItem: true,
+          parentId: pkg.id,
+          lineType: 'addedService',
+        ),
+      );
     }
     return lines;
   }
@@ -259,8 +271,7 @@ class ContractService {
       final finalPhone = phone ?? originalContract.phone;
       final finalShippingAddress =
           shippingAddress ?? originalContract.shippingAddress;
-      final finalBusinessName =
-          businessName ?? originalContract.businessName;
+      final finalBusinessName = businessName ?? originalContract.businessName;
       final finalPaymentType = paymentType ?? originalContract.paymentType;
 
       // Use provided subtotal if available, otherwise calculate from products
@@ -636,6 +647,33 @@ class ContractService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ ContractService: Error updating contract status: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> updateReminderSent(String contractId) async {
+    try {
+      final docRef = _firestore.collection(_collectionPath).doc(contractId);
+      final doc = await docRef.get();
+      if (!doc.exists) return;
+
+      final data = doc.data() ?? {};
+      final currentCount = (data['reminderSentCount'] as num?)?.toInt() ?? 0;
+
+      await docRef.update({
+        'reminderSentCount': currentCount + 1,
+        'lastReminderSentAt': FieldValue.serverTimestamp(),
+      });
+
+      if (kDebugMode) {
+        print(
+          'ContractService: Reminder sent count updated: $contractId -> ${currentCount + 1}',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('ContractService: Error updating reminder sent: $e');
       }
       rethrow;
     }

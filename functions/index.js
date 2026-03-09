@@ -14,6 +14,8 @@ const { fetchAndStoreAdvertsFromFacebook, getGHLTotals } = require('./lib/advert
 const { sync6MonthsFacebookData } = require('./lib/facebook6MonthSync');
 // Email service for appointment notifications
 const { EmailService } = require('./lib/emailService');
+// EmailJS service for contract reminder emails
+const { sendContractReminderEmail } = require('./lib/emailjsService');
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -2022,6 +2024,119 @@ exports.syncGHLLeads = functions
       return result;
     } catch (error) {
       console.error('❌ GHL Leads sync failed:', error);
+      throw error;
+    }
+  });
+
+// ============================================================================
+// CONTRACT SIGNING REMINDERS - Scheduled Function
+// ============================================================================
+
+const CONTRACT_BASE_URL = 'https://medx-ai.web.app';
+const MAX_REMINDERS = 5;
+const FIRST_REMINDER_DAYS = 2;
+
+/**
+ * Get date string (YYYY-MM-DD) in Africa/Johannesburg timezone
+ */
+function toDateStrInSA(d) {
+  return d.toLocaleDateString('en-CA', { timeZone: 'Africa/Johannesburg' });
+}
+
+/**
+ * Scheduled function to send contract signing reminders
+ * Runs daily at 10:00 Africa/Johannesburg, Mon-Fri only
+ * First reminder 2 days after contract creation, then daily up to 5 reminders
+ */
+exports.scheduleContractSigningReminders = functions
+  .runWith({
+    timeoutSeconds: 300,
+    memory: '256MB'
+  })
+  .pubsub
+  .schedule('0 10 * * 1-5')
+  .timeZone('Africa/Johannesburg')
+  .onRun(async (context) => {
+    try {
+      console.log('📧 Running contract signing reminder check...');
+
+      const db = admin.firestore();
+      const now = new Date();
+      const todayStr = toDateStrInSA(now);
+
+      // Cutoff: contracts created on or before (today - 2 days)
+      const cutoffDate = new Date(now);
+      cutoffDate.setDate(cutoffDate.getDate() - FIRST_REMINDER_DAYS);
+      cutoffDate.setHours(0, 0, 0, 0);
+      const cutoffTs = admin.firestore.Timestamp.fromDate(cutoffDate);
+
+      const snapshot = await db
+        .collection('contracts')
+        .where('hasSigned', '==', false)
+        .where('status', 'in', ['pending', 'viewed'])
+        .where('createdAt', '<=', cutoffTs)
+        .get();
+
+      console.log(`Found ${snapshot.size} unsigned contracts eligible for reminders`);
+
+      let sentCount = 0;
+      let skipCount = 0;
+      let errorCount = 0;
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const reminderSentCount = Math.max(0, parseInt(data.reminderSentCount, 10) || 0);
+        const lastReminderSentAt = data.lastReminderSentAt;
+
+        if (reminderSentCount >= MAX_REMINDERS) {
+          skipCount++;
+          continue;
+        }
+
+        if (lastReminderSentAt && typeof lastReminderSentAt.toDate === 'function') {
+          const lastStr = toDateStrInSA(lastReminderSentAt.toDate());
+          if (lastStr === todayStr) {
+            skipCount++;
+            continue;
+          }
+        }
+
+        if (!data.email || !data.accessToken) {
+          console.warn(`Contract ${doc.id}: missing email or accessToken, skipping`);
+          skipCount++;
+          continue;
+        }
+
+        const contractLink = `${CONTRACT_BASE_URL}/contract/${doc.id}?token=${data.accessToken}`;
+        const createdAt = data.createdAt?.toDate?.() || new Date();
+        const daysSinceSent = Math.floor((now - createdAt) / (24 * 60 * 60 * 1000));
+        const nextReminderNumber = reminderSentCount + 1;
+
+        const result = await sendContractReminderEmail({
+          toEmail: data.email,
+          customerName: data.customerName || 'Customer',
+          contractLink,
+          reminderNumber: nextReminderNumber,
+          daysSinceSent
+        });
+
+        if (result.success) {
+          await doc.ref.update({
+            reminderSentCount: reminderSentCount + 1,
+            lastReminderSentAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          sentCount++;
+          console.log(`✅ Reminder ${nextReminderNumber} sent for contract ${doc.id}`);
+        } else {
+          errorCount++;
+          console.error(`❌ Failed to send reminder for ${doc.id}: ${result.error}`);
+        }
+      }
+
+      console.log(`✅ Contract reminders: sent=${sentCount}, skipped=${skipCount}, errors=${errorCount}`);
+      return { success: true, sentCount, skipCount, errorCount };
+    } catch (error) {
+      console.error('❌ Error in scheduleContractSigningReminders:', error);
       throw error;
     }
   });

@@ -42,10 +42,13 @@ class ContractProduct {
   final String name;
   final double price;
   final int quantity;
+
   /// True for package-item and added-service lines that render under a package header.
   final bool isSubItem;
+
   /// Package (header) line id when this line is a sub-item.
   final String? parentId;
+
   /// Optional: standalone, packageHeader, packageItem, addedService (for round-trip).
   final String? lineType;
 
@@ -147,6 +150,10 @@ class Contract {
   final String? editedBy; // User who created this revision
   final DateTime? editedAt; // When this revision was created
 
+  // Reminder tracking (for unsigned contract follow-up emails)
+  final int reminderSentCount; // Count of reminders sent (0-5)
+  final DateTime? lastReminderSentAt; // Last reminder timestamp
+
   Contract({
     required this.id,
     required this.accessToken,
@@ -184,6 +191,8 @@ class Contract {
     this.editReason,
     this.editedBy,
     this.editedAt,
+    this.reminderSentCount = 0,
+    this.lastReminderSentAt,
   });
 
   /// Check if this is a full payment contract
@@ -267,6 +276,8 @@ class Contract {
       editReason: map['editReason']?.toString(),
       editedBy: map['editedBy']?.toString(),
       editedAt: (map['editedAt'] as Timestamp?)?.toDate(),
+      reminderSentCount: (map['reminderSentCount'] as num?)?.toInt() ?? 0,
+      lastReminderSentAt: (map['lastReminderSentAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -307,6 +318,10 @@ class Contract {
       'editReason': editReason,
       'editedBy': editedBy,
       'editedAt': editedAt != null ? Timestamp.fromDate(editedAt!) : null,
+      'reminderSentCount': reminderSentCount,
+      'lastReminderSentAt': lastReminderSentAt != null
+          ? Timestamp.fromDate(lastReminderSentAt!)
+          : null,
     };
   }
 
@@ -347,6 +362,8 @@ class Contract {
     String? editReason,
     String? editedBy,
     DateTime? editedAt,
+    int? reminderSentCount,
+    DateTime? lastReminderSentAt,
   }) {
     return Contract(
       id: id ?? this.id,
@@ -387,6 +404,8 @@ class Contract {
       editReason: editReason ?? this.editReason,
       editedBy: editedBy ?? this.editedBy,
       editedAt: editedAt ?? this.editedAt,
+      reminderSentCount: reminderSentCount ?? this.reminderSentCount,
+      lastReminderSentAt: lastReminderSentAt ?? this.lastReminderSentAt,
     );
   }
 

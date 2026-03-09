@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../models/appointment.dart';
+import '../models/contracts/contract.dart';
 import '../models/streams/appointment.dart' as sales_models;
 import '../models/streams/order.dart' as order_models;
 
@@ -29,6 +30,8 @@ class EmailJSService {
   static const String _depositMarketingTemplateId = 'template_jykxsg3';
   static const String _paymentCustomerTemplateId = 'template_10g88s2';
   static const String _contractLinkTemplateId = 'template_bdg4s33';
+  // Contract reminder template (uses same as contract link for testing; create dedicated template later)
+  static const String _contractReminderTemplateId = 'template_bdg4s33';
   // Installation booking template - dedicated template for installation date selection
   static const String _installationBookingTemplateId = 'template_fvu7nw2';
   // Out for delivery template - notifies customer with tracking and installer info
@@ -271,6 +274,65 @@ class EmailJSService {
       }
     } catch (error) {
       debugPrint('❌ Error sending contract link email: $error');
+      final msg = error.toString();
+      final reason = msg.length > _maxErrorMessageLength
+          ? msg.substring(0, _maxErrorMessageLength)
+          : msg;
+      return (success: false, errorMessage: reason);
+    }
+  }
+
+  /// Send contract signing reminder email (manual trigger from admin or scheduled).
+  /// Uses same template as contract link for testing; create dedicated reminder template later.
+  /// Returns (success: true, errorMessage: null) on success, or (success: false, errorMessage: reason) on failure.
+  static Future<({bool success, String? errorMessage})>
+  sendContractReminderEmail({
+    required Contract contract,
+    required String contractUrl,
+  }) async {
+    try {
+      final reminderNumber = contract.reminderSentCount + 1;
+      final daysSinceSent = DateTime.now()
+          .difference(contract.createdAt)
+          .inDays;
+
+      debugPrint(
+        '📧 Sending contract reminder #$reminderNumber to ${contract.email} (template $_contractReminderTemplateId)',
+      );
+
+      final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'service_id': _serviceId,
+          'template_id': _contractReminderTemplateId,
+          'user_id': _userId,
+          'template_params': {
+            'email': contract.email,
+            'to_email': contract.email,
+            'to_name': contract.customerName,
+            'username': contract.customerName,
+            'customer_name': contract.customerName,
+            'contract_link': contractUrl,
+            'reminder_number': '$reminderNumber',
+            'days_since_sent': '$daysSinceSent',
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('Contract reminder email sent successfully');
+        return (success: true, errorMessage: null);
+      } else {
+        final reason = _shortSendError(response.statusCode, response.body);
+        debugPrint(
+          'Failed to send contract reminder (${response.statusCode}): ${response.body}',
+        );
+        return (success: false, errorMessage: reason);
+      }
+    } catch (error) {
+      debugPrint('Error sending contract reminder: $error');
       final msg = error.toString();
       final reason = msg.length > _maxErrorMessageLength
           ? msg.substring(0, _maxErrorMessageLength)

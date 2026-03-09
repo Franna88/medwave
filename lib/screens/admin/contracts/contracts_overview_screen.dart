@@ -262,13 +262,46 @@ class _ContractsOverviewScreenState extends State<ContractsOverviewScreen> {
     }
   }
 
+  Future<void> _sendContractReminder(
+    Contract contract, {
+    required BuildContext dialogContext,
+  }) async {
+    final provider = context.read<ContractProvider>();
+    final result = await provider.sendContractReminder(contract);
+
+    if (!mounted) return;
+    if (result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Reminder sent to ${contract.email} (reminder #${contract.reminderSentCount + 1})',
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      // Use dialog's context to pop only the dialog, not the route
+      if (dialogContext.mounted) {
+        Navigator.of(dialogContext).pop();
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to send reminder: ${result.errorMessage ?? 'Unknown error'}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   void _viewContractDetails(Contract contract) {
     final provider = context.read<ContractProvider>();
     final url = provider.getFullContractUrl(contract);
 
     showDialog(
       context: context,
-      builder: (context) => _ContractDetailsDialog(
+      builder: (dialogContext) => _ContractDetailsDialog(
         contract: contract,
         url: url,
         onCopyLink: () => _copyLink(contract),
@@ -276,19 +309,22 @@ class _ContractsOverviewScreenState extends State<ContractsOverviewScreen> {
             contract.status != ContractStatus.voided &&
                 contract.status != ContractStatus.signed
             ? () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 _voidContract(contract);
               }
             : null,
+        onSendReminder: contract.canSign
+            ? () => _sendContractReminder(contract, dialogContext: dialogContext)
+            : null,
         onGeneratePdf: contract.hasSigned && contract.pdfUrl == null
             ? () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 _generateContractPdf(contract);
               }
             : null,
         onRegeneratePdf: contract.hasSigned && contract.pdfUrl != null
             ? () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
                 _regenerateContractPdf(contract);
               }
             : null,
@@ -748,6 +784,7 @@ class _ContractDetailsDialog extends StatelessWidget {
   final String url;
   final VoidCallback onCopyLink;
   final VoidCallback? onVoid;
+  final Future<void> Function()? onSendReminder;
   final VoidCallback? onGeneratePdf;
   final VoidCallback? onRegeneratePdf;
 
@@ -756,6 +793,7 @@ class _ContractDetailsDialog extends StatelessWidget {
     required this.url,
     required this.onCopyLink,
     this.onVoid,
+    this.onSendReminder,
     this.onGeneratePdf,
     this.onRegeneratePdf,
   });
@@ -890,6 +928,11 @@ class _ContractDetailsDialog extends StatelessWidget {
                         'Created',
                         dateFormat.format(contract.createdAt),
                       ),
+                      if (contract.reminderSentCount > 0)
+                        _buildInfoRow(
+                          'Reminders sent',
+                          '${contract.reminderSentCount}',
+                        ),
                       if (contract.viewedAt != null)
                         _buildInfoRow(
                           'Viewed',
@@ -962,6 +1005,19 @@ class _ContractDetailsDialog extends StatelessWidget {
                       label: const Text('Void'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  if (onSendReminder != null) ...[
+                    OutlinedButton.icon(
+                      onPressed: () async => await onSendReminder!(),
+                      icon: const Icon(Icons.notifications_active),
+                      label: Text(
+                        'Send Reminder${contract.reminderSentCount > 0 ? ' (${contract.reminderSentCount} sent)' : ''}',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.orange,
                       ),
                     ),
                     const SizedBox(width: 12),

@@ -151,8 +151,9 @@ class ContractProvider extends ChangeNotifier {
         String? assignedAdminEmail;
         if (appointment.assignedTo != null &&
             appointment.assignedTo!.trim().isNotEmpty) {
-          assignedAdminEmail =
-              await AdminService.getAdminEmailByUserId(appointment.assignedTo!);
+          assignedAdminEmail = await AdminService.getAdminEmailByUserId(
+            appointment.assignedTo!,
+          );
         }
         _lastContractBccSent =
             await EmailJSService.sendContractSentNotificationToBcc(
@@ -311,8 +312,9 @@ class ContractProvider extends ChangeNotifier {
           );
           if (appointment?.assignedTo != null &&
               appointment!.assignedTo!.trim().isNotEmpty) {
-            assignedAdminEmail =
-                await AdminService.getAdminEmailByUserId(appointment.assignedTo!);
+            assignedAdminEmail = await AdminService.getAdminEmailByUserId(
+              appointment.assignedTo!,
+            );
           }
           await EmailJSService.sendContractSignedNotificationToBcc(
             contractId: _currentContract!.id,
@@ -497,6 +499,23 @@ class ContractProvider extends ChangeNotifier {
   /// Get full contract URL (for copying)
   String getFullContractUrl(Contract contract) {
     return _service.getFullContractUrl(contract);
+  }
+
+  /// Send contract signing reminder email (manual trigger from admin).
+  Future<({bool success, String? errorMessage})> sendContractReminder(
+    Contract contract,
+  ) async {
+    final contractUrl = _service.getFullContractUrl(contract);
+    final result = await EmailJSService.sendContractReminderEmail(
+      contract: contract,
+      contractUrl: contractUrl,
+    );
+
+    if (result.success) {
+      await _service.updateReminderSent(contract.id);
+    }
+
+    return result;
   }
 
   /// Clear error
