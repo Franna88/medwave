@@ -90,7 +90,15 @@ async function sendContractReminderEmail({
       error: response.data?.message || `HTTP ${response.status}`,
     };
   } catch (err) {
+    const status = err.response?.status;
     const msg = err.response?.data?.message || err.message || String(err);
+    if (status === 403) {
+      console.error(
+        '❌ EmailJS 403: Server-side calls require a private key. Set emailjs.private_key in Firebase config.'
+      );
+    } else if (status === 429) {
+      console.error('❌ EmailJS 429: Rate limit exceeded (1 req/sec). Emails are throttled.');
+    }
     console.error('❌ Error sending contract reminder email:', msg);
     return { success: false, error: msg };
   }

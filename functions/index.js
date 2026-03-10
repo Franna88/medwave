@@ -2190,6 +2190,9 @@ exports.scheduleContractSigningReminders = functions
       let skipCount = 0;
       let errorCount = 0;
 
+      // EmailJS rate limit: 1 request per second - add delay between sends
+      const EMAILJS_DELAY_MS = 1200;
+
       for (const doc of snapshot.docs) {
         const data = doc.data();
 
@@ -2241,6 +2244,9 @@ exports.scheduleContractSigningReminders = functions
           reminderOptInUrl,
           reminderOptOutUrl
         });
+
+        // Throttle to respect EmailJS rate limit (1 req/sec)
+        await new Promise((r) => setTimeout(r, EMAILJS_DELAY_MS));
 
         if (result.success) {
           await doc.ref.update({
