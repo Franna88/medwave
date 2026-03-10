@@ -153,6 +153,7 @@ class Contract {
   // Reminder tracking (for unsigned contract follow-up emails)
   final int reminderSentCount; // Count of reminders sent (0-5)
   final DateTime? lastReminderSentAt; // Last reminder timestamp
+  final bool receiveReminderEmails; // User preference: false = opted out of reminder emails
 
   Contract({
     required this.id,
@@ -193,6 +194,7 @@ class Contract {
     this.editedAt,
     this.reminderSentCount = 0,
     this.lastReminderSentAt,
+    this.receiveReminderEmails = true,
   });
 
   /// Check if this is a full payment contract
@@ -278,6 +280,7 @@ class Contract {
       editedAt: (map['editedAt'] as Timestamp?)?.toDate(),
       reminderSentCount: (map['reminderSentCount'] as num?)?.toInt() ?? 0,
       lastReminderSentAt: (map['lastReminderSentAt'] as Timestamp?)?.toDate(),
+      receiveReminderEmails: map['receiveReminderEmails'] as bool? ?? true,
     );
   }
 
@@ -322,6 +325,7 @@ class Contract {
       'lastReminderSentAt': lastReminderSentAt != null
           ? Timestamp.fromDate(lastReminderSentAt!)
           : null,
+      'receiveReminderEmails': receiveReminderEmails,
     };
   }
 
@@ -364,6 +368,7 @@ class Contract {
     DateTime? editedAt,
     int? reminderSentCount,
     DateTime? lastReminderSentAt,
+    bool? receiveReminderEmails,
   }) {
     return Contract(
       id: id ?? this.id,
@@ -406,6 +411,7 @@ class Contract {
       editedAt: editedAt ?? this.editedAt,
       reminderSentCount: reminderSentCount ?? this.reminderSentCount,
       lastReminderSentAt: lastReminderSentAt ?? this.lastReminderSentAt,
+      receiveReminderEmails: receiveReminderEmails ?? this.receiveReminderEmails,
     );
   }
 

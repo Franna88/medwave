@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const crypto = require('crypto');
 const { Resend } = require('resend');
 // Cumulative metrics functions for parallel tracking system
 const { storeStageTransition, getCumulativeStageMetrics, syncOpportunitiesFromAPI, matchAndUpdateGHLDataToFacebookAds } = require('./lib/opportunityHistoryService');
@@ -1877,6 +1878,83 @@ exports.confirmAppointmentViaEmail = functions.https.onRequest(async (req, res) 
 });
 
 /**
+ * Set contract reminder email preference via email link (Yes/No in reminder email)
+ * GET with contractId, token, preference=yes|no
+ */
+exports.setContractReminderPreference = functions.https.onRequest(async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
+  try {
+    const contractId = req.query.contractId || req.body?.contractId;
+    const token = req.query.token || req.body?.token;
+    const preference = (req.query.preference || req.body?.preference || '').toString().toLowerCase();
+
+    if (!contractId || !token || !preference) {
+      res.status(400).send('Missing contractId, token, or preference');
+      return;
+    }
+
+    if (preference !== 'yes' && preference !== 'no') {
+      res.status(400).send('Invalid preference');
+      return;
+    }
+
+    const contractRef = admin.firestore().collection('contracts').doc(String(contractId));
+    const contractDoc = await contractRef.get();
+
+    if (!contractDoc.exists) {
+      res.status(404).send('Contract not found');
+      return;
+    }
+
+    if (!validateContractAccessToken(String(contractId), String(token))) {
+      res.status(400).send('Invalid token');
+      return;
+    }
+
+    const receiveReminderEmails = preference === 'yes';
+    await contractRef.update({ receiveReminderEmails });
+
+    const message = receiveReminderEmails
+      ? 'You will continue to receive reminder emails for this contract.'
+      : 'You will no longer receive reminder emails for this contract.';
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Reminder Preference Updated</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+          .container { background: white; border-radius: 12px; padding: 32px; max-width: 480px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+          h1 { color: #333; margin-bottom: 12px; }
+          p { color: #555; line-height: 1.5; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>Preference Saved</h1>
+          <p>${message}</p>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('❌ Error in setContractReminderPreference:', error);
+    res.status(500).send('An error occurred while updating your preference.');
+  }
+});
+
+/**
  * Schedule appointment reminder emails
  * Runs daily to check for appointments happening tomorrow
  * 
@@ -2034,7 +2112,7 @@ exports.syncGHLLeads = functions
 
 const CONTRACT_BASE_URL = 'https://medx-ai.web.app';
 const MAX_REMINDERS = 5;
-const FIRST_REMINDER_DAYS = 2;
+const FIRST_REMINDER_DAYS = 1;
 
 /**
  * Get date string (YYYY-MM-DD) in Africa/Johannesburg timezone
@@ -2043,10 +2121,39 @@ function toDateStrInSA(d) {
   return d.toLocaleDateString('en-CA', { timeZone: 'Africa/Johannesburg' });
 }
 
+// Shared secret for validating contract access tokens (HMAC-SHA256)
+// Configure with: firebase functions:config:set contract.access_token_secret="YOUR_SECRET"
+const CONTRACT_ACCESS_TOKEN_SECRET =
+  (functions.config().contract && functions.config().contract.access_token_secret) ||
+  process.env.CONTRACT_ACCESS_TOKEN_SECRET ||
+  null;
+
+function validateContractAccessToken(contractId, token) {
+  try {
+    if (!CONTRACT_ACCESS_TOKEN_SECRET) {
+      console.warn('⚠️ CONTRACT_ACCESS_TOKEN_SECRET is not configured');
+      return false;
+    }
+    if (!token || typeof token !== 'string') return false;
+    const parts = token.split(':');
+    if (parts.length !== 2) return false;
+    const expectedHash = parts[0];
+    const timestamp = parts[1];
+    const data = `${contractId}:${timestamp}`;
+    const hmac = crypto.createHmac('sha256', CONTRACT_ACCESS_TOKEN_SECRET);
+    hmac.update(data);
+    const digest = hmac.digest('hex');
+    return digest === expectedHash;
+  } catch (error) {
+    console.error('❌ Error validating contract access token:', error);
+    return false;
+  }
+}
+
 /**
  * Scheduled function to send contract signing reminders
  * Runs daily at 10:00 Africa/Johannesburg, Mon-Fri only
- * First reminder 2 days after contract creation, then daily up to 5 reminders
+ * First reminder 1 day after contract creation, then daily up to 5 reminders
  */
 exports.scheduleContractSigningReminders = functions
   .runWith({
@@ -2064,7 +2171,7 @@ exports.scheduleContractSigningReminders = functions
       const now = new Date();
       const todayStr = toDateStrInSA(now);
 
-      // Cutoff: contracts created on or before (today - 2 days)
+      // Cutoff: contracts created on or before (today - FIRST_REMINDER_DAYS)
       const cutoffDate = new Date(now);
       cutoffDate.setDate(cutoffDate.getDate() - FIRST_REMINDER_DAYS);
       cutoffDate.setHours(0, 0, 0, 0);
@@ -2085,6 +2192,13 @@ exports.scheduleContractSigningReminders = functions
 
       for (const doc of snapshot.docs) {
         const data = doc.data();
+
+        // Skip if user opted out of reminder emails
+        if (data.receiveReminderEmails === false) {
+          skipCount++;
+          continue;
+        }
+
         const reminderSentCount = Math.max(0, parseInt(data.reminderSentCount, 10) || 0);
         const lastReminderSentAt = data.lastReminderSentAt;
 
@@ -2112,12 +2226,20 @@ exports.scheduleContractSigningReminders = functions
         const daysSinceSent = Math.floor((now - createdAt) / (24 * 60 * 60 * 1000));
         const nextReminderNumber = reminderSentCount + 1;
 
+        const basePreferenceUrl = 'https://us-central1-medx-ai.cloudfunctions.net/setContractReminderPreference';
+        const encodedContractId = encodeURIComponent(doc.id);
+        const encodedToken = encodeURIComponent(data.accessToken);
+        const reminderOptInUrl = `${basePreferenceUrl}?contractId=${encodedContractId}&token=${encodedToken}&preference=yes`;
+        const reminderOptOutUrl = `${basePreferenceUrl}?contractId=${encodedContractId}&token=${encodedToken}&preference=no`;
+
         const result = await sendContractReminderEmail({
           toEmail: data.email,
           customerName: data.customerName || 'Customer',
           contractLink,
           reminderNumber: nextReminderNumber,
-          daysSinceSent
+          daysSinceSent,
+          reminderOptInUrl,
+          reminderOptOutUrl
         });
 
         if (result.success) {

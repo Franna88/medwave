@@ -171,6 +171,7 @@ class ContractService {
         createdBy: createdBy,
         createdByName: createdByName,
         paymentType: appointment.paymentType,
+        receiveReminderEmails: true,
       );
 
       // Save to Firestore
@@ -339,6 +340,7 @@ class ContractService {
         editReason: editReason,
         editedBy: createdBy,
         editedAt: DateTime.now(),
+        receiveReminderEmails: originalContract.receiveReminderEmails,
       );
 
       await docRef.set(revisionContract.toMap());

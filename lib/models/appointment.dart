@@ -72,6 +72,9 @@ class Appointment {
   // Email Notifications
   final Map<String, dynamic>? emailNotifications;
 
+  // Recurring pattern link (for appointments generated from a recurring pattern)
+  final String? recurringPatternId;
+
   const Appointment({
     required this.id,
     required this.patientId,
@@ -95,6 +98,7 @@ class Appointment {
     this.syncStatus = 'pending',
     this.lastSyncedAt,
     this.emailNotifications,
+    this.recurringPatternId,
   });
 
   Duration get duration => endTime.difference(startTime);
@@ -154,6 +158,7 @@ class Appointment {
     String? syncStatus,
     DateTime? lastSyncedAt,
     Map<String, dynamic>? emailNotifications,
+    String? recurringPatternId,
   }) {
     return Appointment(
       id: id ?? this.id,
@@ -178,6 +183,7 @@ class Appointment {
       syncStatus: syncStatus ?? this.syncStatus,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       emailNotifications: emailNotifications ?? this.emailNotifications,
+      recurringPatternId: recurringPatternId ?? this.recurringPatternId,
     );
   }
 
@@ -205,6 +211,7 @@ class Appointment {
       'syncStatus': syncStatus,
       'lastSyncedAt': lastSyncedAt?.toIso8601String(),
       'emailNotifications': emailNotifications,
+      'recurringPatternId': recurringPatternId,
     };
   }
 
@@ -235,6 +242,7 @@ class Appointment {
       syncStatus: json['syncStatus'] ?? 'pending',
       lastSyncedAt: json['lastSyncedAt'] != null ? DateTime.parse(json['lastSyncedAt']) : null,
       emailNotifications: json['emailNotifications'] != null ? Map<String, dynamic>.from(json['emailNotifications']) : null,
+      recurringPatternId: json['recurringPatternId'],
     );
   }
 
@@ -277,6 +285,7 @@ class Appointment {
       'syncStatus': syncStatus,
       'lastSyncedAt': lastSyncedAt != null ? Timestamp.fromDate(lastSyncedAt!) : null,
       'emailNotifications': emailNotifications,
+      'recurringPatternId': recurringPatternId,
       // Additional fields for Firebase
       'dateKey': '${startTime.year}-${startTime.month.toString().padLeft(2, '0')}-${startTime.day.toString().padLeft(2, '0')}',
       'timeSlot': '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}',
@@ -316,6 +325,7 @@ class Appointment {
       syncStatus: data['syncStatus'] ?? 'pending',
       lastSyncedAt: data['lastSyncedAt']?.toDate(),
       emailNotifications: data['emailNotifications'] != null ? Map<String, dynamic>.from(data['emailNotifications']) : null,
+      recurringPatternId: data['recurringPatternId'],
     );
   }
 }

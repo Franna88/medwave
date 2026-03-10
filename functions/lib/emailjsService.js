@@ -24,6 +24,8 @@ const getConfig = () => {
  * @param {string} params.contractLink - Full URL to sign contract
  * @param {number} params.reminderNumber - 1-5
  * @param {number} [params.daysSinceSent] - Days since contract was created
+ * @param {string} [params.reminderOptInUrl] - URL for "yes, keep reminders"
+ * @param {string} [params.reminderOptOutUrl] - URL for "no, stop reminders"
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 async function sendContractReminderEmail({
@@ -32,6 +34,8 @@ async function sendContractReminderEmail({
   contractLink,
   reminderNumber,
   daysSinceSent,
+  reminderOptInUrl,
+  reminderOptOutUrl,
 }) {
   const config = getConfig();
 
@@ -51,6 +55,8 @@ async function sendContractReminderEmail({
     contract_link: contractLink,
     reminder_number: String(reminderNumber),
     days_since_sent: daysSinceSent != null ? String(daysSinceSent) : '',
+    reminder_opt_in_url: reminderOptInUrl || '',
+    reminder_opt_out_url: reminderOptOutUrl || '',
   };
 
   const body = {
