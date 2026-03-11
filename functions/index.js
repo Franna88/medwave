@@ -2112,7 +2112,7 @@ exports.syncGHLLeads = functions
 
 const CONTRACT_BASE_URL = 'https://medx-ai.web.app';
 const MAX_REMINDERS = 5;
-const FIRST_REMINDER_DAYS = 1;
+const FIRST_REMINDER_DAYS = 2;
 
 /**
  * Get date string (YYYY-MM-DD) in Africa/Johannesburg timezone
@@ -2152,8 +2152,8 @@ function validateContractAccessToken(contractId, token) {
 
 /**
  * Scheduled function to send contract signing reminders
- * Runs daily at 10:00 Africa/Johannesburg, Mon-Fri only
- * First reminder 1 day after contract creation, then daily up to 5 reminders
+ * Runs every 2 days at 10:00 Africa/Johannesburg (Mon, Wed, Fri)
+ * First reminder 2 days after contract creation, then every 2 days up to 5 reminders
  */
 exports.scheduleContractSigningReminders = functions
   .runWith({
@@ -2161,7 +2161,7 @@ exports.scheduleContractSigningReminders = functions
     memory: '256MB'
   })
   .pubsub
-  .schedule('0 10 * * 1-5')
+  .schedule('0 10 * * 1,3,5')
   .timeZone('Africa/Johannesburg')
   .onRun(async (context) => {
     try {
@@ -2171,7 +2171,6 @@ exports.scheduleContractSigningReminders = functions
       const now = new Date();
       const todayStr = toDateStrInSA(now);
 
-      // Cutoff: contracts created on or before (today - FIRST_REMINDER_DAYS)
       const cutoffDate = new Date(now);
       cutoffDate.setDate(cutoffDate.getDate() - FIRST_REMINDER_DAYS);
       cutoffDate.setHours(0, 0, 0, 0);
