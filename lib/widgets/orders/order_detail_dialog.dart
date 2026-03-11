@@ -18,6 +18,7 @@ import '../../providers/product_packages_provider.dart';
 import '../../services/firebase/order_service.dart';
 import '../../theme/app_theme.dart';
 import 'installation_signoff_section_widget.dart';
+import 'order_contract_section_widget.dart';
 
 const String _noInstallationRequiredId = 'NO_INSTALLATION_REQUIRED';
 const String _noInstallationRequiredName = 'No Installation Required';
@@ -607,6 +608,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
                       const SizedBox(height: 24),
                     ],
                     _buildOrderItemsSection(),
+                    const SizedBox(height: 24),
+                    OrderContractSectionWidget(order: _currentOrder),
                     const SizedBox(height: 24),
                     // Show business information if questionnaire data exists
                     if (_currentOrder.optInQuestions != null &&
