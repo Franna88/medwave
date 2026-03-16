@@ -257,12 +257,18 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       text: 'Manually moved to ${newStage.name}',
     );
 
-    // Opt-in questionnaire controllers
+    // Opt-in questionnaire controllers (auto-fill from appointment)
     final Map<String, TextEditingController> questionControllers = {
-      'Best phone number': TextEditingController(),
+      'Best phone number': TextEditingController(
+        text: appointment.phone.trim().isNotEmpty ? appointment.phone.trim() : '',
+      ),
       'Name of business': TextEditingController(),
       'Best email': TextEditingController(text: appointment.email),
-      'Sales person dealing with': TextEditingController(),
+      'Sales person dealing with': TextEditingController(
+        text: (appointment.assignedToName?.trim().isNotEmpty == true)
+            ? appointment.assignedToName!.trim()
+            : (userName ?? ''),
+      ),
       'Shipping address': TextEditingController(),
       'Method of payment': TextEditingController(),
       'Interested package': TextEditingController(),
@@ -606,8 +612,10 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                       const SizedBox(height: 12),
                       ...questionControllers.entries.map((entry) {
                         if (entry.key == 'Method of payment') {
-                          final value = _paymentMethodOptions
-                                  .contains(entry.value.text.trim())
+                          final value =
+                              _paymentMethodOptions.contains(
+                                entry.value.text.trim(),
+                              )
                               ? entry.value.text.trim()
                               : null;
                           return Padding(
@@ -623,10 +631,12 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                               ),
                               hint: Text(_getQuestionHint(entry.key)),
                               items: _paymentMethodOptions
-                                  .map((String v) => DropdownMenuItem<String>(
-                                        value: v,
-                                        child: Text(v),
-                                      ))
+                                  .map(
+                                    (String v) => DropdownMenuItem<String>(
+                                      value: v,
+                                      child: Text(v),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: (String? v) {
                                 setState(() => entry.value.text = v ?? '');
@@ -890,7 +900,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                   TextField(
                     controller: searchController,
                     decoration: const InputDecoration(
-                      labelText: 'Search leads (name, email, phone, notes, stage, etc.)',
+                      labelText:
+                          'Search leads (name, email, phone, notes, stage, etc.)',
                       hintText: 'Enter search query...',
                       prefixIcon: Icon(Icons.search),
                       border: OutlineInputBorder(),
@@ -921,9 +932,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
                         }
                       }
                     },
@@ -1256,12 +1267,18 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     String selectedPaymentType =
         appointment.paymentType; // Keep existing or default
 
-    // Opt-in questionnaire controllers
+    // Opt-in questionnaire controllers (auto-fill from appointment)
     final Map<String, TextEditingController> questionControllers = {
-      'Best phone number': TextEditingController(),
+      'Best phone number': TextEditingController(
+        text: appointment.phone.trim().isNotEmpty ? appointment.phone.trim() : '',
+      ),
       'Name of business': TextEditingController(),
       'Best email': TextEditingController(text: appointment.email),
-      'Sales person dealing with': TextEditingController(),
+      'Sales person dealing with': TextEditingController(
+        text: (appointment.assignedToName?.trim().isNotEmpty == true)
+            ? appointment.assignedToName!.trim()
+            : (userName ?? ''),
+      ),
       'Shipping address': TextEditingController(),
       'Method of payment': TextEditingController(),
       'Interested package': TextEditingController(),
@@ -1682,8 +1699,10 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                       const SizedBox(height: 12),
                       ...questionControllers.entries.map((entry) {
                         if (entry.key == 'Method of payment') {
-                          final value = _paymentMethodOptions
-                                  .contains(entry.value.text.trim())
+                          final value =
+                              _paymentMethodOptions.contains(
+                                entry.value.text.trim(),
+                              )
                               ? entry.value.text.trim()
                               : null;
                           return Padding(
@@ -1699,10 +1718,12 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                               ),
                               hint: Text(_getQuestionHint(entry.key)),
                               items: _paymentMethodOptions
-                                  .map((String v) => DropdownMenuItem<String>(
-                                        value: v,
-                                        child: Text(v),
-                                      ))
+                                  .map(
+                                    (String v) => DropdownMenuItem<String>(
+                                      value: v,
+                                      child: Text(v),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: (String? v) {
                                 setState(() => entry.value.text = v ?? '');
@@ -1855,10 +1876,16 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
 
       // Opt-in questionnaire controllers
       final Map<String, TextEditingController> questionControllers = {
-        'Best phone number': TextEditingController(),
+        'Best phone number': TextEditingController(
+          text: lead.phone.trim().isNotEmpty ? lead.phone.trim() : '',
+        ),
         'Name of business': TextEditingController(),
         'Best email': TextEditingController(text: lead.email),
-        'Sales person dealing with': TextEditingController(),
+        'Sales person dealing with': TextEditingController(
+          text: (lead.assignedToName?.trim().isNotEmpty == true)
+              ? lead.assignedToName!.trim()
+              : (userName ?? ''),
+        ),
         'Shipping address': TextEditingController(),
         'Method of payment': TextEditingController(),
         'Interested package': TextEditingController(),
@@ -2008,276 +2035,66 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                               return products.isEmpty
                                   ? const Text('No products available')
                                   : Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 8.0,
-                                    ),
-                                    child: Row(
                                       children: [
-                                        SizedBox(width: 24),
-                                        SizedBox(width: 12),
-                                        Expanded(
-                                          flex: 3,
-                                          child: Text(
-                                            'Product',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          flex: 3,
-                                          child: Text(
-                                            'Description',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          flex: 2,
-                                          child: Text(
-                                            'Country',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 12),
-                                        SizedBox(
-                                          width: 100,
-                                          child: Text(
-                                            'Quantity',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        if (isSuperAdmin) ...[
-                                          SizedBox(width: 12),
-                                          SizedBox(
-                                            width: 120,
-                                            child: Text(
-                                              'Price',
-                                              textAlign: TextAlign.right,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  const Divider(height: 1),
-                                  const SizedBox(height: 8),
-                                  Expanded(
-                                    child: ListView.separated(
-                                      primary: false,
-                                      shrinkWrap: false,
-                                      itemCount: products.length,
-                                      separatorBuilder: (_, __) =>
-                                          const Divider(height: 1),
-                                      itemBuilder: (context, index) {
-                                        final product = products[index];
-                                        final isSelected =
-                                            selectedProductQuantities
-                                                .containsKey(product.id);
-                                        final quantityController =
-                                            TextEditingController(
-                                              text:
-                                                  selectedProductQuantities[product
-                                                          .id]
-                                                      ?.toString() ??
-                                                  '1',
-                                            );
-                                        return Padding(
+                                        Padding(
                                           padding: const EdgeInsets.symmetric(
-                                            vertical: 10,
+                                            vertical: 8.0,
                                           ),
                                           child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
                                             children: [
-                                              Checkbox(
-                                                value: isSelected,
-                                                onChanged: (checked) {
-                                                  setState(() {
-                                                    if (checked == true) {
-                                                      selectedProductQuantities[product
-                                                              .id] =
-                                                          1;
-                                                      quantityController.text =
-                                                          '1';
-                                                    } else {
-                                                      selectedProductQuantities
-                                                          .remove(product.id);
-                                                    }
-                                                  });
-                                                },
-                                              ),
-                                              const SizedBox(width: 12),
+                                              SizedBox(width: 24),
+                                              SizedBox(width: 12),
                                               Expanded(
                                                 flex: 3,
                                                 child: Text(
-                                                  product.name,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 14,
+                                                  'Product',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 13,
                                                   ),
                                                 ),
                                               ),
                                               Expanded(
                                                 flex: 3,
                                                 child: Text(
-                                                  product.description,
+                                                  'Description',
                                                   style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey[700],
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 13,
                                                   ),
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
                                                 ),
                                               ),
                                               Expanded(
                                                 flex: 2,
                                                 child: Text(
-                                                  product.country,
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
+                                                  'Country',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 13,
                                                   ),
                                                 ),
                                               ),
                                               SizedBox(width: 12),
                                               SizedBox(
                                                 width: 100,
-                                                child: isSelected
-                                                    ? Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          IconButton(
-                                                            icon: const Icon(
-                                                              Icons.remove,
-                                                              size: 18,
-                                                            ),
-                                                            padding:
-                                                                EdgeInsets.zero,
-                                                            constraints:
-                                                                const BoxConstraints(
-                                                                  minWidth: 32,
-                                                                  minHeight: 32,
-                                                                ),
-                                                            onPressed: () {
-                                                              final currentQty =
-                                                                  selectedProductQuantities[product
-                                                                      .id] ??
-                                                                  1;
-                                                              if (currentQty >
-                                                                  1) {
-                                                                setState(() {
-                                                                  selectedProductQuantities[product
-                                                                          .id] =
-                                                                      currentQty -
-                                                                      1;
-                                                                quantityController
-                                                                          .text =
-                                                                      (currentQty -
-                                                                              1)
-                                                                          .toString();
-                                                                });
-                                                              }
-                                                            },
-                                                          ),
-                                                          Expanded(
-                                                            child: TextField(
-                                                              controller:
-                                                                  quantityController,
-                                                              keyboardType:
-                                                                  TextInputType
-                                                                      .number,
-                                                              textAlign:
-                                                                  TextAlign
-                                                                      .center,
-                                                              onChanged: (value) {
-                                                                final qty =
-                                                                    int.tryParse(
-                                                                      value,
-                                                                ) ??
-                                                                    1;
-                                                                if (qty >= 1) {
-                                                                  setState(() {
-                                                                    selectedProductQuantities[product
-                                                                            .id] =
-                                                                        qty;
-                                                                  });
-                                                                }
-                                                              },
-                                                              decoration: const InputDecoration(
-                                                                border:
-                                                                    OutlineInputBorder(),
-                                                                contentPadding:
-                                                                    EdgeInsets.symmetric(
-                                                                      horizontal:
-                                                                          4,
-                                                                      vertical:
-                                                                          4,
-                                                                ),
-                                                                isDense: true,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          IconButton(
-                                                            icon: const Icon(
-                                                              Icons.add,
-                                                              size: 18,
-                                                            ),
-                                                            padding:
-                                                                EdgeInsets.zero,
-                                                            constraints:
-                                                                const BoxConstraints(
-                                                                  minWidth: 32,
-                                                                  minHeight: 32,
-                                                                ),
-                                                            onPressed: () {
-                                                              final currentQty =
-                                                                  selectedProductQuantities[product
-                                                                      .id] ??
-                                                                  1;
-                                                              setState(() {
-                                                                selectedProductQuantities[product
-                                                                        .id] =
-                                                                    currentQty +
-                                                                    1;
-                                                                quantityController
-                                                                        .text =
-                                                                    (currentQty +
-                                                                            1)
-                                                                        .toString();
-                                                              });
-                                                            },
-                                                          ),
-                                                        ],
-                                                      )
-                                                    : const SizedBox.shrink(),
+                                                child: Text(
+                                                  'Quantity',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 13,
+                                                  ),
                                                 ),
+                                              ),
                                               if (isSuperAdmin) ...[
-                                                const SizedBox(width: 12),
+                                                SizedBox(width: 12),
                                                 SizedBox(
                                                   width: 120,
                                                   child: Text(
-                                                    'R ${product.price.toStringAsFixed(2)}',
+                                                    'Price',
                                                     textAlign: TextAlign.right,
-                                                    style: const TextStyle(
+                                                    style: TextStyle(
                                                       fontWeight:
-                                                          FontWeight.w600,
+                                                          FontWeight.w700,
                                                       fontSize: 13,
                                                     ),
                                                   ),
@@ -2285,296 +2102,543 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                                               ],
                                             ],
                                           ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              );
+                                        ),
+                                        const Divider(height: 1),
+                                        const SizedBox(height: 8),
+                                        Expanded(
+                                          child: ListView.separated(
+                                            primary: false,
+                                            shrinkWrap: false,
+                                            itemCount: products.length,
+                                            separatorBuilder: (_, __) =>
+                                                const Divider(height: 1),
+                                            itemBuilder: (context, index) {
+                                              final product = products[index];
+                                              final isSelected =
+                                                  selectedProductQuantities
+                                                      .containsKey(product.id);
+                                              final quantityController =
+                                                  TextEditingController(
+                                                    text:
+                                                        selectedProductQuantities[product
+                                                                .id]
+                                                            ?.toString() ??
+                                                        '1',
+                                                  );
+                                              return Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 10,
+                                                    ),
+                                                child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Checkbox(
+                                                      value: isSelected,
+                                                      onChanged: (checked) {
+                                                        setState(() {
+                                                          if (checked == true) {
+                                                            selectedProductQuantities[product
+                                                                    .id] =
+                                                                1;
+                                                            quantityController
+                                                                    .text =
+                                                                '1';
+                                                          } else {
+                                                            selectedProductQuantities
+                                                                .remove(
+                                                                  product.id,
+                                                                );
+                                                          }
+                                                        });
+                                                      },
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    Expanded(
+                                                      flex: 3,
+                                                      child: Text(
+                                                        product.name,
+                                                        style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 14,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Expanded(
+                                                      flex: 3,
+                                                      child: Text(
+                                                        product.description,
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          color:
+                                                              Colors.grey[700],
+                                                        ),
+                                                        maxLines: 2,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                    Expanded(
+                                                      flex: 2,
+                                                      child: Text(
+                                                        product.country,
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    SizedBox(width: 12),
+                                                    SizedBox(
+                                                      width: 100,
+                                                      child: isSelected
+                                                          ? Row(
+                                                              mainAxisSize:
+                                                                  MainAxisSize
+                                                                      .min,
+                                                              children: [
+                                                                IconButton(
+                                                                  icon: const Icon(
+                                                                    Icons
+                                                                        .remove,
+                                                                    size: 18,
+                                                                  ),
+                                                                  padding:
+                                                                      EdgeInsets
+                                                                          .zero,
+                                                                  constraints:
+                                                                      const BoxConstraints(
+                                                                        minWidth:
+                                                                            32,
+                                                                        minHeight:
+                                                                            32,
+                                                                      ),
+                                                                  onPressed: () {
+                                                                    final currentQty =
+                                                                        selectedProductQuantities[product
+                                                                            .id] ??
+                                                                        1;
+                                                                    if (currentQty >
+                                                                        1) {
+                                                                      setState(() {
+                                                                        selectedProductQuantities[product.id] =
+                                                                            currentQty -
+                                                                            1;
+                                                                        quantityController.text =
+                                                                            (currentQty -
+                                                                                    1)
+                                                                                .toString();
+                                                                      });
+                                                                    }
+                                                                  },
+                                                                ),
+                                                                Expanded(
+                                                                  child: TextField(
+                                                                    controller:
+                                                                        quantityController,
+                                                                    keyboardType:
+                                                                        TextInputType
+                                                                            .number,
+                                                                    textAlign:
+                                                                        TextAlign
+                                                                            .center,
+                                                                    onChanged: (value) {
+                                                                      final qty =
+                                                                          int.tryParse(
+                                                                            value,
+                                                                          ) ??
+                                                                          1;
+                                                                      if (qty >=
+                                                                          1) {
+                                                                        setState(() {
+                                                                          selectedProductQuantities[product.id] =
+                                                                              qty;
+                                                                        });
+                                                                      }
+                                                                    },
+                                                                    decoration: const InputDecoration(
+                                                                      border:
+                                                                          OutlineInputBorder(),
+                                                                      contentPadding: EdgeInsets.symmetric(
+                                                                        horizontal:
+                                                                            4,
+                                                                        vertical:
+                                                                            4,
+                                                                      ),
+                                                                      isDense:
+                                                                          true,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                IconButton(
+                                                                  icon:
+                                                                      const Icon(
+                                                                        Icons
+                                                                            .add,
+                                                                        size:
+                                                                            18,
+                                                                      ),
+                                                                  padding:
+                                                                      EdgeInsets
+                                                                          .zero,
+                                                                  constraints:
+                                                                      const BoxConstraints(
+                                                                        minWidth:
+                                                                            32,
+                                                                        minHeight:
+                                                                            32,
+                                                                      ),
+                                                                  onPressed: () {
+                                                                    final currentQty =
+                                                                        selectedProductQuantities[product
+                                                                            .id] ??
+                                                                        1;
+                                                                    setState(() {
+                                                                      selectedProductQuantities[product
+                                                                              .id] =
+                                                                          currentQty +
+                                                                          1;
+                                                                      quantityController
+                                                                              .text =
+                                                                          (currentQty +
+                                                                                  1)
+                                                                              .toString();
+                                                                    });
+                                                                  },
+                                                                ),
+                                                              ],
+                                                            )
+                                                          : const SizedBox.shrink(),
+                                                    ),
+                                                    if (isSuperAdmin) ...[
+                                                      const SizedBox(width: 12),
+                                                      SizedBox(
+                                                        width: 120,
+                                                        child: Text(
+                                                          'R ${product.price.toStringAsFixed(2)}',
+                                                          textAlign:
+                                                              TextAlign.right,
+                                                          style:
+                                                              const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                fontSize: 13,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    );
                             }
                             return packages.isEmpty
                                 ? const Text('No packages available')
                                 : Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 8.0,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        SizedBox(width: 24),
-                                        SizedBox(width: 12),
-                                        Expanded(
-                                          flex: 3,
-                                          child: Text(
-                                            'Package',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 13,
-                                            ),
-                                          ),
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8.0,
                                         ),
-                                        Expanded(
-                                          flex: 3,
-                                          child: Text(
-                                            'Description',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          flex: 2,
-                                          child: Text(
-                                            'Country',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 12),
-                                        SizedBox(
-                                          width: 100,
-                                          child: Text(
-                                            'Quantity',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        if (isSuperAdmin) ...[
-                                          SizedBox(width: 12),
-                                          SizedBox(
-                                            width: 120,
-                                            child: Text(
-                                              'Price',
-                                              textAlign: TextAlign.right,
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  const Divider(height: 1),
-                                  const SizedBox(height: 8),
-                                  Expanded(
-                                    child: ListView.separated(
-                                      primary: false,
-                                      shrinkWrap: false,
-                                      itemCount: packages.length,
-                                      separatorBuilder: (_, __) =>
-                                          const Divider(height: 1),
-                                      itemBuilder: (context, index) {
-                                        final package = packages[index];
-                                        final isSelected =
-                                            selectedPackageQuantities
-                                                .containsKey(package.id);
-                                        final quantityController =
-                                            TextEditingController(
-                                              text:
-                                                  selectedPackageQuantities[
-                                                                  package.id]
-                                                              ?.toString() ??
-                                                          '1',
-                                            );
-                                        return Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 10,
-                                          ),
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Checkbox(
-                                                value: isSelected,
-                                                onChanged: (checked) {
-                                                  setState(() {
-                                                    if (checked == true) {
-                                                      selectedPackageQuantities[
-                                                                  package.id] =
-                                                              1;
-                                                      quantityController.text =
-                                                              '1';
-                                                    } else {
-                                                      selectedPackageQuantities
-                                                          .remove(package.id);
-                                                    }
-                                                  });
-                                                },
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                flex: 3,
-                                                child: Text(
-                                                  package.name,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 14,
-                                                  ),
+                                        child: Row(
+                                          children: [
+                                            SizedBox(width: 24),
+                                            SizedBox(width: 12),
+                                            Expanded(
+                                              flex: 3,
+                                              child: Text(
+                                                'Package',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 13,
                                                 ),
                                               ),
-                                              Expanded(
-                                                flex: 3,
-                                                child: Text(
-                                                  package.description,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey[700],
-                                                  ),
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
+                                            ),
+                                            Expanded(
+                                              flex: 3,
+                                              child: Text(
+                                                'Description',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 13,
                                                 ),
                                               ),
-                                              Expanded(
-                                                flex: 2,
-                                                child: Text(
-                                                  package.country,
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                  ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                'Country',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 13,
                                                 ),
                                               ),
+                                            ),
+                                            SizedBox(width: 12),
+                                            SizedBox(
+                                              width: 100,
+                                              child: Text(
+                                                'Quantity',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                            if (isSuperAdmin) ...[
                                               SizedBox(width: 12),
                                               SizedBox(
-                                                width: 100,
-                                                child: isSelected
-                                                    ? Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          IconButton(
-                                                            icon: const Icon(
-                                                              Icons.remove,
-                                                              size: 18,
-                                                            ),
-                                                            padding:
-                                                                EdgeInsets.zero,
-                                                            constraints:
-                                                                const BoxConstraints(
-                                                                  minWidth: 32,
-                                                                  minHeight: 32,
-                                                                ),
-                                                            onPressed: () {
-                                                              final currentQty =
-                                                                  selectedPackageQuantities[
-                                                                              package.id] ??
-                                                                          1;
-                                                              if (currentQty >
-                                                                  1) {
-                                                                setState(() {
-                                                                  selectedPackageQuantities[
-                                                                          package.id] =
-                                                                      currentQty -
-                                                                          1;
-                                                                quantityController
-                                                                        .text =
-                                                                    (currentQty -
-                                                                            1)
-                                                                        .toString();
-                                                                });
-                                                              }
-                                                            },
-                                                          ),
-                                                          Expanded(
-                                                            child: TextField(
-                                                              controller:
-                                                                  quantityController,
-                                                              keyboardType:
-                                                                  TextInputType
-                                                                      .number,
-                                                              textAlign:
-                                                                  TextAlign
-                                                                      .center,
-                                                              onChanged: (value) {
-                                                                final qty =
-                                                                    int.tryParse(
-                                                                          value) ??
-                                                                      1;
-                                                                if (qty >= 1) {
-                                                                  setState(() {
-                                                                    selectedPackageQuantities[
-                                                                            package.id] =
-                                                                        qty;
-                                                                  });
-                                                                }
-                                                              },
-                                                              decoration: const InputDecoration(
-                                                                border:
-                                                                    OutlineInputBorder(),
-                                                                contentPadding:
-                                                                    EdgeInsets.symmetric(
-                                                                      horizontal: 4,
-                                                                      vertical: 4,
-                                                                    ),
-                                                                isDense: true,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          IconButton(
-                                                            icon: const Icon(
-                                                              Icons.add,
-                                                              size: 18,
-                                                            ),
-                                                            padding:
-                                                                EdgeInsets.zero,
-                                                            constraints:
-                                                                const BoxConstraints(
-                                                                  minWidth: 32,
-                                                                  minHeight: 32,
-                                                                ),
-                                                            onPressed: () {
-                                                              final currentQty =
-                                                                  selectedPackageQuantities[
-                                                                              package.id] ??
-                                                                          1;
-                                                              setState(() {
-                                                                selectedPackageQuantities[
-                                                                        package.id] =
-                                                                    currentQty +
-                                                                        1;
-                                                                quantityController
-                                                                        .text =
-                                                                    (currentQty +
-                                                                            1)
-                                                                        .toString();
-                                                              });
-                                                            },
-                                                          ),
-                                                        ],
-                                                      )
-                                                    : const SizedBox.shrink(),
-                                                ),
-                                              if (isSuperAdmin) ...[
-                                                const SizedBox(width: 12),
-                                                SizedBox(
-                                                  width: 120,
-                                                  child: Text(
-                                                    'R ${package.price.toStringAsFixed(2)}',
-                                                    textAlign: TextAlign.right,
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontSize: 13,
-                                                    ),
+                                                width: 120,
+                                                child: Text(
+                                                  'Price',
+                                                  textAlign: TextAlign.right,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 13,
                                                   ),
                                                 ),
-                                              ],
+                                              ),
                                             ],
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              );
+                                          ],
+                                        ),
+                                      ),
+                                      const Divider(height: 1),
+                                      const SizedBox(height: 8),
+                                      Expanded(
+                                        child: ListView.separated(
+                                          primary: false,
+                                          shrinkWrap: false,
+                                          itemCount: packages.length,
+                                          separatorBuilder: (_, __) =>
+                                              const Divider(height: 1),
+                                          itemBuilder: (context, index) {
+                                            final package = packages[index];
+                                            final isSelected =
+                                                selectedPackageQuantities
+                                                    .containsKey(package.id);
+                                            final quantityController =
+                                                TextEditingController(
+                                                  text:
+                                                      selectedPackageQuantities[package
+                                                              .id]
+                                                          ?.toString() ??
+                                                      '1',
+                                                );
+                                            return Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 10,
+                                                  ),
+                                              child: Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Checkbox(
+                                                    value: isSelected,
+                                                    onChanged: (checked) {
+                                                      setState(() {
+                                                        if (checked == true) {
+                                                          selectedPackageQuantities[package
+                                                                  .id] =
+                                                              1;
+                                                          quantityController
+                                                                  .text =
+                                                              '1';
+                                                        } else {
+                                                          selectedPackageQuantities
+                                                              .remove(
+                                                                package.id,
+                                                              );
+                                                        }
+                                                      });
+                                                    },
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    flex: 3,
+                                                    child: Text(
+                                                      package.name,
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 3,
+                                                    child: Text(
+                                                      package.description,
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[700],
+                                                      ),
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 2,
+                                                    child: Text(
+                                                      package.country,
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 12),
+                                                  SizedBox(
+                                                    width: 100,
+                                                    child: isSelected
+                                                        ? Row(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                              IconButton(
+                                                                icon: const Icon(
+                                                                  Icons.remove,
+                                                                  size: 18,
+                                                                ),
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
+                                                                constraints:
+                                                                    const BoxConstraints(
+                                                                      minWidth:
+                                                                          32,
+                                                                      minHeight:
+                                                                          32,
+                                                                    ),
+                                                                onPressed: () {
+                                                                  final currentQty =
+                                                                      selectedPackageQuantities[package
+                                                                          .id] ??
+                                                                      1;
+                                                                  if (currentQty >
+                                                                      1) {
+                                                                    setState(() {
+                                                                      selectedPackageQuantities[package
+                                                                              .id] =
+                                                                          currentQty -
+                                                                          1;
+                                                                      quantityController
+                                                                              .text =
+                                                                          (currentQty -
+                                                                                  1)
+                                                                              .toString();
+                                                                    });
+                                                                  }
+                                                                },
+                                                              ),
+                                                              Expanded(
+                                                                child: TextField(
+                                                                  controller:
+                                                                      quantityController,
+                                                                  keyboardType:
+                                                                      TextInputType
+                                                                          .number,
+                                                                  textAlign:
+                                                                      TextAlign
+                                                                          .center,
+                                                                  onChanged: (value) {
+                                                                    final qty =
+                                                                        int.tryParse(
+                                                                          value,
+                                                                        ) ??
+                                                                        1;
+                                                                    if (qty >=
+                                                                        1) {
+                                                                      setState(() {
+                                                                        selectedPackageQuantities[package.id] =
+                                                                            qty;
+                                                                      });
+                                                                    }
+                                                                  },
+                                                                  decoration: const InputDecoration(
+                                                                    border:
+                                                                        OutlineInputBorder(),
+                                                                    contentPadding:
+                                                                        EdgeInsets.symmetric(
+                                                                          horizontal:
+                                                                              4,
+                                                                          vertical:
+                                                                              4,
+                                                                        ),
+                                                                    isDense:
+                                                                        true,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              IconButton(
+                                                                icon:
+                                                                    const Icon(
+                                                                      Icons.add,
+                                                                      size: 18,
+                                                                    ),
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
+                                                                constraints:
+                                                                    const BoxConstraints(
+                                                                      minWidth:
+                                                                          32,
+                                                                      minHeight:
+                                                                          32,
+                                                                    ),
+                                                                onPressed: () {
+                                                                  final currentQty =
+                                                                      selectedPackageQuantities[package
+                                                                          .id] ??
+                                                                      1;
+                                                                  setState(() {
+                                                                    selectedPackageQuantities[package
+                                                                            .id] =
+                                                                        currentQty +
+                                                                        1;
+                                                                    quantityController
+                                                                            .text =
+                                                                        (currentQty +
+                                                                                1)
+                                                                            .toString();
+                                                                  });
+                                                                },
+                                                              ),
+                                                            ],
+                                                          )
+                                                        : const SizedBox.shrink(),
+                                                  ),
+                                                  if (isSuperAdmin) ...[
+                                                    const SizedBox(width: 12),
+                                                    SizedBox(
+                                                      width: 120,
+                                                      child: Text(
+                                                        'R ${package.price.toStringAsFixed(2)}',
+                                                        textAlign:
+                                                            TextAlign.right,
+                                                        style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 13,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  );
                           },
                         ),
                       ),
@@ -2592,8 +2656,10 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                       const SizedBox(height: 12),
                       ...questionControllers.entries.map((entry) {
                         if (entry.key == 'Method of payment') {
-                          final value = _paymentMethodOptions
-                                  .contains(entry.value.text.trim())
+                          final value =
+                              _paymentMethodOptions.contains(
+                                entry.value.text.trim(),
+                              )
                               ? entry.value.text.trim()
                               : null;
                           return Padding(
@@ -2609,10 +2675,12 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                               ),
                               hint: Text(_getQuestionHint(entry.key)),
                               items: _paymentMethodOptions
-                                  .map((String v) => DropdownMenuItem<String>(
-                                        value: v,
-                                        child: Text(v),
-                                      ))
+                                  .map(
+                                    (String v) => DropdownMenuItem<String>(
+                                      value: v,
+                                      child: Text(v),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: (String? v) {
                                 setState(() => entry.value.text = v ?? '');
@@ -2683,7 +2751,9 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
       List<models.OptInProduct> optInPackageSelections = [];
       if (selectedPackageQuantities.isNotEmpty) {
         optInPackageSelections = selectedPackageQuantities.entries.map((entry) {
-          final package = packagesForSubmit.firstWhere((p) => p.id == entry.key);
+          final package = packagesForSubmit.firstWhere(
+            (p) => p.id == entry.key,
+          );
           return models.OptInProduct(
             id: package.id,
             name: package.name,
@@ -2706,7 +2776,8 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
           ? 'Manually added to Opt In'
           : noteController.text;
 
-      final email = (optInQuestions != null &&
+      final email =
+          (optInQuestions != null &&
               (optInQuestions['Best email'] ?? '').trim().isNotEmpty)
           ? optInQuestions['Best email']!.trim()
           : lead.email;
@@ -3428,8 +3499,7 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     StreamStage stage,
     List<models.SalesAppointment> appointments,
   ) {
-    final isGreyedOut =
-        stage.id == 'appointments' || stage.id == 'rescheduled';
+    final isGreyedOut = stage.id == 'appointments' || stage.id == 'rescheduled';
     final sortedAppointments = StreamUtils.sortByFormScore(
       appointments,
       (apt) => apt.formScore,
@@ -3515,17 +3585,17 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
                 final listBgColor = isGreyedOut
                     ? Colors.grey.shade200
                     : (candidateData.isNotEmpty
-                        ? Color(
-                            int.parse(stage.color.replaceFirst('#', '0xff')),
-                          ).withOpacity(0.1)
-                        : Colors.white);
+                          ? Color(
+                              int.parse(stage.color.replaceFirst('#', '0xff')),
+                            ).withOpacity(0.1)
+                          : Colors.white);
                 final listBorderColor = isGreyedOut
                     ? Colors.grey.shade400
                     : (candidateData.isNotEmpty
-                        ? Color(
-                            int.parse(stage.color.replaceFirst('#', '0xff')),
-                          )
-                        : Colors.grey.shade200);
+                          ? Color(
+                              int.parse(stage.color.replaceFirst('#', '0xff')),
+                            )
+                          : Colors.grey.shade200);
                 return Container(
                   decoration: BoxDecoration(
                     color: listBgColor,

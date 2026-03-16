@@ -14,7 +14,8 @@ class ContractPdfService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   static final _moneyFormat = NumberFormat('#,##0.00', 'en_US');
-  static String _formatMoney(double amount) => 'R ${_moneyFormat.format(amount)}';
+  static String _formatMoney(double amount) =>
+      'R ${_moneyFormat.format(amount)}';
 
   /// Generate complete contract PDF document with cover page
   Future<pw.Document> generateContractPdf(Contract contract) async {
@@ -812,6 +813,11 @@ class ContractPdfService {
         pw.Text(
           'Please complete the deposit payment to proceed with your order. Payment instructions and confirmation will be sent via email.',
           style: pw.TextStyle(fontSize: 14),
+        ),
+        pw.SizedBox(height: 16),
+        pw.Text(
+          'This invoice and agreement is valid for 30 days.',
+          style: pw.TextStyle(fontSize: 13),
         ),
         pw.SizedBox(height: 24),
         pw.Container(

@@ -498,11 +498,12 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
                       Text(
                         'You will receive deposit payment instructions via email shortly. '
                         'Please complete the payment to proceed with your order.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                          height: 1.5,
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'This invoice and agreement is valid for 30 days.',
+                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -708,6 +709,11 @@ class _ContractViewScreenState extends State<ContractViewScreen> {
               ),
               const SizedBox(height: 8),
               _buildPriceRow('Balance due', contract.remainingBalance),
+              const Divider(height: 24),
+              Text(
+                'This invoice and agreement is valid for 30 days.',
+                style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              ),
             ],
           ),
         ],
