@@ -485,7 +485,7 @@ class SalesAppointmentService {
           print('📤 Calling EmailJS.sendMarketingDepositNotification...');
           final sent = await EmailJSService.sendMarketingDepositNotification(
             appointment: appointment,
-            marketingEmail: 'info@barefootbytes.com',
+            marketingEmail: 'rachel@medwavegroup.com',
             yesUrl: financeUrl,
             noUrl: financeUrl,
             yesLabel: 'Deposit received',
