@@ -3500,14 +3500,33 @@ class _SalesStreamScreenState extends State<SalesStreamScreen> {
     List<models.SalesAppointment> appointments,
   ) {
     final isGreyedOut = stage.id == 'appointments' || stage.id == 'rescheduled';
-    final sortedAppointments = StreamUtils.sortByFormScore(
-      appointments,
-      (apt) => apt.formScore,
-    );
-    final tieredAppointments = StreamUtils.withTierSeparators(
-      sortedAppointments,
-      (apt) => apt.formScore,
-    );
+    // Sorting differs per stage:
+    // - Opt In: sort by arrival time (stageEnteredAt, fallback createdAt)
+    // - Other stages: sort by form score tiers (existing behavior)
+    final List<({models.SalesAppointment? item, bool isDivider, FormScoreTier? tier})>
+    tieredAppointments;
+    if (stage.id == 'opt_in') {
+      final sortedByArrival = [...appointments]..sort((a, b) {
+        final aTime = a.stageEnteredAt;
+        final bTime = b.stageEnteredAt;
+        final stageCompare = bTime.compareTo(aTime);
+        if (stageCompare != 0) return stageCompare;
+        return b.createdAt.compareTo(a.createdAt);
+      });
+      tieredAppointments =
+          sortedByArrival
+              .map((apt) => (item: apt, isDivider: false, tier: null))
+              .toList();
+    } else {
+      final sortedAppointments = StreamUtils.sortByFormScore(
+        appointments,
+        (apt) => apt.formScore,
+      );
+      tieredAppointments = StreamUtils.withTierSeparators(
+        sortedAppointments,
+        (apt) => apt.formScore,
+      );
+    }
     final headerColor = isGreyedOut
         ? Colors.grey[500]!
         : Color(int.parse(stage.color.replaceFirst('#', '0xff')));

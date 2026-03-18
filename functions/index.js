@@ -2205,6 +2205,30 @@ exports.scheduleContractSigningReminders = functions
           skipCount++;
           continue;
         }
+        // Skip if the related appointment no longer exists (e.g. deleted lead)
+        const appointmentId = data.appointmentId;
+        if (!appointmentId) {
+          console.warn(`Contract ${doc.id}: missing appointmentId, skipping`);
+          skipCount++;
+          continue;
+        }
+        try {
+          const apptSnap = await db.collection('appointments').doc(String(appointmentId)).get();
+          if (!apptSnap.exists) {
+            console.warn(
+              `Contract ${doc.id}: appointment ${appointmentId} not found (possibly deleted), skipping`
+            );
+            skipCount++;
+            continue;
+          }
+        } catch (err) {
+          console.error(
+            `Contract ${doc.id}: error checking appointment ${appointmentId}, skipping`,
+            err
+          );
+          skipCount++;
+          continue;
+        }
         // Skip if user opted out of reminder emails
         if (data.receiveReminderEmails === false) {
           skipCount++;

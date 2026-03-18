@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -707,7 +707,37 @@ class _AppointmentDetailDialogState extends State<AppointmentDetailDialog> {
     setState(() => _isDeleting = true);
 
     try {
+      // Delete the sales appointment
       await _appointmentService.deleteAppointment(_currentAppointment.id);
+
+      // Void all unsigned contracts linked to this appointment so they
+      // no longer receive reminders.
+      try {
+        final authProvider = context.read<AuthProvider>();
+        final userId = authProvider.user?.uid ?? 'system';
+        await _contractService.voidUnsignedContractsForAppointment(
+          _currentAppointment.id,
+          voidedBy: userId,
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          // Non-fatal: appointment is deleted; contracts may still exist but
+          // the reminder job will perform an extra safety check.
+          // ignore: avoid_print
+          print('⚠️ Error voiding contracts for deleted appointment: $e');
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Appointment deleted, but related contracts could not be fully voided. '
+                'They will still be skipped by reminders.',
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
 
       if (mounted) {
         // Close the dialog first

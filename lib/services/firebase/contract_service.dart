@@ -636,6 +636,107 @@ class ContractService {
     }
   }
 
+  /// Void all unsigned contracts for a specific appointment.
+  /// Used when an appointment (\"lead\" in Sales stream) is deleted so that
+  /// related contracts no longer receive reminders.
+  Future<void> voidUnsignedContractsForAppointment(
+    String appointmentId, {
+    required String voidedBy,
+    String voidReason = 'Appointment deleted',
+  }) async {
+    try {
+      final snapshot = await _firestore
+          .collection(_collectionPath)
+          .where('appointmentId', isEqualTo: appointmentId)
+          .where('hasSigned', isEqualTo: false)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        if (kDebugMode) {
+          print(
+            'ContractService: No unsigned contracts found for appointment $appointmentId to void.',
+          );
+        }
+        return;
+      }
+
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {
+          'status': ContractStatus.voided.name,
+          'voidedBy': voidedBy,
+          'voidedAt': Timestamp.fromDate(DateTime.now()),
+          'voidReason': voidReason,
+        });
+      }
+
+      await batch.commit();
+
+      if (kDebugMode) {
+        print(
+          '✅ ContractService: Voided ${snapshot.docs.length} unsigned contract(s) for appointment $appointmentId',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+          '❌ ContractService: Error voiding unsigned contracts for appointment $appointmentId: $e',
+        );
+      }
+      rethrow;
+    }
+  }
+
+  /// Void all unsigned contracts for a specific lead.
+  /// Used when a lead is deleted from Marketing/Admin screens.
+  Future<void> voidUnsignedContractsForLead(
+    String leadId, {
+    required String voidedBy,
+    String voidReason = 'Lead deleted',
+  }) async {
+    try {
+      final snapshot = await _firestore
+          .collection(_collectionPath)
+          .where('leadId', isEqualTo: leadId)
+          .where('hasSigned', isEqualTo: false)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        if (kDebugMode) {
+          print(
+            'ContractService: No unsigned contracts found for lead $leadId to void.',
+          );
+        }
+        return;
+      }
+
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {
+          'status': ContractStatus.voided.name,
+          'voidedBy': voidedBy,
+          'voidedAt': Timestamp.fromDate(DateTime.now()),
+          'voidReason': voidReason,
+        });
+      }
+
+      await batch.commit();
+
+      if (kDebugMode) {
+        print(
+          '✅ ContractService: Voided ${snapshot.docs.length} unsigned contract(s) for lead $leadId',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+          '❌ ContractService: Error voiding unsigned contracts for lead $leadId: $e',
+        );
+      }
+      rethrow;
+    }
+  }
+
   /// Update contract status
   Future<void> updateContractStatus(
     String contractId,

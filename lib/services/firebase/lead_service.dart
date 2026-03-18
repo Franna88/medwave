@@ -8,12 +8,14 @@ import '../../models/leads/lead_channel.dart';
 import '../../models/form/form_submission.dart';
 import '../../models/streams/appointment.dart' as models;
 import 'sales_appointment_service.dart';
+import 'contract_service.dart';
 import 'lead_booking_service.dart';
 
 /// Service for managing leads in Firebase
 class LeadService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final SalesAppointmentService _appointmentService = SalesAppointmentService();
+  final ContractService _contractService = ContractService();
 
   // Cloud Function base URL
   static const String _cloudFunctionBaseUrl =
@@ -193,6 +195,23 @@ class LeadService {
   Future<void> deleteLead(String leadId) async {
     try {
       await _firestore.collection('leads').doc(leadId).delete();
+
+      // Also void any unsigned contracts linked to this lead so they do not
+      // receive future reminders.
+      try {
+        await _contractService.voidUnsignedContractsForLead(
+          leadId,
+          voidedBy: 'system',
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          print(
+            'Warning: Error voiding unsigned contracts for deleted lead $leadId: $e',
+          );
+        }
+        // Non-fatal; existing Cloud Function safety checks will still prevent
+        // reminders if appointments/leads are missing.
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Error deleting lead: $e');
