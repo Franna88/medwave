@@ -209,6 +209,11 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
         // Non-fatal: email was sent, tag update failed
       }
       try {
+        await provider.markContractLinkSent(_contract!.id);
+      } catch (_) {
+        // Non-fatal: reminder eligibility tag update failed
+      }
+      try {
         final authProvider = context.read<AuthProvider>();
         final uid = authProvider.user?.uid;
         if (uid != null && mounted) {

@@ -27,6 +27,8 @@ class EmailJSService {
   static const String _practitionerApprovalTemplateId =
       'template_qnmopr1'; // Practitioner approval notification - Application Approved
   static const String _depositCustomerTemplateId = 'template_6vqr5ib';
+  /// Deposit reminder 2: Shipped & Locked at warehouse – confirm if deposit was made (2 days after reminder 1).
+  static const String _depositReminder2TemplateId = 'template_i5hg6ik';
   static const String _depositMarketingTemplateId = 'template_jykxsg3';
   static const String _paymentCustomerTemplateId = 'template_10g88s2';
   static const String _contractLinkTemplateId = 'template_bdg4s33';
@@ -630,7 +632,7 @@ class EmailJSService {
     required String noUrl,
   }) {
     return _sendDepositEmail(
-      templateId: _depositCustomerTemplateId,
+      templateId: _depositReminder2TemplateId,
       toEmail: appointment.email,
       toName: appointment.customerName,
       templateParams: _buildDepositParams(

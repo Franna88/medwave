@@ -132,6 +132,8 @@ class Contract {
   // Timestamps
   final DateTime createdAt;
   final DateTime? viewedAt;
+  /// When the contract link email was sent to the customer (reminders only for contracts with this set).
+  final DateTime? contractLinkSentAt;
 
   // Metadata
   final String createdBy;
@@ -149,6 +151,8 @@ class Contract {
   final String? editReason; // Reason for editing this revision
   final String? editedBy; // User who created this revision
   final DateTime? editedAt; // When this revision was created
+  /// Set when a newer revision was created; reminder job skips contracts with this set.
+  final String? supersededByContractId;
 
   // Reminder tracking (for unsigned contract follow-up emails)
   final int reminderSentCount; // Count of reminders sent (0-5)
@@ -181,6 +185,7 @@ class Contract {
     this.pdfUrl,
     required this.createdAt,
     this.viewedAt,
+    this.contractLinkSentAt,
     required this.createdBy,
     required this.createdByName,
     this.voidedBy,
@@ -192,6 +197,7 @@ class Contract {
     this.editReason,
     this.editedBy,
     this.editedAt,
+    this.supersededByContractId,
     this.reminderSentCount = 0,
     this.lastReminderSentAt,
     this.receiveReminderEmails = true,
@@ -267,6 +273,7 @@ class Contract {
       pdfUrl: map['pdfUrl']?.toString(),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       viewedAt: (map['viewedAt'] as Timestamp?)?.toDate(),
+      contractLinkSentAt: (map['contractLinkSentAt'] as Timestamp?)?.toDate(),
       createdBy: map['createdBy']?.toString() ?? '',
       createdByName: map['createdByName']?.toString() ?? '',
       voidedBy: map['voidedBy']?.toString(),
@@ -278,6 +285,7 @@ class Contract {
       editReason: map['editReason']?.toString(),
       editedBy: map['editedBy']?.toString(),
       editedAt: (map['editedAt'] as Timestamp?)?.toDate(),
+      supersededByContractId: map['supersededByContractId']?.toString(),
       reminderSentCount: (map['reminderSentCount'] as num?)?.toInt() ?? 0,
       lastReminderSentAt: (map['lastReminderSentAt'] as Timestamp?)?.toDate(),
       receiveReminderEmails: map['receiveReminderEmails'] as bool? ?? true,
@@ -310,6 +318,7 @@ class Contract {
       'pdfUrl': pdfUrl,
       'createdAt': Timestamp.fromDate(createdAt),
       'viewedAt': viewedAt != null ? Timestamp.fromDate(viewedAt!) : null,
+      if (contractLinkSentAt != null) 'contractLinkSentAt': Timestamp.fromDate(contractLinkSentAt!),
       'createdBy': createdBy,
       'createdByName': createdByName,
       'voidedBy': voidedBy,
@@ -321,6 +330,7 @@ class Contract {
       'editReason': editReason,
       'editedBy': editedBy,
       'editedAt': editedAt != null ? Timestamp.fromDate(editedAt!) : null,
+      if (supersededByContractId != null) 'supersededByContractId': supersededByContractId,
       'reminderSentCount': reminderSentCount,
       'lastReminderSentAt': lastReminderSentAt != null
           ? Timestamp.fromDate(lastReminderSentAt!)
@@ -355,6 +365,7 @@ class Contract {
     String? pdfUrl,
     DateTime? createdAt,
     DateTime? viewedAt,
+    DateTime? contractLinkSentAt,
     String? createdBy,
     String? createdByName,
     String? voidedBy,
@@ -366,6 +377,7 @@ class Contract {
     String? editReason,
     String? editedBy,
     DateTime? editedAt,
+    String? supersededByContractId,
     int? reminderSentCount,
     DateTime? lastReminderSentAt,
     bool? receiveReminderEmails,
@@ -398,6 +410,7 @@ class Contract {
       pdfUrl: pdfUrl ?? this.pdfUrl,
       createdAt: createdAt ?? this.createdAt,
       viewedAt: viewedAt ?? this.viewedAt,
+      contractLinkSentAt: contractLinkSentAt ?? this.contractLinkSentAt,
       createdBy: createdBy ?? this.createdBy,
       createdByName: createdByName ?? this.createdByName,
       voidedBy: voidedBy ?? this.voidedBy,
@@ -409,6 +422,7 @@ class Contract {
       editReason: editReason ?? this.editReason,
       editedBy: editedBy ?? this.editedBy,
       editedAt: editedAt ?? this.editedAt,
+      supersededByContractId: supersededByContractId ?? this.supersededByContractId,
       reminderSentCount: reminderSentCount ?? this.reminderSentCount,
       lastReminderSentAt: lastReminderSentAt ?? this.lastReminderSentAt,
       receiveReminderEmails: receiveReminderEmails ?? this.receiveReminderEmails,

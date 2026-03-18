@@ -2195,6 +2195,16 @@ exports.scheduleContractSigningReminders = functions
       for (const doc of snapshot.docs) {
         const data = doc.data();
 
+        // Only remind when the contract link was actually sent to the customer
+        if (!data.contractLinkSentAt) {
+          skipCount++;
+          continue;
+        }
+        // Skip superseded contracts (replaced by a newer revision)
+        if (data.supersededByContractId) {
+          skipCount++;
+          continue;
+        }
         // Skip if user opted out of reminder emails
         if (data.receiveReminderEmails === false) {
           skipCount++;

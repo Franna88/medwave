@@ -345,6 +345,11 @@ class ContractService {
 
       await docRef.set(revisionContract.toMap());
 
+      // Mark the contract we revised as superseded so reminder job skips it
+      await _firestore.collection(_collectionPath).doc(originalContract.id).update({
+        'supersededByContractId': revisionContract.id,
+      });
+
       if (kDebugMode) {
         print(
           '✅ ContractService: Contract revision created: ${revisionContract.id} (revision #$revisionNumber)',
@@ -649,6 +654,23 @@ class ContractService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ ContractService: Error updating contract status: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Mark that the contract link email was sent to the customer (used for reminder eligibility).
+  Future<void> updateContractLinkSent(String contractId) async {
+    try {
+      await _firestore.collection(_collectionPath).doc(contractId).update({
+        'contractLinkSentAt': FieldValue.serverTimestamp(),
+      });
+      if (kDebugMode) {
+        print('ContractService: Contract link sent recorded: $contractId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('ContractService: Error updating contract link sent: $e');
       }
       rethrow;
     }
