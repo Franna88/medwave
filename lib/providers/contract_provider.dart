@@ -180,6 +180,11 @@ class ContractProvider extends ChangeNotifier {
     }
   }
 
+  /// Record that the contract link email was sent (for reminder eligibility).
+  Future<void> markContractLinkSent(String contractId) async {
+    await _service.updateContractLinkSent(contractId);
+  }
+
   /// Get contract revision history
   Future<List<Contract>> getContractRevisionHistory(String contractId) async {
     try {
