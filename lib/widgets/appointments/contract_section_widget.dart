@@ -30,6 +30,7 @@ class ContractSectionWidget extends StatefulWidget {
 
 class _ContractSectionWidgetState extends State<ContractSectionWidget> {
   Contract? _contract;
+  Contract? _signedContract;
   bool _isLoading = true;
 
   @override
@@ -47,6 +48,13 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
     );
 
     if (mounted) {
+      final signedContracts =
+          contracts.where((c) => c.status == ContractStatus.signed).toList()
+            ..sort((a, b) {
+              final aTime = a.signedAt ?? a.createdAt;
+              final bTime = b.signedAt ?? b.createdAt;
+              return bTime.compareTo(aTime);
+            });
       setState(() {
         // Get the most recent non-voided contract
         _contract = contracts.isEmpty
@@ -55,6 +63,11 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
                 (c) => c.status != ContractStatus.voided,
                 orElse: () => contracts.first,
               );
+        // Keep a reference to latest signed contract so agents can
+        // always re-open the signed agreement from lead details.
+        _signedContract = signedContracts.isEmpty
+            ? null
+            : signedContracts.first;
         _isLoading = false;
       });
     }
@@ -443,18 +456,32 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
     );
   }
 
-  void _downloadPdf() async {
-    if (_contract?.pdfUrl == null) return;
+  Future<void> _viewSignedAgreement() async {
+    if (_signedContract == null) return;
 
+    final signedPdfUrl = _signedContract!.pdfUrl;
+    if (signedPdfUrl != null && signedPdfUrl.isNotEmpty) {
+      try {
+        final uri = Uri.parse(signedPdfUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          return;
+        }
+      } catch (_) {
+        // Fall back to signed agreement link below.
+      }
+    }
+
+    final provider = context.read<ContractProvider>();
+    final signedUrl = provider.getFullContractUrl(_signedContract!);
     try {
-      final uri = Uri.parse(_contract!.pdfUrl!);
+      final uri = Uri.parse(signedUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (!mounted) return;
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not open PDF'),
+            content: Text('Could not open signed agreement'),
             backgroundColor: Colors.red,
           ),
         );
@@ -463,7 +490,7 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error opening PDF: $e'),
+          content: Text('Error opening signed agreement: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -472,8 +499,9 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Show for Opt In and Deposit Made stages
+    // Show for Opt In and all downstream deposit stages
     if (widget.appointment.currentStage != 'opt_in' &&
+        widget.appointment.currentStage != 'deposit_requested' &&
         widget.appointment.currentStage != 'deposit_made') {
       return const SizedBox.shrink();
     }
@@ -661,6 +689,12 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
                 foregroundColor: AppTheme.primaryColor,
               ),
             ),
+            if (_signedContract != null)
+              OutlinedButton.icon(
+                onPressed: _viewSignedAgreement,
+                icon: const Icon(Icons.verified_outlined, size: 14),
+                label: const Text('View Signed Agreement'),
+              ),
             if (_contract!.parentContractId != null)
               OutlinedButton.icon(
                 onPressed: _showRevisionHistory,
@@ -682,10 +716,7 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
             padding: const EdgeInsets.only(left: 4),
             child: Text(
               'Contract not sent. Cause: ${widget.appointment.contractEmailSendError}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.orange[800],
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.orange[800]),
             ),
           ),
         ],
@@ -695,6 +726,9 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
 
   Widget _buildSigned() {
     final dateFormat = DateFormat('MMM dd, yyyy \'at\' hh:mm a');
+    final hasMovedToDepositRequested =
+        widget.appointment.currentStage == 'deposit_requested' ||
+        widget.appointment.currentStage == 'deposit_made';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -757,10 +791,12 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
             children: [
               Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Lead will automatically move to Deposit Requested',
-                  style: TextStyle(fontSize: 12),
+                  hasMovedToDepositRequested
+                      ? 'Lead has moved to Deposit Requested'
+                      : 'Lead will automatically move to Deposit Requested',
+                  style: const TextStyle(fontSize: 12),
                 ),
               ),
             ],
@@ -769,31 +805,13 @@ class _ContractSectionWidgetState extends State<ContractSectionWidget> {
 
         const SizedBox(height: 12),
 
-        // Action buttons
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _viewContract,
-                icon: const Icon(Icons.visibility, size: 18),
-                label: const Text('View Contract'),
-              ),
-            ),
-            if (_contract!.pdfUrl != null) ...[
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _downloadPdf,
-                  icon: const Icon(Icons.download, size: 18),
-                  label: const Text('Download PDF'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ],
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _viewSignedAgreement,
+            icon: const Icon(Icons.visibility, size: 14),
+            label: const Text('View Signed Agreement'),
+          ),
         ),
       ],
     );

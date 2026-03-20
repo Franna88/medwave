@@ -20,7 +20,7 @@ class OrderContractSectionWidget extends StatefulWidget {
 
 class _OrderContractSectionWidgetState
     extends State<OrderContractSectionWidget> {
-  Contract? _contract;
+  Contract? _signedContract;
   bool _isLoading = true;
 
   @override
@@ -45,28 +45,32 @@ class _OrderContractSectionWidgetState
     );
 
     if (mounted) {
+      final signedContracts = contracts
+          .where((c) => c.status == ContractStatus.signed)
+          .toList()
+        ..sort((a, b) {
+          final aTime = a.signedAt ?? a.createdAt;
+          final bTime = b.signedAt ?? b.createdAt;
+          return bTime.compareTo(aTime);
+        });
       setState(() {
-        _contract = contracts.isEmpty
-            ? null
-            : contracts.firstWhere(
-                (c) => c.status != ContractStatus.voided,
-                orElse: () => contracts.first,
-              );
+        _signedContract = signedContracts.isEmpty ? null : signedContracts.first;
         _isLoading = false;
       });
     }
   }
 
   Future<void> _viewContract() async {
-    if (_contract == null) return;
+    if (_signedContract == null) return;
 
     try {
       Uri uri;
-      if (_contract!.pdfUrl != null && _contract!.pdfUrl!.isNotEmpty) {
-        uri = Uri.parse(_contract!.pdfUrl!);
+      if (_signedContract!.pdfUrl != null &&
+          _signedContract!.pdfUrl!.isNotEmpty) {
+        uri = Uri.parse(_signedContract!.pdfUrl!);
       } else {
         final provider = context.read<ContractProvider>();
-        final url = provider.getFullContractUrl(_contract!);
+        final url = provider.getFullContractUrl(_signedContract!);
         uri = Uri.parse(url);
       }
 
@@ -115,7 +119,7 @@ class _OrderContractSectionWidgetState
               child: CircularProgressIndicator(),
             ),
           )
-        else if (_contract == null || widget.order.appointmentId.isEmpty)
+        else if (_signedContract == null || widget.order.appointmentId.isEmpty)
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -145,19 +149,19 @@ class _OrderContractSectionWidgetState
                   ),
                   decoration: BoxDecoration(
                     color: _colorFromHex(
-                      _contract!.statusColor,
+                      _signedContract!.statusColor,
                     ).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: _colorFromHex(_contract!.statusColor),
+                      color: _colorFromHex(_signedContract!.statusColor),
                     ),
                   ),
                   child: Text(
-                    _contract!.status.displayName,
+                    _signedContract!.status.displayName,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: _colorFromHex(_contract!.statusColor),
+                      color: _colorFromHex(_signedContract!.statusColor),
                     ),
                   ),
                 ),
