@@ -469,6 +469,14 @@ class ContractService {
         print('✅ ContractService: Contract signed: $contractId');
       }
 
+      // Generate and upload PDF first, then send deposit request email with a direct PDF link.
+      //
+      // Key requirement:
+      // - The deposit request email template links to `{{contract_view_url}}`.
+      // - We want that variable to be a direct PDF URL, so it opens like your screenshot.
+      bool pdfAttempted = false;
+      String? pdfUrl;
+
       // Attempt stage movement (non-blocking if it fails)
       try {
         final doc = await _firestore
@@ -477,7 +485,22 @@ class ContractService {
             .get();
         if (doc.exists) {
           final contract = Contract.fromFirestore(doc);
-          final contractViewUrl = getFullContractUrl(contract);
+          final contractViewUrlFallback = getFullContractUrl(contract);
+
+          // Generate PDF (non-blocking if it fails)
+          try {
+            pdfAttempted = true;
+            pdfUrl = await generateAndUploadPdf(contractId);
+          } catch (pdfError) {
+            if (kDebugMode) {
+              print(
+                '⚠️ Contract signed but PDF generation failed (deposit email will fall back to app contract screen): $pdfError',
+              );
+            }
+          }
+
+          final contractViewUrlForEmail = pdfUrl ?? contractViewUrlFallback;
+
           // Move appointment to Deposit Requested stage with email notification
           await _appointmentService.moveAppointmentToStage(
             appointmentId: contract.appointmentId,
@@ -486,13 +509,16 @@ class ContractService {
                 'Contract digitally signed by ${contract.customerName} (Contract ID: $contractId). Deposit request email sent.',
             userId: 'system',
             userName: 'System (Contract Signing)',
-            shouldSendDepositEmail: true, // Triggers deposit confirmation email
-            contractViewUrl: contractViewUrl,
+            // Triggers deposit confirmation email
+            shouldSendDepositEmail: true,
+            // Deposit email button should open the PDF directly
+            contractViewUrl: contractViewUrlForEmail,
             depositAmount: contract.depositAmount,
           );
+
           if (kDebugMode) {
             print(
-              '✅ ContractService: Appointment moved to Deposit Requested with email',
+              '✅ ContractService: Appointment moved to Deposit Requested with email (${pdfUrl != null ? 'direct PDF link' : 'fallback app link'})',
             );
           }
         }
@@ -506,14 +532,15 @@ class ContractService {
         }
       }
 
-      // Generate and upload PDF (non-blocking if it fails)
-      try {
-        await generateAndUploadPdf(contractId);
-      } catch (pdfError) {
-        // Log but don't throw - contract is still signed successfully
-        if (kDebugMode) {
-          print('⚠️ Contract signed but PDF generation failed: $pdfError');
-          print('   Admin can regenerate PDF later from admin panel');
+      // Preserve original behavior if we couldn't even attempt PDF generation above.
+      if (!pdfAttempted) {
+        try {
+          await generateAndUploadPdf(contractId);
+        } catch (pdfError) {
+          if (kDebugMode) {
+            print('⚠️ Contract signed but PDF generation failed: $pdfError');
+            print('   Admin can regenerate PDF later from admin panel');
+          }
         }
       }
     } catch (e) {
